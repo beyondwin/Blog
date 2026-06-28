@@ -1,0 +1,30 @@
+---
+import { formatDate, getEntryDate, getEntryHref, getEntryTypeLabel } from '../lib/content';
+import type { SiteEntry } from '../lib/content';
+import StatusBadge from './StatusBadge.astro';
+
+interface Props {
+  entry: SiteEntry;
+}
+
+const { entry } = Astro.props;
+const date = getEntryDate(entry);
+const tags = entry.data.tags.slice(0, 3);
+---
+
+<a class="content-card" href={getEntryHref(entry)}>
+  <div class="content-card__meta">
+    <StatusBadge label={getEntryTypeLabel(entry)} />
+    <time datetime={date.toISOString()}>{formatDate(date)}</time>
+  </div>
+  <div class="content-card__body">
+    <h2>{entry.data.title}</h2>
+    <p>{entry.data.description}</p>
+    {tags.length > 0 && (
+      <ul class="tag-list" aria-label="Tags">
+        {tags.map((tag) => <li>{tag}</li>)}
+      </ul>
+    )}
+  </div>
+  <span class="content-card__arrow" aria-hidden="true">Read</span>
+</a>

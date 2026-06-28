@@ -1,0 +1,38 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { formatDate, getEntryDate, getEntryTypeLabel } from '../lib/content';
+import type { SiteEntry } from '../lib/content';
+
+interface Props {
+  entry: SiteEntry;
+}
+
+const { entry } = Astro.props;
+const date = getEntryDate(entry);
+const detail = entry.collection === 'travel'
+  ? entry.data.location
+  : entry.collection === 'ideas'
+    ? entry.data.maturity
+    : getEntryTypeLabel(entry);
+---
+
+<BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
+  <div class="shell article-shell">
+    <article class="article-body">
+      <div class="article-kicker">
+        <span>{detail}</span>
+        <span>{formatDate(date)}</span>
+      </div>
+      <h1>{entry.data.title}</h1>
+      <p class="description">{entry.data.description}</p>
+      {entry.data.tags.length > 0 && (
+        <ul class="tag-list article-tag-list" aria-label="Tags">
+          {entry.data.tags.map((tag) => <li>{tag}</li>)}
+        </ul>
+      )}
+      <div class="prose">
+        <slot />
+      </div>
+    </article>
+  </div>
+</BaseLayout>

@@ -1,0 +1,21 @@
+---
+const navItems = [
+  { href: '/articles/', label: 'Articles' },
+  { href: '/analysis/', label: 'Analysis' },
+  { href: '/reviews/', label: 'Reviews' },
+  { href: '/ideas/', label: 'Ideas' },
+  { href: '/memory/', label: 'Memory' },
+];
+---
+
+<header class="site-header">
+  <div class="shell site-header__inner">
+    <a class="brand" href="/" aria-label="beyondwin home">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">beyondwin</span>
+    </a>
+    <nav class="nav" aria-label="Primary navigation">
+      {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+    </nav>
+  </div>
+</header>

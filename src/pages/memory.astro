@@ -1,0 +1,222 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadPublicMemoryData } from '../lib/memoryData';
+
+const memory = loadPublicMemoryData();
+const hasThoughts = memory.thoughts.length > 0;
+const firstThought = memory.thoughts[0];
+const strongestEdges = memory.edges
+  .filter((edge) => edge.type !== 'topic-tag')
+  .sort((a, b) => b.confidence - a.confidence)
+  .slice(0, 4);
+const latestGenerated = memory.generatedAt
+  ? new Intl.DateTimeFormat('ko', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(memory.generatedAt))
+  : null;
+const thoughtLabels = new Map(memory.thoughts.map((thought) => [thought.slug, thought.claimKo]));
+const topicLabels = new Map(memory.topics.map((topic) => [`topic:${topic.slug}`, topic.label]));
+
+function memoryNodeLabel(id: string) {
+  return thoughtLabels.get(id) ?? topicLabels.get(id) ?? id;
+}
+
+function sourceCountLabel(count: number) {
+  return count === 1 ? '1 source' : `${count} sources`;
+}
+
+function sourceHref(source: { path?: string; url?: string }) {
+  if (source.url) {
+    return source.url;
+  }
+
+  if (!source.path) {
+    return '#';
+  }
+
+  if (source.path.startsWith('src/content/articles/')) {
+    return `/articles/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
+  }
+
+  if (source.path.startsWith('src/content/analysis/')) {
+    return `/analysis/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
+  }
+
+  if (source.path.startsWith('src/content/ideas/')) {
+    return `/ideas/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
+  }
+
+  if (source.path.startsWith('src/content/reviews/')) {
+    return `/reviews/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
+  }
+
+  if (source.path.startsWith('src/content/travel/')) {
+    return `/travel/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
+  }
+
+  return '#';
+}
+---
+
+<BaseLayout title="Memory · beyondwin" description="공개해도 되는 생각, 근거, 주제를 다시 찾기 위한 개인 메모리.">
+  <section class="shell memory-hero">
+    <div class="memory-hero__copy">
+      <p class="memory-eyebrow">Memory</p>
+      <h1>Memory</h1>
+      <p>글로 완성되기 전의 생각과 글을 쓰고 난 뒤 남은 판단을 모아 둡니다. 비공개 메모는 제외하고, 다시 읽을 수 있는 생각과 근거만 공개합니다.</p>
+    </div>
+    <dl class="memory-stats" aria-label="Memory statistics">
+      <div><dt>Thoughts</dt><dd>{memory.counts.thoughts}</dd></div>
+      <div><dt>Topics</dt><dd>{memory.counts.topics}</dd></div>
+      <div><dt>Edges</dt><dd>{memory.counts.edges}</dd></div>
+      <div><dt>Sources</dt><dd>{memory.counts.sources}</dd></div>
+    </dl>
+  </section>
+
+  <section class="shell memory-shell" data-memory-tabs>
+    {hasThoughts ? (
+      <>
+        <div class="memory-toolbar">
+          <label>
+            <span>Search memory</span>
+            <input type="search" placeholder="topic, claim, source" data-memory-search />
+          </label>
+          <p>{latestGenerated ? `Last projected ${latestGenerated}` : 'Projection date unavailable'}</p>
+        </div>
+
+        <div class="memory-tabs" role="tablist" aria-label="Memory views">
+          <button class="memory-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="memory-map" data-memory-tab="memory-map">Workbench</button>
+          <button class="memory-tab" type="button" role="tab" aria-selected="false" aria-controls="memory-library" data-memory-tab="memory-library">Library</button>
+          <button class="memory-tab" type="button" role="tab" aria-selected="false" aria-controls="memory-sources" data-memory-tab="memory-sources">Sources</button>
+        </div>
+
+        <div class="memory-panel is-active" id="memory-map" role="tabpanel">
+          <div class="memory-workbench">
+            <aside class="memory-topic-index" aria-label="Memory topics">
+              <h2>Topics</h2>
+              <div class="memory-topic-links">
+                {memory.topics.map((topic) => (
+                  <a href={`#topic-${topic.slug}`}>
+                    <span>{topic.label}</span>
+                    <b>{topic.count}</b>
+                  </a>
+                ))}
+              </div>
+            </aside>
+            <div class="memory-thought-stack" aria-label="Public thoughts">
+              {memory.thoughts.map((thought) => (
+                <article class="memory-thought-row" id={`thought-${thought.slug}`} data-memory-item data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}>
+                  <div>
+                    <span>{thought.memoryType}</span>
+                    <h2>{thought.claimKo}</h2>
+                    <p>{thought.claimEn}</p>
+                  </div>
+                  <div class="memory-chip-row">
+                    {thought.topics.map((topic) => <a href={`#topic-${topic}`}>{topic}</a>)}
+                    <span>{sourceCountLabel(thought.sources.length)}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <aside class="memory-detail" aria-label="Selected thought">
+              <p class="memory-eyebrow">Pinned</p>
+              <h2>{firstThought.claimKo}</h2>
+              <p>{firstThought.body}</p>
+              <div class="memory-chip-row">
+                <span>{firstThought.memoryType}</span>
+                {firstThought.topics.map((topic) => <span>{topic}</span>)}
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="memory-panel" id="memory-library" role="tabpanel" hidden>
+          <div class="memory-library">
+            {memory.topics.map((topic) => (
+              <section class="memory-topic" id={`topic-${topic.slug}`}>
+                <div>
+                  <h2>{topic.label}</h2>
+                  <p>{topic.count} public thoughts</p>
+                </div>
+                <div class="memory-thought-list">
+                  {memory.thoughts
+                    .filter((thought) => thought.topics.includes(topic.label))
+                    .map((thought) => (
+                      <article class="memory-thought-card" id={`thought-${thought.slug}`}>
+                        <h3>{thought.claimKo}</h3>
+                        <p>{thought.claimEn}</p>
+                        <div class="memory-chip-row">
+                          <span>{thought.memoryType}</span>
+                          <span>{sourceCountLabel(thought.sources.length)}</span>
+                        </div>
+                      </article>
+                    ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+
+        <div class="memory-panel" id="memory-sources" role="tabpanel" hidden>
+          {strongestEdges.length > 0 && (
+            <div class="memory-edge-list" aria-label="Memory relationships">
+              <h2>Relationships</h2>
+              {strongestEdges.map((edge) => (
+                <p><span>{edge.type}</span>{memoryNodeLabel(edge.from)} → {memoryNodeLabel(edge.to)}</p>
+              ))}
+            </div>
+          )}
+          <div class="memory-source-grid">
+            {memory.sources.map((source) => (
+              <a class="memory-source-card" href={sourceHref(source)}>
+                <span>{source.kind}</span>
+                <h2>{source.title}</h2>
+                <p>{source.count} linked thoughts{source.date ? ` · ${source.date}` : ''}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </>
+    ) : (
+      <div class="empty-state">
+        <p>No public memory projection yet. Run <code>npm run memory:project</code> after adding accepted public thoughts.</p>
+      </div>
+    )}
+  </section>
+
+  <script>
+    const root = document.querySelector('[data-memory-tabs]');
+    if (root) {
+      const tabs = Array.from(root.querySelectorAll('[data-memory-tab]'));
+      const panels = Array.from(root.querySelectorAll('.memory-panel'));
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const target = tab.getAttribute('data-memory-tab');
+
+          tabs.forEach((item) => {
+            const selected = item === tab;
+            item.classList.toggle('is-active', selected);
+            item.setAttribute('aria-selected', String(selected));
+          });
+
+          panels.forEach((panel) => {
+            const selected = panel.id === target;
+            panel.classList.toggle('is-active', selected);
+            panel.toggleAttribute('hidden', !selected);
+          });
+        });
+      });
+
+      const search = root.querySelector('[data-memory-search]');
+      const items = Array.from(root.querySelectorAll('[data-memory-item]'));
+
+      search?.addEventListener('input', () => {
+        const query = search instanceof HTMLInputElement ? search.value.trim().toLowerCase() : '';
+
+        items.forEach((item) => {
+          const text = item.getAttribute('data-memory-text')?.toLowerCase() ?? '';
+          item.toggleAttribute('hidden', query.length > 0 && !text.includes(query));
+        });
+      });
+    }
+  </script>
+</BaseLayout>

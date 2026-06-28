@@ -1,0 +1,22 @@
+---
+import StatusBadge from './StatusBadge.astro';
+
+interface Props {
+  sourceUrl: string;
+  sourceTitle: string;
+  comment: string;
+  format: string;
+  status: string;
+}
+
+const { sourceUrl, sourceTitle, comment, format, status } = Astro.props;
+---
+
+<aside class="side-panel" aria-label="Source information">
+  <h2>Source</h2>
+  <p><strong>{sourceTitle}</strong></p>
+  <p><a href={sourceUrl} target="_blank" rel="noreferrer">Open original URL</a></p>
+  <p>{comment}</p>
+  <p><StatusBadge label={format} /></p>
+  <p>Status: {status}</p>
+</aside>

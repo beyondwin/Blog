@@ -1,0 +1,194 @@
+# Source of truth for docs/INDEX.md.
+# Keep entries sorted by topic, then title.
+# Exclude executor-skill experiment records from this library index unless they
+# are later promoted into curated notes.
+
+- title: Redis, Optimistic Lock, UPSERT로 타임딜 재고 차감 설계하기
+  path: docs/notes/backend/concurrency/time-deal-stock-decrement-redis-db_kr.md
+  topic: backend/concurrency
+  type: guide
+  language: ko
+  status: organized
+  summary: Beginner-friendly rewrite and fact-check of a Redis, PostgreSQL optimistic lock, and UPSERT based time-deal stock decrement design.
+  source: https://ditto-dev.tistory.com/110
+  updated: 2026-05-01
+
+- title: 구독앱 수익화 가이드
+  path: docs/notes/business/mobile-apps/subscription-app-guide-insights_kr.md
+  topic: business/mobile-apps
+  type: research-note
+  language: ko
+  status: organized
+  summary: iOS subscription app monetization guide covering category selection, paid acquisition, paywalls, retention, and small-budget validation.
+  source: https://x.com/dalgom_bami/status/2048957916246610151
+  updated: 2026-04-29
+
+- title: CS 면접 대비 데이터베이스 질문 4-49
+  path: docs/notes/career/backend-interviews/cs-database-interview-questions_kr.md
+  topic: career/backend-interviews
+  type: guide
+  language: ko
+  status: organized
+  summary: Database interview preparation guide covering transactions, isolation levels, locks, indexes, RDBMS versus NoSQL, connection pools, and operations.
+  source: https://www.inflearn.com/course/cs-interview-prepara-1?cid=341793
+  updated: 2026-04-29
+
+- title: 분산처리와 서버 확장 전략 면접 가이드
+  path: docs/notes/career/backend-interviews/distributed-scaling-architecture-interview_kr.md
+  topic: career/backend-interviews
+  type: guide
+  language: ko
+  status: organized
+  summary: Backend architecture interview guide covering load balancing, read replicas, caching, queues, partitioning, sharding, and failure isolation.
+  source: unknown
+  updated: 2026-04-29
+
+- title: beyondwin Project Documentation
+  path: docs/notes/project/README.md
+  topic: project
+  type: reference
+  language: en
+  status: organized
+  summary: Entry point for project-level documentation covering local setup, publishing workflows, architecture reference, and design rationale.
+  source: README.md
+  updated: 2026-06-25
+
+- title: Getting Started With beyondwin
+  path: docs/notes/project/getting-started.md
+  topic: project
+  type: tutorial
+  language: en
+  status: organized
+  summary: First-run tutorial for installing dependencies, validating the project, running the Astro site, and tracing one MDX file to its route.
+  source: README.md
+  updated: 2026-06-25
+
+- title: How to Publish And Maintain Content
+  path: docs/notes/project/publishing-workflows.md
+  topic: project
+  type: guide
+  language: en
+  status: organized
+  summary: Task guide for ordinary posts, reviews, ideas, travel notes, source-grounded articles, queue sync, memory projection, and archive docs.
+  source: src/content.config.ts
+  updated: 2026-06-25
+
+- title: Project Architecture Reference
+  path: docs/notes/project/architecture-reference.md
+  topic: project
+  type: reference
+  language: en
+  status: organized
+  summary: Technical reference for the Astro routes, content schemas, helper contracts, memory projection, scripts, validation gates, tests, and docs graph layers.
+  source: src/content.config.ts
+  updated: 2026-06-25
+
+- title: Why beyondwin Is Structured This Way
+  path: docs/notes/project/design-and-content-rationale.md
+  topic: project
+  type: explanation
+  language: en
+  status: organized
+  summary: Explanation of the typed content lanes, private-first memory boundary, source-grounded article gates, docs layers, and restrained design system.
+  source: PRODUCT.md
+  updated: 2026-06-25
+
+- title: Archive Docs Organizer
+  path: docs/notes/skills/archive-docs-organizer.md
+  topic: skills/agent-workflows
+  type: workflow
+  language: en
+  status: organized
+  summary: Operating note for sorting Archive inbox documents into raw sources, curated notes, and index metadata.
+  source: local archive-docs-organizer skill
+  updated: 2026-04-29
+
+- title: mattpocock/skills 레포 분석
+  path: docs/notes/skills/mattpocock-skills-repo-analysis.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Analysis of the mattpocock/skills repository as a set of composable engineering protocols for AI coding agents.
+  source: https://github.com/mattpocock/skills
+  updated: 2026-04-29
+
+- title: Research Article Workflow
+  path: docs/notes/skills/research-article-workflow.md
+  topic: skills/agent-workflows
+  type: workflow
+  language: en
+  status: organized
+  summary: Repeatable workflow for turning a keyword, URL, GitHub repository, or social thread into a source-backed public article.
+  source: internal workflow
+  updated: 2026-06-25
+
+- title: Hermes Agent Persistent Worker Runtime Research Packet
+  path: docs/notes/article-factory/hermes-agent-persistent-worker-runtime.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Internal evidence packet for the published Hermes Agent article, including the supplied Korean report review, local source inspection, issue verification, and junior explanation notes.
+  source: src/content/articles/hermes-agent-persistent-worker-runtime.mdx
+  updated: 2026-06-29
+
+- title: LazyCodex Agent Harness Analysis Research Packet
+  path: docs/notes/article-factory/lazycodex-agent-harness-analysis.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Internal evidence packet for the published LazyCodex article, including source inventory, static source inspection, evidence ledger, and junior explanation notes.
+  source: src/content/articles/lazycodex-agent-harness-analysis.mdx
+  updated: 2026-06-25
+
+- title: Ponytail Agent Minimalism Analysis Research Packet
+  path: docs/notes/article-factory/ponytail-agent-minimalism-analysis.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Internal evidence packet for the published Ponytail article, including source inventory, local clone inspection, adapter map, benchmark reading notes, and adoption risks.
+  source: src/content/articles/ponytail-agent-minimalism-analysis.mdx
+  updated: 2026-06-25
+
+- title: GStack + Superpowers 발표자료용 초압축 버전
+  path: docs/notes/skills/gstack-superpowers/gstack-superpowers-slides.md
+  topic: skills/gstack-superpowers
+  type: reference
+  language: ko
+  status: organized
+  summary: Slide-ready compressed outline explaining the GStack and Superpowers workflow for Claude Code.
+  source: docs/notes/skills/gstack-superpowers/gstack-superpowers-analysis.md
+  updated: 2026-04-29
+
+- title: GStack + Superpowers 작업 방식 요약
+  path: docs/notes/skills/gstack-superpowers/gstack-superpowers-summary.md
+  topic: skills/gstack-superpowers
+  type: guide
+  language: ko
+  status: organized
+  summary: Practical summary of how to combine GStack and Superpowers for planning, worktree separation, subagents, and review.
+  source: docs/notes/skills/gstack-superpowers/gstack-superpowers-analysis.md
+  updated: 2026-04-29
+
+- title: GStack + Superpowers는 어떻게 같이 쓰면 좋을까
+  path: docs/notes/skills/gstack-superpowers/gstack-superpowers-blog.md
+  topic: skills/gstack-superpowers
+  type: guide
+  language: ko
+  status: organized
+  summary: Blog-style explanation of using GStack and Superpowers to structure Claude Code work before implementation.
+  source: docs/notes/skills/gstack-superpowers/gstack-superpowers-analysis.md
+  updated: 2026-04-29
+
+- title: GStack + Superpowers로 클로드코드 완전히 달라진 사람의 후기 분석 문서
+  path: docs/notes/skills/gstack-superpowers/gstack-superpowers-analysis.md
+  topic: skills/gstack-superpowers
+  type: research-note
+  language: ko
+  status: organized
+  summary: Detailed analysis of a Maker Evan video about using GStack and Superpowers to structure Claude Code workflows.
+  source: https://www.youtube.com/watch?v=af3OJ0L1jEU
+  updated: 2026-04-29
