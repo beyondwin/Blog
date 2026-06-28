@@ -1,0 +1,29 @@
+---
+import ContentCard from '../../components/ContentCard.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllContent, getAllTags } from '../../lib/content';
+
+export async function getStaticPaths() {
+  const tags = await getAllTags();
+  return tags.map((tag) => ({
+    params: { tag },
+    props: { tag },
+  }));
+}
+
+const { tag } = Astro.props;
+const entries = (await getAllContent()).filter((entry) => entry.data.tags.includes(tag));
+---
+
+<BaseLayout title={`${tag} · beyondwin`} description={`${tag} 태그가 붙은 글.`}>
+  <section class="shell hero">
+    <p class="site-label">Tag</p>
+    <h1>{tag}</h1>
+    <p>이 주제로 묶인 공개 글입니다.</p>
+  </section>
+  <section class="shell">
+    <div class="content-grid">
+      {entries.map((entry) => <ContentCard entry={entry} />)}
+    </div>
+  </section>
+</BaseLayout>

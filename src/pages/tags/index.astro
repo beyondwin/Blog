@@ -1,0 +1,30 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getAllTags } from '../../lib/content';
+
+const tags = await getAllTags();
+---
+
+<BaseLayout title="Tags · beyondwin" description="주제별로 글을 찾아봅니다.">
+  <section class="shell hero">
+    <p class="site-label">Index</p>
+    <h1>Tags</h1>
+    <p>글을 쓴 날짜보다 다시 찾을 때 떠올리는 단어를 기준으로 묶었습니다.</p>
+  </section>
+  <section class="shell">
+    {tags.length > 0 ? (
+      <div class="tag-index">
+        {tags.map((tag) => (
+          <a href={`/tags/${encodeURIComponent(tag)}/`}>
+            <span>{tag}</span>
+            <small>Browse</small>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <div class="empty-state">
+        <p>No tags yet.</p>
+      </div>
+    )}
+  </section>
+</BaseLayout>

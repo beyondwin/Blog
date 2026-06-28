@@ -1,0 +1,27 @@
+---
+import ContentCard from '../../components/ContentCard.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { collectionMeta, getContentByCollection } from '../../lib/content';
+
+const entries = await getContentByCollection('analysis');
+const meta = collectionMeta.analysis;
+---
+
+<BaseLayout title="Analysis · beyondwin" description={meta.description}>
+  <section class="shell hero">
+    <p class="site-label">Research</p>
+    <h1>{meta.navLabel}</h1>
+    <p>{meta.description}</p>
+  </section>
+  <section class="shell">
+    {entries.length > 0 ? (
+      <div class="content-grid">
+        {entries.map((entry) => <ContentCard entry={entry} />)}
+      </div>
+    ) : (
+      <div class="empty-state">
+        <p>No published analysis yet.</p>
+      </div>
+    )}
+  </section>
+</BaseLayout>

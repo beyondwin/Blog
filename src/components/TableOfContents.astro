@@ -1,0 +1,21 @@
+---
+interface TocItem {
+  href: string;
+  label: string;
+}
+
+interface Props {
+  items: TocItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<aside class="side-panel" aria-label="Article structure">
+  <h2>Structure</h2>
+  <ol class="toc-list">
+    {items.map((item) => (
+      <li><a href={item.href}>{item.label}</a></li>
+    ))}
+  </ol>
+</aside>

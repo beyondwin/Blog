@@ -1,0 +1,152 @@
+---
+import ContentCard from '../components/ContentCard.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import {
+  collectionMeta,
+  formatDate,
+  getAllContent,
+  getEntryDate,
+  getEntryHref,
+  getHomeSections,
+} from '../lib/content';
+import { loadPublicMemoryData } from '../lib/memoryData';
+
+const entries = await getAllContent();
+const sections = await getHomeSections();
+const memory = loadPublicMemoryData();
+const editorialPool = [...sections.articles, ...sections.analysis].sort((a, b) => {
+  return getEntryDate(b).getTime() - getEntryDate(a).getTime();
+});
+const featured = editorialPool[0] ?? entries[0];
+const leadStack = editorialPool.slice(featured ? 1 : 0, featured ? 4 : 5);
+const latest = entries
+  .filter((entry) => entry.id !== featured?.id || entry.collection !== featured?.collection)
+  .slice(0, 8);
+const articleTags = Array.from(
+  new Set(editorialPool.flatMap((entry) => entry.data.tags)),
+).slice(0, 12);
+const homeCollections = ['articles', 'analysis', 'reviews', 'ideas', 'memory'] as const;
+const sectionLabels = {
+  articles: '개발',
+  analysis: '분석',
+  reviews: '독서',
+  ideas: '아이디어',
+  memory: '메모리',
+};
+const homeLanes = homeCollections.map((collection) => {
+  if (collection === 'memory') {
+    return {
+      href: '/memory/',
+      label: sectionLabels.memory,
+      count: memory.counts.thoughts,
+      description: '공개 가능한 생각, 근거, 주제를 다시 찾기 위한 메모리입니다.',
+    };
+  }
+
+  return {
+    href: collectionMeta[collection].href,
+    label: sectionLabels[collection],
+    count: sections[collection].length,
+    description: collectionMeta[collection].description,
+  };
+});
+---
+
+<BaseLayout>
+  <section class="shell home-hero">
+    <div class="home-hero__copy">
+      <p class="site-label">Articles / Analysis / Reusable judgement</p>
+      <h1>읽고, 실행하고, 다시 판단할 수 있게 남깁니다.</h1>
+      <p>
+        에이전트 워크플로우, 개발 도구, 제품 구조를 직접 확인한 뒤
+        나중에 같은 결정을 내릴 때 꺼내 쓸 수 있는 기술 글로 정리합니다.
+      </p>
+      <div class="home-hero__actions" aria-label="Primary actions">
+        <a href="/articles/">Articles</a>
+        <a href="/analysis/">Analysis</a>
+      </div>
+    </div>
+    <aside class="home-hero__panel" aria-label="Archive summary">
+      <strong>현재 색인</strong>
+      <span><em>Articles</em><b>{sections.articles.length}</b></span>
+      <span><em>Analysis</em><b>{sections.analysis.length}</b></span>
+      <span><em>All notes</em><b>{entries.length}</b></span>
+      <span><em>Memory</em><b><a href="/memory/">Map</a></b></span>
+    </aside>
+  </section>
+
+  <section class="shell editorial-grid" aria-label="Featured writing">
+    {featured ? (
+      <a class="featured-entry" href={getEntryHref(featured)}>
+        <span class="featured-entry__label">{collectionMeta[featured.collection].navLabel} · Featured</span>
+        <h2>{featured.data.title}</h2>
+        <p>{featured.data.description}</p>
+        <small>{formatDate(getEntryDate(featured))}</small>
+      </a>
+    ) : (
+      <div class="featured-entry">
+        <span class="featured-entry__label">Latest</span>
+        <h2>아직 공개 글이 없습니다.</h2>
+        <p>MDX 파일을 추가하면 이 영역에 최신 글이 표시됩니다.</p>
+      </div>
+    )}
+
+    <div class="latest-list latest-list--lead">
+      <div class="section-heading">
+        <h2>Start here</h2>
+        <a href="/articles/">전체 Articles</a>
+      </div>
+      {leadStack.length > 0 ? (
+        <ol>
+          {leadStack.map((entry) => (
+            <li>
+              <a href={getEntryHref(entry)}>
+                <span>{collectionMeta[entry.collection].navLabel}</span>
+                <strong>{entry.data.title}</strong>
+                <time>{formatDate(getEntryDate(entry))}</time>
+              </a>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p class="muted">새 글이 추가되면 최신 목록이 채워집니다.</p>
+      )}
+    </div>
+  </section>
+
+  <section class="shell lane-strip" aria-label="Writing categories">
+    {homeLanes.map((lane) => (
+      <a class="lane-link" href={lane.href}>
+        <span>{lane.label}</span>
+        <strong>{lane.count}</strong>
+        <p>{lane.description}</p>
+      </a>
+    ))}
+  </section>
+
+  <section class="shell archive-section">
+    <div class="section-heading">
+      <div>
+        <h2>Latest stories</h2>
+        <p>최근 글을 먼저 훑고, 태그로 다시 좁힙니다.</p>
+      </div>
+      <a href="/tags/">태그 색인</a>
+    </div>
+    {articleTags.length > 0 && (
+      <nav class="topic-rack" aria-label="Article topics">
+        {articleTags.map((tag) => (
+          <a href={`/tags/${encodeURIComponent(tag)}/`}>{tag}</a>
+        ))}
+      </nav>
+    )}
+    {entries.length > 0 ? (
+      <div class="content-grid content-grid--index">
+        {latest.map((entry) => <ContentCard entry={entry} />)}
+      </div>
+    ) : (
+      <div class="empty-state">
+        <p>No published content yet.</p>
+      </div>
+    )}
+  </section>
+</BaseLayout>

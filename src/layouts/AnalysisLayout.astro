@@ -1,0 +1,49 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import SourcePanel from '../components/SourcePanel.astro';
+import TableOfContents from '../components/TableOfContents.astro';
+import BaseLayout from './BaseLayout.astro';
+import { formatDate, getEntryDate } from '../lib/content';
+
+interface Props {
+  entry: CollectionEntry<'analysis'>;
+}
+
+const { entry } = Astro.props;
+const date = getEntryDate(entry);
+const tocItems = [
+  { href: '#summary', label: 'Summary' },
+  { href: '#core-argument', label: 'Core argument' },
+  { href: '#counterpoints', label: 'Counterpoints' },
+  { href: '#takeaways', label: 'Takeaways' },
+];
+---
+
+<BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
+  <div class="shell article-shell article-shell--with-sidebars">
+    <TableOfContents items={tocItems} />
+    <article class="article-body">
+      <div class="article-kicker">
+        <span>{entry.data.format}</span>
+        <span>{formatDate(date)}</span>
+      </div>
+      <h1>{entry.data.title}</h1>
+      <p class="description">{entry.data.description}</p>
+      {entry.data.tags.length > 0 && (
+        <ul class="tag-list article-tag-list" aria-label="Tags">
+          {entry.data.tags.map((tag) => <li>{tag}</li>)}
+        </ul>
+      )}
+      <div class="prose">
+        <slot />
+      </div>
+    </article>
+    <SourcePanel
+      sourceUrl={entry.data.sourceUrl}
+      sourceTitle={entry.data.sourceTitle}
+      comment={entry.data.comment}
+      format={entry.data.format}
+      status={entry.data.status}
+    />
+  </div>
+</BaseLayout>

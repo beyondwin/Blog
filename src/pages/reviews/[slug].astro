@@ -1,0 +1,20 @@
+---
+import { getCollection, render } from 'astro:content';
+import Callout from '../../components/Callout.astro';
+import ReviewLayout from '../../layouts/ReviewLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('reviews', ({ data }) => !data.draft);
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<ReviewLayout entry={entry}>
+  <Content components={{ Callout }} />
+</ReviewLayout>

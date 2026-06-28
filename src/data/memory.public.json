@@ -1,0 +1,522 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-28T23:21:26.635Z",
+  "counts": {
+    "thoughts": 7,
+    "topics": 12,
+    "edges": 25,
+    "sources": 7
+  },
+  "thoughts": [
+    {
+      "slug": "agent-harnesses-are-operating-systems",
+      "claimKo": "코딩 에이전트 하네스의 가치는 모델 성능보다 작업 순서와 검증 습관을 강제하는 데 있다.",
+      "claimEn": "The value of a coding-agent harness is less about model intelligence and more about enforcing work order and verification habits.",
+      "memoryType": "semantic",
+      "origin": "kws",
+      "topics": [
+        "ai-workflow",
+        "agent-workflows",
+        "codex"
+      ],
+      "theses": [
+        "ai-workflow-quality",
+        "tool-adoption"
+      ],
+      "sources": [
+        "srccontentarticleslazycodex-agent-harness-analysismdx"
+      ],
+      "body": "LazyCodex is useful to remember as an operating layer, not as a smarter model.\nIts important pieces are project memory, planning, hooks, MCP tools, execution state, and completion evidence.",
+      "position": {
+        "x": 88,
+        "y": 50
+      }
+    },
+    {
+      "slug": "agent-workflows-need-review-gates",
+      "claimKo": "에이전트 워크플로우는 실행보다 먼저 검토 게이트와 명확한 handoff를 가져야 한다.",
+      "claimEn": "Agent workflows need review gates and explicit handoffs before execution.",
+      "memoryType": "procedural",
+      "origin": "kws",
+      "topics": [
+        "ai-workflow",
+        "agent-workflows"
+      ],
+      "theses": [
+        "ai-workflow-quality"
+      ],
+      "sources": [
+        "docsimplementationmemory-second-brainmd"
+      ],
+      "body": "This thought connects the public memory system to the existing workflow notes.\nIt is useful as a bridge between planning discipline and implementation quality.",
+      "position": {
+        "x": 73.69,
+        "y": 79.71
+      }
+    },
+    {
+      "slug": "ai-design-tools-need-judgment-loops",
+      "claimKo": "AI 디자인 도구의 핵심 가치는 자동 제작보다 더 많은 시안을 빠르게 판단 가능한 형태로 만드는 데 있다.",
+      "claimEn": "The core value of AI design tools is not automatic production but turning more options into forms that can be judged quickly.",
+      "memoryType": "semantic",
+      "origin": "kws",
+      "topics": [
+        "ai-design",
+        "design-systems",
+        "frontend"
+      ],
+      "theses": [
+        "design-quality",
+        "ai-workflow-quality"
+      ],
+      "sources": [
+        "srccontentarticlesai-design-referencesmdx"
+      ],
+      "body": "This thought should guide future UI work: tools are useful only when they improve comparison, critique, and systemization.\nIt is a guardrail against treating generation volume as design quality.",
+      "position": {
+        "x": 41.54,
+        "y": 87.05
+      }
+    },
+    {
+      "slug": "context-quality-is-routing-problem",
+      "claimKo": "컨텍스트 품질은 프롬프트 문장력이 아니라 라우팅과 검증 구조의 문제다.",
+      "claimEn": "Context quality is a routing and verification problem, not just prompt wording.",
+      "memoryType": "semantic",
+      "origin": "kws",
+      "topics": [
+        "ai-workflow",
+        "context-engineering"
+      ],
+      "theses": [
+        "ai-workflow-quality"
+      ],
+      "sources": [
+        "srccontentarticlescontext-refinement-system-designmdx"
+      ],
+      "body": "This thought is the first public memory seed for the context refinement article.\nIt anchors the memory page around routing, validation, and answer quality.",
+      "position": {
+        "x": 15.76,
+        "y": 66.49
+      }
+    },
+    {
+      "slug": "local-agent-products-are-work-shells",
+      "claimKo": "로컬 AI 제품의 차별점은 모델 호출이 아니라 사용자의 도구와 파일을 어떤 작업 셸로 묶는지에서 생긴다.",
+      "claimEn": "The differentiation of local AI products comes from the work shell around a user's tools and files, not from model calls alone.",
+      "memoryType": "semantic",
+      "origin": "kws",
+      "topics": [
+        "ai-workflow",
+        "local-first",
+        "design-systems"
+      ],
+      "theses": [
+        "tool-adoption",
+        "ai-workflow-quality"
+      ],
+      "sources": [
+        "srccontentarticlesopen-design-repo-analysismdx"
+      ],
+      "body": "Open Design and LazyCodex both point to the same product pattern: the agent is only one part of the workflow.\nThe durable product surface is the shell that connects prompts, files, preview, review, and repeatable rules.",
+      "position": {
+        "x": 15.76,
+        "y": 33.51
+      }
+    },
+    {
+      "slug": "memory-needs-retrieval-not-decoration",
+      "claimKo": "Second brain 화면은 장식용 그래프보다 검색, 주제, 근거 연결처럼 다시 찾는 동작을 먼저 제공해야 한다.",
+      "claimEn": "A second-brain screen should prioritize retrieval actions like search, topics, and source links over decorative graphs.",
+      "memoryType": "procedural",
+      "origin": "kws",
+      "topics": [
+        "memory-system",
+        "site-design",
+        "readability"
+      ],
+      "theses": [
+        "personal-archive",
+        "design-quality"
+      ],
+      "sources": [
+        "srcpagesmemoryastro"
+      ],
+      "body": "This thought captures the current direction for the Memory tab.\nGraph views can return later, but the default surface should help readers find claims, topics, sources, and relationships quickly.",
+      "position": {
+        "x": 41.54,
+        "y": 12.95
+      }
+    },
+    {
+      "slug": "personal-sites-should-show-records-first",
+      "claimKo": "개인 블로그 첫 화면은 추상적인 가치 제안보다 실제 글과 분류가 먼저 보여야 신뢰가 생긴다.",
+      "claimEn": "A personal blog earns trust when the first screen shows actual writing and categories before abstract value propositions.",
+      "memoryType": "reflective",
+      "origin": "kws",
+      "topics": [
+        "site-design",
+        "writing-system",
+        "readability"
+      ],
+      "theses": [
+        "design-quality",
+        "personal-archive"
+      ],
+      "sources": [
+        "designmd"
+      ],
+      "body": "This came from removing product-like copy from the home page.\nThe site should feel like an archive with a point of view, not a SaaS landing page describing itself.",
+      "position": {
+        "x": 73.69,
+        "y": 20.29
+      }
+    }
+  ],
+  "topics": [
+    {
+      "id": "topic:agent-workflows",
+      "slug": "agent-workflows",
+      "label": "agent-workflows",
+      "count": 2,
+      "position": {
+        "x": 88,
+        "y": 50
+      }
+    },
+    {
+      "id": "topic:ai-design",
+      "slug": "ai-design",
+      "label": "ai-design",
+      "count": 1,
+      "position": {
+        "x": 82.91,
+        "y": 69
+      }
+    },
+    {
+      "id": "topic:ai-workflow",
+      "slug": "ai-workflow",
+      "label": "ai-workflow",
+      "count": 4,
+      "position": {
+        "x": 69,
+        "y": 82.91
+      }
+    },
+    {
+      "id": "topic:codex",
+      "slug": "codex",
+      "label": "codex",
+      "count": 1,
+      "position": {
+        "x": 50,
+        "y": 88
+      }
+    },
+    {
+      "id": "topic:context-engineering",
+      "slug": "context-engineering",
+      "label": "context-engineering",
+      "count": 1,
+      "position": {
+        "x": 31,
+        "y": 82.91
+      }
+    },
+    {
+      "id": "topic:design-systems",
+      "slug": "design-systems",
+      "label": "design-systems",
+      "count": 2,
+      "position": {
+        "x": 17.09,
+        "y": 69
+      }
+    },
+    {
+      "id": "topic:frontend",
+      "slug": "frontend",
+      "label": "frontend",
+      "count": 1,
+      "position": {
+        "x": 12,
+        "y": 50
+      }
+    },
+    {
+      "id": "topic:local-first",
+      "slug": "local-first",
+      "label": "local-first",
+      "count": 1,
+      "position": {
+        "x": 17.09,
+        "y": 31
+      }
+    },
+    {
+      "id": "topic:memory-system",
+      "slug": "memory-system",
+      "label": "memory-system",
+      "count": 1,
+      "position": {
+        "x": 31,
+        "y": 17.09
+      }
+    },
+    {
+      "id": "topic:readability",
+      "slug": "readability",
+      "label": "readability",
+      "count": 2,
+      "position": {
+        "x": 50,
+        "y": 12
+      }
+    },
+    {
+      "id": "topic:site-design",
+      "slug": "site-design",
+      "label": "site-design",
+      "count": 2,
+      "position": {
+        "x": 69,
+        "y": 17.09
+      }
+    },
+    {
+      "id": "topic:writing-system",
+      "slug": "writing-system",
+      "label": "writing-system",
+      "count": 1,
+      "position": {
+        "x": 82.91,
+        "y": 31
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "srccontentarticlesai-design-referencesmdx",
+      "kind": "article",
+      "path": "src/content/articles/ai-design-references.mdx",
+      "title": "AI 디자인 도구를 보는 기준",
+      "date": "2026-05-16",
+      "count": 1
+    },
+    {
+      "id": "designmd",
+      "kind": "design",
+      "path": "DESIGN.md",
+      "title": "beyondwin Design System",
+      "date": "2026-06-25",
+      "count": 1
+    },
+    {
+      "id": "srccontentarticlescontext-refinement-system-designmdx",
+      "kind": "article",
+      "path": "src/content/articles/context-refinement-system-design.mdx",
+      "title": "Context Refinement System 설계 요약",
+      "date": "2026-05-16",
+      "count": 1
+    },
+    {
+      "id": "srccontentarticleslazycodex-agent-harness-analysismdx",
+      "kind": "article",
+      "path": "src/content/articles/lazycodex-agent-harness-analysis.mdx",
+      "title": "LazyCodex는 Codex를 어떻게 제품형 개발 하네스로 바꾸는가",
+      "date": "2026-06-24",
+      "count": 1
+    },
+    {
+      "id": "srcpagesmemoryastro",
+      "kind": "implementation",
+      "path": "src/pages/memory.astro",
+      "title": "Memory page workbench",
+      "date": "2026-06-25",
+      "count": 1
+    },
+    {
+      "id": "docsimplementationmemory-second-brainmd",
+      "kind": "guide",
+      "path": "docs/implementation/memory-second-brain.md",
+      "title": "Memory Second Brain Implementation Reference",
+      "date": "2026-05-24",
+      "count": 1
+    },
+    {
+      "id": "srccontentarticlesopen-design-repo-analysismdx",
+      "kind": "article",
+      "path": "src/content/articles/open-design-repo-analysis.mdx",
+      "title": "Open Design 분석",
+      "date": "2026-05-16",
+      "count": 1
+    }
+  ],
+  "edges": [
+    {
+      "from": "context-quality-is-routing-problem",
+      "to": "agent-workflows-need-review-gates",
+      "type": "supports",
+      "confidence": 0.82,
+      "created": "2026-05-24"
+    },
+    {
+      "from": "agent-harnesses-are-operating-systems",
+      "to": "agent-workflows-need-review-gates",
+      "type": "extends",
+      "confidence": 0.9,
+      "created": "2026-06-25"
+    },
+    {
+      "from": "agent-harnesses-are-operating-systems",
+      "to": "context-quality-is-routing-problem",
+      "type": "supports",
+      "confidence": 0.84,
+      "created": "2026-06-25"
+    },
+    {
+      "from": "local-agent-products-are-work-shells",
+      "to": "agent-harnesses-are-operating-systems",
+      "type": "related",
+      "confidence": 0.78,
+      "created": "2026-06-25"
+    },
+    {
+      "from": "ai-design-tools-need-judgment-loops",
+      "to": "personal-sites-should-show-records-first",
+      "type": "supports",
+      "confidence": 0.76,
+      "created": "2026-06-25"
+    },
+    {
+      "from": "memory-needs-retrieval-not-decoration",
+      "to": "personal-sites-should-show-records-first",
+      "type": "extends",
+      "confidence": 0.82,
+      "created": "2026-06-25"
+    },
+    {
+      "from": "agent-harnesses-are-operating-systems",
+      "to": "topic:ai-workflow",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "agent-harnesses-are-operating-systems",
+      "to": "topic:agent-workflows",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "agent-harnesses-are-operating-systems",
+      "to": "topic:codex",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "agent-workflows-need-review-gates",
+      "to": "topic:ai-workflow",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "agent-workflows-need-review-gates",
+      "to": "topic:agent-workflows",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "ai-design-tools-need-judgment-loops",
+      "to": "topic:ai-design",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "ai-design-tools-need-judgment-loops",
+      "to": "topic:design-systems",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "ai-design-tools-need-judgment-loops",
+      "to": "topic:frontend",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "context-quality-is-routing-problem",
+      "to": "topic:ai-workflow",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "context-quality-is-routing-problem",
+      "to": "topic:context-engineering",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "local-agent-products-are-work-shells",
+      "to": "topic:ai-workflow",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "local-agent-products-are-work-shells",
+      "to": "topic:local-first",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "local-agent-products-are-work-shells",
+      "to": "topic:design-systems",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "memory-needs-retrieval-not-decoration",
+      "to": "topic:memory-system",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "memory-needs-retrieval-not-decoration",
+      "to": "topic:site-design",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "memory-needs-retrieval-not-decoration",
+      "to": "topic:readability",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "personal-sites-should-show-records-first",
+      "to": "topic:site-design",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "personal-sites-should-show-records-first",
+      "to": "topic:writing-system",
+      "type": "topic-tag",
+      "confidence": 1
+    },
+    {
+      "from": "personal-sites-should-show-records-first",
+      "to": "topic:readability",
+      "type": "topic-tag",
+      "confidence": 1
+    }
+  ],
+  "excluded": {
+    "private": 0,
+    "notAccepted": 0,
+    "notPublicSurface": 0,
+    "missingSource": 0,
+    "invalidSource": 0,
+    "unsupportedSchema": 0
+  }
+}

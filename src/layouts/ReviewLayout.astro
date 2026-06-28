@@ -1,0 +1,32 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from './BaseLayout.astro';
+import { formatDate, getEntryDate } from '../lib/content';
+
+interface Props {
+  entry: CollectionEntry<'reviews'>;
+}
+
+const { entry } = Astro.props;
+const date = getEntryDate(entry);
+---
+
+<BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
+  <div class="shell article-shell">
+    <article class="article-body">
+      <div class="article-kicker">
+        <span>Review</span>
+        <span>{formatDate(date)}</span>
+      </div>
+      <h1>{entry.data.title}</h1>
+      {entry.data.coverImage && (
+        <figure class="review-cover">
+          <img src={entry.data.coverImage} alt={`${entry.data.itemTitle} 도서 표지`} loading="eager" decoding="async" />
+        </figure>
+      )}
+      <div class="prose">
+        <slot />
+      </div>
+    </article>
+  </div>
+</BaseLayout>

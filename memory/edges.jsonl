@@ -1,0 +1,6 @@
+{"from":"context-quality-is-routing-problem","to":"agent-workflows-need-review-gates","type":"supports","confidence":0.82,"created":"2026-05-24"}
+{"from":"agent-harnesses-are-operating-systems","to":"agent-workflows-need-review-gates","type":"extends","confidence":0.9,"created":"2026-06-25"}
+{"from":"agent-harnesses-are-operating-systems","to":"context-quality-is-routing-problem","type":"supports","confidence":0.84,"created":"2026-06-25"}
+{"from":"local-agent-products-are-work-shells","to":"agent-harnesses-are-operating-systems","type":"related","confidence":0.78,"created":"2026-06-25"}
+{"from":"ai-design-tools-need-judgment-loops","to":"personal-sites-should-show-records-first","type":"supports","confidence":0.76,"created":"2026-06-25"}
+{"from":"memory-needs-retrieval-not-decoration","to":"personal-sites-should-show-records-first","type":"extends","confidence":0.82,"created":"2026-06-25"}

@@ -1,0 +1,54 @@
+# Local brainstorming and design artifacts
+.superpowers/
+.parallel/
+.playwright-cli/
+.impeccable/
+
+# Dependencies
+node_modules/
+
+# Astro and Vercel build output
+.astro/
+.vercel/
+dist/
+
+# Test and coverage output
+coverage/
+
+# Generated knowledge/navigation output
+graphify-out/
+docs/wiki/*
+!docs/wiki/README.md
+docs/_graph/*
+!docs/_graph/README.md
+
+# Local/private archive intake
+docs/_inbox/
+docs/raw/**
+!docs/raw/
+!docs/raw/README.md
+docs/superpowers/
+
+# Local memory review drafts. Public memory thoughts may be committed only after
+# review; private/local drafts should use these ignored names.
+memory/review/*.jsonl
+memory/thoughts/private-*.md
+memory/thoughts/*.local.md
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS and editor noise
+.DS_Store
+.idea/
+.vscode/
+output/playwright
