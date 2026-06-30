@@ -43,55 +43,55 @@
   source: unknown
   updated: 2026-04-29
 
-- title: beyondwin Project Documentation
+- title: beyondwin 프로젝트 문서
   path: docs/notes/project/README.md
   topic: project
   type: reference
-  language: en
+  language: ko
   status: organized
-  summary: Entry point for project-level documentation covering local setup, publishing workflows, architecture reference, and design rationale.
+  summary: 프로젝트 문서 허브. local setup, publishing workflow, architecture reference, design rationale로 이어지는 진입점.
   source: README.md
-  updated: 2026-06-25
+  updated: 2026-06-30
 
-- title: Getting Started With beyondwin
+- title: beyondwin 시작하기
   path: docs/notes/project/getting-started.md
   topic: project
   type: tutorial
-  language: en
+  language: ko
   status: organized
-  summary: First-run tutorial for installing dependencies, validating the project, running the Astro site, and tracing one MDX file to its route.
+  summary: dependency 설치, 전체 검증, Astro dev server 실행, MDX 파일 하나가 route로 이어지는 경로를 확인하는 첫 실행 튜토리얼.
   source: README.md
-  updated: 2026-06-25
+  updated: 2026-06-30
 
-- title: How to Publish And Maintain Content
+- title: 콘텐츠 운영
   path: docs/notes/project/publishing-workflows.md
   topic: project
   type: guide
-  language: en
+  language: ko
   status: organized
-  summary: Task guide for ordinary posts, reviews, ideas, travel notes, source-grounded articles, queue sync, memory projection, and archive docs.
+  summary: 일반 글, 리뷰, 아이디어, 여행 기록, source-grounded article, queue sync, memory projection, archive docs를 운영하는 방법.
   source: src/content.config.ts
-  updated: 2026-06-25
+  updated: 2026-06-30
 
-- title: Project Architecture Reference
+- title: 아키텍처 레퍼런스
   path: docs/notes/project/architecture-reference.md
   topic: project
   type: reference
-  language: en
+  language: ko
   status: organized
-  summary: Technical reference for the Astro routes, content schemas, helper contracts, memory projection, scripts, validation gates, tests, and docs graph layers.
+  summary: Astro route, content schema, helper contract, memory projection, script, validation gate, test, docs graph layer를 정리한 기술 레퍼런스.
   source: src/content.config.ts
-  updated: 2026-06-25
+  updated: 2026-06-30
 
-- title: Why beyondwin Is Structured This Way
+- title: beyondwin이 이렇게 구성된 이유
   path: docs/notes/project/design-and-content-rationale.md
   topic: project
   type: explanation
-  language: en
+  language: ko
   status: organized
-  summary: Explanation of the typed content lanes, private-first memory boundary, source-grounded article gates, docs layers, and restrained design system.
+  summary: typed content lane, private-first memory boundary, source-grounded article gate, docs layer, restrained design system을 택한 이유와 trade-off.
   source: PRODUCT.md
-  updated: 2026-06-25
+  updated: 2026-06-30
 
 - title: Archive Docs Organizer
   path: docs/notes/skills/archive-docs-organizer.md

@@ -19,7 +19,7 @@
 
 - id: project
   name: Project
-  description: Documentation for the beyondwin Astro site, content model, publishing workflows, validation gates, memory projection, and design rationale.
+  description: beyondwin Astro site, content model, publishing workflow, validation gate, memory projection, design rationale를 다루는 프로젝트 문서.
   folder: docs/notes/project
 
 - id: skills/agent-workflows
