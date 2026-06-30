@@ -1,19 +1,20 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { loadPublicMemoryData } from '../lib/memoryData';
+import { buildMemoryLookup, loadPublicMemoryData } from '../lib/memoryData';
 
 const memory = loadPublicMemoryData();
+const lookup = buildMemoryLookup(memory);
 const hasThoughts = memory.thoughts.length > 0;
 const firstThought = memory.thoughts[0];
-const strongestEdges = memory.edges
-  .filter((edge) => edge.type !== 'topic-tag')
-  .sort((a, b) => b.confidence - a.confidence)
-  .slice(0, 4);
 const latestGenerated = memory.generatedAt
   ? new Intl.DateTimeFormat('ko', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(memory.generatedAt))
   : null;
 const thoughtLabels = new Map(memory.thoughts.map((thought) => [thought.slug, thought.claimKo]));
-const topicLabels = new Map(memory.topics.map((topic) => [`topic:${topic.slug}`, topic.label]));
+const topicLabels = new Map(memory.topics.map((topic) => [topic.id, topic.label]));
+const strongestEdges = memory.edges
+  .filter((edge) => edge.type !== 'topic-tag')
+  .sort((a, b) => b.confidence - a.confidence)
+  .slice(0, 4);
 
 function memoryNodeLabel(id: string) {
   return thoughtLabels.get(id) ?? topicLabels.get(id) ?? id;
@@ -23,37 +24,34 @@ function sourceCountLabel(count: number) {
   return count === 1 ? '1 source' : `${count} sources`;
 }
 
-function sourceHref(source: { path?: string; url?: string }) {
-  if (source.url) {
-    return source.url;
-  }
-
-  if (!source.path) {
-    return '#';
-  }
-
-  if (source.path.startsWith('src/content/articles/')) {
-    return `/articles/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
-  }
-
-  if (source.path.startsWith('src/content/analysis/')) {
-    return `/analysis/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
-  }
-
-  if (source.path.startsWith('src/content/ideas/')) {
-    return `/ideas/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
-  }
-
-  if (source.path.startsWith('src/content/reviews/')) {
-    return `/reviews/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
-  }
-
-  if (source.path.startsWith('src/content/travel/')) {
-    return `/travel/${source.path.split('/').pop()?.replace(/\.mdx?$/, '')}/`;
-  }
-
-  return '#';
+function relationshipLabel(edge: { from: string; to: string; type: string }) {
+  return `${edge.type}: ${memoryNodeLabel(edge.from)} -> ${memoryNodeLabel(edge.to)}`;
 }
+
+const memoryPayload = {
+  thoughts: Object.fromEntries(memory.thoughts.map((thought) => [
+    thought.slug,
+    {
+      slug: thought.slug,
+      claimKo: thought.claimKo,
+      claimEn: thought.claimEn,
+      memoryType: thought.memoryType,
+      topics: thought.topics,
+      sources: (lookup.sourceRefsByThoughtSlug.get(thought.slug) ?? []).map((source) => ({
+        id: source.id,
+        title: source.title,
+        href: source.href,
+        routeable: source.routeable,
+        unresolved: 'unresolved' in source ? source.unresolved : false,
+      })),
+      body: thought.body,
+      relationships: (lookup.edgesByThoughtSlug.get(thought.slug) ?? [])
+        .filter((edge) => edge.type !== 'topic-tag')
+        .map((edge) => relationshipLabel(edge)),
+    },
+  ])),
+  fallbackRelationships: strongestEdges.map((edge) => relationshipLabel(edge)),
+};
 ---
 
 <BaseLayout title="Memory · beyondwin" description="공개해도 되는 생각, 근거, 주제를 다시 찾기 위한 개인 메모리.">
@@ -93,37 +91,57 @@ function sourceHref(source: { path?: string; url?: string }) {
             <aside class="memory-topic-index" aria-label="Memory topics">
               <h2>Topics</h2>
               <div class="memory-topic-links">
+                <button class="memory-filter is-active" type="button" data-memory-topic="">
+                  <span>All topics</span>
+                  <b>{memory.counts.thoughts}</b>
+                </button>
                 {memory.topics.map((topic) => (
-                  <a href={`#topic-${topic.slug}`}>
+                  <button class="memory-filter" type="button" data-memory-topic={topic.label}>
                     <span>{topic.label}</span>
                     <b>{topic.count}</b>
-                  </a>
+                  </button>
                 ))}
               </div>
             </aside>
             <div class="memory-thought-stack" aria-label="Public thoughts">
               {memory.thoughts.map((thought) => (
-                <article class="memory-thought-row" id={`thought-${thought.slug}`} data-memory-item data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}>
+                <button
+                  class={`memory-thought-row ${thought.slug === firstThought.slug ? 'is-selected' : ''}`}
+                  type="button"
+                  id={`thought-${thought.slug}`}
+                  data-memory-item
+                  data-memory-slug={thought.slug}
+                  data-memory-topics={thought.topics.join(' ')}
+                  data-memory-sources={thought.sources.join(' ')}
+                  data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}
+                >
                   <div>
                     <span>{thought.memoryType}</span>
                     <h2>{thought.claimKo}</h2>
                     <p>{thought.claimEn}</p>
                   </div>
                   <div class="memory-chip-row">
-                    {thought.topics.map((topic) => <a href={`#topic-${topic}`}>{topic}</a>)}
+                    {thought.topics.map((topic) => <span>{topic}</span>)}
                     <span>{sourceCountLabel(thought.sources.length)}</span>
                   </div>
-                </article>
+                </button>
               ))}
+              <div class="memory-no-results" data-memory-no-results hidden>
+                <h2>No matching thoughts</h2>
+                <p>검색어, topic, source 필터를 줄이면 다시 볼 수 있습니다.</p>
+                <button type="button" data-memory-reset>Reset filters</button>
+              </div>
             </div>
-            <aside class="memory-detail" aria-label="Selected thought">
-              <p class="memory-eyebrow">Pinned</p>
-              <h2>{firstThought.claimKo}</h2>
-              <p>{firstThought.body}</p>
-              <div class="memory-chip-row">
+            <aside class="memory-detail" aria-label="Selected thought" data-memory-detail>
+              <p class="memory-eyebrow">Selected</p>
+              <h2 data-memory-detail-title>{firstThought.claimKo}</h2>
+              <p data-memory-detail-body>{firstThought.body}</p>
+              <div class="memory-chip-row" data-memory-detail-topics>
                 <span>{firstThought.memoryType}</span>
                 {firstThought.topics.map((topic) => <span>{topic}</span>)}
               </div>
+              <div class="memory-detail-list" data-memory-detail-sources></div>
+              <div class="memory-detail-list" data-memory-detail-relationships></div>
             </aside>
           </div>
         </div>
@@ -131,7 +149,7 @@ function sourceHref(source: { path?: string; url?: string }) {
         <div class="memory-panel" id="memory-library" role="tabpanel" hidden>
           <div class="memory-library">
             {memory.topics.map((topic) => (
-              <section class="memory-topic" id={`topic-${topic.slug}`}>
+              <section class="memory-topic" id={`topic-${topic.slug}`} data-memory-topic-group={topic.label}>
                 <div>
                   <h2>{topic.label}</h2>
                   <p>{topic.count} public thoughts</p>
@@ -140,38 +158,71 @@ function sourceHref(source: { path?: string; url?: string }) {
                   {memory.thoughts
                     .filter((thought) => thought.topics.includes(topic.label))
                     .map((thought) => (
-                      <article class="memory-thought-card" id={`thought-${thought.slug}`}>
+                      <button
+                        class="memory-thought-card"
+                        type="button"
+                        data-memory-item
+                        data-memory-card
+                        data-memory-slug={thought.slug}
+                        data-memory-topics={thought.topics.join(' ')}
+                        data-memory-sources={thought.sources.join(' ')}
+                        data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}
+                      >
                         <h3>{thought.claimKo}</h3>
                         <p>{thought.claimEn}</p>
                         <div class="memory-chip-row">
                           <span>{thought.memoryType}</span>
                           <span>{sourceCountLabel(thought.sources.length)}</span>
                         </div>
-                      </article>
+                      </button>
                     ))}
                 </div>
               </section>
             ))}
+            <div class="memory-no-results" data-memory-no-results hidden>
+              <h2>No matching library entries</h2>
+              <p>현재 조건에 맞는 public thought가 없습니다.</p>
+              <button type="button" data-memory-reset>Reset filters</button>
+            </div>
           </div>
         </div>
 
         <div class="memory-panel" id="memory-sources" role="tabpanel" hidden>
-          {strongestEdges.length > 0 && (
-            <div class="memory-edge-list" aria-label="Memory relationships">
-              <h2>Relationships</h2>
+          <div class="memory-edge-list" aria-label="Memory relationships">
+            <h2>Relationships</h2>
+            <div data-memory-relationships>
               {strongestEdges.map((edge) => (
-                <p><span>{edge.type}</span>{memoryNodeLabel(edge.from)} → {memoryNodeLabel(edge.to)}</p>
+                <p><span>{edge.type}</span>{memoryNodeLabel(edge.from)} -> {memoryNodeLabel(edge.to)}</p>
               ))}
             </div>
-          )}
+          </div>
           <div class="memory-source-grid">
-            {memory.sources.map((source) => (
-              <a class="memory-source-card" href={sourceHref(source)}>
-                <span>{source.kind}</span>
-                <h2>{source.title}</h2>
-                <p>{source.count} linked thoughts{source.date ? ` · ${source.date}` : ''}</p>
-              </a>
-            ))}
+            {memory.sources.map((source) => {
+              const resolved = lookup.sourcesById.get(source.id);
+              const content = (
+                <>
+                  <span>{source.kind}{resolved?.routeable ? ' · public route' : ' · repo source'}</span>
+                  <h2>{source.title}</h2>
+                  <p>{source.count} linked thoughts{source.date ? ` · ${source.date}` : ''}</p>
+                  {source.path && <small>{source.path}</small>}
+                </>
+              );
+
+              return resolved?.href ? (
+                <a class="memory-source-card" href={resolved.href} data-memory-source={source.id}>
+                  {content}
+                </a>
+              ) : (
+                <button class="memory-source-card memory-source-card--static" type="button" data-memory-source={source.id}>
+                  {content}
+                </button>
+              );
+            })}
+          </div>
+          <div class="memory-no-results" data-memory-no-results hidden>
+            <h2>No matching sources</h2>
+            <p>현재 조건에 연결된 source가 없습니다.</p>
+            <button type="button" data-memory-reset>Reset filters</button>
           </div>
         </div>
       </>
@@ -181,6 +232,8 @@ function sourceHref(source: { path?: string; url?: string }) {
       </div>
     )}
   </section>
+
+  <script is:inline type="application/json" id="memory-payload" set:html={JSON.stringify(memoryPayload)} />
 
   <script>
     const root = document.querySelector('[data-memory-tabs]');
