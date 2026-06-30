@@ -235,11 +235,181 @@ const memoryPayload = {
 
   <script is:inline type="application/json" id="memory-payload" set:html={JSON.stringify(memoryPayload)} />
 
-  <script>
+  <script is:inline>
     const root = document.querySelector('[data-memory-tabs]');
+    const payloadElement = document.querySelector('#memory-payload');
+    const payload = payloadElement?.textContent ? JSON.parse(payloadElement.textContent) : { thoughts: {}, fallbackRelationships: [] };
+
     if (root) {
+      const state = {
+        query: '',
+        selectedThoughtSlug: Object.keys(payload.thoughts)[0] ?? '',
+        activeTopic: '',
+        activeSourceId: '',
+      };
+
       const tabs = Array.from(root.querySelectorAll('[data-memory-tab]'));
       const panels = Array.from(root.querySelectorAll('.memory-panel'));
+      const search = root.querySelector('[data-memory-search]');
+      const items = Array.from(root.querySelectorAll('[data-memory-item]'));
+      const topicButtons = Array.from(root.querySelectorAll('[data-memory-topic]'));
+      const sourceButtons = Array.from(root.querySelectorAll('[data-memory-source]'));
+      const resetButtons = Array.from(root.querySelectorAll('[data-memory-reset]'));
+      const topicGroups = Array.from(root.querySelectorAll('[data-memory-topic-group]'));
+      const detailTitle = root.querySelector('[data-memory-detail-title]');
+      const detailBody = root.querySelector('[data-memory-detail-body]');
+      const detailTopics = root.querySelector('[data-memory-detail-topics]');
+      const detailSources = root.querySelector('[data-memory-detail-sources]');
+      const detailRelationships = root.querySelector('[data-memory-detail-relationships]');
+      const relationships = root.querySelector('[data-memory-relationships]');
+
+      function itemMatches(item) {
+        const text = item.getAttribute('data-memory-text')?.toLowerCase() ?? '';
+        const topics = item.getAttribute('data-memory-topics')?.split(/\s+/).filter(Boolean) ?? [];
+        const sources = item.getAttribute('data-memory-sources')?.split(/\s+/).filter(Boolean) ?? [];
+
+        if (state.query && !text.includes(state.query)) {
+          return false;
+        }
+
+        if (state.activeTopic && !topics.includes(state.activeTopic)) {
+          return false;
+        }
+
+        if (state.activeSourceId && !sources.includes(state.activeSourceId)) {
+          return false;
+        }
+
+        return true;
+      }
+
+      function visibleThoughtSlugs() {
+        const slugs = new Set();
+
+        items.forEach((item) => {
+          if (!item.hidden && item instanceof HTMLElement) {
+            const slug = item.dataset.memorySlug;
+            if (slug) {
+              slugs.add(slug);
+            }
+          }
+        });
+
+        return slugs;
+      }
+
+      function renderList(itemsToRender, values) {
+        values.forEach((value) => {
+          const element = document.createElement('p');
+          element.textContent = value;
+          itemsToRender.append(element);
+        });
+      }
+
+      function renderDetail() {
+        const selected = payload.thoughts[state.selectedThoughtSlug];
+        if (!selected || !detailTitle || !detailBody || !detailTopics || !detailSources || !detailRelationships) {
+          return;
+        }
+
+        detailTitle.textContent = selected.claimKo;
+        detailBody.textContent = selected.body || selected.claimEn;
+        detailTopics.innerHTML = '';
+        detailSources.innerHTML = '';
+        detailRelationships.innerHTML = '';
+
+        const typeChip = document.createElement('span');
+        typeChip.textContent = selected.memoryType;
+        detailTopics.append(typeChip);
+
+        selected.topics.forEach((topic) => {
+          const chip = document.createElement('span');
+          chip.textContent = topic;
+          detailTopics.append(chip);
+        });
+
+        selected.sources.forEach((source) => {
+          const row = document.createElement(source.href ? 'a' : 'p');
+          row.textContent = source.unresolved ? `${source.id} · unresolved source` : source.title;
+          row.className = source.href ? 'memory-detail-link' : 'memory-detail-static';
+          if (source.href) {
+            row.href = source.href;
+          }
+          detailSources.append(row);
+        });
+
+        const relationshipValues = selected.relationships.length > 0 ? selected.relationships : payload.fallbackRelationships;
+        renderList(detailRelationships, relationshipValues);
+
+        if (relationships) {
+          relationships.innerHTML = '';
+          renderList(relationships, relationshipValues);
+        }
+      }
+
+      function updateSelectedFromVisibleItems() {
+        const selectedStillVisible = items.some((item) => {
+          return !item.hidden && item instanceof HTMLElement && item.dataset.memorySlug === state.selectedThoughtSlug;
+        });
+
+        if (selectedStillVisible) {
+          return;
+        }
+
+        const firstVisible = items.find((item) => !item.hidden && item instanceof HTMLElement);
+        state.selectedThoughtSlug = firstVisible instanceof HTMLElement ? firstVisible.dataset.memorySlug ?? '' : '';
+      }
+
+      function applyFilters() {
+        let visibleCount = 0;
+
+        items.forEach((item) => {
+          const visible = itemMatches(item);
+          item.toggleAttribute('hidden', !visible);
+          if (visible) {
+            visibleCount += 1;
+          }
+        });
+
+        const visibleSlugs = visibleThoughtSlugs();
+
+        topicGroups.forEach((group) => {
+          const groupItems = Array.from(group.querySelectorAll('[data-memory-item]'));
+          const hasVisibleItem = groupItems.some((item) => !item.hidden);
+          group.toggleAttribute('hidden', !hasVisibleItem);
+        });
+
+        sourceButtons.forEach((button) => {
+          const sourceId = button.getAttribute('data-memory-source') ?? '';
+          const sourceVisible = !state.activeSourceId || state.activeSourceId === sourceId || Array.from(visibleSlugs).some((slug) => {
+            const thought = payload.thoughts[slug];
+            return thought?.sources?.some((source) => source.id === sourceId);
+          });
+          button.toggleAttribute('hidden', !sourceVisible);
+        });
+
+        updateSelectedFromVisibleItems();
+
+        items.forEach((item) => {
+          if (item instanceof HTMLElement) {
+            item.classList.toggle('is-selected', item.dataset.memorySlug === state.selectedThoughtSlug);
+          }
+        });
+
+        topicButtons.forEach((button) => {
+          button.classList.toggle('is-active', (button.getAttribute('data-memory-topic') ?? '') === state.activeTopic);
+        });
+
+        sourceButtons.forEach((button) => {
+          button.classList.toggle('is-active', (button.getAttribute('data-memory-source') ?? '') === state.activeSourceId);
+        });
+
+        root.querySelectorAll('[data-memory-no-results]').forEach((emptyState) => {
+          emptyState.toggleAttribute('hidden', visibleCount > 0);
+        });
+
+        renderDetail();
+      }
 
       tabs.forEach((tab) => {
         tab.addEventListener('click', () => {
@@ -256,20 +426,56 @@ const memoryPayload = {
             panel.classList.toggle('is-active', selected);
             panel.toggleAttribute('hidden', !selected);
           });
+
+          applyFilters();
         });
       });
-
-      const search = root.querySelector('[data-memory-search]');
-      const items = Array.from(root.querySelectorAll('[data-memory-item]'));
 
       search?.addEventListener('input', () => {
-        const query = search instanceof HTMLInputElement ? search.value.trim().toLowerCase() : '';
+        state.query = search instanceof HTMLInputElement ? search.value.trim().toLowerCase() : '';
+        applyFilters();
+      });
 
-        items.forEach((item) => {
-          const text = item.getAttribute('data-memory-text')?.toLowerCase() ?? '';
-          item.toggleAttribute('hidden', query.length > 0 && !text.includes(query));
+      items.forEach((item) => {
+        item.addEventListener('click', () => {
+          if (item instanceof HTMLElement) {
+            state.selectedThoughtSlug = item.dataset.memorySlug ?? state.selectedThoughtSlug;
+            applyFilters();
+          }
         });
       });
+
+      topicButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          state.activeTopic = button.getAttribute('data-memory-topic') ?? '';
+          applyFilters();
+        });
+      });
+
+      sourceButtons.forEach((button) => {
+        button.addEventListener('click', (event) => {
+          const sourceId = button.getAttribute('data-memory-source') ?? '';
+          state.activeSourceId = state.activeSourceId === sourceId ? '' : sourceId;
+          if (button instanceof HTMLButtonElement) {
+            event.preventDefault();
+          }
+          applyFilters();
+        });
+      });
+
+      resetButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          state.query = '';
+          state.activeTopic = '';
+          state.activeSourceId = '';
+          if (search instanceof HTMLInputElement) {
+            search.value = '';
+          }
+          applyFilters();
+        });
+      });
+
+      applyFilters();
     }
   </script>
 </BaseLayout>
