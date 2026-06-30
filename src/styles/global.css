@@ -980,6 +980,25 @@ code {
   color: var(--primary-ink);
 }
 
+.memory-filter {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 11px 0;
+  text-align: left;
+}
+
+.memory-filter.is-active {
+  color: var(--primary-ink);
+}
+
 .memory-thought-stack {
   display: grid;
   gap: 10px;
@@ -989,6 +1008,22 @@ code {
   display: grid;
   gap: 16px;
   padding: 18px;
+}
+
+.memory-thought-row,
+.memory-thought-card,
+.memory-source-card--static {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.memory-thought-row.is-selected,
+.memory-thought-card.is-selected,
+.memory-source-card.is-active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
 }
 
 .memory-thought-row > div:first-child > span {
@@ -1027,6 +1062,31 @@ code {
 .memory-thought-card p {
   color: var(--muted);
   line-height: 1.58;
+}
+
+.memory-detail-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.memory-detail-list p,
+.memory-detail-list a {
+  margin: 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  padding-top: 8px;
+}
+
+.memory-detail-link {
+  color: var(--primary-ink);
+  text-decoration-thickness: 1px;
+}
+
+.memory-detail-static {
+  color: var(--muted);
 }
 
 .memory-chip-row {
@@ -1128,6 +1188,51 @@ code {
   color: var(--primary-ink);
   font-size: 12px;
   font-weight: 760;
+}
+
+.memory-source-card small {
+  display: block;
+  margin-top: 14px;
+  color: var(--muted-2);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.memory-source-card--static {
+  width: 100%;
+}
+
+.memory-no-results {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-strong);
+  padding: 18px;
+}
+
+.memory-no-results h2 {
+  margin: 0 0 8px;
+  color: var(--ink-strong);
+  font-size: 18px;
+}
+
+.memory-no-results p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.memory-no-results button {
+  min-height: 36px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--ink-strong);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 760;
+  padding: 0 12px;
 }
 
 @media (prefers-reduced-motion: reduce) {
