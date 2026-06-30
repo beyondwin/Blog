@@ -1,7 +1,6 @@
 # Docs Index
 
-This index is generated from `docs/_index/catalog.yml` and maintained by
-`$archive-docs-organizer`.
+이 index는 `docs/_index/catalog.yml`을 기준으로 관리한다. 새 curated note를 추가하거나 옮기면 catalog와 이 파일을 같이 갱신한다.
 
 | Title | Topic | Type | Language | Status | Path |
 |---|---|---|---|---|---|
@@ -9,11 +8,11 @@ This index is generated from `docs/_index/catalog.yml` and maintained by
 | 구독앱 수익화 가이드 | business/mobile-apps | research-note | ko | organized | [docs/notes/business/mobile-apps/subscription-app-guide-insights_kr.md](notes/business/mobile-apps/subscription-app-guide-insights_kr.md) |
 | CS 면접 대비 데이터베이스 질문 4-49 | career/backend-interviews | guide | ko | organized | [docs/notes/career/backend-interviews/cs-database-interview-questions_kr.md](notes/career/backend-interviews/cs-database-interview-questions_kr.md) |
 | 분산처리와 서버 확장 전략 면접 가이드 | career/backend-interviews | guide | ko | organized | [docs/notes/career/backend-interviews/distributed-scaling-architecture-interview_kr.md](notes/career/backend-interviews/distributed-scaling-architecture-interview_kr.md) |
-| beyondwin Project Documentation | project | reference | en | organized | [docs/notes/project/README.md](notes/project/README.md) |
-| Getting Started With beyondwin | project | tutorial | en | organized | [docs/notes/project/getting-started.md](notes/project/getting-started.md) |
-| How to Publish And Maintain Content | project | guide | en | organized | [docs/notes/project/publishing-workflows.md](notes/project/publishing-workflows.md) |
-| Project Architecture Reference | project | reference | en | organized | [docs/notes/project/architecture-reference.md](notes/project/architecture-reference.md) |
-| Why beyondwin Is Structured This Way | project | explanation | en | organized | [docs/notes/project/design-and-content-rationale.md](notes/project/design-and-content-rationale.md) |
+| beyondwin 프로젝트 문서 | project | reference | ko | organized | [docs/notes/project/README.md](notes/project/README.md) |
+| beyondwin 시작하기 | project | tutorial | ko | organized | [docs/notes/project/getting-started.md](notes/project/getting-started.md) |
+| 콘텐츠 운영 | project | guide | ko | organized | [docs/notes/project/publishing-workflows.md](notes/project/publishing-workflows.md) |
+| 아키텍처 레퍼런스 | project | reference | ko | organized | [docs/notes/project/architecture-reference.md](notes/project/architecture-reference.md) |
+| beyondwin이 이렇게 구성된 이유 | project | explanation | ko | organized | [docs/notes/project/design-and-content-rationale.md](notes/project/design-and-content-rationale.md) |
 | Archive Docs Organizer | skills/agent-workflows | workflow | en | organized | [docs/notes/skills/archive-docs-organizer.md](notes/skills/archive-docs-organizer.md) |
 | mattpocock/skills 레포 분석 | skills/agent-workflows | research-note | ko | organized | [docs/notes/skills/mattpocock-skills-repo-analysis.md](notes/skills/mattpocock-skills-repo-analysis.md) |
 | Research Article Workflow | skills/agent-workflows | workflow | en | organized | [docs/notes/skills/research-article-workflow.md](notes/skills/research-article-workflow.md) |

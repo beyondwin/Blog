@@ -1,85 +1,74 @@
 # Archive Docs
 
-`docs/` is organized as a small knowledge system with separate layers for
-intake, source material, curated notes, generated wiki pages, and metadata.
+`docs/`는 이 저장소의 내부 지식 라이브러리다. source capture, curated note, generated navigation, metadata를 분리해서 보관한다.
 
 ## Layout
 
-- `_inbox/` - unclassified documents waiting to be sorted.
-- `raw/` - immutable source captures such as copied articles, transcripts,
-  exported PDFs converted to Markdown, or other reference material.
-- `notes/` - human-curated documents organized by topic. This is the primary
-  long-term library.
-- `wiki/` - AI-maintained wiki pages compiled from `raw/` and `notes/`.
-- `_index/` - catalog and topic metadata used to build `INDEX.md`.
-- `_graph/` - notes about generated graph artifacts. Graphify's default runtime
-  output remains `../graphify-out/`.
+- `_inbox/`: 아직 분류하지 않은 local intake.
+- `raw/`: 원문 wording, transcript, exported PDF 변환본처럼 provenance가 중요한 source capture.
+- `notes/`: 사람이 다듬은 curated document. 장기 보관의 기준 layer다.
+- `wiki/`: `raw`와 `notes`를 바탕으로 만든 generated navigation.
+- `_index/`: [INDEX.md](INDEX.md)를 관리하기 위한 catalog와 topic metadata.
+- `_graph/`: graph artifact 설명. Graphify runtime output은 repo root의 `graphify-out/`에 둔다.
 
 ## Source Of Truth
 
-Use this priority order when answers conflict:
+충돌하는 정보가 있으면 아래 순서로 판단한다.
 
-1. Original material in `raw/`
-2. Curated notes in `notes/`
-3. Skill-local experiment records under `../skills/<skill>/docs/experiments/`
-   when the question is about executor-skill implementation history
-4. Generated summaries and relationship maps in `wiki/` or `graphify-out/`
+1. `raw/`의 원본 자료.
+2. `notes/`의 curated note.
+3. 질문이 executor-skill 구현 이력에 관한 경우, 해당 skill의 experiment record.
+4. `wiki/`나 `graphify-out/`의 generated summary와 relationship map.
 
-Generated wiki pages are useful for speed, but they are not the final authority.
-Important claims should link back to a source file, curated note, or the
-specific plan/spec that introduced the claim.
+generated layer는 빠른 길찾기용이다. 중요한 답변은 source file, curated note, claim을 만든 spec/plan까지 거슬러 올라가 확인한다.
 
 ## Version Control
 
-Track durable source documents, curated notes, and index metadata. Keep generated
-navigation output local unless it is a lightweight placeholder:
+track하는 것:
 
-- `docs/wiki/README.md` documents the generated wiki layer, but generated wiki
-  pages are ignored.
-- `docs/_graph/README.md` documents graph artifacts, but generated graph files
-  are ignored.
-- `graphify-out/` is a local generated knowledge graph and is ignored.
-- Local working plans under ignored directories such as `docs/superpowers/`
-  are not part of the curated library. Durable executor-skill plans should live
-  under the relevant `skills/<skill>/docs/experiments/` directory.
+- durable source document.
+- curated note.
+- index metadata.
+- generated layer를 설명하는 lightweight README.
+
+track하지 않는 것:
+
+- local intake.
+- private raw capture.
+- generated wiki pages.
+- `graphify-out/`.
+- 임시 작업 plan.
 
 ## Intake Workflow
 
-1. Put new unsorted material in `_inbox/`.
-2. Preserve source-heavy captures in `raw/` when the original wording matters.
-3. Move polished or synthesized material into `notes/<topic>/`.
-4. Update `_index/catalog.yml`, `_index/topics.yml`, and `INDEX.md`.
-5. Regenerate `wiki/` or `graphify-out/` when enough material has changed.
+1. 새 자료를 `_inbox/`에 둔다.
+2. 원문이 중요한 자료는 `raw/`에 보존한다.
+3. 읽고 정리한 결과를 `notes/<topic>/`으로 승격한다.
+4. `_index/catalog.yml`, `_index/topics.yml`, `INDEX.md`를 갱신한다.
+5. navigation이 필요할 만큼 바뀌었으면 `wiki/`나 `graphify-out/`을 갱신한다.
 
-Do not add local working plans to the library catalog unless a plan is converted
-into a durable curated note. Link durable executor-skill experiment records from
-the relevant skill README or experiment index instead.
+작업 계획이나 agent scratch file은 그대로 catalog에 넣지 않는다. 장기적으로 읽을 가치가 있는 문서로 정리된 뒤에만 curated note가 된다.
 
-## Graphify Workflow
+## Graphify
 
-Install or run Graphify with:
+Graphify는 source of truth가 아니라 graph navigation layer다.
+
+설치 또는 실행 확인:
 
 ```bash
 uvx --from graphifyy graphify --help
 ```
 
-For Codex integration:
+Codex 연동:
 
 ```bash
 uvx --from graphifyy graphify codex install
 ```
 
-Then run the Graphify skill against the docs corpus:
+graph 갱신:
 
-```text
-/graphify docs
+```bash
+graphify update .
 ```
 
-For deeper inferred relationships:
-
-```text
-/graphify docs --mode deep
-```
-
-Use generated graph files as an acceleration layer. Before answering important
-questions, inspect the relevant files in `raw/` or `notes/`.
+architecture나 codebase 질문에 답하기 전에는 `graphify-out/GRAPH_REPORT.md`를 읽고, 중요한 claim은 `docs/raw/` 또는 `docs/notes/`에서 다시 확인한다.
