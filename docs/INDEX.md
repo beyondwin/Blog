@@ -11,6 +11,7 @@
 | beyondwin 프로젝트 문서 | project | reference | ko | organized | [docs/notes/project/README.md](notes/project/README.md) |
 | beyondwin 시작하기 | project | tutorial | ko | organized | [docs/notes/project/getting-started.md](notes/project/getting-started.md) |
 | 콘텐츠 운영 | project | guide | ko | organized | [docs/notes/project/publishing-workflows.md](notes/project/publishing-workflows.md) |
+| Agent Runbook | project | workflow | ko | organized | [docs/notes/project/agent-runbook.md](notes/project/agent-runbook.md) |
 | 아키텍처 레퍼런스 | project | reference | ko | organized | [docs/notes/project/architecture-reference.md](notes/project/architecture-reference.md) |
 | beyondwin이 이렇게 구성된 이유 | project | explanation | ko | organized | [docs/notes/project/design-and-content-rationale.md](notes/project/design-and-content-rationale.md) |
 | Archive Docs Organizer | skills/agent-workflows | workflow | en | organized | [docs/notes/skills/archive-docs-organizer.md](notes/skills/archive-docs-organizer.md) |
