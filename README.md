@@ -33,6 +33,7 @@ npm run dev
 
 프로젝트 문서는 [docs/notes/project/README.md](docs/notes/project/README.md)에서 시작합니다.
 
+- [Agent Runbook](docs/notes/project/agent-runbook.md): 에이전트가 작업별 read order, 수정 표면, 검증 기준, public/private boundary를 빠르게 확인하는 실행 지도.
 - [시작하기](docs/notes/project/getting-started.md): 로컬 실행, 검증, 첫 콘텐츠 추적.
 - [콘텐츠 운영](docs/notes/project/publishing-workflows.md): 일반 글, 리뷰, queue sync, source-grounded article, memory, archive docs 작업.
 - [아키텍처 레퍼런스](docs/notes/project/architecture-reference.md): 라우트, 스키마, 스크립트, 테스트, 데이터 계약.
