@@ -73,6 +73,16 @@
   source: src/content.config.ts
   updated: 2026-06-30
 
+- title: Agent Runbook
+  path: docs/notes/project/agent-runbook.md
+  topic: project
+  type: workflow
+  language: ko
+  status: organized
+  summary: 에이전트가 beyondwin 작업 유형별 read order, 수정 표면, 위험 경계, 검증 명령, public/private boundary를 빠르게 확인하는 실행 지도.
+  source: docs/superpowers/specs/2026-07-01-blog-agent-docs-runbook-design.md
+  updated: 2026-07-01
+
 - title: 아키텍처 레퍼런스
   path: docs/notes/project/architecture-reference.md
   topic: project
