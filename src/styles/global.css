@@ -679,6 +679,110 @@ code {
   text-wrap: pretty;
 }
 
+.article-memory {
+  display: grid;
+  gap: 18px;
+  max-width: 72ch;
+  margin-top: clamp(42px, 7vw, 72px);
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+
+.article-memory__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.article-memory__header p {
+  margin: 0 0 6px;
+  color: var(--primary-ink);
+  font-size: 12px;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.article-memory__header h2 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: clamp(22px, 3vw, 28px);
+  line-height: 1.18;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.article-memory__header a {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--ink-strong);
+  font-size: 13px;
+  font-weight: 760;
+  text-decoration: none;
+}
+
+.article-memory__header a:hover {
+  border-color: var(--primary);
+  color: var(--primary-ink);
+}
+
+.article-memory__group {
+  display: grid;
+  gap: 10px;
+}
+
+.article-memory__group h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.article-memory__list {
+  display: grid;
+  gap: 10px;
+}
+
+.article-memory__item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 16px;
+}
+
+.article-memory__item h4 {
+  margin: 0 0 8px;
+  color: var(--ink-strong);
+  font-size: 18px;
+  line-height: 1.32;
+  letter-spacing: 0;
+  text-wrap: pretty;
+}
+
+.article-memory__item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.58;
+}
+
+.article-memory__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.article-memory__meta span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 720;
+  padding: 5px 7px;
+}
+
 .review-cover {
   display: flex;
   margin: 0 0 34px;
@@ -1373,6 +1477,10 @@ code {
   .article-body .description,
   .prose {
     font-size: 16px;
+  }
+
+  .article-memory__header {
+    flex-direction: column;
   }
 
   .memory-stats {
