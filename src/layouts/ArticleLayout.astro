@@ -2,18 +2,21 @@
 import BaseLayout from './BaseLayout.astro';
 import { formatDate, getEntryDate, getEntryTypeLabel } from '../lib/content';
 import type { SiteEntry } from '../lib/content';
+import type { ArticleMemoryLinks } from '../lib/memoryData';
 
 interface Props {
   entry: SiteEntry;
+  relatedMemory?: ArticleMemoryLinks;
 }
 
-const { entry } = Astro.props;
+const { entry, relatedMemory } = Astro.props;
 const date = getEntryDate(entry);
 const detail = entry.collection === 'travel'
   ? entry.data.location
   : entry.collection === 'ideas'
     ? entry.data.maturity
     : getEntryTypeLabel(entry);
+const hasRelatedMemory = Boolean(relatedMemory && relatedMemory.total > 0);
 ---
 
 <BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
@@ -33,6 +36,56 @@ const detail = entry.collection === 'travel'
       <div class="prose">
         <slot />
       </div>
+
+      {hasRelatedMemory && relatedMemory && (
+        <aside class="article-memory" aria-labelledby="article-memory-title">
+          <div class="article-memory__header">
+            <div>
+              <p>Memory</p>
+              <h2 id="article-memory-title">이 글에서 이어지는 판단</h2>
+            </div>
+            <a href="/memory/">Memory 열기</a>
+          </div>
+
+          {relatedMemory.linked.length > 0 && (
+            <section class="article-memory__group" aria-label="Linked memory">
+              <h3>Linked memory</h3>
+              <div class="article-memory__list">
+                {relatedMemory.linked.map((thought) => (
+                  <article class="article-memory__item">
+                    <h4>{thought.claimKo}</h4>
+                    <p>{thought.claimEn}</p>
+                    <div class="article-memory__meta">
+                      <span>{thought.memoryType}</span>
+                      {thought.topics.map((topic) => <span>{topic}</span>)}
+                      <span>{thought.sourceCount === 1 ? '1 source' : `${thought.sourceCount} sources`}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {relatedMemory.related.length > 0 && (
+            <section class="article-memory__group" aria-label="Related memory">
+              <h3>Related memory</h3>
+              <div class="article-memory__list">
+                {relatedMemory.related.map((thought) => (
+                  <article class="article-memory__item">
+                    <h4>{thought.claimKo}</h4>
+                    <p>{thought.claimEn}</p>
+                    <div class="article-memory__meta">
+                      <span>{thought.memoryType}</span>
+                      {thought.topics.map((topic) => <span>{topic}</span>)}
+                      <span>{thought.sourceCount === 1 ? '1 source' : `${thought.sourceCount} sources`}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+        </aside>
+      )}
     </article>
   </div>
 </BaseLayout>
