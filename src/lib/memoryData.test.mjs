@@ -300,84 +300,94 @@ describe('memory data helpers', () => {
     ]);
   });
 
-  it('builds a render-safe graph model with public thoughts, topics, sources, and stable edges', () => {
-    const model = buildMemoryGraphModel(makeMemory());
+  it('builds a graph model with thought, topic, and source nodes', () => {
+    const graph = buildMemoryGraphModel(makeMemory());
 
-    expect(model.selectedFallback).toBe('thought:routing-problem');
-    expect(model.nodes.map((node) => node.id)).toEqual([
-      'thought:routing-problem',
-      'thought:review-gates',
-      'topic:ai-workflow',
-      'topic:agent-workflows',
-      'source:article-source',
-      'source:docs-source',
-      'source:external-source',
+    expect(graph.selectedFallback).toBe('thought:routing-problem');
+    expect(graph.nodes.map((node) => [node.id, node.kind])).toEqual([
+      ['thought:routing-problem', 'thought'],
+      ['thought:review-gates', 'thought'],
+      ['topic:ai-workflow', 'topic'],
+      ['topic:agent-workflows', 'topic'],
+      ['source:article-source', 'source'],
+      ['source:docs-source', 'source'],
+      ['source:external-source', 'source'],
     ]);
-    expect(model.nodes.find((node) => node.id === 'thought:routing-problem')).toMatchObject({
-      kind: 'thought',
+    expect(graph.nodes.find((node) => node.id === 'thought:routing-problem')).toMatchObject({
       label: '컨텍스트 품질은 라우팅 문제다.',
       sublabel: 'Context quality is a routing problem.',
-      weight: 3,
       memoryType: 'semantic',
       origin: 'author',
       topicIds: ['topic:ai-workflow'],
       sourceIds: ['source:article-source', 'source:missing-source'],
-      position: { x: 10, y: 20 },
+      weight: 2,
     });
-    expect(model.nodes.find((node) => node.id === 'source:article-source')).toMatchObject({
-      kind: 'source',
+    expect(graph.nodes.find((node) => node.id === 'source:article-source')).toMatchObject({
       label: 'Context Refinement System 설계 요약',
+      kind: 'source',
       href: '/articles/context-refinement-system-design/',
       routeable: true,
     });
-    expect(model.edges.map((edge) => edge.id)).toEqual([
-      'explicit:routing-problem:supports:review-gates',
-      'explicit:routing-problem:topic-tag:topic:ai-workflow',
-      'derived-topic:routing-problem:topic:ai-workflow',
-      'derived-source:routing-problem:article-source',
-      'derived-source:routing-problem:missing-source',
-      'derived-topic:review-gates:topic:agent-workflows',
-      'derived-source:review-gates:docs-source',
-    ]);
-    expect(model.edges).toContainEqual({
-      id: 'explicit:routing-problem:supports:review-gates',
-      from: 'thought:routing-problem',
-      to: 'thought:review-gates',
-      type: 'supports',
-      confidence: 0.8,
-      derived: false,
-    });
-    expect(model.edges.some((edge) => edge.id.includes('missing-thought'))).toBe(false);
   });
 
-  it('counts graph facets for lenses, routeable sources, memory types, and edge types', () => {
-    const model = buildMemoryGraphModel(makeMemory());
+  it('builds explicit and derived graph edges with stable ids', () => {
+    const graph = buildMemoryGraphModel(makeMemory());
 
-    expect(model.facets.lenses).toEqual([
+    expect(graph.edges).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'explicit:routing-problem:supports:review-gates',
+        from: 'thought:routing-problem',
+        to: 'thought:review-gates',
+        type: 'supports',
+        derived: false,
+      }),
+      expect.objectContaining({
+        id: 'derived:thought-topic:routing-problem:topic-ai-workflow',
+        from: 'thought:routing-problem',
+        to: 'topic:ai-workflow',
+        type: 'topic-tag',
+        derived: true,
+      }),
+      expect.objectContaining({
+        id: 'derived:thought-source:routing-problem:article-source',
+        from: 'thought:routing-problem',
+        to: 'source:article-source',
+        type: 'source-link',
+        derived: true,
+      }),
+    ]));
+    expect(graph.edges).toHaveLength(5);
+    expect(graph.edges.some((edge) => edge.to.includes('missing-thought'))).toBe(false);
+    expect(graph.edges.some((edge) => edge.to === 'source:missing-source')).toBe(false);
+  });
+
+  it('counts graph facets for lenses, topics, sources, memory types, and edge types', () => {
+    const graph = buildMemoryGraphModel(makeMemory());
+
+    expect(graph.facets.lenses).toEqual([
       { id: 'all', label: 'All', count: 7 },
-      { id: 'topics', label: 'Topics', count: 4 },
-      { id: 'sources', label: 'Sources', count: 5 },
+      { id: 'topics', label: 'Topics', count: 2 },
+      { id: 'sources', label: 'Sources', count: 3 },
       { id: 'theses', label: 'Theses', count: 1 },
-      { id: 'external-vs-mine', label: 'External vs Mine', count: 3 },
+      { id: 'external-vs-mine', label: 'External vs Mine', count: 2 },
     ]);
-    expect(model.facets.topics).toEqual([
-      { id: 'topic:ai-workflow', label: 'ai-workflow', count: 1 },
+    expect(graph.facets.topics).toEqual([
       { id: 'topic:agent-workflows', label: 'agent-workflows', count: 1 },
+      { id: 'topic:ai-workflow', label: 'ai-workflow', count: 1 },
     ]);
-    expect(model.facets.sources).toEqual([
+    expect(graph.facets.sources).toEqual([
       { id: 'source:article-source', label: 'Context Refinement System 설계 요약', count: 1, routeable: true },
-      { id: 'source:docs-source', label: 'Memory Second Brain Implementation Reference', count: 1, routeable: false },
       { id: 'source:external-source', label: 'External Source', count: 0, routeable: true },
+      { id: 'source:docs-source', label: 'Memory Second Brain Implementation Reference', count: 1, routeable: false },
     ]);
-    expect(model.facets.memoryTypes).toEqual([
-      { id: 'semantic', label: 'semantic', count: 1 },
+    expect(graph.facets.memoryTypes).toEqual([
       { id: 'procedural', label: 'procedural', count: 1 },
+      { id: 'semantic', label: 'semantic', count: 1 },
     ]);
-    expect(model.facets.edgeTypes).toEqual([
+    expect(graph.facets.edgeTypes).toEqual([
+      { id: 'source-link', label: 'source-link', count: 2 },
       { id: 'supports', label: 'supports', count: 1 },
-      { id: 'topic-tag', label: 'topic-tag', count: 1 },
-      { id: 'topic', label: 'topic', count: 2 },
-      { id: 'source', label: 'source', count: 3 },
+      { id: 'topic-tag', label: 'topic-tag', count: 2 },
     ]);
   });
 
@@ -402,53 +412,19 @@ describe('memory data helpers', () => {
     });
   });
 
-  it('keeps public thoughts visible when source records are missing', () => {
-    const model = buildMemoryGraphModel(makeMemory({ sources: [] }));
+  it('keeps public thoughts visible when a thought references a missing source', () => {
+    const graph = buildMemoryGraphModel(makeMemory());
+    const thought = graph.nodes.find((node) => node.id === 'thought:routing-problem');
 
-    expect(model.nodes.find((node) => node.id === 'thought:routing-problem')).toMatchObject({
-      sourceIds: ['source:article-source', 'source:missing-source'],
-    });
-    expect(model.nodes.some((node) => node.id === 'source:missing-source')).toBe(false);
-    expect(model.edges).toContainEqual({
-      id: 'derived-source:routing-problem:missing-source',
-      from: 'thought:routing-problem',
-      to: 'source:missing-source',
-      type: 'source',
-      confidence: 1,
-      derived: true,
-    });
+    expect(thought?.sourceIds).toContain('source:missing-source');
+    expect(graph.nodes.some((node) => node.id === 'source:missing-source')).toBe(false);
+    expect(graph.edges.some((edge) => edge.to === 'source:missing-source')).toBe(false);
   });
 
-  it('normalizes missing layout positions to bounded stable coordinates', () => {
-    const model = buildMemoryGraphModel(makeMemory({
-      thoughts: [
-        {
-          slug: 'no-position',
-          claimKo: '위치 없는 생각',
-          claimEn: 'A thought without a position.',
-          memoryType: 'semantic',
-          origin: 'author',
-          topics: [],
-          theses: [],
-          sources: [],
-          body: '',
-        },
-      ],
-      topics: [
-        { id: 'topic:ai-workflow', slug: 'ai-workflow', label: 'ai-workflow', count: 1 },
-      ],
-      sources: [
-        { id: 'article-source', kind: 'article', title: 'Article', count: 1 },
-      ],
-      edges: [],
-    }));
+  it('keeps deterministic positions inside graph bounds', () => {
+    const graph = buildMemoryGraphModel(makeMemory());
 
-    expect(model.nodes.map((node) => node.position)).toEqual([
-      { x: 50, y: 50 },
-      { x: 60, y: 50 },
-      { x: 50, y: 70 },
-    ]);
-    for (const node of model.nodes) {
+    for (const node of graph.nodes) {
       expect(node.position.x).toBeGreaterThanOrEqual(0);
       expect(node.position.x).toBeLessThanOrEqual(100);
       expect(node.position.y).toBeGreaterThanOrEqual(0);
@@ -457,33 +433,36 @@ describe('memory data helpers', () => {
   });
 
   it('filters graph visibility by query, lens, topic, source, memory type, and edge type', () => {
-    const model = buildMemoryGraphModel(makeMemory());
+    const graph = buildMemoryGraphModel(makeMemory());
 
-    expect([...filterMemoryGraphModel(model, {
-      query: 'review gates',
-      activeLens: 'all',
-      activeTopicIds: [],
-      activeSourceIds: [],
-      activeMemoryTypes: [],
-      activeEdgeTypes: [],
-    }).nodeIds]).toEqual(['thought:review-gates']);
-
-    expect([...filterMemoryGraphModel(model, {
-      query: '',
-      activeLens: 'topics',
-      activeTopicIds: ['topic:ai-workflow'],
-      activeSourceIds: [],
-      activeMemoryTypes: ['semantic'],
-      activeEdgeTypes: ['topic'],
-    }).edgeIds]).toEqual(['derived-topic:routing-problem:topic:ai-workflow']);
-
-    expect([...filterMemoryGraphModel(model, {
-      query: '',
-      activeLens: 'sources',
-      activeTopicIds: [],
-      activeSourceIds: ['source:docs-source'],
-      activeMemoryTypes: [],
-      activeEdgeTypes: ['source'],
-    }).nodeIds]).toEqual(['thought:review-gates', 'source:docs-source']);
+    expect([...filterMemoryGraphModel(graph, { query: 'routing' }).nodeIds]).toEqual([
+      'thought:routing-problem',
+      'topic:ai-workflow',
+      'source:article-source',
+    ]);
+    expect([...filterMemoryGraphModel(graph, { activeLens: 'topics' }).nodeIds]).toEqual([
+      'thought:routing-problem',
+      'thought:review-gates',
+      'topic:ai-workflow',
+      'topic:agent-workflows',
+    ]);
+    expect([...filterMemoryGraphModel(graph, { activeTopicIds: ['topic:ai-workflow'] }).nodeIds]).toEqual([
+      'thought:routing-problem',
+      'topic:ai-workflow',
+      'source:article-source',
+    ]);
+    expect([...filterMemoryGraphModel(graph, { activeSourceIds: ['source:docs-source'] }).nodeIds]).toEqual([
+      'thought:review-gates',
+      'topic:agent-workflows',
+      'source:docs-source',
+    ]);
+    expect([...filterMemoryGraphModel(graph, { activeMemoryTypes: ['procedural'] }).nodeIds]).toEqual([
+      'thought:review-gates',
+      'topic:agent-workflows',
+      'source:docs-source',
+    ]);
+    expect([...filterMemoryGraphModel(graph, { activeEdgeTypes: ['supports'] }).edgeIds]).toEqual([
+      'explicit:routing-problem:supports:review-gates',
+    ]);
   });
 });

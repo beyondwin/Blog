@@ -249,298 +249,337 @@ export function buildMemoryLookup(memory: MemoryPublicData): MemoryLookup {
   };
 }
 
-function graphThoughtId(slug: string): string {
+const graphLensDefinitions = [
+  { id: 'all', label: 'All' },
+  { id: 'topics', label: 'Topics' },
+  { id: 'sources', label: 'Sources' },
+  { id: 'theses', label: 'Theses' },
+  { id: 'external-vs-mine', label: 'External vs Mine' },
+] as const;
+
+function prefixedThoughtId(slug: string): string {
   return `thought:${slug}`;
 }
 
-function graphSourceId(id: string): string {
-  return `source:${id}`;
+function prefixedSourceId(sourceId: string): string {
+  return `source:${sourceId}`;
 }
 
-function clampGraphCoordinate(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? Math.min(100, Math.max(0, value))
-    : null;
+function stableEdgePart(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
 }
 
-function stableFallbackPosition(kind: MemoryGraphNodeKind, index: number): { x: number; y: number } {
-  const offsets = {
-    thought: { x: 0, y: 0 },
-    topic: { x: 10, y: 0 },
-    source: { x: 0, y: 20 },
-  } satisfies Record<MemoryGraphNodeKind, { x: number; y: number }>;
-  const offset = offsets[kind];
-
-  return {
-    x: Math.min(100, 50 + offset.x + (index % 6) * 6),
-    y: Math.min(100, 50 + offset.y + Math.floor(index / 6) * 8),
-  };
+function incrementCount(counts: Map<string, number>, key: string): void {
+  counts.set(key, (counts.get(key) ?? 0) + 1);
 }
 
-function graphPosition(
-  item: { position?: { x?: number; y?: number } },
-  kind: MemoryGraphNodeKind,
-  index: number,
-): { x: number; y: number } {
-  const x = clampGraphCoordinate(item.position?.x);
-  const y = clampGraphCoordinate(item.position?.y);
-
-  if (x !== null && y !== null) {
-    return { x, y };
-  }
-
-  return stableFallbackPosition(kind, index);
+function sortedFacetEntries(counts: Map<string, number>): Array<{ id: string; label: string; count: number }> {
+  return [...counts.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([id, count]) => ({ id, label: id, count }));
 }
 
-function countBy<T>(items: T[], getValue: (item: T) => string | undefined): Array<{ id: string; label: string; count: number }> {
-  const counts = new Map<string, number>();
-
-  for (const item of items) {
-    const value = getValue(item);
-
-    if (!value) {
-      continue;
-    }
-
-    counts.set(value, (counts.get(value) ?? 0) + 1);
-  }
-
-  return [...counts.entries()].map(([id, count]) => ({ id, label: id, count }));
-}
-
-function countEdgeTypes(edges: MemoryGraphEdge[]): Array<{ id: string; label: string; count: number }> {
-  const counts = new Map<string, number>();
-
-  for (const edge of edges) {
-    counts.set(edge.type, (counts.get(edge.type) ?? 0) + 1);
-  }
-
-  return [...counts.entries()].map(([id, count]) => ({ id, label: id, count }));
+function normalizedQuery(value: string | undefined): string {
+  return value?.trim().toLocaleLowerCase() ?? '';
 }
 
 function nodeSearchText(node: MemoryGraphNode): string {
   return [
+    node.id,
     node.label,
-    node.sublabel,
-    node.memoryType,
-    node.origin,
+    node.sublabel ?? '',
+    node.memoryType ?? '',
+    node.origin ?? '',
     ...node.topicIds,
     ...node.sourceIds,
-  ].filter(Boolean).join(' ').toLocaleLowerCase();
+  ].join(' ').toLocaleLowerCase();
 }
 
-function nodeMatchesLens(node: MemoryGraphNode, lens: string): boolean {
-  if (lens === 'topics') {
-    return node.kind === 'thought' || node.kind === 'topic';
+function graphPosition(base: { x: number; y: number } | undefined, index: number, total: number, ring: number): { x: number; y: number } {
+  if (base) {
+    return {
+      x: Math.min(100, Math.max(0, base.x)),
+      y: Math.min(100, Math.max(0, base.y)),
+    };
   }
 
-  if (lens === 'sources') {
-    return node.kind === 'thought' || node.kind === 'source';
-  }
-
-  if (lens === 'theses') {
-    return node.kind === 'thought' || node.kind === 'topic';
-  }
-
-  if (lens === 'external-vs-mine') {
-    return node.kind === 'thought' || node.kind === 'source';
-  }
-
-  return true;
+  const angle = total <= 1 ? 0 : (Math.PI * 2 * index) / total;
+  return {
+    x: Math.round((50 + Math.cos(angle) * ring) * 100) / 100,
+    y: Math.round((50 + Math.sin(angle) * ring) * 100) / 100,
+  };
 }
 
 export function buildMemoryGraphModel(memory: MemoryPublicData): MemoryGraphModel {
   const lookup = buildMemoryLookup(memory);
   const nodes: MemoryGraphNode[] = [];
   const edges: MemoryGraphEdge[] = [];
+  const nodeIds = new Set<string>();
+  const memoryTypeCounts = new Map<string, number>();
+  const edgeTypeCounts = new Map<string, number>();
 
-  for (const [index, thought] of memory.thoughts.entries()) {
+  for (const thought of memory.thoughts) {
+    const topicIds = thought.topics.map((topic) => {
+      return lookup.topicsBySlug.get(topic)?.id ?? `topic:${stableEdgePart(topic)}`;
+    });
+    const sourceIds = thought.sources.map(prefixedSourceId);
+
     nodes.push({
-      id: graphThoughtId(thought.slug),
+      id: prefixedThoughtId(thought.slug),
       kind: 'thought',
-      label: thought.claimKo || thought.claimEn || thought.slug,
+      label: thought.claimKo,
       sublabel: thought.claimEn,
-      weight: thought.topics.length + thought.sources.length,
+      weight: Math.max(1, thought.sources.length),
       memoryType: thought.memoryType,
       origin: thought.origin,
-      topicIds: thought.topics.map((topicSlug) => lookup.topicsBySlug.get(topicSlug)?.id ?? `topic:${topicSlug}`),
-      sourceIds: thought.sources.map(graphSourceId),
-      position: graphPosition(thought, 'thought', index),
+      topicIds,
+      sourceIds,
+      position: graphPosition(thought.position, nodes.length, Math.max(1, memory.thoughts.length), 34),
     });
+    nodeIds.add(prefixedThoughtId(thought.slug));
+    incrementCount(memoryTypeCounts, thought.memoryType);
   }
 
   for (const [index, topic] of memory.topics.entries()) {
     nodes.push({
       id: topic.id,
       kind: 'topic',
-      label: topic.label || topic.slug,
-      weight: topic.count,
+      label: topic.label,
+      weight: Math.max(1, topic.count),
       topicIds: [topic.id],
       sourceIds: [],
-      position: graphPosition(topic, 'topic', index),
+      position: graphPosition(topic.position, index, Math.max(1, memory.topics.length), 42),
     });
+    nodeIds.add(topic.id);
   }
 
   for (const [index, source] of memory.sources.entries()) {
     const resolved = lookup.sourcesById.get(source.id);
-
     nodes.push({
-      id: graphSourceId(source.id),
+      id: prefixedSourceId(source.id),
       kind: 'source',
-      label: source.title || source.id,
+      label: source.title,
       sublabel: source.kind,
-      weight: source.count,
+      weight: Math.max(1, source.count),
       topicIds: [],
-      sourceIds: [graphSourceId(source.id)],
+      sourceIds: [prefixedSourceId(source.id)],
       href: resolved?.href ?? null,
       routeable: resolved?.routeable ?? false,
       date: source.date,
-      position: graphPosition(source, 'source', index),
+      position: graphPosition(undefined, index, Math.max(1, memory.sources.length), 46),
     });
+    nodeIds.add(prefixedSourceId(source.id));
   }
 
   for (const edge of memory.edges) {
-    if (!isKnownMemoryEndpoint(edge.from, lookup.thoughtsBySlug, lookup.topicsById) || !isKnownMemoryEndpoint(edge.to, lookup.thoughtsBySlug, lookup.topicsById)) {
+    if (edge.type === 'topic-tag') {
       continue;
     }
 
-    const from = lookup.thoughtsBySlug.has(edge.from) ? graphThoughtId(edge.from) : edge.from;
-    const to = lookup.thoughtsBySlug.has(edge.to) ? graphThoughtId(edge.to) : edge.to;
+    const from = lookup.thoughtsBySlug.has(edge.from) ? prefixedThoughtId(edge.from) : edge.from;
+    const to = lookup.thoughtsBySlug.has(edge.to) ? prefixedThoughtId(edge.to) : edge.to;
+
+    if (!nodeIds.has(from) || !nodeIds.has(to)) {
+      continue;
+    }
+
     edges.push({
-      id: `explicit:${edge.from}:${edge.type}:${edge.to}`,
+      id: `explicit:${stableEdgePart(edge.from)}:${stableEdgePart(edge.type)}:${stableEdgePart(edge.to)}`,
       from,
       to,
       type: edge.type,
       confidence: edge.confidence,
       derived: false,
     });
+    incrementCount(edgeTypeCounts, edge.type);
   }
 
   for (const thought of memory.thoughts) {
-    const from = graphThoughtId(thought.slug);
+    const thoughtId = prefixedThoughtId(thought.slug);
 
-    for (const topicSlug of thought.topics) {
-      const topicId = lookup.topicsBySlug.get(topicSlug)?.id ?? `topic:${topicSlug}`;
-      edges.push({
-        id: `derived-topic:${thought.slug}:${topicId}`,
-        from,
-        to: topicId,
-        type: 'topic',
-        confidence: 1,
-        derived: true,
-      });
+    for (const topic of thought.topics) {
+      const topicId = lookup.topicsBySlug.get(topic)?.id;
+      if (!topicId || !nodeIds.has(topicId)) {
+        continue;
+      }
+
+      const edgeId = `derived:thought-topic:${stableEdgePart(thought.slug)}:${stableEdgePart(topicId)}`;
+      if (!edges.some((edge) => edge.id === edgeId)) {
+        edges.push({
+          id: edgeId,
+          from: thoughtId,
+          to: topicId,
+          type: 'topic-tag',
+          confidence: 1,
+          derived: true,
+        });
+        incrementCount(edgeTypeCounts, 'topic-tag');
+      }
     }
 
     for (const sourceId of thought.sources) {
+      const graphSourceId = prefixedSourceId(sourceId);
+      if (!nodeIds.has(graphSourceId)) {
+        continue;
+      }
+
       edges.push({
-        id: `derived-source:${thought.slug}:${sourceId}`,
-        from,
-        to: graphSourceId(sourceId),
-        type: 'source',
+        id: `derived:thought-source:${stableEdgePart(thought.slug)}:${stableEdgePart(sourceId)}`,
+        from: thoughtId,
+        to: graphSourceId,
+        type: 'source-link',
         confidence: 1,
         derived: true,
       });
+      incrementCount(edgeTypeCounts, 'source-link');
     }
   }
-
-  const topicFacets = memory.topics.map((topic) => ({
-    id: topic.id,
-    label: topic.label || topic.slug,
-    count: topic.count,
-  }));
-  const sourceFacets = memory.sources.map((source) => {
-    const resolved = lookup.sourcesById.get(source.id);
-
-    return {
-      id: graphSourceId(source.id),
-      label: source.title || source.id,
-      count: source.count,
-      routeable: resolved?.routeable ?? false,
-    };
-  });
 
   return {
     nodes,
     edges,
     facets: {
-      lenses: [
-        { id: 'all', label: 'All', count: nodes.length },
-        { id: 'topics', label: 'Topics', count: memory.thoughts.filter((thought) => thought.topics.length > 0).length + memory.topics.length },
-        { id: 'sources', label: 'Sources', count: memory.thoughts.filter((thought) => thought.sources.length > 0).length + memory.sources.length },
-        { id: 'theses', label: 'Theses', count: memory.thoughts.filter((thought) => thought.theses.length > 0).length },
-        { id: 'external-vs-mine', label: 'External vs Mine', count: memory.thoughts.length + memory.sources.filter((source) => source.kind === 'external').length },
-      ],
-      topics: topicFacets,
-      sources: sourceFacets,
-      memoryTypes: countBy(memory.thoughts, (thought) => thought.memoryType),
-      edgeTypes: countEdgeTypes(edges),
+      lenses: graphLensDefinitions.map((lens) => {
+        const count = lens.id === 'all'
+          ? nodes.length
+          : lens.id === 'topics'
+            ? memory.topics.length
+            : lens.id === 'sources'
+              ? memory.sources.length
+              : lens.id === 'theses'
+                ? memory.thoughts.filter((thought) => thought.theses.length > 0).length
+                : new Set([
+                  ...memory.thoughts.map((thought) => thought.origin),
+                  ...memory.sources.filter((source) => source.kind === 'external').map((source) => source.kind),
+                ]).size;
+        return { ...lens, count };
+      }),
+      topics: memory.topics
+        .map((topic) => ({ id: topic.id, label: topic.label, count: topic.count }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+      sources: memory.sources
+        .map((source) => {
+          const resolved = lookup.sourcesById.get(source.id);
+          return {
+            id: prefixedSourceId(source.id),
+            label: source.title,
+            count: source.count,
+            routeable: resolved?.routeable ?? false,
+          };
+        })
+        .sort((a, b) => a.label.localeCompare(b.label)),
+      memoryTypes: sortedFacetEntries(memoryTypeCounts),
+      edgeTypes: sortedFacetEntries(edgeTypeCounts),
     },
-    selectedFallback: memory.thoughts[0] ? graphThoughtId(memory.thoughts[0].slug) : null,
+    selectedFallback: memory.thoughts[0] ? prefixedThoughtId(memory.thoughts[0].slug) : null,
   };
+}
+
+function applyLens(nodes: MemoryGraphNode[], activeLens: string | undefined): MemoryGraphNode[] {
+  if (!activeLens || activeLens === 'all') {
+    return nodes;
+  }
+
+  if (activeLens === 'topics') {
+    return nodes.filter((node) => node.kind === 'thought' || node.kind === 'topic');
+  }
+
+  if (activeLens === 'sources') {
+    return nodes.filter((node) => node.kind === 'thought' || node.kind === 'source');
+  }
+
+  if (activeLens === 'theses') {
+    return nodes.filter((node) => node.kind !== 'source');
+  }
+
+  if (activeLens === 'external-vs-mine') {
+    return nodes.filter((node) => node.kind === 'thought' || node.kind === 'source');
+  }
+
+  return nodes;
 }
 
 export function filterMemoryGraphModel(
   model: MemoryGraphModel,
-  filters: MemoryGraphFilterState,
+  filters: MemoryGraphFilterState = {},
 ): { nodeIds: Set<string>; edgeIds: Set<string> } {
-  const query = filters.query?.trim().toLocaleLowerCase() ?? '';
-  const activeLens = filters.activeLens ?? 'all';
+  const query = normalizedQuery(filters.query);
   const activeTopicIds = new Set(filters.activeTopicIds ?? []);
   const activeSourceIds = new Set(filters.activeSourceIds ?? []);
   const activeMemoryTypes = new Set(filters.activeMemoryTypes ?? []);
   const activeEdgeTypes = new Set(filters.activeEdgeTypes ?? []);
-  const nodeIds = new Set<string>();
-  const edgeIds = new Set<string>();
+  const activeEdgeNodeIds = activeEdgeTypes.size > 0
+    ? new Set(model.edges.filter((edge) => activeEdgeTypes.has(edge.type)).flatMap((edge) => [edge.from, edge.to]))
+    : null;
 
-  for (const node of model.nodes) {
-    if (!nodeMatchesLens(node, activeLens)) {
-      continue;
-    }
-
-    if (query && !nodeSearchText(node).includes(query)) {
-      continue;
-    }
-
-    if (activeTopicIds.size > 0) {
-      const matchesTopic = node.kind === 'topic'
-        ? activeTopicIds.has(node.id)
-        : node.topicIds.some((topicId) => activeTopicIds.has(topicId));
-
-      if (!matchesTopic) {
-        continue;
+  const lensNodeIds = new Set(applyLens(model.nodes, filters.activeLens).map((node) => node.id));
+  const visibleNodes = applyLens(model.nodes, filters.activeLens)
+    .filter((node) => {
+      if (query && !nodeSearchText(node).includes(query)) {
+        return false;
       }
-    }
 
-    if (activeSourceIds.size > 0) {
-      const matchesSource = node.kind === 'source'
-        ? activeSourceIds.has(node.id)
-        : node.sourceIds.some((sourceId) => activeSourceIds.has(sourceId));
-
-      if (!matchesSource) {
-        continue;
+      if (activeTopicIds.size > 0 && !node.topicIds.some((topicId) => activeTopicIds.has(topicId))) {
+        return false;
       }
-    }
 
-    if (activeMemoryTypes.size > 0 && node.kind === 'thought' && (!node.memoryType || !activeMemoryTypes.has(node.memoryType))) {
-      continue;
-    }
+      if (activeSourceIds.size > 0 && !node.sourceIds.some((sourceId) => activeSourceIds.has(sourceId))) {
+        return false;
+      }
 
-    nodeIds.add(node.id);
-  }
+      if (activeMemoryTypes.size > 0 && (!node.memoryType || !activeMemoryTypes.has(node.memoryType))) {
+        return false;
+      }
+
+      if (activeEdgeNodeIds && !activeEdgeNodeIds.has(node.id)) {
+        return false;
+      }
+
+      return true;
+    });
+
+  const nodeIds = new Set(visibleNodes.map((node) => node.id));
 
   for (const edge of model.edges) {
-    if (activeEdgeTypes.size > 0 && !activeEdgeTypes.has(edge.type)) {
+    const fromVisible = nodeIds.has(edge.from);
+    const toVisible = nodeIds.has(edge.to);
+
+    if (!fromVisible && !toVisible) {
       continue;
     }
 
-    if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) {
-      continue;
-    }
+    const fromNode = model.nodes.find((node) => node.id === edge.from);
+    const toNode = model.nodes.find((node) => node.id === edge.to);
+    const visibleThoughtContext = (fromNode?.kind === 'thought' && fromVisible) || (toNode?.kind === 'thought' && toVisible);
 
-    edgeIds.add(edge.id);
+    if (visibleThoughtContext && edge.derived) {
+      if (lensNodeIds.has(edge.from)) {
+        nodeIds.add(edge.from);
+      }
+      if (lensNodeIds.has(edge.to)) {
+        nodeIds.add(edge.to);
+      }
+    }
   }
 
-  return { nodeIds, edgeIds };
+  const orderedNodeIds = new Set(model.nodes.filter((node) => nodeIds.has(node.id)).map((node) => node.id));
+  const edgeIds = new Set(
+    model.edges
+      .filter((edge) => {
+        if (!orderedNodeIds.has(edge.from) || !orderedNodeIds.has(edge.to)) {
+          return false;
+        }
+
+        if (activeEdgeTypes.size > 0 && !activeEdgeTypes.has(edge.type)) {
+          return false;
+        }
+
+        return true;
+      })
+      .map((edge) => edge.id),
+  );
+
+  return { nodeIds: orderedNodeIds, edgeIds };
 }
 
 export interface ArticleMemoryLink {
