@@ -1,11 +1,11 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { buildMemoryLookup, loadPublicMemoryData } from '../lib/memoryData';
+import { buildMemoryGraphModel, buildMemoryLookup, loadPublicMemoryData } from '../lib/memoryData';
 
 const memory = loadPublicMemoryData();
 const lookup = buildMemoryLookup(memory);
+const graph = buildMemoryGraphModel(memory);
 const hasThoughts = memory.thoughts.length > 0;
-const firstThought = memory.thoughts[0];
 const latestGenerated = memory.generatedAt
   ? new Intl.DateTimeFormat('ko', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(memory.generatedAt))
   : null;
@@ -20,6 +20,11 @@ function memoryNodeLabel(id: string) {
   return thoughtLabels.get(id) ?? topicLabels.get(id) ?? id;
 }
 
+function graphNodeLabel(id: string) {
+  const thoughtSlug = id.startsWith('thought:') ? id.replace('thought:', '') : id;
+  return thoughtLabels.get(thoughtSlug) ?? topicLabels.get(id) ?? id;
+}
+
 function sourceCountLabel(count: number) {
   return count === 1 ? '1 source' : `${count} sources`;
 }
@@ -28,91 +33,254 @@ function relationshipLabel(edge: { from: string; to: string; type: string }) {
   return `${edge.type}: ${memoryNodeLabel(edge.from)} -> ${memoryNodeLabel(edge.to)}`;
 }
 
-const memoryPayload = {
-  thoughts: Object.fromEntries(memory.thoughts.map((thought) => [
-    thought.slug,
-    {
-      slug: thought.slug,
-      claimKo: thought.claimKo,
-      claimEn: thought.claimEn,
-      memoryType: thought.memoryType,
-      topics: thought.topics,
-      sources: (lookup.sourceRefsByThoughtSlug.get(thought.slug) ?? []).map((source) => ({
-        id: source.id,
-        title: source.title,
-        href: source.href,
-        routeable: source.routeable,
-        unresolved: 'unresolved' in source ? source.unresolved : false,
+function edgeCoordinates(edge: { from: string; to: string }) {
+  const from = graph.nodes.find((node) => node.id === edge.from);
+  const to = graph.nodes.find((node) => node.id === edge.to);
+
+  return {
+    x1: from?.position.x ?? 50,
+    y1: from?.position.y ?? 50,
+    x2: to?.position.x ?? 50,
+    y2: to?.position.y ?? 50,
+  };
+}
+
+const thoughtDetails = Object.fromEntries(memory.thoughts.map((thought) => [
+  `thought:${thought.slug}`,
+  {
+    id: `thought:${thought.slug}`,
+    kind: 'thought',
+    title: thought.claimKo,
+    body: thought.body || thought.claimEn,
+    sublabel: thought.claimEn,
+    memoryType: thought.memoryType,
+    origin: thought.origin,
+    topics: thought.topics,
+    theses: thought.theses,
+    sources: (lookup.sourceRefsByThoughtSlug.get(thought.slug) ?? []).map((source) => ({
+      id: source.id,
+      title: source.title,
+      href: source.href,
+      routeable: source.routeable,
+      unresolved: 'unresolved' in source ? source.unresolved : false,
+    })),
+    relationships: (lookup.edgesByThoughtSlug.get(thought.slug) ?? [])
+      .filter((edge) => edge.type !== 'topic-tag')
+      .map((edge) => relationshipLabel(edge)),
+  },
+]));
+
+const topicDetails = Object.fromEntries(memory.topics.map((topic) => [
+  topic.id,
+  {
+    id: topic.id,
+    kind: 'topic',
+    title: topic.label,
+    body: `${topic.count} public thoughts`,
+    thoughts: memory.thoughts
+      .filter((thought) => thought.topics.includes(topic.label))
+      .map((thought) => ({
+        id: `thought:${thought.slug}`,
+        title: thought.claimKo,
       })),
-      body: thought.body,
-      relationships: (lookup.edgesByThoughtSlug.get(thought.slug) ?? [])
-        .filter((edge) => edge.type !== 'topic-tag')
-        .map((edge) => relationshipLabel(edge)),
+  },
+]));
+
+const sourceDetails = Object.fromEntries(memory.sources.map((source) => {
+  const resolved = lookup.sourcesById.get(source.id);
+  return [
+    `source:${source.id}`,
+    {
+      id: `source:${source.id}`,
+      kind: 'source',
+      title: source.title,
+      body: source.path ?? source.url ?? source.kind,
+      href: resolved?.href ?? null,
+      routeable: resolved?.routeable ?? false,
+      sourceKind: source.kind,
+      date: source.date,
+      thoughts: memory.thoughts
+        .filter((thought) => thought.sources.includes(source.id))
+        .map((thought) => ({
+          id: `thought:${thought.slug}`,
+          title: thought.claimKo,
+        })),
     },
-  ])),
+  ];
+}));
+
+const memoryPayload = {
+  graph,
+  details: {
+    ...thoughtDetails,
+    ...topicDetails,
+    ...sourceDetails,
+  },
   fallbackRelationships: strongestEdges.map((edge) => relationshipLabel(edge)),
 };
 ---
 
 <BaseLayout title="Memory · beyondwin" description="공개해도 되는 생각, 근거, 주제를 다시 찾기 위한 개인 메모리.">
-  <section class="shell memory-hero">
-    <div class="memory-hero__copy">
-      <p class="memory-eyebrow">Memory</p>
-      <h1>Memory</h1>
-      <p>글로 완성되기 전의 생각과 글을 쓰고 난 뒤 남은 판단을 모아 둡니다. 비공개 메모는 제외하고, 다시 읽을 수 있는 생각과 근거만 공개합니다.</p>
-    </div>
-    <dl class="memory-stats" aria-label="Memory statistics">
-      <div><dt>Thoughts</dt><dd>{memory.counts.thoughts}</dd></div>
-      <div><dt>Topics</dt><dd>{memory.counts.topics}</dd></div>
-      <div><dt>Edges</dt><dd>{memory.counts.edges}</dd></div>
-      <div><dt>Sources</dt><dd>{memory.counts.sources}</dd></div>
-    </dl>
-  </section>
-
-  <section class="shell memory-shell" data-memory-tabs>
+  <section class="memory-app shell" data-memory-app>
     {hasThoughts ? (
       <>
-        <div class="memory-toolbar">
-          <label>
+        <aside class="memory-app__rail" aria-label="Memory filters">
+          <div class="memory-app__title">
+            <p class="memory-eyebrow">Knowledge Graph</p>
+            <h1>Second Brain</h1>
+            <p>공개해도 되는 생각과 근거만 그래프로 탐색합니다.</p>
+          </div>
+
+          <dl class="memory-app__stats" aria-label="Memory statistics">
+            <div><dt>Thoughts</dt><dd>{memory.counts.thoughts}</dd></div>
+            <div><dt>Topics</dt><dd>{memory.counts.topics}</dd></div>
+            <div><dt>Edges</dt><dd>{memory.counts.edges}</dd></div>
+            <div><dt>Sources</dt><dd>{memory.counts.sources}</dd></div>
+          </dl>
+
+          <p class="memory-app__generated">{latestGenerated ? `Last projected ${latestGenerated}` : 'Projection date unavailable'}</p>
+
+          <label class="memory-app__search">
             <span>Search memory</span>
             <input type="search" placeholder="topic, claim, source" data-memory-search />
           </label>
-          <p>{latestGenerated ? `Last projected ${latestGenerated}` : 'Projection date unavailable'}</p>
-        </div>
 
-        <div class="memory-tabs" role="tablist" aria-label="Memory views">
-          <button class="memory-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="memory-map" data-memory-tab="memory-map">Workbench</button>
-          <button class="memory-tab" type="button" role="tab" aria-selected="false" aria-controls="memory-library" data-memory-tab="memory-library">Library</button>
-          <button class="memory-tab" type="button" role="tab" aria-selected="false" aria-controls="memory-sources" data-memory-tab="memory-sources">Sources</button>
-        </div>
-
-        <div class="memory-panel is-active" id="memory-map" role="tabpanel">
-          <div class="memory-workbench">
-            <aside class="memory-topic-index" aria-label="Memory topics">
-              <h2>Topics</h2>
-              <div class="memory-topic-links">
-                <button class="memory-filter is-active" type="button" data-memory-topic="">
-                  <span>All topics</span>
-                  <b>{memory.counts.thoughts}</b>
+          <div class="memory-app__control-group" aria-label="Lenses">
+            <h2>Lens</h2>
+            <div class="memory-app__chips">
+              {graph.facets.lenses.map((lens) => (
+                <button class={`memory-app__chip ${lens.id === 'all' ? 'is-active' : ''}`} type="button" data-memory-lens={lens.id} aria-pressed={lens.id === 'all' ? 'true' : 'false'}>
+                  <span>{lens.label}</span>
+                  <b>{lens.count}</b>
                 </button>
-                {memory.topics.map((topic) => (
-                  <button class="memory-filter" type="button" data-memory-topic={topic.label}>
-                    <span>{topic.label}</span>
-                    <b>{topic.count}</b>
-                  </button>
-                ))}
-              </div>
-            </aside>
-            <div class="memory-thought-stack" aria-label="Public thoughts">
+              ))}
+            </div>
+          </div>
+
+          <div class="memory-app__control-group" aria-label="Topics">
+            <h2>Topics</h2>
+            <div class="memory-app__chips">
+              {graph.facets.topics.map((topic) => (
+                <button class="memory-app__chip" type="button" data-memory-topic={topic.id} aria-pressed="false">
+                  <span>{topic.label}</span>
+                  <b>{topic.count}</b>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div class="memory-app__control-group" aria-label="Sources">
+            <h2>Sources</h2>
+            <div class="memory-app__chips">
+              {graph.facets.sources.map((source) => (
+                <button class="memory-app__chip" type="button" data-memory-source={source.id} aria-pressed="false">
+                  <span>{source.label}</span>
+                  <b>{source.count}</b>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div class="memory-app__control-group" aria-label="Memory types">
+            <h2>Node types</h2>
+            <div class="memory-app__chips">
+              {graph.facets.memoryTypes.map((type) => (
+                <button class="memory-app__chip" type="button" data-memory-type={type.id} aria-pressed="false">
+                  <span>{type.label}</span>
+                  <b>{type.count}</b>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div class="memory-app__control-group" aria-label="Edge types">
+            <h2>Edge types</h2>
+            <div class="memory-app__chips">
+              {graph.facets.edgeTypes.map((type) => (
+                <button class="memory-app__chip" type="button" data-memory-edge-type={type.id} aria-pressed="false">
+                  <span>{type.label}</span>
+                  <b>{type.count}</b>
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <main class="memory-app__main">
+          <div class="memory-graph-toolbar" aria-label="Graph controls">
+            <div class="memory-graph-toolbar__group" role="group" aria-label="Graph layout">
+              <button class="memory-graph-tool is-active" type="button" data-memory-layout="brain" aria-pressed="true">Brain</button>
+              <button class="memory-graph-tool" type="button" data-memory-layout="cluster" aria-pressed="false">Cluster</button>
+              <button class="memory-graph-tool" type="button" data-memory-layout="timeline" aria-pressed="false">Timeline</button>
+            </div>
+            <div class="memory-graph-toolbar__group" role="group" aria-label="Graph display">
+              <button class="memory-graph-tool" type="button" data-memory-reset>Reset</button>
+              <button class="memory-graph-tool is-active" type="button" data-memory-labels aria-pressed="true">Labels</button>
+              <button class="memory-graph-tool" type="button" data-memory-density="wide" aria-pressed="false">Wide</button>
+            </div>
+          </div>
+
+          <div class="memory-graph-stage" data-memory-graph data-memory-layout-mode="brain" data-memory-density-mode="normal">
+            <svg class="memory-graph-edges" viewBox="0 0 100 100" role="presentation" aria-hidden="true" preserveAspectRatio="none">
+              {graph.edges.map((edge) => {
+                const coords = edgeCoordinates(edge);
+                return (
+                  <line
+                    x1={coords.x1}
+                    y1={coords.y1}
+                    x2={coords.x2}
+                    y2={coords.y2}
+                    data-memory-edge={edge.id}
+                    data-memory-edge-type={edge.type}
+                    data-memory-edge-derived={String(edge.derived)}
+                  />
+                );
+              })}
+            </svg>
+
+            {graph.nodes.map((node) => (
+              <button
+                class={`memory-graph-node memory-graph-node--${node.kind} ${node.id === graph.selectedFallback ? 'is-selected' : ''}`}
+                type="button"
+                style={`--x:${node.position.x};--y:${node.position.y};--weight:${node.weight};`}
+                data-memory-node={node.id}
+                data-memory-kind={node.kind}
+                data-memory-topics={node.topicIds.join(' ')}
+                data-memory-sources={node.sourceIds.join(' ')}
+                data-memory-type={node.memoryType ?? ''}
+                data-memory-text={`${node.label} ${node.sublabel ?? ''} ${node.memoryType ?? ''} ${node.origin ?? ''}`}
+                aria-pressed={node.id === graph.selectedFallback ? 'true' : 'false'}
+                aria-label={`${node.kind}: ${node.label}`}
+              >
+                <span>{node.label}</span>
+              </button>
+            ))}
+
+            <div class="memory-no-results memory-no-results--graph" data-memory-graph-empty hidden>
+              <h2>No matching graph nodes</h2>
+              <p>검색어와 필터를 줄이면 다시 볼 수 있습니다.</p>
+              <button type="button" data-memory-reset>Reset filters</button>
+            </div>
+          </div>
+
+          <section class="memory-secondary" aria-label="Memory fallback views">
+            <div class="memory-tabs" role="tablist" aria-label="Memory views">
+              <button class="memory-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="memory-list" data-memory-tab="memory-list">List</button>
+              <button class="memory-tab" type="button" role="tab" aria-selected="false" aria-controls="memory-library" data-memory-tab="memory-library">Library</button>
+              <button class="memory-tab" type="button" role="tab" aria-selected="false" aria-controls="memory-sources" data-memory-tab="memory-sources">Sources</button>
+            </div>
+
+            <div class="memory-panel is-active" id="memory-list" role="tabpanel">
+              <div class="memory-thought-stack" aria-label="Public thoughts">
               {memory.thoughts.map((thought) => (
                 <button
-                  class={`memory-thought-row ${thought.slug === firstThought.slug ? 'is-selected' : ''}`}
+                  class={`memory-thought-row ${`thought:${thought.slug}` === graph.selectedFallback ? 'is-selected' : ''}`}
                   type="button"
-                  id={`thought-${thought.slug}`}
-                  data-memory-item
-                  data-memory-slug={thought.slug}
-                  data-memory-topics={thought.topics.join(' ')}
-                  data-memory-sources={thought.sources.join(' ')}
+                  data-memory-list-item
+                  data-memory-node={`thought:${thought.slug}`}
+                  data-memory-topics={thought.topics.map((topic) => lookup.topicsBySlug.get(topic)?.id ?? '').join(' ')}
+                  data-memory-sources={thought.sources.map((source) => `source:${source}`).join(' ')}
+                  data-memory-type={thought.memoryType}
                   data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}
                 >
                   <div>
@@ -121,35 +289,23 @@ const memoryPayload = {
                     <p>{thought.claimEn}</p>
                   </div>
                   <div class="memory-chip-row">
-                    {thought.topics.map((topic) => <span>{topic}</span>)}
-                    <span>{sourceCountLabel(thought.sources.length)}</span>
-                  </div>
-                </button>
-              ))}
-              <div class="memory-no-results" data-memory-no-results hidden>
+                  {thought.topics.map((topic) => <span>{topic}</span>)}
+                  <span>{sourceCountLabel(thought.sources.length)}</span>
+                </div>
+              </button>
+            ))}
+                <div class="memory-no-results" data-memory-list-empty hidden>
                 <h2>No matching thoughts</h2>
-                <p>검색어, topic, source 필터를 줄이면 다시 볼 수 있습니다.</p>
+                  <p>검색어와 필터를 줄이면 다시 볼 수 있습니다.</p>
                 <button type="button" data-memory-reset>Reset filters</button>
               </div>
             </div>
-            <aside class="memory-detail" aria-label="Selected thought" data-memory-detail>
-              <p class="memory-eyebrow">Selected</p>
-              <h2 data-memory-detail-title>{firstThought.claimKo}</h2>
-              <p data-memory-detail-body>{firstThought.body}</p>
-              <div class="memory-chip-row" data-memory-detail-topics>
-                <span>{firstThought.memoryType}</span>
-                {firstThought.topics.map((topic) => <span>{topic}</span>)}
-              </div>
-              <div class="memory-detail-list" data-memory-detail-sources></div>
-              <div class="memory-detail-list" data-memory-detail-relationships></div>
-            </aside>
           </div>
-        </div>
 
-        <div class="memory-panel" id="memory-library" role="tabpanel" hidden>
+            <div class="memory-panel" id="memory-library" role="tabpanel" hidden>
           <div class="memory-library">
             {memory.topics.map((topic) => (
-              <section class="memory-topic" id={`topic-${topic.slug}`} data-memory-topic-group={topic.label}>
+                  <section class="memory-topic" id={`topic-${topic.slug}`} data-memory-topic-group={topic.id}>
                 <div>
                   <h2>{topic.label}</h2>
                   <p>{topic.count} public thoughts</p>
@@ -161,11 +317,11 @@ const memoryPayload = {
                       <button
                         class="memory-thought-card"
                         type="button"
-                        data-memory-item
-                        data-memory-card
-                        data-memory-slug={thought.slug}
-                        data-memory-topics={thought.topics.join(' ')}
-                        data-memory-sources={thought.sources.join(' ')}
+                            data-memory-list-item
+                            data-memory-node={`thought:${thought.slug}`}
+                            data-memory-topics={thought.topics.map((label) => lookup.topicsBySlug.get(label)?.id ?? '').join(' ')}
+                            data-memory-sources={thought.sources.map((source) => `source:${source}`).join(' ')}
+                            data-memory-type={thought.memoryType}
                         data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}
                       >
                         <h3>{thought.claimKo}</h3>
@@ -179,7 +335,7 @@ const memoryPayload = {
                 </div>
               </section>
             ))}
-            <div class="memory-no-results" data-memory-no-results hidden>
+                <div class="memory-no-results" data-memory-list-empty hidden>
               <h2>No matching library entries</h2>
               <p>현재 조건에 맞는 public thought가 없습니다.</p>
               <button type="button" data-memory-reset>Reset filters</button>
@@ -187,15 +343,7 @@ const memoryPayload = {
           </div>
         </div>
 
-        <div class="memory-panel" id="memory-sources" role="tabpanel" hidden>
-          <div class="memory-edge-list" aria-label="Memory relationships">
-            <h2>Relationships</h2>
-            <div data-memory-relationships>
-              {strongestEdges.map((edge) => (
-                <p><span>{edge.type}</span>{memoryNodeLabel(edge.from)} -> {memoryNodeLabel(edge.to)}</p>
-              ))}
-            </div>
-          </div>
+            <div class="memory-panel" id="memory-sources" role="tabpanel" hidden>
           <div class="memory-source-grid">
             {memory.sources.map((source) => {
               const resolved = lookup.sourcesById.get(source.id);
@@ -209,22 +357,33 @@ const memoryPayload = {
               );
 
               return resolved?.href ? (
-                <a class="memory-source-card" href={resolved.href} data-memory-source={source.id}>
+                    <a class="memory-source-card" href={resolved.href} data-memory-source-card={`source:${source.id}`}>
                   {content}
                 </a>
               ) : (
-                <button class="memory-source-card memory-source-card--static" type="button" data-memory-source={source.id}>
+                    <button class="memory-source-card memory-source-card--static" type="button" data-memory-source-card={`source:${source.id}`}>
                   {content}
                 </button>
               );
             })}
           </div>
-          <div class="memory-no-results" data-memory-no-results hidden>
+              <div class="memory-no-results" data-memory-source-empty hidden>
             <h2>No matching sources</h2>
             <p>현재 조건에 연결된 source가 없습니다.</p>
             <button type="button" data-memory-reset>Reset filters</button>
           </div>
         </div>
+          </section>
+        </main>
+
+        <aside class="memory-app__drawer" aria-label="Selected memory node" data-memory-detail>
+          <p class="memory-eyebrow">Selected</p>
+          <h2 data-memory-detail-title>{graph.selectedFallback ? graphNodeLabel(graph.selectedFallback) : 'No selected node'}</h2>
+          <p data-memory-detail-body>{graph.selectedFallback ? memoryPayload.details[graph.selectedFallback]?.body : 'Select a node to inspect its public evidence.'}</p>
+          <div class="memory-chip-row" data-memory-detail-chips></div>
+          <div class="memory-detail-list" data-memory-detail-sources></div>
+          <div class="memory-detail-list" data-memory-detail-relationships></div>
+        </aside>
       </>
     ) : (
       <div class="empty-state">
