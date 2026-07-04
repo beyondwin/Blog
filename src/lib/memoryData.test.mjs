@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildMemoryGraphModel,
   buildMemoryLookup,
   emptyMemoryData,
   findArticleMemoryLinks,
+  filterMemoryGraphModel,
   normalizeMemoryData,
   resolveMemorySourceHref,
 } from './memoryData.ts';
@@ -296,5 +298,192 @@ describe('memory data helpers', () => {
       'one-match-first',
       'one-match-second',
     ]);
+  });
+
+  it('builds a render-safe graph model with public thoughts, topics, sources, and stable edges', () => {
+    const model = buildMemoryGraphModel(makeMemory());
+
+    expect(model.selectedFallback).toBe('thought:routing-problem');
+    expect(model.nodes.map((node) => node.id)).toEqual([
+      'thought:routing-problem',
+      'thought:review-gates',
+      'topic:ai-workflow',
+      'topic:agent-workflows',
+      'source:article-source',
+      'source:docs-source',
+      'source:external-source',
+    ]);
+    expect(model.nodes.find((node) => node.id === 'thought:routing-problem')).toMatchObject({
+      kind: 'thought',
+      label: '컨텍스트 품질은 라우팅 문제다.',
+      sublabel: 'Context quality is a routing problem.',
+      weight: 3,
+      memoryType: 'semantic',
+      origin: 'kws',
+      topicIds: ['topic:ai-workflow'],
+      sourceIds: ['source:article-source', 'source:missing-source'],
+      position: { x: 10, y: 20 },
+    });
+    expect(model.nodes.find((node) => node.id === 'source:article-source')).toMatchObject({
+      kind: 'source',
+      label: 'Context Refinement System 설계 요약',
+      href: '/articles/context-refinement-system-design/',
+      routeable: true,
+    });
+    expect(model.edges.map((edge) => edge.id)).toEqual([
+      'explicit:routing-problem:supports:review-gates',
+      'explicit:routing-problem:topic-tag:topic:ai-workflow',
+      'derived-topic:routing-problem:topic:ai-workflow',
+      'derived-source:routing-problem:article-source',
+      'derived-source:routing-problem:missing-source',
+      'derived-topic:review-gates:topic:agent-workflows',
+      'derived-source:review-gates:docs-source',
+    ]);
+    expect(model.edges).toContainEqual({
+      id: 'explicit:routing-problem:supports:review-gates',
+      from: 'thought:routing-problem',
+      to: 'thought:review-gates',
+      type: 'supports',
+      confidence: 0.8,
+      derived: false,
+    });
+    expect(model.edges.some((edge) => edge.id.includes('missing-thought'))).toBe(false);
+  });
+
+  it('counts graph facets for lenses, routeable sources, memory types, and edge types', () => {
+    const model = buildMemoryGraphModel(makeMemory());
+
+    expect(model.facets.lenses).toEqual([
+      { id: 'all', label: 'All', count: 7 },
+      { id: 'topics', label: 'Topics', count: 4 },
+      { id: 'sources', label: 'Sources', count: 5 },
+      { id: 'theses', label: 'Theses', count: 1 },
+      { id: 'external-vs-mine', label: 'External vs Mine', count: 3 },
+    ]);
+    expect(model.facets.topics).toEqual([
+      { id: 'topic:ai-workflow', label: 'ai-workflow', count: 1 },
+      { id: 'topic:agent-workflows', label: 'agent-workflows', count: 1 },
+    ]);
+    expect(model.facets.sources).toEqual([
+      { id: 'source:article-source', label: 'Context Refinement System 설계 요약', count: 1, routeable: true },
+      { id: 'source:docs-source', label: 'Memory Second Brain Implementation Reference', count: 1, routeable: false },
+      { id: 'source:external-source', label: 'External Source', count: 0, routeable: true },
+    ]);
+    expect(model.facets.memoryTypes).toEqual([
+      { id: 'semantic', label: 'semantic', count: 1 },
+      { id: 'procedural', label: 'procedural', count: 1 },
+    ]);
+    expect(model.facets.edgeTypes).toEqual([
+      { id: 'supports', label: 'supports', count: 1 },
+      { id: 'topic-tag', label: 'topic-tag', count: 1 },
+      { id: 'topic', label: 'topic', count: 2 },
+      { id: 'source', label: 'source', count: 3 },
+    ]);
+  });
+
+  it('returns an empty graph model for empty memory data', () => {
+    expect(buildMemoryGraphModel(emptyMemoryData)).toEqual({
+      nodes: [],
+      edges: [],
+      facets: {
+        lenses: [
+          { id: 'all', label: 'All', count: 0 },
+          { id: 'topics', label: 'Topics', count: 0 },
+          { id: 'sources', label: 'Sources', count: 0 },
+          { id: 'theses', label: 'Theses', count: 0 },
+          { id: 'external-vs-mine', label: 'External vs Mine', count: 0 },
+        ],
+        topics: [],
+        sources: [],
+        memoryTypes: [],
+        edgeTypes: [],
+      },
+      selectedFallback: null,
+    });
+  });
+
+  it('keeps public thoughts visible when source records are missing', () => {
+    const model = buildMemoryGraphModel(makeMemory({ sources: [] }));
+
+    expect(model.nodes.find((node) => node.id === 'thought:routing-problem')).toMatchObject({
+      sourceIds: ['source:article-source', 'source:missing-source'],
+    });
+    expect(model.nodes.some((node) => node.id === 'source:missing-source')).toBe(false);
+    expect(model.edges).toContainEqual({
+      id: 'derived-source:routing-problem:missing-source',
+      from: 'thought:routing-problem',
+      to: 'source:missing-source',
+      type: 'source',
+      confidence: 1,
+      derived: true,
+    });
+  });
+
+  it('normalizes missing layout positions to bounded stable coordinates', () => {
+    const model = buildMemoryGraphModel(makeMemory({
+      thoughts: [
+        {
+          slug: 'no-position',
+          claimKo: '위치 없는 생각',
+          claimEn: 'A thought without a position.',
+          memoryType: 'semantic',
+          origin: 'kws',
+          topics: [],
+          theses: [],
+          sources: [],
+          body: '',
+        },
+      ],
+      topics: [
+        { id: 'topic:ai-workflow', slug: 'ai-workflow', label: 'ai-workflow', count: 1 },
+      ],
+      sources: [
+        { id: 'article-source', kind: 'article', title: 'Article', count: 1 },
+      ],
+      edges: [],
+    }));
+
+    expect(model.nodes.map((node) => node.position)).toEqual([
+      { x: 50, y: 50 },
+      { x: 60, y: 50 },
+      { x: 50, y: 70 },
+    ]);
+    for (const node of model.nodes) {
+      expect(node.position.x).toBeGreaterThanOrEqual(0);
+      expect(node.position.x).toBeLessThanOrEqual(100);
+      expect(node.position.y).toBeGreaterThanOrEqual(0);
+      expect(node.position.y).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it('filters graph visibility by query, lens, topic, source, memory type, and edge type', () => {
+    const model = buildMemoryGraphModel(makeMemory());
+
+    expect([...filterMemoryGraphModel(model, {
+      query: 'review gates',
+      activeLens: 'all',
+      activeTopicIds: [],
+      activeSourceIds: [],
+      activeMemoryTypes: [],
+      activeEdgeTypes: [],
+    }).nodeIds]).toEqual(['thought:review-gates']);
+
+    expect([...filterMemoryGraphModel(model, {
+      query: '',
+      activeLens: 'topics',
+      activeTopicIds: ['topic:ai-workflow'],
+      activeSourceIds: [],
+      activeMemoryTypes: ['semantic'],
+      activeEdgeTypes: ['topic'],
+    }).edgeIds]).toEqual(['derived-topic:routing-problem:topic:ai-workflow']);
+
+    expect([...filterMemoryGraphModel(model, {
+      query: '',
+      activeLens: 'sources',
+      activeTopicIds: [],
+      activeSourceIds: ['source:docs-source'],
+      activeMemoryTypes: [],
+      activeEdgeTypes: ['source'],
+    }).nodeIds]).toEqual(['thought:review-gates', 'source:docs-source']);
   });
 });
