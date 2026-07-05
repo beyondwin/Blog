@@ -22,7 +22,7 @@ Read the smallest useful set for the task.
 | Source-grounded article | `docs/notes/project/publishing-workflows.md`, relevant `docs/notes/article-factory/` packet | Rendered article route |
 | Review, idea, or travel note | `docs/notes/project/publishing-workflows.md`, `docs/notes/project/architecture-reference.md` | Matching collection schema in `src/content.config.ts` |
 | Queue analysis | `SYNC.md`, `docs/notes/project/publishing-workflows.md` | `scripts/queue.mjs` and `queue.md` |
-| Public memory projection | `docs/notes/project/architecture-reference.md`, `docs/implementation/memory-second-brain.md` | `scripts/memory/schema.mjs`, `scripts/memory/project.mjs`, `src/lib/memoryData.ts` |
+| Public memory projection | `docs/notes/project/architecture-reference.md`, `docs/implementation/memory-second-brain.md` | `scripts/memory/schema.mjs`, `scripts/memory/project.mjs`, `src/lib/memory/`, `src/pages/memory.astro`, `public/scripts/memory-workbench.js` |
 | Archive docs note | `docs/README.md`, `docs/_index/README.md` | `docs/_index/catalog.yml`, `docs/_index/topics.yml`, `docs/INDEX.md` |
 | New content lane | `docs/notes/project/architecture-reference.md`, `DESIGN.md` | Existing pages, layouts, validation scripts, and navigation |
 | Route, layout, or style change | `DESIGN.md`, `docs/notes/project/architecture-reference.md` | Target `src/pages`, `src/layouts`, `src/components`, or CSS files |
@@ -89,6 +89,7 @@ Do not catalog generated `docs/wiki/` pages or `graphify-out/` files as primary 
 - Adding an MDX file without running `npm run validate`.
 - Publishing a `source-grounded` article without source evidence or the required article-quality headings.
 - Letting `/memory` read private `memory/**` files directly.
+- Editing `/memory` behavior in `src/pages/memory.astro` before checking the focused module under `src/lib/memory/`.
 - Adding a curated docs note without updating `catalog.yml`, `topics.yml` when needed, and `docs/INDEX.md`.
 - Treating `graphify-out/` as source material instead of generated navigation.
 - Changing a content lane without updating schema, routes, helpers, validation, navigation, and docs together.

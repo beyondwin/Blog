@@ -12,7 +12,13 @@
 | Layouts | `src/layouts/` | base, article, analysis, review page shell. |
 | Components | `src/components/` | header, card, badge, callout, source panel, table of contents. |
 | Content helpers | `src/lib/content.ts` | collection metadata, 날짜 선택, route href, tag, sorting. |
-| Memory loader | `src/lib/memoryData.ts` | public memory JSON normalize, source href resolve, lookup build. |
+| Memory public data | `src/lib/memory/publicData.ts` | public memory JSON type, empty fallback, normalize, public JSON load. |
+| Memory lookup | `src/lib/memory/lookup.ts` | source route resolution and thought/topic/source/edge lookup maps. |
+| Memory graph model | `src/lib/memory/graphModel.ts` | graph nodes, edges, facets, deterministic positions. |
+| Memory filters | `src/lib/memory/filters.ts` | lens/filter matching and `/memory/` deep-link helpers. |
+| Memory article links | `src/lib/memory/articleLinks.ts` | article footer linked/related memory matching. |
+| Memory page payload | `src/lib/memory/pagePayload.ts` | serializable `/memory` detail drawer and client payload data. |
+| Memory compatibility | `src/lib/memoryData.ts` | temporary re-export surface for existing imports. |
 | Global styles | `src/styles/global.css` | token, layout, prose, component, responsive CSS. |
 | Content source | `src/content/` | 공개 MDX 콘텐츠. |
 | Memory source | `memory/` | public projection의 입력. private draft는 commit하지 않는다. |
@@ -133,7 +139,7 @@ public route:
 
 - `/memory/`
 
-`/memory`는 `memory/**`를 직접 읽지 않는다. [src/lib/memoryData.ts](../../../src/lib/memoryData.ts)가 generated JSON을 normalize하고 source link를 resolve한다.
+`/memory`는 `memory/**`를 직접 읽지 않는다. [src/lib/memory/publicData.ts](../../../src/lib/memory/publicData.ts)가 generated JSON을 읽고 normalize하며, [src/lib/memory/lookup.ts](../../../src/lib/memory/lookup.ts)가 source link를 resolve한다.
 
 ### Thought Eligibility
 
@@ -166,18 +172,20 @@ Projection exclusion reasons:
 - `invalidSource`
 - `unsupportedSchema`
 
-## Memory Data Loader
+## Memory Code Map
 
-[src/lib/memoryData.ts](../../../src/lib/memoryData.ts)는 다음을 제공한다.
+| Layer | File | Responsibility |
+| --- | --- | --- |
+| Memory public data | `src/lib/memory/publicData.ts` | `MemoryPublicData`, empty fallback, normalization, public JSON loading. |
+| Memory lookup | `src/lib/memory/lookup.ts` | source href resolution and thought/topic/source/edge lookup maps. |
+| Memory graph model | `src/lib/memory/graphModel.ts` | graph nodes, edges, facets, deterministic positions. |
+| Memory filters | `src/lib/memory/filters.ts` | lens/filter matching and `/memory/` deep-link helpers. |
+| Memory article links | `src/lib/memory/articleLinks.ts` | article footer linked/related memory matching. |
+| Memory page payload | `src/lib/memory/pagePayload.ts` | serializable `/memory` detail drawer and client payload data. |
+| Memory compatibility | `src/lib/memoryData.ts` | temporary re-export surface for existing imports. |
 
-- `emptyMemoryData`: generated JSON이 없거나 일부 field가 없을 때 fallback.
-- `normalizeMemoryData(value)`: partial JSON을 완전한 `MemoryPublicData`로 만든다.
-- `resolveMemorySourceHref(source)`: `src/content/<collection>/<slug>.mdx` source를 public route로 바꾼다.
-- `buildMemoryLookup(memory)`: thought, topic, source, edge lookup map을 만든다.
-- `loadPublicMemoryData()`: Astro `import.meta.glob`으로 `src/data/memory.public.json`을 읽는다.
-- `createMemoryNodeHref(nodeId)`: graph node id를 `/memory/?node=...` 링크로 만든다.
-- `createMemoryFilterHref(filters)`: topic/source/lens/search filter를 `/memory/` query string으로 만든다.
-- `parseMemoryDeepLinkParams(params, model)`: URLSearchParams에서 현재 graph model에 존재하는 filter만 복원한다.
+`/memory/` browser interaction lives in `public/scripts/memory-workbench.js`;
+the Astro page renders static markup and embeds the public memory payload.
 
 routeable source prefix:
 
@@ -265,7 +273,8 @@ routeable source prefix:
 | `scripts/memory.schema.test.mjs` | thought parsing, schema validation, exclusion reasons, edge validation. |
 | `scripts/memory.seed.test.mjs` | memory seed candidate generation. |
 | `scripts/memory.project.test.mjs` | public memory projection, exclusion counts, broken-source failure, JSON output. |
-| `src/lib/memoryData.test.mjs` | public memory data normalization and fallback behavior. |
+| `src/lib/memory/*.test.mjs` | public memory data, lookup, graph model, filters, article links, and page payload behavior. |
+| `src/lib/memoryData.test.mjs` | compatibility re-export behavior. |
 
 ## Docs And Graph Layers
 

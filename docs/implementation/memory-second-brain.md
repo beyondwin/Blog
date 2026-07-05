@@ -31,7 +31,9 @@ flowchart LR
   Edges["memory/edges.jsonl"] --> Project
   Sources["memory/sources.jsonl"] --> Project
   Project --> PublicJson["src/data/memory.public.json"]
-  PublicJson --> Page["src/pages/memory.astro"]
+  PublicJson --> Modules["src/lib/memory/"]
+  Modules --> Page["src/pages/memory.astro"]
+  Page --> Workbench["public/scripts/memory-workbench.js"]
 ```
 
 ## File Responsibilities
@@ -66,11 +68,30 @@ truth.
 : Generated static data for the public page. This file contains no private
 thoughts.
 
+`src/lib/memory/`
+: Responsibility-based public memory modules for data normalization, lookup,
+graph derivation, filters, article links, and page payloads.
+
 `src/lib/memoryData.ts`
-: Astro-facing data shape and missing-file fallback.
+: Compatibility re-export surface for older imports.
 
 `src/pages/memory.astro`
-: Public dual-surface UI with Map, Library, and Sources views.
+: Public dual-surface UI shell with Map, Library, and Sources views.
+
+`public/scripts/memory-workbench.js`
+: Progressive-enhancement browser behavior for `/memory` filters, URL state,
+selected details, tabs, and graph controls.
+
+## Code Map
+
+- `src/lib/memory/publicData.ts`: generated public JSON shape and fallback.
+- `src/lib/memory/lookup.ts`: source href resolution and lookup maps.
+- `src/lib/memory/graphModel.ts`: graph nodes, edges, facets, and layout metadata.
+- `src/lib/memory/filters.ts`: graph filters and URL deep-link helpers.
+- `src/lib/memory/articleLinks.ts`: article footer linked/related memory cards.
+- `src/lib/memory/pagePayload.ts`: serializable `/memory` detail payload.
+- `src/lib/memoryData.ts`: compatibility re-export for older imports.
+- `public/scripts/memory-workbench.js`: progressive-enhancement browser behavior.
 
 ## Thought File Contract
 
@@ -214,6 +235,7 @@ Test files:
 - `scripts/memory.schema.test.mjs`
 - `scripts/memory.seed.test.mjs`
 - `scripts/memory.project.test.mjs`
+- `src/lib/memory/*.test.mjs`
 - `src/lib/memoryData.test.mjs`
 
 Required test evidence:
@@ -222,6 +244,7 @@ Required test evidence:
 npm test -- scripts/memory.schema.test.mjs
 npm test -- scripts/memory.seed.test.mjs
 npm test -- scripts/memory.project.test.mjs
+npm run test -- src/lib/memory
 npm test -- src/lib/memoryData.test.mjs
 npm run test
 npm run build
