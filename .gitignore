@@ -32,6 +32,7 @@ docs/superpowers/
 # Local memory review drafts. Public memory thoughts may be committed only after
 # review; private/local drafts should use these ignored names.
 memory/review/*.jsonl
+memory/review/*.md
 memory/thoughts/private-*.md
 memory/thoughts/*.local.md
 

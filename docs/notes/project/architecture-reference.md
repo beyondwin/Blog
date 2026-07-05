@@ -175,6 +175,9 @@ Projection exclusion reasons:
 - `resolveMemorySourceHref(source)`: `src/content/<collection>/<slug>.mdx` source를 public route로 바꾼다.
 - `buildMemoryLookup(memory)`: thought, topic, source, edge lookup map을 만든다.
 - `loadPublicMemoryData()`: Astro `import.meta.glob`으로 `src/data/memory.public.json`을 읽는다.
+- `createMemoryNodeHref(nodeId)`: graph node id를 `/memory/?node=...` 링크로 만든다.
+- `createMemoryFilterHref(filters)`: topic/source/lens/search filter를 `/memory/` query string으로 만든다.
+- `parseMemoryDeepLinkParams(params, model)`: URLSearchParams에서 현재 graph model에 존재하는 filter만 복원한다.
 
 routeable source prefix:
 
@@ -198,6 +201,8 @@ routeable source prefix:
 | `npm run article:new` | `node scripts/create-article-packet.mjs` | evidence packet과 article draft 생성. |
 | `npm run article:quality` | `node scripts/article-quality.mjs` | source-grounded article shape 검사. |
 | `npm run memory:seed` | `node scripts/memory/seed.mjs` | memory review candidate 생성. |
+| `npm run memory:review -- report` | `node scripts/memory/review.mjs report` | generated memory candidates를 읽기 쉬운 local review report로 만든다. |
+| `npm run memory:review -- promote <slug> --reviewed-at YYYY-MM-DD` | `node scripts/memory/review.mjs promote` | 선택한 candidate를 검증된 public thought markdown으로 승격한다. |
 | `npm run memory:project` | `node scripts/memory/project.mjs` | `src/data/memory.public.json` 생성. |
 | `npm run memory:validate` | `node scripts/memory/project.mjs --validate` | public memory 입력 검증. JSON은 쓰지 않는다. |
 | `npm run validate` | chained command | content, article quality, memory, tests, build 전체 gate. |
