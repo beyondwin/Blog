@@ -2,7 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import Callout from '../../components/Callout.astro';
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
-import { findArticleMemoryLinks, loadPublicMemoryData } from '../../lib/memoryData';
+import { findArticleMemoryLinks, loadPublicMemoryData } from '../../lib/memory';
 
 export async function getStaticPaths() {
   const entries = await getCollection('articles', ({ data }) => !data.draft);
