@@ -79,4 +79,10 @@ describe('site content contract', () => {
     expect(layout).not.toContain('class="description"');
     expect(layout).not.toContain('StatusBadge');
   });
+
+  it('loads the memory workbench script from the public scripts directory', async () => {
+    const source = await readFile(join(root, 'src', 'pages', 'memory.astro'), 'utf8');
+
+    expect(source).toContain('<script src="/scripts/memory-workbench.js" defer></script>');
+  });
 });
