@@ -1,122 +1,23 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { buildMemoryGraphModel, buildMemoryLookup, loadPublicMemoryData } from '../lib/memoryData';
+import {
+  buildMemoryPagePayload,
+  getMemoryGraphEdgeCoordinates,
+  getMemorySourceCountLabel,
+  loadPublicMemoryData,
+} from '../lib/memory';
 
 const memory = loadPublicMemoryData();
-const lookup = buildMemoryLookup(memory);
-const graph = buildMemoryGraphModel(memory);
+const memoryPayload = buildMemoryPagePayload(memory);
+const graph = memoryPayload.graph;
 const hasThoughts = memory.thoughts.length > 0;
 const latestGenerated = memory.generatedAt
   ? new Intl.DateTimeFormat('ko', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(memory.generatedAt))
   : null;
-const thoughtLabels = new Map(memory.thoughts.map((thought) => [thought.slug, thought.claimKo]));
-const topicLabels = new Map(memory.topics.map((topic) => [topic.id, topic.label]));
-const strongestEdges = memory.edges
-  .filter((edge) => edge.type !== 'topic-tag')
-  .sort((a, b) => b.confidence - a.confidence)
-  .slice(0, 4);
-
-function memoryNodeLabel(id: string) {
-  return thoughtLabels.get(id) ?? topicLabels.get(id) ?? id;
-}
-
-function graphNodeLabel(id: string) {
-  const thoughtSlug = id.startsWith('thought:') ? id.replace('thought:', '') : id;
-  return thoughtLabels.get(thoughtSlug) ?? topicLabels.get(id) ?? id;
-}
-
-function sourceCountLabel(count: number) {
-  return count === 1 ? '1 source' : `${count} sources`;
-}
-
-function relationshipLabel(edge: { from: string; to: string; type: string }) {
-  return `${edge.type}: ${memoryNodeLabel(edge.from)} -> ${memoryNodeLabel(edge.to)}`;
-}
-
-function edgeCoordinates(edge: { from: string; to: string }) {
-  const from = graph.nodes.find((node) => node.id === edge.from);
-  const to = graph.nodes.find((node) => node.id === edge.to);
-
-  return {
-    x1: from?.position.x ?? 50,
-    y1: from?.position.y ?? 50,
-    x2: to?.position.x ?? 50,
-    y2: to?.position.y ?? 50,
-  };
-}
-
-const thoughtDetails = Object.fromEntries(memory.thoughts.map((thought) => [
-  `thought:${thought.slug}`,
-  {
-    id: `thought:${thought.slug}`,
-    kind: 'thought',
-    title: thought.claimKo,
-    body: thought.body || thought.claimEn,
-    sublabel: thought.claimEn,
-    memoryType: thought.memoryType,
-    origin: thought.origin,
-    topics: thought.topics,
-    theses: thought.theses,
-    sources: (lookup.sourceRefsByThoughtSlug.get(thought.slug) ?? []).map((source) => ({
-      id: source.id,
-      title: source.title,
-      href: source.href,
-      routeable: source.routeable,
-      unresolved: 'unresolved' in source ? source.unresolved : false,
-    })),
-    relationships: (lookup.edgesByThoughtSlug.get(thought.slug) ?? [])
-      .filter((edge) => edge.type !== 'topic-tag')
-      .map((edge) => relationshipLabel(edge)),
-  },
-]));
-
-const topicDetails = Object.fromEntries(memory.topics.map((topic) => [
-  topic.id,
-  {
-    id: topic.id,
-    kind: 'topic',
-    title: topic.label,
-    body: `${topic.count} public thoughts`,
-    thoughts: memory.thoughts
-      .filter((thought) => thought.topics.includes(topic.label))
-      .map((thought) => ({
-        id: `thought:${thought.slug}`,
-        title: thought.claimKo,
-      })),
-  },
-]));
-
-const sourceDetails = Object.fromEntries(memory.sources.map((source) => {
-  const resolved = lookup.sourcesById.get(source.id);
-  return [
-    `source:${source.id}`,
-    {
-      id: `source:${source.id}`,
-      kind: 'source',
-      title: source.title,
-      body: source.path ?? source.url ?? source.kind,
-      href: resolved?.href ?? null,
-      routeable: resolved?.routeable ?? false,
-      sourceKind: source.kind,
-      date: source.date,
-      thoughts: memory.thoughts
-        .filter((thought) => thought.sources.includes(source.id))
-        .map((thought) => ({
-          id: `thought:${thought.slug}`,
-          title: thought.claimKo,
-        })),
-    },
-  ];
-}));
-
-const memoryPayload = {
-  graph,
-  details: {
-    ...thoughtDetails,
-    ...topicDetails,
-    ...sourceDetails,
-  },
-  fallbackRelationships: strongestEdges.map((edge) => relationshipLabel(edge)),
+const clientPayload = {
+  graph: memoryPayload.graph,
+  details: memoryPayload.details,
+  fallbackRelationships: memoryPayload.fallbackRelationships,
 };
 ---
 
@@ -223,7 +124,7 @@ const memoryPayload = {
           <div class="memory-graph-stage" data-memory-graph data-memory-layout-mode="brain" data-memory-density-mode="normal">
             <svg class="memory-graph-edges" viewBox="0 0 100 100" role="presentation" aria-hidden="true" preserveAspectRatio="none">
               {graph.edges.map((edge) => {
-                const coords = edgeCoordinates(edge);
+                const coords = getMemoryGraphEdgeCoordinates(graph, edge);
                 return (
                   <line
                     x1={coords.x1}
@@ -278,7 +179,7 @@ const memoryPayload = {
                   type="button"
                   data-memory-list-item
                   data-memory-node={`thought:${thought.slug}`}
-                  data-memory-topics={thought.topics.map((topic) => lookup.topicsBySlug.get(topic)?.id ?? '').join(' ')}
+                  data-memory-topics={thought.topics.map((topic) => memoryPayload.topicIdsByLabel[topic] ?? '').join(' ')}
                   data-memory-sources={thought.sources.map((source) => `source:${source}`).join(' ')}
                   data-memory-type={thought.memoryType}
                   data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}
@@ -290,7 +191,7 @@ const memoryPayload = {
                   </div>
                   <div class="memory-chip-row">
                   {thought.topics.map((topic) => <span>{topic}</span>)}
-                  <span>{sourceCountLabel(thought.sources.length)}</span>
+                  <span>{getMemorySourceCountLabel(thought.sources.length)}</span>
                 </div>
               </button>
             ))}
@@ -319,7 +220,7 @@ const memoryPayload = {
                         type="button"
                             data-memory-list-item
                             data-memory-node={`thought:${thought.slug}`}
-                            data-memory-topics={thought.topics.map((label) => lookup.topicsBySlug.get(label)?.id ?? '').join(' ')}
+                            data-memory-topics={thought.topics.map((label) => memoryPayload.topicIdsByLabel[label] ?? '').join(' ')}
                             data-memory-sources={thought.sources.map((source) => `source:${source}`).join(' ')}
                             data-memory-type={thought.memoryType}
                         data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}
@@ -328,7 +229,7 @@ const memoryPayload = {
                         <p>{thought.claimEn}</p>
                         <div class="memory-chip-row">
                           <span>{thought.memoryType}</span>
-                          <span>{sourceCountLabel(thought.sources.length)}</span>
+                          <span>{getMemorySourceCountLabel(thought.sources.length)}</span>
                         </div>
                       </button>
                     ))}
@@ -346,7 +247,7 @@ const memoryPayload = {
             <div class="memory-panel" id="memory-sources" role="tabpanel" hidden>
           <div class="memory-source-grid">
             {memory.sources.map((source) => {
-              const resolved = lookup.sourcesById.get(source.id);
+              const resolved = memoryPayload.sourcesById[source.id];
               const content = (
                 <>
                   <span>{source.kind}{resolved?.routeable ? ' · public route' : ' · repo source'}</span>
@@ -378,7 +279,7 @@ const memoryPayload = {
 
         <aside class="memory-app__drawer" aria-label="Selected memory node" data-memory-detail>
           <p class="memory-eyebrow">Selected</p>
-          <h2 data-memory-detail-title>{graph.selectedFallback ? graphNodeLabel(graph.selectedFallback) : 'No selected node'}</h2>
+          <h2 data-memory-detail-title>{graph.selectedFallback ? memoryPayload.details[graph.selectedFallback]?.title : 'No selected node'}</h2>
           <p data-memory-detail-body>{graph.selectedFallback ? memoryPayload.details[graph.selectedFallback]?.body : 'Select a node to inspect its public evidence.'}</p>
           <div class="memory-chip-row" data-memory-detail-chips></div>
           <div class="memory-detail-list" data-memory-detail-sources></div>
@@ -392,7 +293,7 @@ const memoryPayload = {
     )}
   </section>
 
-  <script is:inline type="application/json" id="memory-payload" set:html={JSON.stringify(memoryPayload)} />
+  <script is:inline type="application/json" id="memory-payload" set:html={JSON.stringify(clientPayload)} />
 
   <script is:inline>
     const root = document.querySelector('[data-memory-app]');
