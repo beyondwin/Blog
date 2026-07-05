@@ -205,46 +205,55 @@ source 접근이 막히면 글을 억지로 만들지 않는다.
   error: paywall or access restriction
 ```
 
-## How to Project Public Memory
+## How to Review And Project Public Memory
 
 `/memory`는 private source를 직접 읽지 않는다. 공개 페이지는 [src/data/memory.public.json](../../../src/data/memory.public.json)만 읽는다.
 
-1. thought를 `memory/thoughts/`에 둔다.
+1. 후보를 생성한다.
 
-2. public export 조건을 모두 맞춘다.
-
-   ```yaml
-   schema_version: 1
-   confidentiality: public
-   surfaces: [memory-public]
-   review:
-     status: accepted
-   sources:
-     - kind: article
-       path: src/content/articles/example-article.mdx
-       title: "Example Article"
+   ```bash
+   npm run memory:seed
    ```
 
-3. projection을 생성한다.
+2. 후보를 읽기 쉬운 local report로 만든다.
+
+   ```bash
+   npm run memory:review -- report
+   ```
+
+   이 명령은 `memory/review/queue.md`를 만든다. 이 파일과 JSONL queue는 local review artifact이며 commit하지 않는다.
+
+3. 공개해도 되는 후보 하나를 명시적으로 승격한다.
+
+   ```bash
+   npm run memory:review -- promote <slug> --reviewed-at 2026-07-05
+   ```
+
+   이 명령은 `memory/thoughts/<slug>.md`를 만든다. 승격된 thought는 `confidentiality: public`, `surfaces: [memory-public, article-ready]`, `review.status: accepted`를 가진다.
+
+4. 공개 projection을 생성한다.
 
    ```bash
    npm run memory:project
    ```
 
-4. JSON을 쓰지 않고 검증만 하려면 실행한다.
+5. JSON을 쓰지 않고 검증만 하려면 실행한다.
 
    ```bash
    npm run memory:validate
    ```
 
-5. `/memory/`에서 Workbench, Library, Sources tab을 확인한다.
+6. 전체 gate를 통과시킨다.
+
+   ```bash
+   npm run validate
+   ```
 
 주의:
 
-- `confidentiality: private`는 export되지 않는다.
-- `review.status`가 `accepted`가 아니면 export되지 않는다.
-- local source path는 repo 내부의 안전한 relative path여야 한다.
-- external source URL은 `http` 또는 `https`만 허용한다.
+- `memory/review/*.jsonl`과 `memory/review/*.md`는 local review artifact다.
+- 승격 명령은 duplicate slug, 안전하지 않은 source path, 존재하지 않는 source path를 거부한다.
+- public route는 `memory/**`를 직접 읽지 않는다.
 
 ## How to Maintain Archive Docs
 

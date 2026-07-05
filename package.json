@@ -12,6 +12,7 @@
     "article:new": "node scripts/create-article-packet.mjs",
     "article:quality": "node scripts/article-quality.mjs",
     "memory:seed": "node scripts/memory/seed.mjs",
+    "memory:review": "node scripts/memory/review.mjs",
     "memory:project": "node scripts/memory/project.mjs",
     "memory:validate": "node scripts/memory/project.mjs --validate",
     "validate": "node scripts/validate-content.mjs && npm run article:quality && npm run memory:validate && npm run test && npm run build"

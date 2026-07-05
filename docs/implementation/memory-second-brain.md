@@ -145,6 +145,27 @@ The seed file is review input, not public data. Promotion means manually moving
 selected candidate records into `memory/thoughts/*.md`, adding reviewed
 frontmatter, and setting public fields only when the thought is safe to publish.
 
+## Review Workflow
+
+Run:
+
+```bash
+npm run memory:review -- report
+```
+
+This reads `memory/review/seed-candidates.jsonl` and writes the ignored local
+report `memory/review/queue.md`.
+
+Promote one reviewed candidate:
+
+```bash
+npm run memory:review -- promote <slug> --reviewed-at YYYY-MM-DD
+```
+
+Promotion writes `memory/thoughts/<slug>.md`, validates source paths, and refuses
+duplicate slugs. The command is explicit because seed candidates remain private
+until reviewed.
+
 ## Projection Workflow
 
 Run:
