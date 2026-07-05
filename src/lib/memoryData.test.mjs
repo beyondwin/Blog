@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   buildMemoryGraphModel,
   buildMemoryLookup,
+  createMemoryFilterHref,
+  createMemoryNodeHref,
   emptyMemoryData,
   findArticleMemoryLinks,
   filterMemoryGraphModel,
   normalizeMemoryData,
+  parseMemoryDeepLinkParams,
   resolveMemorySourceHref,
 } from './memoryData.ts';
 
@@ -166,6 +169,8 @@ describe('memory data helpers', () => {
           claimKo: '컨텍스트 품질은 라우팅 문제다.',
           claimEn: 'Context quality is a routing problem.',
           memoryType: 'semantic',
+          nodeId: 'thought:routing-problem',
+          memoryHref: '/memory/?node=thought%3Arouting-problem',
           topics: ['ai-workflow'],
           sourceCount: 2,
           matchCount: 0,
@@ -464,5 +469,58 @@ describe('memory data helpers', () => {
     expect([...filterMemoryGraphModel(graph, { activeEdgeTypes: ['supports'] }).edgeIds]).toEqual([
       'explicit:routing-problem:supports:review-gates',
     ]);
+  });
+
+  it('creates stable memory node and filter hrefs', () => {
+    expect(createMemoryNodeHref('thought:routing-problem')).toBe('/memory/?node=thought%3Arouting-problem');
+    expect(createMemoryFilterHref({
+      activeLens: 'sources',
+      selectedNodeId: 'source:article-source',
+      activeTopicIds: ['topic:ai-workflow'],
+      activeSourceIds: ['source:article-source'],
+      activeMemoryTypes: ['semantic'],
+      activeEdgeTypes: ['supports'],
+      query: 'routing',
+    })).toBe('/memory/?node=source%3Aarticle-source&q=routing&lens=sources&topic=topic%3Aai-workflow&source=source%3Aarticle-source&type=semantic&edge=supports');
+  });
+
+  it('parses memory deep-link params and ignores unknown ids', () => {
+    const graph = buildMemoryGraphModel(makeMemory());
+    const params = new URLSearchParams([
+      ['node', 'thought:routing-problem'],
+      ['q', 'routing'],
+      ['lens', 'sources'],
+      ['topic', 'topic:ai-workflow'],
+      ['topic', 'topic:missing'],
+      ['source', 'source:article-source'],
+      ['type', 'semantic'],
+      ['type', 'missing'],
+      ['edge', 'supports'],
+      ['edge', 'missing'],
+    ]);
+
+    expect(parseMemoryDeepLinkParams(params, graph)).toEqual({
+      selectedNodeId: 'thought:routing-problem',
+      query: 'routing',
+      activeLens: 'sources',
+      activeTopicIds: ['topic:ai-workflow'],
+      activeSourceIds: ['source:article-source'],
+      activeMemoryTypes: ['semantic'],
+      activeEdgeTypes: ['supports'],
+    });
+  });
+
+  it('adds node ids and memory hrefs to article memory links', () => {
+    const result = findArticleMemoryLinks(
+      makeMemory(),
+      'src/content/articles/context-refinement-system-design.mdx',
+      [],
+    );
+
+    expect(result.linked[0]).toMatchObject({
+      slug: 'routing-problem',
+      nodeId: 'thought:routing-problem',
+      memoryHref: '/memory/?node=thought%3Arouting-problem',
+    });
   });
 });

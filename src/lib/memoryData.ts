@@ -151,6 +151,10 @@ export interface MemoryGraphFilterState {
   activeEdgeTypes?: string[];
 }
 
+export interface MemoryDeepLinkState extends MemoryGraphFilterState {
+  selectedNodeId?: string;
+}
+
 const routeableSourcePrefixes = [
   ['src/content/articles/', '/articles/'],
   ['src/content/analysis/', '/analysis/'],
@@ -582,11 +586,101 @@ export function filterMemoryGraphModel(
   return { nodeIds: orderedNodeIds, edgeIds };
 }
 
+function appendParams(params: URLSearchParams, key: string, values: string[] | undefined): void {
+  for (const value of values ?? []) {
+    if (value) {
+      params.append(key, value);
+    }
+  }
+}
+
+export function createMemoryFilterHref(filters: MemoryDeepLinkState): string {
+  const params = new URLSearchParams();
+
+  if (filters.selectedNodeId) {
+    params.set('node', filters.selectedNodeId);
+  }
+
+  if (filters.query?.trim()) {
+    params.set('q', filters.query.trim());
+  }
+
+  if (filters.activeLens && filters.activeLens !== 'all') {
+    params.set('lens', filters.activeLens);
+  }
+
+  appendParams(params, 'topic', filters.activeTopicIds);
+  appendParams(params, 'source', filters.activeSourceIds);
+  appendParams(params, 'type', filters.activeMemoryTypes);
+  appendParams(params, 'edge', filters.activeEdgeTypes);
+
+  const query = params.toString();
+  return query ? `/memory/?${query}` : '/memory/';
+}
+
+export function createMemoryNodeHref(nodeId: string): string {
+  return createMemoryFilterHref({ selectedNodeId: nodeId });
+}
+
+function allowedParamValues(values: string[], allowed: Set<string>): string[] {
+  return values.filter((value) => allowed.has(value));
+}
+
+export function parseMemoryDeepLinkParams(
+  params: URLSearchParams,
+  model: MemoryGraphModel,
+): MemoryDeepLinkState {
+  const nodeIds = new Set(model.nodes.map((node) => node.id));
+  const lensIds = new Set(model.facets.lenses.map((lens) => lens.id));
+  const topicIds = new Set(model.facets.topics.map((topic) => topic.id));
+  const sourceIds = new Set(model.facets.sources.map((source) => source.id));
+  const memoryTypes = new Set(model.facets.memoryTypes.map((type) => type.id));
+  const edgeTypes = new Set(model.facets.edgeTypes.map((type) => type.id));
+  const selectedNodeId = params.get('node') ?? undefined;
+  const activeLens = params.get('lens') ?? undefined;
+  const query = params.get('q')?.trim() ?? '';
+  const state: MemoryDeepLinkState = {};
+
+  if (selectedNodeId && nodeIds.has(selectedNodeId)) {
+    state.selectedNodeId = selectedNodeId;
+  }
+
+  if (query) {
+    state.query = query;
+  }
+
+  if (activeLens && lensIds.has(activeLens)) {
+    state.activeLens = activeLens;
+  }
+
+  const activeTopicIds = allowedParamValues(params.getAll('topic'), topicIds);
+  const activeSourceIds = allowedParamValues(params.getAll('source'), sourceIds);
+  const activeMemoryTypes = allowedParamValues(params.getAll('type'), memoryTypes);
+  const activeEdgeTypes = allowedParamValues(params.getAll('edge'), edgeTypes);
+
+  if (activeTopicIds.length > 0) {
+    state.activeTopicIds = activeTopicIds;
+  }
+  if (activeSourceIds.length > 0) {
+    state.activeSourceIds = activeSourceIds;
+  }
+  if (activeMemoryTypes.length > 0) {
+    state.activeMemoryTypes = activeMemoryTypes;
+  }
+  if (activeEdgeTypes.length > 0) {
+    state.activeEdgeTypes = activeEdgeTypes;
+  }
+
+  return state;
+}
+
 export interface ArticleMemoryLink {
   slug: string;
   claimKo: string;
   claimEn: string;
   memoryType: string;
+  nodeId: string;
+  memoryHref: string;
   topics: string[];
   sourceCount: number;
   matchCount: number;
@@ -605,11 +699,15 @@ function normalizeMemoryMatchValue(value: string): string {
 }
 
 function toArticleMemoryLink(thought: MemoryThought, matchCount: number): ArticleMemoryLink {
+  const nodeId = prefixedThoughtId(thought.slug);
+
   return {
     slug: thought.slug,
     claimKo: thought.claimKo,
     claimEn: thought.claimEn,
     memoryType: thought.memoryType,
+    nodeId,
+    memoryHref: createMemoryNodeHref(nodeId),
     topics: thought.topics,
     sourceCount: thought.sources.length,
     matchCount,
