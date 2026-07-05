@@ -83,6 +83,6 @@ describe('site content contract', () => {
   it('loads the memory workbench script from the public scripts directory', async () => {
     const source = await readFile(join(root, 'src', 'pages', 'memory.astro'), 'utf8');
 
-    expect(source).toContain('<script src="/scripts/memory-workbench.js" defer></script>');
+    expect(source).toContain('<script is:inline src="/scripts/memory-workbench.js" defer></script>');
   });
 });
