@@ -17,6 +17,7 @@ const detail = entry.collection === 'travel'
     ? entry.data.maturity
     : getEntryTypeLabel(entry);
 const hasRelatedMemory = Boolean(relatedMemory && relatedMemory.total > 0);
+const memoryHref = relatedMemory?.linked[0]?.memoryHref ?? relatedMemory?.related[0]?.memoryHref ?? '/memory/';
 ---
 
 <BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
@@ -44,7 +45,7 @@ const hasRelatedMemory = Boolean(relatedMemory && relatedMemory.total > 0);
               <p>Memory</p>
               <h2 id="article-memory-title">이 글에서 이어지는 판단</h2>
             </div>
-            <a href="/memory/">Memory 열기</a>
+            <a href={memoryHref}>Memory 열기</a>
           </div>
 
           {relatedMemory.linked.length > 0 && (
@@ -52,7 +53,7 @@ const hasRelatedMemory = Boolean(relatedMemory && relatedMemory.total > 0);
               <h3>Linked memory</h3>
               <div class="article-memory__list">
                 {relatedMemory.linked.map((thought) => (
-                  <article class="article-memory__item">
+                  <a class="article-memory__item" href={thought.memoryHref}>
                     <h4>{thought.claimKo}</h4>
                     <p>{thought.claimEn}</p>
                     <div class="article-memory__meta">
@@ -60,7 +61,7 @@ const hasRelatedMemory = Boolean(relatedMemory && relatedMemory.total > 0);
                       {thought.topics.map((topic) => <span>{topic}</span>)}
                       <span>{thought.sourceCount === 1 ? '1 source' : `${thought.sourceCount} sources`}</span>
                     </div>
-                  </article>
+                  </a>
                 ))}
               </div>
             </section>
@@ -71,7 +72,7 @@ const hasRelatedMemory = Boolean(relatedMemory && relatedMemory.total > 0);
               <h3>Related memory</h3>
               <div class="article-memory__list">
                 {relatedMemory.related.map((thought) => (
-                  <article class="article-memory__item">
+                  <a class="article-memory__item" href={thought.memoryHref}>
                     <h4>{thought.claimKo}</h4>
                     <p>{thought.claimEn}</p>
                     <div class="article-memory__meta">
@@ -79,7 +80,7 @@ const hasRelatedMemory = Boolean(relatedMemory && relatedMemory.total > 0);
                       {thought.topics.map((topic) => <span>{topic}</span>)}
                       <span>{thought.sourceCount === 1 ? '1 source' : `${thought.sourceCount} sources`}</span>
                     </div>
-                  </article>
+                  </a>
                 ))}
               </div>
             </section>
