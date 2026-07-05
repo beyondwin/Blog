@@ -412,6 +412,7 @@ const memoryPayload = {
         activeMemoryTypes: new Set(),
         activeEdgeTypes: new Set(),
         selectedNodeId: payload.graph.selectedFallback,
+        urlHasSelection: false,
         layoutMode: 'brain',
         showLabels: true,
         density: 'normal',
@@ -445,6 +446,101 @@ const memoryPayload = {
       const topicGroups = Array.from(root.querySelectorAll('[data-memory-topic-group]'));
       const nodeById = new Map(payload.graph.nodes.map((node) => [node.id, node]));
       const edgeById = new Map(payload.graph.edges.map((edge) => [edge.id, edge]));
+      const validNodeIds = new Set(payload.graph.nodes.map((node) => node.id));
+      const validLensIds = new Set((payload.graph.facets?.lenses ?? []).map((lens) => lens.id));
+      const validTopicIds = new Set((payload.graph.facets?.topics ?? []).map((topic) => topic.id));
+      const validSourceIds = new Set((payload.graph.facets?.sources ?? []).map((source) => source.id));
+      const validMemoryTypes = new Set((payload.graph.facets?.memoryTypes ?? []).map((type) => type.id));
+      const validEdgeTypes = new Set((payload.graph.facets?.edgeTypes ?? []).map((type) => type.id));
+
+      function allowedValues(params, key, allowed) {
+        return params.getAll(key).filter((value) => allowed.has(value));
+      }
+
+      function readUrlState() {
+        if (!window.location) {
+          return {};
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const selectedNodeId = params.get('node') ?? '';
+        const activeLens = params.get('lens') ?? '';
+        const urlState = {};
+
+        if (selectedNodeId && validNodeIds.has(selectedNodeId)) {
+          urlState.selectedNodeId = selectedNodeId;
+        }
+
+        const query = (params.get('q') ?? '').trim().toLocaleLowerCase();
+        if (query) {
+          urlState.query = query;
+        }
+
+        if (activeLens && validLensIds.has(activeLens)) {
+          urlState.activeLens = activeLens;
+        }
+
+        urlState.activeTopicIds = allowedValues(params, 'topic', validTopicIds);
+        urlState.activeSourceIds = allowedValues(params, 'source', validSourceIds);
+        urlState.activeMemoryTypes = allowedValues(params, 'type', validMemoryTypes);
+        urlState.activeEdgeTypes = allowedValues(params, 'edge', validEdgeTypes);
+
+        return urlState;
+      }
+
+      function writeUrlState() {
+        if (!window.history || !window.location) {
+          return;
+        }
+
+        const params = new URLSearchParams();
+        const selectedIsFallback = state.selectedNodeId === payload.graph.selectedFallback;
+        if (state.selectedNodeId && (!selectedIsFallback || state.urlHasSelection)) {
+          params.set('node', state.selectedNodeId);
+        }
+        if (state.query) {
+          params.set('q', state.query);
+        }
+        if (state.activeLens && state.activeLens !== 'all') {
+          params.set('lens', state.activeLens);
+        }
+        state.activeTopicIds.forEach((value) => params.append('topic', value));
+        state.activeSourceIds.forEach((value) => params.append('source', value));
+        state.activeMemoryTypes.forEach((value) => params.append('type', value));
+        state.activeEdgeTypes.forEach((value) => params.append('edge', value));
+
+        const nextUrl = params.toString()
+          ? `${window.location.pathname}?${params.toString()}`
+          : window.location.pathname;
+        window.history.replaceState(null, '', nextUrl);
+      }
+
+      const urlState = readUrlState();
+      if (urlState.query !== undefined) {
+        state.query = urlState.query;
+      }
+      if (urlState.activeLens) {
+        state.activeLens = urlState.activeLens;
+      }
+      if (urlState.selectedNodeId) {
+        state.selectedNodeId = urlState.selectedNodeId;
+        state.urlHasSelection = true;
+      }
+      for (const value of urlState.activeTopicIds ?? []) {
+        state.activeTopicIds.add(value);
+      }
+      for (const value of urlState.activeSourceIds ?? []) {
+        state.activeSourceIds.add(value);
+      }
+      for (const value of urlState.activeMemoryTypes ?? []) {
+        state.activeMemoryTypes.add(value);
+      }
+      for (const value of urlState.activeEdgeTypes ?? []) {
+        state.activeEdgeTypes.add(value);
+      }
+      if (search instanceof HTMLInputElement && state.query) {
+        search.value = state.query;
+      }
 
       function normalize(value) {
         return value.trim().toLocaleLowerCase();
@@ -759,6 +855,7 @@ const memoryPayload = {
         graphStage?.classList.toggle('is-hiding-labels', !state.showLabels);
         syncButtonStates();
         renderDetail();
+        writeUrlState();
       }
 
       search?.addEventListener('input', () => {
@@ -790,6 +887,7 @@ const memoryPayload = {
       graphNodes.forEach((node) => {
         node.addEventListener('click', () => {
           state.selectedNodeId = node.getAttribute('data-memory-node') ?? state.selectedNodeId;
+          state.urlHasSelection = true;
           applyFilters();
         });
       });
@@ -797,6 +895,7 @@ const memoryPayload = {
       listItems.forEach((item) => {
         item.addEventListener('click', () => {
           state.selectedNodeId = item.getAttribute('data-memory-node') ?? state.selectedNodeId;
+          state.urlHasSelection = true;
           applyFilters();
         });
       });
@@ -827,6 +926,7 @@ const memoryPayload = {
           state.activeMemoryTypes.clear();
           state.activeEdgeTypes.clear();
           state.selectedNodeId = payload.graph.selectedFallback;
+          state.urlHasSelection = false;
           state.layoutMode = 'brain';
           state.showLabels = true;
           state.density = 'normal';
