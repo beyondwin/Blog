@@ -1,0 +1,61 @@
+---
+import type { ContentMemoryLinks } from '../lib/memoryData';
+
+interface Props {
+  memory?: ContentMemoryLinks;
+}
+
+const { memory } = Astro.props;
+const hasMemory = Boolean(memory && memory.total > 0);
+const memoryHref = memory?.linked[0]?.memoryHref ?? memory?.related[0]?.memoryHref ?? '/memory/';
+---
+
+{hasMemory && memory && (
+  <aside class="article-memory" aria-labelledby="content-memory-title">
+    <div class="article-memory__header">
+      <div>
+        <p>Memory</p>
+        <h2 id="content-memory-title">이 기록에서 이어지는 판단</h2>
+      </div>
+      <a href={memoryHref}>Memory 열기</a>
+    </div>
+
+    {memory.linked.length > 0 && (
+      <section class="article-memory__group" aria-label="Linked memory">
+        <h3>Linked memory</h3>
+        <div class="article-memory__list">
+          {memory.linked.map((thought) => (
+            <a class="article-memory__item" href={thought.memoryHref}>
+              <h4>{thought.claimKo}</h4>
+              <p>{thought.claimEn}</p>
+              <div class="article-memory__meta">
+                <span>{thought.memoryType}</span>
+                {thought.topics.map((topic) => <span>{topic}</span>)}
+                <span>{thought.sourceCount === 1 ? '1 source' : `${thought.sourceCount} sources`}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {memory.related.length > 0 && (
+      <section class="article-memory__group" aria-label="Related memory">
+        <h3>Related memory</h3>
+        <div class="article-memory__list">
+          {memory.related.map((thought) => (
+            <a class="article-memory__item" href={thought.memoryHref}>
+              <h4>{thought.claimKo}</h4>
+              <p>{thought.claimEn}</p>
+              <div class="article-memory__meta">
+                <span>{thought.memoryType}</span>
+                {thought.topics.map((topic) => <span>{topic}</span>)}
+                <span>{thought.sourceCount === 1 ? '1 source' : `${thought.sourceCount} sources`}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+  </aside>
+)}
