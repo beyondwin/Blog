@@ -541,6 +541,8 @@ Expected: commit succeeds.
   - `ContentMemoryLinks.astro` component with props `{ memory?: ContentMemoryLinks }`
   - `ArticleLayout`, `AnalysisLayout`, and `ReviewLayout` props accept `relatedMemory?: ContentMemoryLinks`
 
+**Spec Refs:** S1, S1.11, S1.5.1
+
 - [ ] **Step 1: Create the shared footer component**
 
 Create `src/components/ContentMemoryLinks.astro`:
@@ -747,6 +749,8 @@ Expected: commit succeeds.
 **Interfaces:**
 - Consumes: `findContentMemoryLinks(memory, sourcePath, tags)`, `loadPublicMemoryData()`.
 - Produces: all public content detail routes pass `relatedMemory` into their layout.
+
+**Spec Refs:** S1, S1.11, S1.5.1
 
 - [ ] **Step 1: Update article detail route to use the content helper**
 
