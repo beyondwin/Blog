@@ -1,13 +1,16 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import ContentMemoryLinks from '../components/ContentMemoryLinks.astro';
 import BaseLayout from './BaseLayout.astro';
 import { formatDate, getEntryDate } from '../lib/content';
+import type { ContentMemoryLinks as ContentMemoryLinksModel } from '../lib/memoryData';
 
 interface Props {
   entry: CollectionEntry<'reviews'>;
+  relatedMemory?: ContentMemoryLinksModel;
 }
 
-const { entry } = Astro.props;
+const { entry, relatedMemory } = Astro.props;
 const date = getEntryDate(entry);
 ---
 
@@ -27,6 +30,7 @@ const date = getEntryDate(entry);
       <div class="prose">
         <slot />
       </div>
+      <ContentMemoryLinks memory={relatedMemory} />
     </article>
   </div>
 </BaseLayout>
