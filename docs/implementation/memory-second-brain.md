@@ -33,6 +33,7 @@ flowchart LR
   Project --> PublicJson["src/data/memory.public.json"]
   PublicJson --> Modules["src/lib/memory/"]
   Modules --> Page["src/pages/memory.astro"]
+  Modules --> Footers["content detail memory footers"]
   Page --> Workbench["public/scripts/memory-workbench.js"]
 ```
 
@@ -70,7 +71,8 @@ thoughts.
 
 `src/lib/memory/`
 : Responsibility-based public memory modules for data normalization, lookup,
-graph derivation, filters, article links, and page payloads.
+graph derivation, filters, content links, article compatibility, and page
+payloads.
 
 `src/lib/memoryData.ts`
 : Compatibility re-export surface for older imports.
@@ -88,7 +90,8 @@ selected details, tabs, and graph controls.
 - `src/lib/memory/lookup.ts`: source href resolution and lookup maps.
 - `src/lib/memory/graphModel.ts`: graph nodes, edges, facets, and layout metadata.
 - `src/lib/memory/filters.ts`: graph filters and URL deep-link helpers.
-- `src/lib/memory/articleLinks.ts`: article footer linked/related memory cards.
+- `src/lib/memory/contentLinks.ts`: matches any public content source path and tags against the public memory projection. It returns linked and related thoughts for detail-page footers without reading `memory/**` directly.
+- `src/lib/memory/articleLinks.ts`: compatibility wrapper for existing article-memory imports. New route work should use `findContentMemoryLinks()`.
 - `src/lib/memory/pagePayload.ts`: serializable `/memory` detail payload.
 - `src/lib/memoryData.ts`: compatibility re-export for older imports.
 - `public/scripts/memory-workbench.js`: progressive-enhancement browser behavior.
@@ -214,6 +217,8 @@ This must validate the same inputs without rewriting the public JSON.
 ## Public Page Behavior
 
 `/memory` renders from `src/data/memory.public.json`.
+The same public projection also feeds content detail footers through
+`findContentMemoryLinks()`.
 
 The page contains:
 

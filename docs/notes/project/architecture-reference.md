@@ -16,7 +16,7 @@
 | Memory lookup | `src/lib/memory/lookup.ts` | source route resolution and thought/topic/source/edge lookup maps. |
 | Memory graph model | `src/lib/memory/graphModel.ts` | graph nodes, edges, facets, deterministic positions. |
 | Memory filters | `src/lib/memory/filters.ts` | lens/filter matching and `/memory/` deep-link helpers. |
-| Memory article links | `src/lib/memory/articleLinks.ts` | article footer linked/related memory matching. |
+| Memory content links | `src/lib/memory/contentLinks.ts` | public content footer linked/related memory matching. |
 | Memory page payload | `src/lib/memory/pagePayload.ts` | serializable `/memory` detail drawer and client payload data. |
 | Memory compatibility | `src/lib/memoryData.ts` | temporary re-export surface for existing imports. |
 | Global styles | `src/styles/global.css` | token, layout, prose, component, responsive CSS. |
@@ -180,7 +180,8 @@ Projection exclusion reasons:
 | Memory lookup | `src/lib/memory/lookup.ts` | source href resolution and thought/topic/source/edge lookup maps. |
 | Memory graph model | `src/lib/memory/graphModel.ts` | graph nodes, edges, facets, deterministic positions. |
 | Memory filters | `src/lib/memory/filters.ts` | lens/filter matching and `/memory/` deep-link helpers. |
-| Memory article links | `src/lib/memory/articleLinks.ts` | article footer linked/related memory matching. |
+| Memory content links | `src/lib/memory/contentLinks.ts` | public content footer linked/related memory matching. |
+| Memory article compatibility | `src/lib/memory/articleLinks.ts` | compatibility wrapper for article-memory imports. |
 | Memory page payload | `src/lib/memory/pagePayload.ts` | serializable `/memory` detail drawer and client payload data. |
 | Memory compatibility | `src/lib/memoryData.ts` | temporary re-export surface for existing imports. |
 
@@ -196,6 +197,12 @@ routeable source prefix:
 | `src/content/ideas/` | `/ideas/` |
 | `src/content/reviews/` | `/reviews/` |
 | `src/content/travel/` | `/travel/` |
+
+Published detail pages in `articles`, `analysis`, `reviews`, `ideas`, and
+`travel` can render a public memory footer. The footer uses
+`findContentMemoryLinks()` against `src/data/memory.public.json`; direct links
+come from exact source path matches, and related links come from tag/topic
+matches. Detail pages do not read `memory/**` directly.
 
 ## Script Reference
 
@@ -273,7 +280,7 @@ routeable source prefix:
 | `scripts/memory.schema.test.mjs` | thought parsing, schema validation, exclusion reasons, edge validation. |
 | `scripts/memory.seed.test.mjs` | memory seed candidate generation. |
 | `scripts/memory.project.test.mjs` | public memory projection, exclusion counts, broken-source failure, JSON output. |
-| `src/lib/memory/*.test.mjs` | public memory data, lookup, graph model, filters, article links, and page payload behavior. |
+| `src/lib/memory/*.test.mjs` | public memory data, lookup, graph model, filters, content links, article compatibility, and page payload behavior. |
 | `src/lib/memoryData.test.mjs` | compatibility re-export behavior. |
 
 ## Docs And Graph Layers
