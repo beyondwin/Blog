@@ -1,113 +1,447 @@
 ---
-title: "pgvector로 하이브리드 검색 만들기: KNN, HNSW, FTS, RRF까지"
-description: "PostgreSQL pgvector에서 벡터 검색, IVFFLAT/HNSW 인덱스, FTS, RRF 기반 하이브리드 검색을 실무 RAG 흐름으로 정리한다."
+title: "pgvector로 벡터 검색 이해하기: 임베딩, SQL, HNSW, RRF까지"
+description: "PostgreSQL과 pgvector로 의미 기반 검색을 만드는 과정을 임베딩 기초, 거리 연산자, JSONB/JOIN, HNSW/IVFFLAT, FTS와 RRF 하이브리드 검색까지 한 흐름으로 정리한다."
 createdAt: "2026-07-09"
 updatedAt: "2026-07-09"
 tags: ["PostgreSQL", "pgvector", "RAG", "search", "database"]
 status: "published"
 ---
 
-RAG 검색을 처음 만들 때 흔히 `LIKE '%검색어%'`나 단순 키워드 검색부터 떠올린다. 하지만 사용자는 항상 문서에 들어 있는 단어 그대로 검색하지 않는다. “카드 결제 오류”라고 입력했을 때 실제 문서는 “신용카드로 결제하려는데 실패합니다”일 수 있고, 반대로 `ERR_PAYMENT_403`처럼 정확한 문자열이 중요한 검색어도 있다.
+pgvector를 처음 보면 “PostgreSQL에 벡터 컬럼 하나 추가하는 기능”처럼 보인다. 그런데 실제로는 검색 시스템의 모양이 꽤 달라진다. 기존 SQL 검색이 문자열이 들어 있는지를 본다면, 벡터 검색은 문장의 의미가 얼마나 가까운지를 본다.
 
-그래서 실무 검색은 보통 두 가지 축을 함께 본다. 하나는 단어가 실제로 들어 있는지 보는 FTS, 다른 하나는 문장의 의미가 가까운지 보는 벡터 검색이다. 이 둘을 섞고, 마지막 순위를 안정적으로 합치는 방식이 하이브리드 검색이다.
+예를 들어 사용자가 `카드 결제`를 검색했다고 하자. 단순 `LIKE '%카드 결제%'`는 정확히 그 문자열이 들어간 row만 찾는다. 하지만 사용자가 원하는 결과는 `신용카드 납부`, `체크카드 사용`, `온라인 결제 실패`처럼 표현은 다르지만 의미가 가까운 데이터일 수 있다.
 
-이 글은 PostgreSQL과 Spring Boot는 어느 정도 알지만 `pgvector`, ANN 인덱스, RRF가 낯선 주니어 개발자를 기준으로 정리한다. 목표는 쿼리를 외우는 것이 아니라, 왜 이런 구조가 필요한지 이해하는 것이다.
+pgvector는 이 “의미가 가까운 데이터 찾기”를 PostgreSQL 안에서 SQL로 처리하게 해준다. 더 중요한 점은 벡터 검색만 따로 하는 것이 아니라, 기존 테이블, JOIN, JSONB 필터, Full-Text Search와 함께 조합할 수 있다는 것이다.
 
-## 한눈에 보는 검색 흐름
+이 글은 PostgreSQL은 조금 써봤지만 임베딩과 벡터 검색은 처음 접하는 주니어 개발자를 기준으로 쓴다. 목표는 SQL을 외우는 것이 아니라, 어떤 데이터가 어디에 저장되고, 왜 거리 연산자와 인덱스와 하이브리드 검색이 필요한지 이해하는 것이다.
 
-사용자가 검색창에 이렇게 입력했다고 하자.
+| 질문 | 짧은 답 |
+| --- | --- |
+| pgvector는 무엇을 해주나? | PostgreSQL 안에서 벡터 타입, 거리 연산자, ANN 인덱스를 쓰게 해준다. |
+| 벡터 검색은 `LIKE`와 무엇이 다른가? | 글자 포함 여부가 아니라 의미적으로 가까운 데이터를 찾는다. |
+| 왜 FTS도 같이 쓰나? | 에러 코드, 상품명, 정확한 단어처럼 키워드 검색이 더 강한 경우가 있다. |
+| HNSW와 IVFFLAT은 무엇인가? | 전체 벡터를 다 비교하지 않고 가까운 후보를 빠르게 찾기 위한 ANN 인덱스다. |
+| RRF는 왜 필요한가? | FTS 점수와 벡터 점수를 직접 더하지 않고 순위 기반으로 안정적으로 합치기 위해 쓴다. |
+
+## 먼저 큰 그림부터 보기
+
+벡터 검색의 흐름은 단순하다.
 
 ```text
-카드 결제 오류
+텍스트
+예: "카드 결제"
+
+  ↓
+
+임베딩 모델
+텍스트를 숫자 배열로 변환
+
+  ↓
+
+벡터
+[0.82, 0.14, 0.63, 0.45, ...]
+
+  ↓
+
+PostgreSQL + pgvector에 저장
+
+  ↓
+
+SQL로 의미가 가까운 데이터 검색
+ORDER BY embedding <=> query_vector
+LIMIT 5
 ```
 
-RAG 검색 시스템은 보통 다음 순서로 움직인다.
+![텍스트가 임베딩 모델을 거쳐 벡터로 바뀌는 흐름](/images/articles/pgvector-embedding-flow.png)
 
-```text
-사용자 검색어
-  ↓
-검색어를 embedding vector로 변환
-  ↓
-PostgreSQL에서 두 검색 실행
-  ├─ FTS 검색: 정확한 단어 기반 검색
-  └─ Vector 검색: 의미 기반 검색
-  ↓
-두 결과를 RRF 같은 방식으로 합침
-  ↓
-최종 top K 문서를 LLM context에 넣음
-```
+핵심은 원본 텍스트와 벡터가 서로 다른 역할을 한다는 점이다.
 
-여기서 FTS와 벡터 검색은 경쟁 관계가 아니다. 역할이 다르다.
+| 데이터 | 역할 |
+| --- | --- |
+| 원본 텍스트 | 사람이 읽고 화면에 보여줄 데이터 |
+| 임베딩 벡터 | DB가 의미적 유사도를 계산할 때 쓰는 숫자 배열 |
 
-| 검색 방식 | 잘하는 것 | 예시 |
-| --- | --- | --- |
-| FTS | 정확한 단어, 코드, 제품명, 에러 문자열 찾기 | `카드`, `ERR_PAYMENT_403` |
-| Vector Search | 표현은 달라도 의미가 가까운 문서 찾기 | `결제가 실패해요`, `결제 수단 등록이 안 됩니다` |
+따라서 `embedding`만 저장하면 안 된다. 검색 결과를 사용자에게 보여주려면 반드시 `content`, `description` 같은 원본 텍스트도 같이 있어야 한다.
 
-FTS만 쓰면 표현이 조금 바뀐 문서를 놓치고, 벡터 검색만 쓰면 정확한 식별자 검색이 약해질 수 있다. 하이브리드 검색은 이 약점을 서로 보완한다.
+## pgvector가 PostgreSQL에 더하는 것
 
-## 예제 테이블
-
-예제에서는 문서 본문과 embedding을 같은 테이블에 둔다.
+기본 PostgreSQL에는 `text`, `numeric`, `jsonb`, `timestamptz` 같은 타입이 있다. pgvector extension을 켜면 여기에 `vector` 타입과 벡터 거리 연산자가 추가된다.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
+```
 
+가장 작은 학습용 테이블은 이렇게 만들 수 있다.
+
+```sql
 CREATE TABLE doc_embeddings (
-    id bigserial PRIMARY KEY,
-    content text NOT NULL,
-    embedding vector(1536)
+    id        bigserial PRIMARY KEY,
+    content   text NOT NULL,
+    embedding vector(8) NOT NULL
 );
 ```
 
-`vector(1536)`은 embedding 차원 수다. 실제 차원은 사용하는 embedding 모델에 따라 달라진다. 중요한 점은 테이블 컬럼 차원과 검색 벡터 차원이 반드시 같아야 한다는 것이다.
+`vector(8)`은 숫자 8개짜리 벡터를 저장한다는 뜻이다.
+
+```text
+[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]
+```
+
+실무에서는 8차원을 쓰지 않는다. 사용하는 임베딩 모델이 반환하는 차원 수에 맞춰야 한다. 예를 들어 모델이 1536차원 벡터를 반환하면 컬럼도 이렇게 만든다.
+
+```sql
+CREATE TABLE doc_embeddings (
+    id        bigserial PRIMARY KEY,
+    content   text NOT NULL,
+    embedding vector(1536) NOT NULL
+);
+```
+
+여기서 중요한 것은 차원 수가 맞아야 한다는 점이다.
 
 ```text
 테이블 컬럼: vector(1536)
 검색 벡터: 1536차원
 ```
 
-둘이 다르면 검색 품질이 떨어지는 정도가 아니라 쿼리 자체가 실패한다.
+둘이 다르면 검색 품질이 떨어지는 정도가 아니라 쿼리 자체가 실패한다. 또 pgvector의 타입별 차원 한도와 인덱스 한도는 버전과 타입에 따라 다르므로, 큰 차원 모델을 쓰는 경우 공식 README의 현재 제한을 확인하는 편이 안전하다.
 
-## KNN 벡터 검색부터 시작하기
+## 교육용 샘플 데이터
 
-KNN은 `K-Nearest Neighbors`의 약자다. 벡터 검색에서는 “검색 문장 벡터와 가장 가까운 문서 벡터 K개를 찾는다”는 뜻이다.
-
-기본 쿼리는 이렇게 생겼다.
+처음에는 실제 임베딩 모델을 붙이기보다, 의미가 비슷한 문장끼리 비슷한 숫자를 넣어보면 이해가 빠르다.
 
 ```sql
-SELECT id, content
-FROM doc_embeddings
-ORDER BY embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]'
-LIMIT 5;
+INSERT INTO doc_embeddings (content, embedding) VALUES
+    ('카드 결제',      '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]'),
+    ('신용카드 납부',  '[0.80, 0.16, 0.61, 0.47, 0.69, 0.30, 0.54, 0.41]'),
+    ('계좌 이체',      '[0.55, 0.72, 0.38, 0.61, 0.29, 0.84, 0.17, 0.66]'),
+    ('송금',          '[0.53, 0.74, 0.36, 0.63, 0.27, 0.82, 0.19, 0.68]'),
+    ('급여 입금',      '[0.31, 0.89, 0.12, 0.77, 0.08, 0.95, 0.24, 0.51]'),
+    ('월급',          '[0.29, 0.91, 0.10, 0.79, 0.06, 0.93, 0.22, 0.53]'),
+    ('ATM 출금',      '[0.67, 0.33, 0.78, 0.22, 0.89, 0.11, 0.44, 0.76]'),
+    ('현금 인출',      '[0.65, 0.35, 0.76, 0.24, 0.87, 0.13, 0.42, 0.74]'),
+    ('공과금 납부',    '[0.43, 0.58, 0.29, 0.84, 0.16, 0.72, 0.91, 0.35]'),
+    ('전기요금',       '[0.41, 0.60, 0.27, 0.86, 0.14, 0.70, 0.89, 0.37]');
 ```
 
-이 쿼리는 모든 문서의 `embedding`과 검색 벡터 사이의 거리를 계산한 뒤, 가장 가까운 5개를 가져온다.
-
-여기서 `<=>`는 pgvector의 cosine distance 연산자다. 가장 많이 하는 실수는 이 값을 유사도라고 생각하는 것이다.
+이 예제에서는 `카드 결제`와 `신용카드 납부`, `계좌 이체`와 `송금`, `급여 입금`과 `월급`이 서로 가까운 벡터를 갖도록 넣었다. 실제 서비스에서는 사람이 숫자를 직접 만들지 않고, 임베딩 모델 API나 로컬 임베딩 모델을 호출해서 만든다.
 
 ```text
-<=> 는 유사도가 아니라 거리다.
-값이 작을수록 더 가깝다.
+"카드 결제"
+  ↓
+임베딩 모델 호출
+  ↓
+[0.0123, -0.2231, 0.9981, ...]
+  ↓
+PostgreSQL에 저장
+```
+
+## 거리 연산자 이해하기
+
+벡터 검색은 결국 이 질문에 답하는 일이다.
+
+```text
+이 검색어 벡터와 가장 가까운 문서 벡터는 무엇인가?
+```
+
+pgvector에서 자주 쓰는 연산자는 세 가지다.
+
+| 연산자 | 이름 | 보는 것 | 정렬 감각 |
+| --- | --- | --- | --- |
+| `<=>` | Cosine distance | 방향이 얼마나 비슷한가 | 작을수록 가까움 |
+| `<->` | L2 distance | 직선 거리가 얼마나 가까운가 | 작을수록 가까움 |
+| `<#>` | Negative inner product | 내적값의 음수 | 작을수록 가까움 |
+
+가장 많이 헷갈리는 부분은 `<=>`가 유사도가 아니라 거리라는 점이다.
+
+```text
+cosine distance = 1 - cosine similarity
 ```
 
 그래서 정렬은 오름차순이다.
 
 ```sql
-ORDER BY embedding <=> query_embedding
+SELECT
+    content,
+    embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]' AS cosine_distance
+FROM doc_embeddings
+ORDER BY embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]'
+LIMIT 5;
 ```
 
-유사도 점수처럼 보고 싶다면 보통 이렇게 바꿔서 보여준다.
+UI에서 유사도처럼 보여주고 싶다면 이렇게 변환할 수 있다.
 
 ```sql
-1 - (embedding <=> query_embedding) AS vec_score
+SELECT
+    content,
+    embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]' AS cosine_distance,
+    1 - (embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]') AS cosine_similarity
+FROM doc_embeddings
+ORDER BY embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]'
+LIMIT 5;
 ```
 
-하지만 내부 랭킹과 인덱스 사용을 생각할 때는 “작은 distance가 좋은 결과”라는 감각을 유지하는 편이 낫다.
+내적도 주의해야 한다. pgvector의 `<#>`는 실제 내적값이 아니라 negative inner product다. 실제 내적 점수처럼 보고 싶다면 `-1`을 곱한다.
 
-## 왜 인덱스가 필요한가
+```sql
+SELECT
+    content,
+    embedding <#> '[0.31, 0.89, 0.12, 0.77, 0.08, 0.95, 0.24, 0.51]' AS negative_inner_product,
+    -1 * (embedding <#> '[0.31, 0.89, 0.12, 0.77, 0.08, 0.95, 0.24, 0.51]') AS inner_product
+FROM doc_embeddings
+ORDER BY embedding <#> '[0.31, 0.89, 0.12, 0.77, 0.08, 0.95, 0.24, 0.51]'
+LIMIT 5;
+```
 
-인덱스가 없으면 PostgreSQL은 전체 테이블을 훑는다.
+정리하면 이렇다. pgvector의 거리 연산자는 대체로 “작을수록 좋은 결과”라고 기억하면 된다.
+
+## CTE로 query vector 분리하기
+
+쿼리가 길어지면 같은 벡터 리터럴을 여러 번 반복하게 된다. 이럴 때는 CTE로 검색 벡터를 분리하면 읽기 쉽다.
+
+```sql
+WITH query_vector AS (
+    SELECT '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]'::vector AS v
+)
+SELECT
+    d.content,
+    d.embedding <=> q.v AS distance
+FROM doc_embeddings d
+CROSS JOIN query_vector q
+ORDER BY d.embedding <=> q.v
+LIMIT 5;
+```
+
+운영 코드에서는 벡터 문자열을 SQL에 직접 붙이지 말고 파라미터 바인딩을 사용해야 한다. 여기서는 구조를 설명하기 위해 리터럴을 그대로 쓴다.
+
+## 기존 문자열 검색과 다른 점
+
+기존 검색은 보통 이런 식이었다.
+
+```sql
+SELECT *
+FROM doc_embeddings
+WHERE content LIKE '%카드 결제%';
+```
+
+이 경우 `신용카드 납부`는 못 찾을 수 있다. 문자열 `카드 결제`가 그대로 들어 있지 않기 때문이다.
+
+벡터 검색은 기준이 다르다.
+
+```sql
+SELECT
+    content,
+    embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]' AS distance
+FROM doc_embeddings
+ORDER BY distance
+LIMIT 5;
+```
+
+이 쿼리는 글자가 같은지를 보지 않는다. 저장된 벡터가 검색 벡터와 얼마나 가까운지를 본다.
+
+| 검색 방식 | 예시 | 기준 |
+| --- | --- | --- |
+| `LIKE` | `%카드%` | 문자열 포함 여부 |
+| FTS | `카드 & 결제` | 토큰 기반 전문 검색 |
+| Vector Search | `[0.82, 0.14, ...]` | 의미적 유사도 |
+
+그래서 실무에서는 FTS와 벡터 검색을 함께 쓰는 하이브리드 검색으로 가는 경우가 많다.
+
+## 실무 테이블에 붙이면 무엇이 좋아지나
+
+pgvector의 장점은 벡터를 별도 벡터 DB에만 두지 않고, PostgreSQL의 기존 데이터와 같이 다룰 수 있다는 점이다.
+
+![PostgreSQL 안에서 일반 거래 데이터와 description 벡터를 함께 관리하는 구조](/images/articles/pgvector-architecture.png)
+
+거래 테이블을 예로 들어보자.
+
+```sql
+CREATE TABLE transactions (
+    transaction_id bigserial PRIMARY KEY,
+    account_id     bigint NOT NULL,
+    customer_tier  varchar(20) NOT NULL,
+    description    text NOT NULL,
+    amount         numeric(15, 2) NOT NULL,
+    branch_id      bigint REFERENCES branches(branch_id),
+    metadata       jsonb,
+    created_at     timestamptz DEFAULT now()
+);
+```
+
+여기에 거래 설명의 임베딩을 추가한다.
+
+```sql
+ALTER TABLE transactions
+ADD COLUMN description_embedding vector(1536);
+```
+
+그러면 한 row는 개념적으로 이렇게 된다.
+
+```text
+transaction_id: 1
+description: 강남 백화점 카드 결제
+amount: 450000
+metadata: {"channel":"offline","category":"shopping"}
+description_embedding: [0.82, 0.14, ...]
+```
+
+이제 JSONB 조건과 벡터 검색을 한 SQL 안에서 같이 쓸 수 있다.
+
+```sql
+SELECT
+    t.transaction_id,
+    t.account_id,
+    t.customer_tier,
+    t.description,
+    t.amount,
+    t.metadata,
+    t.description_embedding <=> :query_embedding AS distance
+FROM transactions t
+WHERE t.description_embedding IS NOT NULL
+  AND t.metadata->>'channel' = 'offline'
+  AND t.metadata->>'category' = 'shopping'
+ORDER BY t.description_embedding <=> :query_embedding
+LIMIT 5;
+```
+
+이 쿼리는 이렇게 읽으면 된다.
+
+```text
+1. 임베딩이 생성된 거래만 본다.
+2. 오프라인 거래만 남긴다.
+3. 쇼핑 카테고리만 남긴다.
+4. 그중 검색 벡터와 의미가 가까운 순서로 정렬한다.
+5. 상위 5개를 반환한다.
+```
+
+JOIN도 그대로 가능하다.
+
+```sql
+CREATE TABLE branches (
+    branch_id   bigserial PRIMARY KEY,
+    branch_name text NOT NULL
+);
+```
+
+```sql
+SELECT
+    t.transaction_id,
+    t.description,
+    t.amount,
+    b.branch_name,
+    t.metadata,
+    t.description_embedding <=> :query_embedding AS distance
+FROM transactions t
+JOIN branches b
+  ON t.branch_id = b.branch_id
+WHERE t.description_embedding IS NOT NULL
+  AND t.metadata->>'channel' = 'offline'
+ORDER BY t.description_embedding <=> :query_embedding
+LIMIT 5;
+```
+
+이게 PostgreSQL 안에서 pgvector를 쓰는 가장 큰 매력이다. 의미 검색, 관계형 JOIN, JSONB 필터를 하나의 데이터베이스와 하나의 SQL 모델 안에서 다룰 수 있다.
+
+## 임베딩 컬럼은 어디에 둘까
+
+초기 MVP라면 원본 테이블에 바로 넣는 방식이 가장 단순하다.
+
+```sql
+ALTER TABLE transactions
+ADD COLUMN description_embedding vector(1536);
+```
+
+장점은 JOIN이 줄고 쿼리가 쉽다는 것이다. 단점은 임베딩 모델이 바뀌거나 여러 종류의 임베딩을 관리할 때 컬럼이 지저분해질 수 있다는 것이다.
+
+운영에서 모델 버전 관리가 중요하다면 별도 테이블이 더 깔끔할 수 있다.
+
+```sql
+CREATE TABLE transaction_embeddings (
+    transaction_id  bigint NOT NULL REFERENCES transactions(transaction_id),
+    embedding_model varchar(100) NOT NULL,
+    embedding       vector(1536) NOT NULL,
+    created_at      timestamptz DEFAULT now(),
+    PRIMARY KEY (transaction_id, embedding_model)
+);
+```
+
+검색 쿼리는 조금 길어진다.
+
+```sql
+SELECT
+    t.transaction_id,
+    t.description,
+    t.amount,
+    te.embedding <=> :query_embedding AS distance
+FROM transaction_embeddings te
+JOIN transactions t
+  ON t.transaction_id = te.transaction_id
+WHERE te.embedding_model = 'text-embedding-v1'
+ORDER BY te.embedding <=> :query_embedding
+LIMIT 5;
+```
+
+선택 기준은 단순하다.
+
+| 방식 | 적합한 상황 |
+| --- | --- |
+| 원본 테이블에 embedding 컬럼 추가 | MVP, 단일 모델, 단순 쿼리 |
+| embedding 전용 테이블 분리 | 모델 버전 관리, 여러 임베딩, 재생성/롤백 필요 |
+
+## 임베딩 생성은 비동기로 빼는 편이 안전하다
+
+거래 저장 요청 안에서 임베딩 API까지 호출하면 응답 시간이 길어진다. 외부 모델 API가 느리거나 실패하면 원래 거래 저장까지 흔들릴 수 있다.
+
+실무에서는 보통 이렇게 나눈다.
+
+```text
+1. 거래 데이터 INSERT
+2. description_embedding은 일단 NULL
+3. embedding_job 등록
+4. Worker가 임베딩 모델 호출
+5. 벡터 생성
+6. transactions.description_embedding UPDATE
+7. 이후 검색 대상에 포함
+```
+
+Spring Boot 기준으로 보면 구조는 이렇게 잡을 수 있다.
+
+```text
+TransactionController
+  ↓
+TransactionService
+  ↓
+TransactionRepository
+  ↓
+PostgreSQL 저장
+
+비동기 처리
+
+EmbeddingJob
+  ↓
+EmbeddingWorker
+  ↓
+EmbeddingClient
+  ↓
+외부 임베딩 모델
+  ↓
+TransactionRepository.updateEmbedding()
+```
+
+그래서 검색 쿼리에는 `embedding IS NOT NULL` 조건을 넣는 습관이 좋다.
+
+## 인덱스가 없으면 어떻게 동작할까
+
+벡터 검색 쿼리는 `ORDER BY distance LIMIT K` 모양이다.
+
+```sql
+SELECT content
+FROM doc_embeddings
+ORDER BY embedding <=> :query_embedding
+LIMIT 5;
+```
+
+인덱스가 없으면 PostgreSQL은 모든 row의 벡터 거리를 계산하고 정렬한다.
 
 ```text
 Seq Scan
@@ -116,17 +450,61 @@ Seq Scan
   → LIMIT 5
 ```
 
-문서가 1천 개라면 큰 문제가 아닐 수 있다. 하지만 10만 개, 100만 개, 1000만 개가 되면 매 검색마다 전체 벡터를 비교하는 방식은 부담이 크다.
+데이터가 1천 개라면 괜찮을 수 있다. 하지만 10만 개, 100만 개, 1000만 개가 되면 매 검색마다 전체 벡터를 비교하기 어렵다.
 
-그래서 ANN 인덱스를 쓴다. ANN은 `Approximate Nearest Neighbor`다. 정확히 모든 벡터를 비교하지 않고, 가까울 가능성이 높은 후보를 빠르게 찾는다.
+이때 ANN 인덱스를 쓴다. ANN은 Approximate Nearest Neighbor다. 모든 벡터를 정확히 비교하지 않고, 가까울 가능성이 높은 후보를 빠르게 찾는다.
 
 ```text
 정확도 일부를 양보하고 검색 속도를 얻는 방식
 ```
 
-pgvector에서 자주 보는 ANN 인덱스는 IVFFLAT과 HNSW다.
+pgvector에서 많이 쓰는 ANN 인덱스는 HNSW와 IVFFLAT이다.
 
-## IVFFLAT: 가까운 방만 들어가서 찾기
+## HNSW: 그래프를 타고 가까운 벡터 찾기
+
+HNSW는 벡터들을 그래프처럼 연결해두고, 검색할 때 가까운 노드를 따라가며 후보를 찾는다.
+
+```text
+문서 벡터 A ─ 문서 벡터 B ─ 문서 벡터 C
+      │              │
+문서 벡터 D ─ 문서 벡터 E
+```
+
+코사인 거리용 HNSW 인덱스는 이렇게 만든다.
+
+```sql
+CREATE INDEX idx_doc_embedding_hnsw
+ON doc_embeddings
+USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
+```
+
+주요 설정은 세 가지다.
+
+| 설정 | 의미 | 커질 때의 효과 |
+| --- | --- | --- |
+| `m` | 각 노드가 연결할 이웃 수 | 정확도는 좋아질 수 있지만 인덱스가 커짐 |
+| `ef_construction` | 인덱스 생성 시 넓게 볼 후보 수 | 생성은 느려지고 품질은 좋아질 수 있음 |
+| `ef_search` | 검색 시 넓게 볼 후보 수 | 검색은 느려지고 recall은 좋아질 수 있음 |
+
+검색 시에는 트랜잭션 안에서 `SET LOCAL`로 조절하는 방식이 깔끔하다.
+
+```sql
+BEGIN;
+
+SET LOCAL hnsw.ef_search = 100;
+
+SELECT id, content
+FROM doc_embeddings
+ORDER BY embedding <=> :query_embedding
+LIMIT 5;
+
+COMMIT;
+```
+
+초기 RAG 검색이라면 HNSW를 먼저 검토하는 경우가 많다. 검색 품질이 대체로 좋고, 테이블에 데이터가 없는 상태에서도 인덱스를 만들 수 있기 때문이다. 대신 인덱스 생성은 느릴 수 있고 메모리 사용량도 더 크다.
+
+## IVFFLAT: 가까운 클러스터만 들어가서 찾기
 
 IVFFLAT은 전체 벡터를 여러 클러스터로 나눠 저장한다. 쉽게 말하면 전체 문서를 여러 방으로 나누고, 검색할 때 검색 벡터와 가까운 방만 들어가서 찾는 방식이다.
 
@@ -137,13 +515,11 @@ USING ivfflat (embedding vector_cosine_ops)
 WITH (lists = 100);
 ```
 
-여기서 `lists`는 클러스터 개수다.
+![IVFFLAT 클러스터 검색 흐름](/images/articles/pgvector-hybrid-search-ivfflat-cluster.png)
 
-| 설정 | 의미 |
-| --- | --- |
-| `lists`가 너무 작음 | 한 클러스터에 데이터가 많아 검색이 느려질 수 있음 |
-| `lists`가 너무 큼 | 클러스터가 잘게 나뉘어 유사 문서를 놓칠 수 있음 |
-| 적절한 `lists` | 속도와 recall 사이의 균형 |
+그림에서 `전체 벡터`는 DB에 저장된 모든 문서 embedding이다. 이 벡터들이 여러 클러스터로 나뉘고, 검색 벡터는 그중 가까운 클러스터로 들어간다. 마지막에는 선택된 클러스터 안에서만 KNN 검색을 한다.
+
+주의할 점은 클러스터 이름이다. 그림에는 사람이 읽기 쉽게 `카드 관련`, `이체/송금/급여`처럼 붙였지만, 실제 IVFFLAT이 사람이 정한 업무 카테고리로 묶는 것은 아니다. embedding 공간에서 가까운 벡터끼리 자동으로 묶인다.
 
 검색할 때는 `probes`로 몇 개의 클러스터를 볼지 정한다.
 
@@ -164,100 +540,129 @@ lists = 100, probes = 100
 
 `probes`가 낮으면 빠르지만 놓치는 문서가 생길 수 있다. `probes`가 높으면 느려지지만 recall이 좋아진다.
 
-![IVFFLAT 클러스터 검색 흐름](/images/articles/pgvector-hybrid-search-ivfflat-cluster.png)
+IVFFLAT은 인덱스 구축이 비교적 빠르고 메모리 사용량도 낮은 편이다. 대신 데이터가 어느 정도 들어간 뒤 인덱스를 만드는 편이 좋다. 클러스터를 나누려면 기존 데이터 분포를 봐야 하기 때문이다.
 
-그림에서 `전체 벡터`는 DB에 저장된 모든 문서 embedding이다. 이 벡터들이 여러 클러스터로 나뉘고, 검색 벡터는 그중 가까운 클러스터로 들어간다. 마지막에는 선택된 클러스터 안에서만 KNN 검색을 한다.
+## HNSW와 IVFFLAT 비교
 
-주의할 점이 있다. 그림에는 `카드 관련`, `이체/송금/급여`처럼 사람이 읽기 쉬운 이름을 붙였지만, 실제 IVFFLAT이 사람이 정한 카테고리 이름으로 묶는 것은 아니다. embedding 공간에서 가까운 벡터끼리 자동으로 묶인다.
+둘 중 하나가 항상 정답은 아니다.
 
-```text
-텍스트 카테고리 기준으로 직접 분류하는 것 ❌
-벡터 공간의 거리 기준으로 묶는 것 ✅
-```
+| 항목 | HNSW | IVFFLAT |
+| --- | --- | --- |
+| 핵심 구조 | 계층형 그래프 | 클러스터/list |
+| 검색 방식 | 그래프를 따라 가까운 노드 탐색 | 가까운 클러스터만 탐색 |
+| 인덱스 생성 | 느린 편 | 빠른 편 |
+| 메모리 사용 | 많은 편 | 적은 편 |
+| 검색 품질 | 일반적으로 좋은 편 | 설정에 더 민감 |
+| 데이터 없는 테이블 | 만들 수 있음 | 보통 데이터 적재 후 생성 |
+| 주요 튜닝값 | `m`, `ef_construction`, `ef_search` | `lists`, `probes` |
 
-IVFFLAT은 인덱스 구축이 비교적 빠르고 메모리 사용량도 낮은 편이다. 대신 클러스터 설정과 `probes` 값에 따라 진짜 가까운 문서를 놓칠 수 있다. 데이터 분포가 많이 바뀌는 서비스라면 인덱스 품질도 주기적으로 확인해야 한다.
+처음에는 HNSW로 시작하고, 데이터 규모와 쓰기 패턴, 메모리 예산, recall 요구사항을 보면서 조정하는 접근이 현실적이다.
 
-## HNSW: 그래프를 타고 가까운 벡터 찾기
+## 인덱스와 연산자는 반드시 맞춰야 한다
 
-HNSW는 `Hierarchical Navigable Small World`의 약자다. IVFFLAT이 클러스터를 찾아 들어가는 방식이라면, HNSW는 벡터들을 그래프처럼 연결해두고 검색할 때 가까운 노드를 따라간다.
-
-```text
-문서 벡터 A ─ 문서 벡터 B ─ 문서 벡터 C
-      │              │
-문서 벡터 D ─ 문서 벡터 E
-```
-
-인덱스는 이렇게 만든다.
+코사인 거리로 검색할 거면 코사인 operator class로 인덱스를 만든다.
 
 ```sql
-CREATE INDEX idx_doc_embedding_hnsw
+CREATE INDEX idx_embedding_cosine
 ON doc_embeddings
-USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
+USING hnsw (embedding vector_cosine_ops);
 ```
 
-주요 설정은 세 가지다.
-
-| 설정 | 의미 | 커질 때의 효과 |
-| --- | --- | --- |
-| `m` | 각 노드가 연결할 이웃 수 | 정확도는 좋아질 수 있지만 인덱스가 커짐 |
-| `ef_construction` | 인덱스 생성 시 넓게 볼 후보 수 | 생성은 느려지고 품질은 좋아질 수 있음 |
-| `ef_search` | 검색 시 넓게 볼 후보 수 | 검색은 느려지고 recall은 좋아질 수 있음 |
-
-검색 시에는 보통 트랜잭션 안에서 `SET LOCAL`로 조절한다.
+L2 거리로 검색할 거면 L2 operator class를 쓴다.
 
 ```sql
-BEGIN;
-
-SET LOCAL hnsw.ef_search = 100;
-
-SELECT id, content
-FROM doc_embeddings
-ORDER BY embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]'
-LIMIT 5;
-
-COMMIT;
+CREATE INDEX idx_embedding_l2
+ON doc_embeddings
+USING hnsw (embedding vector_l2_ops);
 ```
 
-초기 RAG 서비스라면 HNSW를 먼저 검토하는 경우가 많다. 검색 품질이 대체로 좋고, 실시간 insert에도 비교적 잘 맞기 때문이다. 다만 HNSW는 인덱스 생성이 더 느리고 메모리 사용량도 더 크다.
-
-| 항목 | IVFFLAT | HNSW |
-| --- | --- | --- |
-| 핵심 구조 | 클러스터/list | 계층형 그래프 |
-| 검색 방식 | 가까운 클러스터만 탐색 | 그래프를 따라 가까운 노드 탐색 |
-| 인덱스 생성 속도 | 빠른 편 | 느린 편 |
-| 메모리 사용량 | 적은 편 | 많은 편 |
-| 검색 정확도 | 설정에 따라 낮을 수 있음 | 일반적으로 높은 편 |
-| 주요 튜닝값 | `lists`, `probes` | `m`, `ef_construction`, `ef_search` |
-| 추천 상황 | 데이터가 비교적 정적이고 대량 | 검색 품질이 중요하고 데이터 추가가 있음 |
-
-## FTS: 의미가 아니라 단어를 찾기
-
-FTS는 `Full-Text Search`다. 벡터 검색이 의미 기반 검색이라면, FTS는 키워드 기반 검색이다.
+내적 기준이면 inner product operator class를 쓴다.
 
 ```sql
+CREATE INDEX idx_embedding_ip
+ON doc_embeddings
+USING hnsw (embedding vector_ip_ops);
+```
+
+정리하면 이렇게 맞춘다.
+
+| 검색 방식 | SQL 연산자 | 인덱스 operator class |
+| --- | --- | --- |
+| 코사인 거리 | `<=>` | `vector_cosine_ops` |
+| L2 거리 | `<->` | `vector_l2_ops` |
+| 내적 | `<#>` | `vector_ip_ops` |
+
+인덱스를 만들었는데 쿼리가 다른 연산자를 쓰면 기대한 인덱스 전략이 깨진다.
+
+또 하나 중요한 조건이 있다. pgvector 인덱스는 보통 아래처럼 거리 연산자 결과를 오름차순으로 정렬하고 `LIMIT`을 걸 때 잘 맞는다.
+
+```sql
+ORDER BY embedding <=> :query_embedding
+LIMIT 5
+```
+
+반대로 아래처럼 유사도 표현식으로 바꿔 정렬하면 인덱스 사용이 어려워질 수 있다.
+
+```sql
+ORDER BY 1 - (embedding <=> :query_embedding) DESC
+LIMIT 5
+```
+
+랭킹 쿼리 내부에서는 거리 기준 정렬을 유지하고, 화면에 보여줄 때만 similarity 값을 계산하는 편이 낫다.
+
+## JSONB 조건에도 인덱스가 필요하다
+
+벡터 인덱스만 만들었다고 전체 검색이 빨라지는 것은 아니다. 실제 쿼리는 보통 일반 조건을 같이 갖는다.
+
+```sql
+WHERE metadata->>'category' = 'shopping'
+ORDER BY description_embedding <=> :query_embedding
+LIMIT 10
+```
+
+이 조건을 자주 쓴다면 expression index를 고려할 수 있다.
+
+```sql
+CREATE INDEX idx_transactions_metadata_category
+ON transactions ((metadata->>'category'));
+```
+
+JSONB 포함 조건을 자주 쓴다면 GIN 인덱스를 검토할 수 있다.
+
+```sql
+CREATE INDEX idx_transactions_metadata_gin
+ON transactions
+USING gin (metadata);
+```
+
+필터 조건과 벡터 검색을 섞는 쿼리는 실제 데이터 분포에 따라 실행 계획이 달라진다. 그래서 `EXPLAIN ANALYZE`가 필요하다.
+
+```sql
+EXPLAIN ANALYZE
 SELECT
-    id,
-    content,
-    ts_rank(
-        to_tsvector('simple', content),
-        plainto_tsquery('simple', '카드 결제 오류')
-    ) AS fts_score
-FROM doc_embeddings
-WHERE to_tsvector('simple', content) @@ plainto_tsquery('simple', '카드 결제 오류')
-ORDER BY fts_score DESC
-LIMIT 5;
+    transaction_id,
+    description
+FROM transactions
+WHERE description_embedding IS NOT NULL
+  AND metadata->>'category' = 'shopping'
+ORDER BY description_embedding <=> :query_embedding
+LIMIT 10;
 ```
 
-핵심 함수와 연산자는 세 가지다.
+작은 테이블에서 Seq Scan이 나온다고 무조건 문제는 아니다. PostgreSQL이 보기에는 전체를 읽는 편이 더 싸다고 판단할 수 있다. 확인해야 할 것은 인덱스 사용 여부만이 아니라 실행 시간, rows estimate와 actual rows 차이, sort 비용, 필터 selectivity다.
 
-| 요소 | 역할 |
-| --- | --- |
-| `to_tsvector` | 문서 내용을 검색 가능한 토큰 구조로 바꿈 |
-| `plainto_tsquery` | 일반 사용자 입력을 FTS query로 바꿈 |
-| `@@` | 문서와 query가 매칭되는지 검사 |
+## FTS와 벡터 검색은 경쟁 관계가 아니다
 
-데이터가 많다면 매번 `to_tsvector`를 계산하지 말고 generated column과 GIN 인덱스를 쓰는 편이 좋다.
+RAG 검색을 만들 때 흔히 벡터 검색만 있으면 된다고 생각한다. 하지만 실제 검색어에는 정확한 문자열이 중요한 경우가 많다.
+
+예를 들어 `ERR_PAYMENT_403`, 주문번호, 상품 코드, 계좌번호 일부, 특정 정책명은 의미 기반 검색보다 키워드 검색이 더 강하다.
+
+| 검색 방식 | 잘하는 것 | 예시 |
+| --- | --- | --- |
+| FTS | 정확한 단어, 코드, 제품명, 에러 문자열 찾기 | `ERR_PAYMENT_403`, `카드` |
+| Vector Search | 표현은 달라도 의미가 가까운 문서 찾기 | `결제가 실패해요`, `결제 수단 등록이 안 됩니다` |
+
+PostgreSQL FTS는 이렇게 시작할 수 있다.
 
 ```sql
 ALTER TABLE doc_embeddings
@@ -268,10 +673,10 @@ GENERATED ALWAYS AS (
 
 CREATE INDEX idx_doc_content_tsv
 ON doc_embeddings
-USING GIN (content_tsv);
+USING gin (content_tsv);
 ```
 
-이후 쿼리는 더 단순해진다.
+검색 쿼리는 이렇게 쓴다.
 
 ```sql
 SELECT
@@ -284,9 +689,9 @@ ORDER BY fts_score DESC
 LIMIT 5;
 ```
 
-한국어에서는 주의가 필요하다. PostgreSQL의 `simple` 설정은 한국어 형태소 분석기가 아니다. 공백으로 나뉜 `카드 결제 오류`는 어느 정도 맞을 수 있지만, `카드결제`, `신용카드를`, `결제했습니다` 같은 표현에서는 기대와 다를 수 있다.
+한국어에서는 조심해야 한다. PostgreSQL의 `simple` 설정은 한국어 형태소 분석기가 아니다. `카드 결제 오류`처럼 공백이 있는 검색어는 어느 정도 맞을 수 있지만, `카드결제`, `신용카드를`, `결제했습니다` 같은 표현에서는 기대와 다를 수 있다.
 
-한국어 검색 품질이 중요하면 다음 선택지도 검토해야 한다.
+한국어 검색 품질이 중요하면 이런 선택지도 같이 본다.
 
 | 선택지 | 적합한 상황 |
 | --- | --- |
@@ -295,9 +700,9 @@ LIMIT 5;
 | PGroonga | 한국어, 일본어, 중국어 검색 품질이 중요할 때 |
 | OpenSearch/Elasticsearch | analyzer, 운영 기능, 검색 튜닝이 중요할 때 |
 
-## Hybrid Search: 두 검색 결과를 합치기
+## RRF로 하이브리드 검색 결과 합치기
 
-FTS와 벡터 검색을 각각 실행한 뒤 합치는 가장 단순한 방식은 점수를 더하는 것이다.
+FTS와 벡터 검색을 각각 실행한 뒤 결과를 합치는 가장 단순한 방식은 점수를 더하는 것이다.
 
 ```sql
 ORDER BY fts_score + vec_score DESC
@@ -315,10 +720,6 @@ ORDER BY fts_score + vec_score DESC
 
 그래서 실무에서는 점수 자체보다 순위를 합치는 RRF를 자주 쓴다.
 
-## RRF: 점수 대신 순위를 합치기
-
-RRF는 `Reciprocal Rank Fusion`이다. 핵심은 간단하다.
-
 ```text
 점수 기반 결합:
 fts_score + vec_score
@@ -333,9 +734,9 @@ fts_score + vec_score
 RRF Score = 1 / (60 + rank)
 ```
 
-FTS에서 1등이고 벡터 검색에서 2등인 문서는 한쪽에서만 1등인 문서보다 안정적으로 높은 점수를 받는다. RRF는 “여러 검색 방식에서 골고루 상위권인 문서”를 좋아한다.
+FTS에서 1등이고 벡터 검색에서 2등인 문서는 한쪽에서만 1등인 문서보다 안정적으로 높은 점수를 받는다. RRF는 여러 검색 방식에서 골고루 상위권인 문서를 좋아한다.
 
-실무에서는 최종 top 5를 보여주더라도 후보는 더 넉넉히 가져오는 편이 좋다.
+중요한 운영 감각은 후보를 넉넉히 가져오는 것이다.
 
 ```text
 FTS top 50
@@ -346,7 +747,7 @@ RRF로 합침
 최종 top 5 반환
 ```
 
-후보를 너무 작게 잡으면 RRF로 좋아질 수 있는 문서를 너무 일찍 버린다.
+최종 5개만 보여준다는 이유로 후보도 5개만 가져오면 RRF가 좋아질 기회를 너무 일찍 버린다.
 
 ## RRF 기반 SQL 예시
 
@@ -356,8 +757,8 @@ RRF로 합침
 WITH
 query AS (
     SELECT
-        plainto_tsquery('simple', '카드 결제 오류') AS text_query,
-        '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]'::vector AS query_embedding
+        plainto_tsquery('simple', :query_text) AS text_query,
+        :query_embedding::vector AS query_embedding
 ),
 fts_candidates AS (
     SELECT
@@ -384,6 +785,7 @@ vec_candidates AS (
         d.embedding <=> q.query_embedding AS distance
     FROM doc_embeddings d
     CROSS JOIN query q
+    WHERE d.embedding IS NOT NULL
     ORDER BY d.embedding <=> q.query_embedding
     LIMIT 50
 ),
@@ -409,9 +811,9 @@ ORDER BY rrf_score DESC
 LIMIT 5;
 ```
 
-`FULL OUTER JOIN`을 쓰는 이유는 양쪽 결과를 모두 살리기 위해서다. FTS에만 나온 문서도 있고, 벡터 검색에만 나온 문서도 있다. `COALESCE`는 한쪽에만 있는 값의 `NULL`을 처리한다.
+`FULL OUTER JOIN`을 쓰는 이유는 양쪽 후보를 모두 살리기 위해서다. FTS에만 나온 문서도 있고, 벡터 검색에만 나온 문서도 있다. `coalesce`는 한쪽에만 값이 있는 경우를 처리한다.
 
-운영 코드에서는 검색어와 embedding을 문자열로 직접 붙이지 말고 파라미터 바인딩을 써야 한다. 또한 candidate 개수, `ef_search`, `probes`, 최종 `LIMIT`은 실제 데이터와 latency budget으로 튜닝해야 한다.
+운영에서는 `:query_text`, `:query_embedding`, 후보 개수, `ef_search`, `probes`, 최종 `LIMIT`을 실제 데이터와 latency budget에 맞춰 조정해야 한다.
 
 ## Spring Boot에서는 어디에 둘까
 
@@ -429,7 +831,14 @@ DocumentSearchRepository
 PostgreSQL Hybrid Search Query
 ```
 
-`SearchController`는 HTTP 요청과 응답을 다룬다. `SearchService`는 검색어 validation, embedding 생성, 검색 실행, 결과 후처리를 조율한다. `EmbeddingClient`는 외부 embedding 모델 호출을 감싼다. `DocumentSearchRepository`는 SQL을 실행한다.
+각 역할은 분리하는 편이 좋다.
+
+| 컴포넌트 | 역할 |
+| --- | --- |
+| `SearchController` | HTTP 요청과 응답 처리 |
+| `SearchService` | 검색어 검증, 임베딩 생성, 검색 실행 조율 |
+| `EmbeddingClient` | 외부 임베딩 모델 호출 캡슐화 |
+| `DocumentSearchRepository` | SQL 실행 |
 
 결과 모델은 단순하게 시작할 수 있다.
 
@@ -447,52 +856,44 @@ public record SearchResult(
 
 ## 운영 체크리스트
 
-첫 번째는 벡터 차원이다.
+첫째, 벡터 차원이 맞는지 본다.
 
 ```text
 embedding 컬럼 차원과 query vector 차원이 같은가?
 ```
 
-두 번째는 operator class와 검색 연산자 일치다.
+둘째, 연산자와 operator class가 맞는지 본다.
 
-| 목적 | 인덱스 operator class | 검색 연산자 |
-| --- | --- | --- |
-| Cosine distance | `vector_cosine_ops` | `<=>` |
-| L2 distance | `vector_l2_ops` | `<->` |
-| Inner product | `vector_ip_ops` | `<#>` |
+```text
+vector_cosine_ops 인덱스 → <=> 검색
+vector_l2_ops 인덱스     → <-> 검색
+vector_ip_ops 인덱스     → <#> 검색
+```
 
-cosine 인덱스를 만들었다면 검색도 cosine 연산자를 써야 한다.
+셋째, 인덱스를 타는 쿼리 형태인지 확인한다.
 
 ```sql
-CREATE INDEX idx_doc_embedding_hnsw
-ON doc_embeddings
-USING hnsw (embedding vector_cosine_ops);
+ORDER BY embedding <=> :query_embedding
+LIMIT 5
+```
 
+넷째, 실행 계획을 본다.
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT id, content
 FROM doc_embeddings
 ORDER BY embedding <=> :query_embedding
 LIMIT 5;
 ```
 
-세 번째는 실행 계획이다.
-
-```sql
-EXPLAIN ANALYZE
-SELECT id, content
-FROM doc_embeddings
-ORDER BY embedding <=> :query_embedding
-LIMIT 5;
-```
-
-확인할 것은 인덱스 사용 여부만이 아니다. 실제 실행 시간, rows estimate와 actual rows 차이, candidate 수, sort 비용을 같이 봐야 한다. 작은 테이블에서는 PostgreSQL이 Seq Scan을 선택하는 것이 정상일 수도 있다.
-
-네 번째는 대량 데이터 적재 후 통계 갱신이다.
+다섯째, 대량 적재 후 통계를 갱신한다.
 
 ```sql
 ANALYZE doc_embeddings;
 ```
 
-다섯 번째는 운영 중 인덱스 생성 절차다. 큰 테이블에서는 일반 `CREATE INDEX`가 부담이 될 수 있으므로 `CONCURRENTLY`를 검토한다.
+여섯째, 운영 중 큰 테이블에 인덱스를 만들 때는 `CONCURRENTLY`를 검토한다.
 
 ```sql
 CREATE INDEX CONCURRENTLY idx_doc_embedding_hnsw
@@ -503,13 +904,23 @@ WITH (m = 16, ef_construction = 64);
 
 단, `CREATE INDEX CONCURRENTLY`는 트랜잭션 블록 안에서 쓸 수 없는 등 제약이 있다. 마이그레이션 도구와 운영 절차에 맞춰 별도 계획을 잡아야 한다.
 
+일곱째, `NULL` 벡터를 검색 대상에서 제외한다.
+
+```sql
+WHERE embedding IS NOT NULL
+```
+
+여덟째, approximate index의 recall을 감으로만 믿지 않는다. 운영에서는 approximate 결과와 exact search 결과를 비교해 recall을 모니터링해야 한다.
+
 ## 주니어가 자주 하는 실수
 
 첫째, `<=>`를 유사도라고 착각한다. `<=>`는 cosine distance이고 작을수록 좋다.
 
-둘째, 인덱스 operator class와 검색 연산자를 다르게 쓴다. `vector_cosine_ops` 인덱스를 만들고 `<->`로 검색하면 의도와 다르다.
+둘째, `<#>`를 실제 내적값이라고 착각한다. `<#>`는 negative inner product다. 실제 내적은 `-1 * (embedding <#> query_vector)`로 본다.
 
-셋째, 최종 5개를 보여준다는 이유로 후보도 5개만 가져온다.
+셋째, 인덱스 operator class와 검색 연산자를 다르게 쓴다. `vector_cosine_ops` 인덱스를 만들고 `<->`로 검색하면 의도와 달라진다.
+
+넷째, 최종 5개를 보여준다는 이유로 후보도 5개만 가져온다.
 
 ```text
 나쁜 예:
@@ -519,15 +930,78 @@ FTS top 5 + Vector top 5 → RRF
 FTS top 50 + Vector top 50 → RRF → 최종 top 5
 ```
 
-넷째, FTS 점수와 벡터 점수를 그냥 더한다. 초기 실험은 가능하지만, 검색 품질이 중요해지면 RRF나 정규화 전략을 검토해야 한다.
+다섯째, FTS 점수와 벡터 점수를 그냥 더한다. 초기 실험은 가능하지만, 검색 품질이 중요해지면 RRF나 정규화 전략을 검토해야 한다.
 
-다섯째, 한국어 FTS 품질을 과신한다. `simple`은 한국어 형태소 분석기가 아니다.
+여섯째, 한국어 FTS 품질을 과신한다. `simple`은 한국어 형태소 분석기가 아니다.
 
-여섯째, 인덱스가 있는데 Seq Scan이 나오면 무조건 문제라고 생각한다. 작은 테이블에서는 Seq Scan이 더 빠를 수 있고, PostgreSQL 플래너가 그 선택을 하는 것이 자연스럽다.
+일곱째, 인덱스가 있는데 Seq Scan이 나오면 무조건 문제라고 생각한다. 작은 테이블에서는 Seq Scan이 더 빠를 수 있고, PostgreSQL 플래너가 그 선택을 하는 것이 자연스럽다.
 
-## 추천 기본 구성
+## 직접 해볼 실습 과제
 
-처음 RAG 검색 시스템을 만든다면 다음 구성을 우선 검토할 만하다.
+처음 연습할 때는 아래 순서로 해보면 좋다.
+
+1. 기준 벡터를 바꿔본다.
+
+```sql
+SELECT
+    content,
+    embedding <=> '[0.53, 0.74, 0.36, 0.63, 0.27, 0.82, 0.19, 0.68]' AS cosine_distance
+FROM doc_embeddings
+ORDER BY embedding <=> '[0.53, 0.74, 0.36, 0.63, 0.27, 0.82, 0.19, 0.68]'
+LIMIT 5;
+```
+
+`송금` 기준 벡터를 넣었을 때 `계좌 이체`가 가까이 나오는지 본다.
+
+2. `LIMIT`을 바꿔본다.
+
+```sql
+LIMIT 3;
+LIMIT 5;
+LIMIT 10;
+```
+
+3. 인덱스 생성 전후 실행 계획을 비교한다.
+
+```sql
+EXPLAIN ANALYZE
+SELECT
+    content,
+    embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]' AS cosine_distance
+FROM doc_embeddings
+ORDER BY embedding <=> '[0.82, 0.14, 0.63, 0.45, 0.71, 0.28, 0.56, 0.39]'
+LIMIT 5;
+```
+
+4. `transactions` 테이블에 JSONB 조건을 붙여본다.
+
+```sql
+SELECT
+    transaction_id,
+    description,
+    amount,
+    metadata,
+    description_embedding <=> :query_embedding AS distance
+FROM transactions
+WHERE description_embedding IS NOT NULL
+  AND metadata->>'category' = 'shopping'
+ORDER BY description_embedding <=> :query_embedding
+LIMIT 10;
+```
+
+이 네 가지를 직접 돌려보면 pgvector가 단순히 “벡터 컬럼을 저장하는 기능”이 아니라, 기존 SQL 모델 안에 의미 검색을 끼워 넣는 방식이라는 감각이 잡힌다.
+
+## 내 결론
+
+pgvector를 처음 배울 때는 세 문장만 기억하면 된다.
+
+첫째, 벡터 검색은 글자가 같은지를 찾는 검색이 아니라 의미가 가까운지를 찾는 검색이다.
+
+둘째, pgvector는 그 벡터 검색을 PostgreSQL의 테이블, JOIN, JSONB, 인덱스, 트랜잭션 모델 안에서 다루게 해준다.
+
+셋째, 실무 검색은 벡터 검색 하나로 끝나지 않는다. 정확한 문자열을 찾는 FTS, 의미를 찾는 vector search, 둘의 순위를 안정적으로 합치는 RRF가 같이 필요해지는 경우가 많다.
+
+추천 기본 구성은 이렇게 시작할 수 있다.
 
 ```text
 PostgreSQL + pgvector
@@ -536,29 +1010,9 @@ PostgreSQL + pgvector
   └─ RRF hybrid ranking
 ```
 
-기본 인덱스는 이렇게 시작할 수 있다.
+이 구성이 모든 서비스의 정답은 아니다. 하지만 주니어 개발자가 RAG 검색이나 의미 검색을 처음 만들 때, 개념과 실무 사이를 잇는 출발점으로는 충분히 좋은 기본값이다.
 
-```sql
-CREATE INDEX idx_doc_embedding_hnsw
-ON doc_embeddings
-USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
+## 확인한 자료
 
-CREATE INDEX idx_doc_content_tsv
-ON doc_embeddings
-USING GIN (content_tsv);
-```
-
-그리고 검색 흐름은 이렇게 잡는다.
-
-```text
-1. 사용자가 검색어 입력
-2. 검색어 embedding 생성
-3. FTS top N 검색
-4. Vector top N 검색
-5. RRF로 랭킹 통합
-6. 최종 top K 반환
-7. RAG라면 top K 문서를 LLM context에 삽입
-```
-
-한 줄로 정리하면 이렇다. 벡터 검색은 의미를 찾고, FTS는 단어를 찾고, 하이브리드 검색은 둘을 합쳐 결과를 안정화한다. IVFFLAT은 클러스터를 찾아 들어가는 방식이고, HNSW는 그래프를 타고 가까운 벡터를 찾는 방식이다. 점수 합산은 위험할 수 있고, RRF는 순위 기반이라 하이브리드 검색에서 실용적이다.
+- [pgvector 공식 GitHub README](https://github.com/pgvector/pgvector)
+- 내부 강의노트: `PostgreSQL + pgvector 벡터 검색 강의 노트`
