@@ -163,6 +163,16 @@
   source: src/content/articles/ponytail-agent-minimalism-analysis.mdx
   updated: 2026-06-25
 
+- title: oh-my-pi Deep Review Research Packet
+  path: docs/notes/article-factory/oh-my-pi-deep-review.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Verified evidence packet for the oh-my-pi deep review, including a live upstream clone, code and policy inspection, focused test evidence, current issue state, and code-derived trust-boundary blind spots.
+  source: src/content/articles/oh-my-pi-deep-review.mdx
+  updated: 2026-07-12
+
 - title: GStack + Superpowers 발표자료용 초압축 버전
   path: docs/notes/skills/gstack-superpowers/gstack-superpowers-slides.md
   topic: skills/gstack-superpowers
