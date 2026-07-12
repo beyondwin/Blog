@@ -133,6 +133,16 @@
   source: internal workflow
   updated: 2026-06-25
 
+- title: Graphify Code Knowledge Graph Deep-Dive Research Packet
+  path: docs/notes/article-factory/graphify-code-knowledge-graph-deep-dive.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Internal evidence packet for the published Graphify deep-dive article, including the supplied HTML report, code-audit claims, controlled experiments, benchmark caveats, and editorial boundaries.
+  source: src/content/articles/graphify-code-knowledge-graph-deep-dive.mdx
+  updated: 2026-07-12
+
 - title: Hermes Agent Persistent Worker Runtime Research Packet
   path: docs/notes/article-factory/hermes-agent-persistent-worker-runtime.md
   topic: skills/agent-workflows
