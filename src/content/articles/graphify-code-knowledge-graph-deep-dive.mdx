@@ -1,0 +1,416 @@
+---
+title: "Graphify는 코드 이해를 정말 더 빠르게 만드는가?"
+description: "Graphify의 코드 지식 그래프 원리와 질의 방식, 통제 실험, 벤치마크 한계, 보안·운영 사각지대와 현실적인 도입법을 코드와 근거로 검토한다."
+createdAt: "2026-07-12"
+updatedAt: "2026-07-12"
+tags: ["Graphify", "knowledge-graph", "code-search", "AI-agent", "source-grounded"]
+status: "published"
+---
+
+Graphify는 분명 쓸모가 있다. 낯선 저장소에서 핵심 심볼과 모듈 관계를 빠르게 훑고, “이 함수와 저 서비스가 어떻게 이어지는가”를 탐색하는 데는 단순 파일 검색보다 좋은 지도를 만든다. 하지만 그 지도를 코드의 의미나 실제 실행 경로와 같다고 믿는 순간부터 문제가 시작된다. 내 결론은 간단하다. **Graphify는 설명 가능한 구조 탐색 계층으로는 유용하지만, 단독 진실 공급원으로 쓰기에는 아직 위험하다.**
+
+이 글은 제공받은 한국어 심층 보고서를 그대로 옮긴 글이 아니다. 2026년 7월 12일 기준 `Graphify-Labs/graphify`의 최신 `v8` 소스를 새로 받아 구현과 테스트를 다시 읽었고, PyPI `graphifyy 0.9.12`와 저장소 HEAD `0.9.13`을 작은 Python 프로젝트에 직접 실행했다. 그 과정에서 원문이 정확히 짚은 부분뿐 아니라, 원문 이후 수정된 부분과 원문에는 없던 사각지대도 확인했다.
+
+| 질문 | 짧은 판단 |
+| --- | --- |
+| 무엇을 해주는가? | 코드와 문서를 노드·엣지 그래프로 바꾸고 구조 탐색용 보고서와 질의 인터페이스를 만든다. |
+| 코드 분석에 LLM이 꼭 필요한가? | 코드 전용 AST 추출에는 필요 없다. 문서·이미지·영상의 의미 추출은 별도 backend를 사용할 수 있다. |
+| 자연어 질문을 의미적으로 이해하는가? | 기본 질의는 임베딩보다 문자열 정규화, IDF, exact/prefix/substring 점수, trigram 후보화와 그래프 순회에 가깝다. |
+| 호출 그래프와 같은가? | 아니다. 기본 저장은 무방향 그래프이고, 정적 분석이 놓친 엣지는 그래프에 나타나지 않는다. |
+| 벤치마크는 믿을 만한가? | 가능성을 보여주는 프로젝트 자체 결과다. 공개되지 않은 harness와 작은 코드 질문 수 때문에 독립 재현 전에는 제한적으로 읽어야 한다. |
+| 가장 좋은 역할은? | `rg`·LSP·SCIP·CodeQL·runtime trace를 대체하기보다, 이들을 연결하는 구조 지도와 탐색 출발점이다. |
+
+## 먼저 알아야 할 개념
+
+코드 지식 그래프를 이해하려면 노드와 엣지만 알면 된다.
+
+- **노드**는 파일, 함수, 클래스, 메서드, 패키지, 문서의 개념 같은 대상이다.
+- **엣지**는 `contains`, `calls`, `imports`, `inherits`, `references`처럼 두 대상을 잇는 관계다.
+- **confidence**는 관계가 소스에서 직접 추출됐는지, 후처리로 추론됐는지, 아직 모호한지를 나타낸다.
+
+예를 들어 다음 코드가 있다고 하자.
+
+```python
+from services import OrderService
+
+def checkout(order_id: str):
+    service = OrderService()
+    return service.submit(order_id)
+```
+
+그래프는 대략 이런 질문에 답하려 한다.
+
+```text
+app.py --contains--> checkout()
+checkout() --calls--> OrderService
+OrderService --method--> submit()
+```
+
+여기서 가장 중요한 것은 **그려진 엣지보다 그려지지 않은 엣지**다. 정적 분석기는 reflection, dependency injection, runtime import, feature flag, generated code, macro, framework registration을 모두 알 수 없다. 그래프에 `AMBIGUOUS`가 0개라고 해서 완전하다는 뜻도 아니다. 놓친 관계는 스스로 “나는 빠졌다”고 표시하지 않기 때문이다.
+
+또 하나 구분해야 할 것이 있다.
+
+| 증거 | 대답할 수 있는 질문 |
+| --- | --- |
+| 정적 코드 그래프 | 어떤 심볼과 파일이 구조적으로 연결될 가능성이 있는가? |
+| LSP/SCIP | 이 언어의 정확한 정의와 참조는 어디인가? |
+| CodeQL/data flow | 값이 source에서 sink까지 어떻게 전파될 수 있는가? |
+| OpenTelemetry trace | 실제 요청이 어느 서비스와 함수를 거쳤는가? |
+| 테스트와 로그 | 특정 입력에서 어떤 경로가 실행되고 실패했는가? |
+
+Graphify가 만드는 것은 첫 번째에 가깝다. 나머지 증거를 대신하지 않는다.
+
+## 실제 구조
+
+공식 아키텍처는 다음 파이프라인으로 설명한다.
+
+```text
+detect
+  → extract
+  → build_graph
+  → cluster
+  → analyze
+  → report
+  → export
+```
+
+### 1. 파일을 고른다
+
+`detect.py`가 확장자, 무시 규칙, 민감해 보이는 파일명, build/cache 디렉터리 등을 기준으로 corpus를 만든다. `.graphifyignore`로 프로젝트별 제외 규칙도 줄 수 있다. symlink는 기본적으로 따라가지 않고, opt-in하더라도 scan root 밖으로 나가는 target은 건너뛴다.
+
+이 단계부터 그래프의 진실 범위가 결정된다. generated code를 제외하면 노이즈는 줄지만 실제 runtime 연결이 사라질 수 있고, 포함하면 원본과 생성물이 중복 허브가 될 수 있다. 어떤 파일을 읽지 않았는지는 어떤 알고리즘을 쓰느냐만큼 중요하다.
+
+### 2. 코드는 tree-sitter로 구조를 뽑는다
+
+코드 전용 경로는 tree-sitter AST를 사용한다. 함수, 클래스, import, 상속, 메서드, 일부 호출과 참조를 언어별 extractor가 노드와 엣지로 변환한다. 이 경로는 모델 API 호출 없이 실행할 수 있고, AST cache는 Graphify 버전별로 분리된다.
+
+그렇다고 완전한 compiler frontend나 language server가 되는 것은 아니다. extractor가 지원하는 구문과 후처리 resolver 범위 안에서만 관계가 생긴다. 같은 Python이라도 일반 함수 호출, instance method, `getattr`, decorator, framework magic은 서로 다른 규칙을 탄다.
+
+### 3. 문서와 미디어는 다른 신뢰 경계를 가진다
+
+Markdown, PDF, 이미지, 영상 같은 비코드 자료는 의미 추출 backend를 사용할 수 있다. 이때부터 비용, 모델 재현성, 데이터 반출, prompt injection이 분석 경계에 들어온다. 현재 코드는 source를 hash가 붙은 `untrusted_source` 블록으로 감싸고 알려진 injection sentinel을 중화한다. 좋은 방어지만, 모델 기반 추출을 완전히 무해하거나 결정적으로 만들지는 않는다.
+
+더 미묘한 사각지대는 cache다. AST cache는 Graphify 버전이 바뀌면 무효화되지만, semantic cache는 재과금을 피하려고 의도적으로 버전이 없다. 파일 내용이 같으면 provider, model, prompt, 추출 정책이 바뀌어도 과거 semantic 결과가 재사용될 수 있다. “소스가 안 바뀌었다”와 “의미 추출 결과가 현재 정책으로 만들어졌다”는 다른 말이다.
+
+### 4. 기본 그래프는 단순 무방향 그래프다
+
+`build_from_json()`의 기본값은 `directed=False`이고 결과는 NetworkX `Graph`다. export할 때 원래 source와 target을 `_src`, `_tgt` 메타데이터로 복원하지만, 저장 topology 자체는 무방향이다.
+
+이 선택은 탐색을 쉽게 하는 대신 정보를 잃는다.
+
+- A가 B를 호출한 것과 B가 A를 호출한 것을 topology에서 같은 연결로 본다.
+- 같은 노드 쌍 사이의 `calls`, `imports`, `references`를 모두 독립적으로 보존하는 typed multigraph가 아니다.
+- 여러 relation이나 반대 방향의 같은 relation이 겹치면 하나가 덮이거나 탈락할 수 있다.
+
+즉 export에 방향 화살표가 보인다고 해서 저장 단계에서 관계 multiplicity까지 보존됐다고 해석하면 안 된다.
+
+### 5. clustering과 보고서를 만든다
+
+선택적 `graspologic`이 있으면 Leiden, 없으면 NetworkX Louvain을 사용한다. 정렬과 seed를 통해 결정성을 높이고, 높은 degree의 god node와 community를 보고서에 보여준다.
+
+degree가 높다는 사실은 “중요하다”와 같지 않다. 공통 logger, base type, generated registry, `GET`, `Config`, `index` 같은 일반 이름이 허브가 될 수 있다. centrality는 읽을 후보를 고르는 신호이지 제품 중요도 점수가 아니다.
+
+## 핵심 기능
+
+### `query`는 자연어처럼 보이는 lexical graph search다
+
+현재 구현은 질문에서 불용어를 줄이고, label·node ID·source path에 대해 exact, prefix, substring 점수를 계산한다. 흔한 단어의 영향은 IDF로 낮추고, trigram index로 후보를 줄인 뒤 상위 seed에서 BFS나 DFS를 수행한다.
+
+이 방식은 구체적인 식별자에 강하다.
+
+```text
+"OrderService submit"
+"src/auth/session.py"
+"PaymentController"
+```
+
+반대로 이런 질문은 흔들리기 쉽다.
+
+```text
+"인증은 전체적으로 어떻게 동작해?"
+"에러는 어디서 처리해?"
+"GET 요청 흐름을 보여줘"
+```
+
+우리 fixture에는 서로 다른 파일의 `GET()` 두 개가 있었다. `GET`을 질의하자 최신 구현은 둘 다 seed로 골랐다.
+
+```text
+Traversal: BFS depth=1
+Start: ['GET()', 'GET()']
+```
+
+이는 버그이면서 동시에 정직한 결과다. 질문이 모호하니 후보도 여러 개다. 문제는 사용자가 “자연어 질문이니까 도구가 의도를 골라줬겠지”라고 생각할 때 생긴다.
+
+### `path`는 방향을 무시하고 가장 짧은 연결을 찾는다
+
+CLI와 MCP의 path 구현은 모두 `G.to_undirected()`에 대해 shortest path를 구한다. A에서 B로 물어도, B에서 A로 물어도 같은 연결을 찾기 쉽다. 탐색용으로는 편하지만 다음을 증명하지 못한다.
+
+- 호출 방향
+- 데이터 흐름
+- 의존성 전파 방향
+- 실제 요청 순서
+- 트랜잭션 경계
+
+path 결과는 “두 대상 사이에 저장된 구조 관계가 이어진다” 정도로 읽어야 한다.
+
+### 작은 통제 실험에서 무엇을 잡고 놓쳤나
+
+2026년 7월 12일 최신 `v8`과 PyPI 0.9.12에 5개 Python 파일을 넣었다. 두 파일에는 각각 `GET()`을 정의했고, `OrderService.submit()`을 직접 호출하는 코드와 `getattr(service, "submit")`으로 호출하는 코드를 함께 뒀다.
+
+흥미롭게도 결과는 직관과 달랐다.
+
+- 서로 다른 `GET()`은 경로가 포함된 별도 ID로 유지됐다.
+- 직접 쓴 `service.submit()`은 `checkout → OrderService`까지만 연결되고 `submit()` 메서드까지는 이어지지 않았다.
+- `getattr` 경로는 오히려 `indirect_call → .submit()` 엣지를 만들었다.
+
+“동적 호출은 놓치고 직접 호출은 잡는다” 같은 간단한 규칙으로 설명할 수 없다는 뜻이다. relation coverage는 언어뿐 아니라 구문 패턴과 resolver 구현에 따라 달라진다.
+
+### `check-update`라는 이름이 주는 오해
+
+원문은 새 파일을 만든 뒤 `graphify check-update`가 아무 출력 없이 끝난 것을 신규 파일 감지 실패로 봤다. 현재 코드를 다시 확인하면 두 기능을 나눠야 한다.
+
+- `detect_incremental()`은 기존 manifest와 현재 corpus를 비교한다. 우리 실험에서는 새 파일 1개를 정확히 `new_files`로 반환했다.
+- `graphify check-update`는 corpus를 다시 스캔하는 명령이 아니다. watcher가 남기는 `needs_update` flag를 확인하는 알림용 명령이다.
+
+따라서 “증분 감지가 전부 고장 났다”는 결론은 과하다. 다만 사용자가 이름만 보고 freshness scan으로 오해하기 쉬운 운영 계약은 여전히 문제다. exit 0과 무출력이 최신 상태를 증명하지 않는다.
+
+### 닫힌 이슈도 실행 경로별로 다시 봐야 한다
+
+절대 경로가 node ID에 들어가는 [#1789](https://github.com/Graphify-Labs/graphify/issues/1789)는 닫혀 있다. maintainer는 현재 CLI가 상대 경로 ID를 만들고 서로 다른 checkout에서도 동일하다고 설명했다.
+
+하지만 우리가 문서화된 headless 명령인 `graphify extract`로 다시 실행한 결과는 달랐다. PyPI 0.9.12와 최신 `v8` 모두에서 `source_file`은 clustered output에서 `api_a.py`처럼 상대화됐지만, node ID에는 다음처럼 절대 scan root가 남았다.
+
+```text
+private_tmp_graphify_path_a_proj_api_a_get
+private_tmp_graphify_path_b_proj_api_a_get
+```
+
+동일한 코드의 ID 집합이 checkout 위치에 따라 바뀌었다. 모든 host skill 경로가 같은 문제를 가진다고 단정할 수는 없다. 하지만 “이슈가 닫혔으니 이식성 문제가 완전히 끝났다”고 말할 수도 없다. 특히 `graphify extract`를 CI나 중앙 graph store에 사용할 팀이라면 직접 확인해야 한다.
+
+## 좋은 점
+
+### 소스 위치와 관계 성격을 설명할 수 있다
+
+vector search는 관련 문단을 잘 찾지만 “왜 이 결과가 나왔는가”가 흐릴 때가 있다. Graphify node와 edge에는 label, source file, location, relation, confidence가 붙는다. 정확하지 않더라도 검증할 출발점이 명확하다.
+
+### 코드 전용 경로가 싸고 빠르다
+
+작은 fixture는 모델 없이 즉시 처리됐다. 대형 저장소에서도 AST 추출은 API 비용 없이 반복할 수 있다. 모델 context에 저장소 전체를 밀어 넣는 방식과 비교하면, 먼저 구조 후보를 줄이는 전략 자체는 합리적이다.
+
+### 낯선 저장소의 지도를 빨리 만든다
+
+파일 수가 많고 팀 경계가 불명확한 저장소에서는 community와 hub가 읽기 순서를 정하는 데 도움이 된다. “무엇이 진짜 핵심인가”를 자동 판정해주지는 않지만, 어디부터 의심하고 읽을지는 제안한다.
+
+### 최근 구현은 실패를 조용히 삼키지 않으려 한다
+
+현재 코드에는 다음과 같은 방어가 있다.
+
+- graph shrink guard와 backup
+- 변경 파일 queue와 rebuild lock
+- 삭제 증거가 불충분할 때 node eviction을 막는 보강
+- AST cache 버전 분리
+- symlink root 경계
+- graph file 크기 제한
+- 손상된 JSON에 대한 명시적 복구 안내
+- HTTP API key middleware와 loopback 기본 bind
+- SSRF, redirect, download size, XSS, path traversal 방어
+
+2026년 7월 12일 검증한 commit의 GitHub check도 Python 3.10/3.12, skill 생성, security scan에서 녹색이었다. 빠르게 변하는 프로젝트지만, 테스트와 방어 코드를 적극적으로 추가하는 방향은 분명하다.
+
+## 조심해야 할 점
+
+### 1. `graph.json`만으로는 재현 조건이 부족하다
+
+현재 graph에는 Git commit이 기록될 수 있다. 그러나 branch, dirty worktree, Graphify 버전, extraction flag, ignore 규칙, semantic backend/model/prompt, graph schema version은 완전한 provenance envelope로 묶여 있지 않다.
+
+같은 commit에서도 다음 두 결과는 달라질 수 있다.
+
+```text
+--directed 사용 여부
+--follow-symlinks 사용 여부
+.graphifyignore 내용
+semantic backend와 model
+cache를 재사용했는지 여부
+```
+
+중앙 store를 운영한다면 `repo + commit`만으로 cache key를 만들면 부족하다.
+
+### 2. semantic cache는 비용과 freshness를 교환한다
+
+파일 내용이 같으면 과거 semantic extraction을 재사용하는 것은 비용 면에서 합리적이다. 하지만 모델이나 prompt가 개선돼도 옛 결과가 남을 수 있다. 팀은 “비용 없이 재사용”과 “현재 정책으로 재생성” 중 어느 쪽을 원하는지 선택할 수 있어야 한다.
+
+### 3. 기본 그래프는 typed multigraph가 아니다
+
+같은 두 node 사이에 관계가 여러 개라면 단순 `Graph`는 전부 독립적으로 보존할 수 없다. 호출과 참조를 따로 세고, 서로 반대 방향의 relation을 감사하고, confidence별 증거를 누적하려면 directed typed multigraph나 relation별 별도 index가 더 맞다.
+
+### 4. merge는 정보가 풍부한 쪽이 항상 정확한 쪽이라는 가정을 포함한다
+
+builder는 동일 ID node가 여러 번 들어오면 뒤의 속성으로 덮는다. 문서상 semantic node가 AST node보다 풍부하므로 overwrite하는 선택이 의도돼 있다. 하지만 풍부한 설명이 정확한 source location보다 우선하는 것이 모든 작업에 맞지는 않는다. 보안 감사와 refactor에서는 정확한 정의 위치가 더 중요할 수 있다.
+
+### 5. 산출물은 소스가 없어도 민감하다
+
+`graph.json`에는 파일명, 심볼명, 관계, package dependency, community, god node가 들어간다. 이것만으로도 인증 경계, 핵심 결제 모듈, 내부 서비스 이름, 장애 집중 지점을 추정할 수 있다. 문서 semantic node까지 들어가면 더 많은 내부 맥락이 노출될 수 있다.
+
+“원본 코드를 안 넣었으니 공개해도 된다”는 안전 기준이 아니다.
+
+### 6. HTTP로 공유하는 순간 local tool이 아니다
+
+기본 bind는 `127.0.0.1`이고 API key도 지원한다. 하지만 `0.0.0.0`에 key 없이 띄우는 설정도 경고만 하고 허용한다. wildcard bind에서는 Host allow-list도 비활성화된다.
+
+팀 공유 환경에는 최소한 다음이 별도로 필요하다.
+
+- 인증을 선택이 아니라 필수로 만들기
+- TLS 또는 신뢰된 reverse proxy
+- tenant/repository별 권한 분리
+- access log와 key rotation
+- graph artifact 자체의 보관·삭제 정책
+
+### 7. submodule, vendored code, generated code의 소유권은 자동으로 정해지지 않는다
+
+Graphify는 알려진 build/cache 디렉터리와 lockfile을 제외하지만, 모든 생성물과 vendor 경계를 알아낼 수는 없다. checked-out submodule도 일반 디렉터리처럼 보일 수 있다. monorepo에서는 서로 다른 서비스가 같은 `Config`, `handler`, `GET`을 반복한다.
+
+corpus를 넓히면 recall은 늘고 identity 충돌과 hub noise도 늘어난다. 먼저 “이 graph가 어느 deployable unit을 대표하는가”를 정해야 한다.
+
+### 8. 모든 출력 경로가 하나의 atomic transaction은 아니다
+
+watch rebuild에는 lock과 임시 graph가 있지만, 다른 경로에는 JSON을 직접 쓰는 부분도 있다. graph, report, labels, manifest, cost metadata가 한 번에 commit되는 단일 transaction은 아니다. 중간에 process가 죽으면 서로 다른 세대의 파일이 남을 수 있다.
+
+backup과 shrink guard는 도움이 되지만, 완전한 crash consistency와 같지는 않다.
+
+### 9. 설치 명령은 에이전트의 행동을 바꾼다
+
+`graphify install`과 hook 설치는 agent instruction과 Git 동작을 지속적으로 수정한다. 패키지를 upgrade해도 설치된 skill과 hook의 interpreter path가 자동으로 현재 버전과 일치한다는 보장은 없다. 실제로 PyPI 0.9.12 probe에서는 로컬에 설치된 0.9.13 skill과 package가 다르다는 경고가 나왔다.
+
+도입 검토에는 Python dependency뿐 아니라 설치되는 instruction, hook, merge driver도 포함해야 한다.
+
+### 10. 테스트가 많다는 것과 누구나 같은 조건으로 재현된다는 것은 다르다
+
+최신 소스의 로컬 전체 테스트에서는 3,097개가 통과하고 31개가 skip됐지만 10개가 실패했다. 네 개는 기본 dev dependency profile에 optional `openai`가 없어서였고, 해당 extra를 넣으니 모두 통과했다. 여섯 개는 HTTP opener를 mock하면서도 `example.com` DNS에는 의존하는 테스트였다. 같은 commit의 GitHub CI는 `--all-extras`와 정상 DNS 환경에서 녹색이었다.
+
+이 결과는 “제품이 망가졌다”는 증거가 아니다. 오히려 **녹색 CI를 재현하려면 CI의 dependency와 network 전제를 같이 복사해야 한다**는 DX 교훈에 가깝다.
+
+### 11. 벤치마크는 세 종류를 분리해서 읽어야 한다
+
+첫째, 내장 `graphify benchmark`는 task benchmark가 아니다. corpus word 수가 없으면 `node_count × 50`으로 추정하고, graph context는 네 글자당 한 token으로 계산하며, 고정 질문 다섯 개를 쓴다. 아예 node가 매칭되지 않은 질문은 평균에서 빠진다. 이 값은 근사 context ratio다.
+
+둘째, 공식 memory benchmark는 LOCOMO와 LongMemEval-S에서 인상적인 수치를 보고한다. 그러나 maintainer가 [#1706](https://github.com/Graphify-Labs/graphify/issues/1706)에서 `memory/runner.py`와 adapter가 공개 저장소에 없다고 밝혔다. clean checkout에서 headline row를 독립 재현할 수 없다.
+
+셋째, ERPNext code intelligence 결과는 graph tool을 추가했을 때 key-fact coverage가 70.8%에서 82.0%로 올랐다고 보고하지만 질문은 6개다. 좋은 신호지만 다른 언어와 저장소에 일반화할 표본은 아니다.
+
+비용 표기도 조심해야 한다. `BENCHMARKS.md` 일부는 Graphify의 약 `$1.40`을 ingest cost로 부르지만, maintainer 설명에 따르면 graph build는 0원이고 그 비용은 공통 reader와 judge에서 나온다. index 구축비, retrieval/answer 비용, 평가 비용을 섞으면 비교가 달라진다.
+
+## 언제 쓰면 좋은가
+
+Graphify가 잘 맞는 팀은 다음과 같다.
+
+- 처음 보는 큰 저장소의 읽기 순서를 빨리 잡고 싶다.
+- 에이전트가 매번 같은 구조 탐색을 반복한다.
+- source file과 relation이 보이는 설명 가능한 후보 검색이 필요하다.
+- AST-only graph를 싸게 자주 갱신할 수 있다.
+- 결과를 반드시 원본 코드와 테스트로 다시 확인하는 습관이 있다.
+
+단독 사용이 위험한 작업도 분명하다.
+
+- 인증·권한·결제·개인정보 data flow
+- 실제 장애의 request path와 latency 분석
+- reflection과 runtime wiring이 많은 framework
+- generated code와 macro가 핵심인 build
+- 서로 다른 tenant의 graph를 한 서버에서 공유하는 환경
+- “놓친 관계가 없어야 한다”는 완전성 요구
+
+현실적인 구성은 hybrid다.
+
+```text
+정확한 이름·문자열
+  → rg / Zoekt
+
+정의·참조·구현
+  → LSP / SCIP
+
+넓은 구조 후보와 설명 가능한 주변 문맥
+  → Graphify
+
+값 전파와 보안 source/sink
+  → CodeQL
+
+실제 실행 경로
+  → trace / log / test
+
+자연어 개념 유사성
+  → vector / hybrid retrieval
+```
+
+도입할 때는 전사 설치보다 한 저장소에서 먼저 측정하는 편이 낫다.
+
+1. 팀이 실제로 자주 묻는 질문 20~30개를 모은다.
+2. 정답 파일·심볼·핵심 사실을 사람이 표시한다.
+3. `rg`, LSP, Graphify, hybrid 조합을 같은 질문으로 비교한다.
+4. recall뿐 아니라 잘못된 확신, source 확인 시간, graph 갱신 시간도 잰다.
+5. 파일 추가·삭제·rename·branch 전환·worktree·중단된 build를 시험한다.
+6. 다른 checkout에서 node ID와 graph diff가 안정적인지 확인한다.
+7. graph artifact에 민감 정보가 들어가는지 security review를 한다.
+
+추천 합격 기준은 제품마다 다르지만 최소한 다음 질문에는 답할 수 있어야 한다.
+
+- graph가 어느 commit뿐 아니라 어떤 설정으로 만들어졌는가?
+- 같은 corpus를 두 번 만들면 ID와 relation이 안정적인가?
+- 질문에 답이 없을 때 도구가 모른다고 말하는가?
+- graph가 오래됐거나 부분 실패했을 때 자동화가 멈추는가?
+- HTTP로 공유할 때 인증과 repository 권한이 강제되는가?
+- Graphify가 못 잡는 언어 기능을 팀이 알고 있는가?
+
+## 주니어 개발자가 배울 점
+
+첫째, **도구의 입력과 출력 사이를 직접 보라.** “AI 지식 그래프”라는 이름보다 `_score_nodes`, `build_from_json`, `shortest_path`가 실제로 무엇을 하는지가 중요하다. 자연어 입력을 받는다고 모두 semantic search는 아니다.
+
+둘째, **정적 구조와 runtime truth를 구분하라.** import와 call candidate를 찾는 것, 실제 요청이 그 경로를 탔다는 것은 전혀 다른 증거다. 구조는 code graph로, 실행은 trace와 test로 확인해야 한다.
+
+셋째, **없는 엣지를 의심하라.** 틀린 엣지는 눈에 보이지만 빠진 엣지는 보이지 않는다. 정적 분석 도구를 평가할 때 precision만큼 recall과 unsupported construct 목록을 봐야 한다.
+
+넷째, **benchmark의 분모와 비용 경계를 확인하라.** 질문이 몇 개인지, 실패한 질문이 평균에서 빠지는지, 비용에 index·reader·judge 중 무엇이 포함되는지에 따라 같은 숫자의 의미가 달라진다.
+
+다섯째, **cache도 데이터 모델이다.** 무엇을 key로 삼고 어떤 변화에서 무효화되는지 모르면 빠른 결과가 오래된 결과일 수 있다.
+
+여섯째, **닫힌 이슈는 최종 증명이 아니다.** 어느 버전, 어느 command path, 어떤 flag에서 고쳐졌는지 직접 재현해야 한다. 이번 절대 경로 ID 사례가 정확히 그랬다.
+
+## 내 결론
+
+Graphify는 “저장소 전체를 읽지 않고도 구조 후보를 좁혀주는 도구”로 평가하면 꽤 매력적이다. 코드 전용 AST 경로는 빠르고 저렴하며, source와 relation이 붙은 결과는 vector-only 검색보다 검증하기 쉽다. community와 god node도 낯선 저장소의 첫 지도를 만드는 데 도움이 된다.
+
+하지만 “코드를 이해하는 그래프”라는 표현은 실제 구현보다 넓다. 기본 graph는 무방향 단순 그래프이고, query는 lexical heuristic 중심이며, path는 방향을 무시한다. semantic cache와 graph provenance에는 freshness 공백이 있고, headless extract 경로의 절대 ID 이식성 문제도 현재 버전에서 재현됐다. 공개 benchmark는 흥미롭지만 핵심 memory harness가 공개되지 않았고 code 평가는 n=6이다.
+
+그래서 나는 Graphify를 `rg`의 대체재나 architecture oracle로 두지 않는다. **정확 검색과 language intelligence 앞뒤에 놓는 구조 탐색 layer**로 쓴다. Graphify가 후보를 보여주면 source를 열고, LSP로 정의·참조를 확인하고, 보안 질문은 CodeQL로, 실제 경로는 trace와 test로 닫는다.
+
+도입 판단도 스타 수나 “몇 배 token 절감”으로 하지 않는 편이 좋다. 팀의 실제 질문으로 작은 gold set을 만들고, branch·worktree·cache·삭제·중단·공유까지 포함한 운영 실험을 통과시키자. 그 조건에서 시간을 줄이고 오답 확신을 늘리지 않는다면 Graphify는 좋은 지도다. 지도를 현실 그 자체로 믿지만 않으면 된다.
+
+## 확인한 자료
+
+검증 기준은 2026년 7월 12일 `Graphify-Labs/graphify` commit `591da764a18db9c558de627accd61a61b32bc23e`와 PyPI `graphifyy 0.9.12`다.
+
+- [Graphify GitHub repository](https://github.com/Graphify-Labs/graphify)
+- [README](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/README.md)
+- [Architecture](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/ARCHITECTURE.md)
+- [Benchmarks](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/BENCHMARKS.md)
+- [Security policy](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/SECURITY.md)
+- [Package metadata](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/pyproject.toml)
+- [Graph builder](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/build.py)
+- [Query and path implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/serve.py)
+- [Incremental detection](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/detect.py)
+- [Watch and rebuild implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/watch.py)
+- [Cache implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/cache.py)
+- [Built-in benchmark implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/benchmark.py)
+- [PyPI graphifyy](https://pypi.org/project/graphifyy/)
+- [Issue #1706 — benchmark reproduction](https://github.com/Graphify-Labs/graphify/issues/1706)
+- [Issue #1751 — central graph store](https://github.com/Graphify-Labs/graphify/issues/1751)
+- [Issue #1765 — check-update and new files](https://github.com/Graphify-Labs/graphify/issues/1765)
+- [Issue #1766 — homonymous generic symbols](https://github.com/Graphify-Labs/graphify/issues/1766)
+- [Issue #1776 — deleted files and unresolved stubs](https://github.com/Graphify-Labs/graphify/issues/1776)
+- [Issue #1789 — absolute path node IDs](https://github.com/Graphify-Labs/graphify/issues/1789)
+- [PR #1795 — deletion-evidence guard](https://github.com/Graphify-Labs/graphify/pull/1795)
+- [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
+- [CodeQL data-flow analysis](https://codeql.github.com/docs/writing-codeql-queries/about-data-flow-analysis/)
+- [SCIP](https://github.com/scip-code/scip)
+- [OpenTelemetry traces](https://opentelemetry.io/docs/concepts/signals/traces/)
+- [Zoekt](https://github.com/sourcegraph/zoekt)
+
+독립 실험은 작은 Python fixture로 기능 경계를 확인하기 위한 것이며, 여러 언어와 대형 저장소의 정확도를 대표하는 benchmark가 아니다. 모델 기반 문서·미디어 추출, 원격 graph DB, HTTP MCP 운영은 실행하지 않았다.

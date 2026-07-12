@@ -17,6 +17,7 @@
 | Archive Docs Organizer | skills/agent-workflows | workflow | en | organized | [docs/notes/skills/archive-docs-organizer.md](notes/skills/archive-docs-organizer.md) |
 | mattpocock/skills 레포 분석 | skills/agent-workflows | research-note | ko | organized | [docs/notes/skills/mattpocock-skills-repo-analysis.md](notes/skills/mattpocock-skills-repo-analysis.md) |
 | Research Article Workflow | skills/agent-workflows | workflow | en | organized | [docs/notes/skills/research-article-workflow.md](notes/skills/research-article-workflow.md) |
+| Graphify Code Knowledge Graph Deep-Dive Research Packet | skills/agent-workflows | research-note | ko | organized | [docs/notes/article-factory/graphify-code-knowledge-graph-deep-dive.md](notes/article-factory/graphify-code-knowledge-graph-deep-dive.md) |
 | Hermes Agent Persistent Worker Runtime Research Packet | skills/agent-workflows | research-note | ko | organized | [docs/notes/article-factory/hermes-agent-persistent-worker-runtime.md](notes/article-factory/hermes-agent-persistent-worker-runtime.md) |
 | LazyCodex Agent Harness Analysis Research Packet | skills/agent-workflows | research-note | ko | organized | [docs/notes/article-factory/lazycodex-agent-harness-analysis.md](notes/article-factory/lazycodex-agent-harness-analysis.md) |
 | Ponytail Agent Minimalism Analysis Research Packet | skills/agent-workflows | research-note | ko | organized | [docs/notes/article-factory/ponytail-agent-minimalism-analysis.md](notes/article-factory/ponytail-agent-minimalism-analysis.md) |

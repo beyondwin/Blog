@@ -6,7 +6,7 @@ Scope: source-grounded Korean article publication
 
 ## Goal
 
-Turn the supplied standalone report
+Validate and substantially rewrite the supplied standalone report
 `/Users/kws/Downloads/graphify_deep_dive_ko.html` into a native beyondwin
 article without losing its code-audit evidence, controlled experiments, or
 source trail.
@@ -27,6 +27,12 @@ Use the repository's source-grounded article workflow:
    boundaries, and freshness caveats.
 4. Register the evidence packet in `docs/_index/catalog.yml` and `docs/INDEX.md`.
 5. Refresh Graphify navigation after the authored files are complete.
+
+Before publication, independently inspect the current Graphify repository,
+official documentation, package metadata, tests, and relevant issue history.
+Re-run small, safe local probes where they materially test the report's claims.
+The resulting article must correct stale or overstated claims and add important
+blind spots even when they are absent from the supplied report.
 
 ## Content Strategy
 
@@ -56,6 +62,45 @@ The article should follow this shape:
 The prose may be shortened where the standalone report repeats the same
 qualification, but numerical results, version distinctions, experimental
 limitations, and citations must not be silently weakened or generalized.
+
+## Independent Validation And Blind-Spot Review
+
+The implementation should use a fresh local clone of the official repository
+and primary sources rather than treating the HTML as authoritative analysis.
+Validation should cover:
+
+- the current release and repository-version relationship,
+- graph directionality, relation typing, node identity, query seeding, path
+  traversal, update behavior, and benchmark implementation,
+- automated tests and CI signals that support or contradict implementation
+  claims,
+- package installation metadata and optional dependency boundaries,
+- security controls for local files, URLs, generated HTML, semantic extraction,
+  and assistant integration,
+- reproducibility of small code-only indexing and query probes.
+
+The blind-spot pass should explicitly look beyond the source report for:
+
+- branch, commit, worktree, and generated-artifact cache invalidation,
+- symlink, submodule, generated-code, vendored-code, and monorepo boundary
+  behavior,
+- authorization and multi-tenant risks when a graph is served or shared,
+- secrets, personal paths, source snippets, and architectural intelligence in
+  exported graph artifacts,
+- schema/version compatibility for long-lived or centrally stored graphs,
+- false confidence caused by missing edges, unsupported language constructs,
+  reflection, dependency injection, macros, code generation, and dynamic
+  dispatch,
+- evaluation leakage, small samples, hand-authored questions, judge coupling,
+  and token-count proxies in benchmark claims,
+- operational cost of large artifacts, concurrent updates, interrupted builds,
+  partial output, file watching, and cleanup,
+- the trust impact of installer-written agent instructions, hooks, and persistent
+  configuration.
+
+Only blind spots supported by code, tests, official documentation, package
+metadata, reproducible observation, or clearly labeled engineering inference
+belong in the public article.
 
 ## Files
 
@@ -120,8 +165,7 @@ artifacts remain ignored and are not part of the commit.
 ## Non-Goals
 
 - Reproducing the standalone HTML design pixel for pixel.
-- Re-running the original external repository audit or controlled experiments.
 - Updating time-sensitive Graphify statistics beyond the supplied report's
-  snapshot.
+  snapshot without a primary-source verification date.
 - Adding a custom download page or maintaining two public versions of the same
   article.
