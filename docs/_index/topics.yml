@@ -24,7 +24,7 @@
 
 - id: skills/agent-workflows
   name: Agent Workflows
-  description: Notes about AI-agent skills, reusable coding-agent workflows, prompt protocols, and agent operating conventions.
+  description: Notes about AI-agent skills, reusable coding-agent workflows, prompt protocols, agent operating conventions, and source-grounded agent runtime reviews.
   folder: docs/notes/skills
 
 - id: skills/gstack-superpowers
