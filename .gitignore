@@ -1,6 +1,7 @@
 # Local brainstorming and design artifacts
 .superpowers/
 .parallel/
+.worktrees/
 .playwright-cli/
 .impeccable/
 
