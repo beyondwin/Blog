@@ -53,16 +53,5 @@ npm run dev
 - `docs/raw/`: 원문 wording이나 provenance가 필요한 source capture.
 - `docs/notes/<topic>/`: 사람이 다듬은 curated note. 장기 보관의 source of truth입니다.
 - `docs/wiki/`: 생성된 navigation layer.
-- `graphify-out/`: 생성된 knowledge graph.
 
 문서를 추가하거나 옮기면 [docs/_index/catalog.yml](docs/_index/catalog.yml), [docs/_index/topics.yml](docs/_index/topics.yml), [docs/INDEX.md](docs/INDEX.md)를 같이 갱신합니다.
-
-## Graphify
-
-이 저장소는 `graphify-out/`에 knowledge graph를 둡니다. 아키텍처나 코드 구조 질문에 답하기 전에는 [graphify-out/GRAPH_REPORT.md](graphify-out/GRAPH_REPORT.md)를 먼저 확인합니다.
-
-코드 파일을 수정했다면 graph를 갱신합니다.
-
-```bash
-graphify update .
-```

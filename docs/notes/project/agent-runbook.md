@@ -17,7 +17,7 @@ Read the smallest useful set for the task.
 
 | Task | Read first | Then confirm |
 | --- | --- | --- |
-| Architecture or codebase question | `graphify-out/GRAPH_REPORT.md`, then `docs/notes/project/architecture-reference.md` | Relevant `src/` or `scripts/` files |
+| Architecture or codebase question | `docs/notes/project/architecture-reference.md` | Relevant `src/` or `scripts/` files |
 | Ordinary article | `docs/notes/project/publishing-workflows.md` | `src/content.config.ts` |
 | Source-grounded article | `docs/notes/project/publishing-workflows.md`, relevant `docs/notes/article-factory/` packet | Rendered article route |
 | Review, idea, or travel note | `docs/notes/project/publishing-workflows.md`, `docs/notes/project/architecture-reference.md` | Matching collection schema in `src/content.config.ts` |
@@ -38,7 +38,7 @@ Read the smallest useful set for the task.
 | Travel note | Add a travel or place record | `src/content/travel/*.mdx` | Collection routing and unrelated travel entries | `npm run validate` |
 | Queue analysis | Turn a queued URL into an analysis entry | `queue.md`, `src/content/analysis/*.mdx` | Fabricated source claims, paywalled source guesses, missing `output:` metadata | `npm run validate`; confirm `queue.md` metadata |
 | Public memory projection | Promote accepted public thoughts to `/memory` | `memory/thoughts/*.md`, `memory/edges.jsonl`, `memory/sources.jsonl`, `src/data/memory.public.json` | Direct imports from `memory/**` in public routes, private thoughts, unsafe source paths | `npm run memory:validate`; `npm run validate` before closeout |
-| Archive docs note | Add or move a curated internal document | `docs/notes/**`, `docs/raw/**` when provenance matters, `docs/_index/*.yml`, `docs/INDEX.md` | `docs/wiki/`, `graphify-out/`, uncataloged durable notes | `npm run validate` when practical; confirm index paths exist |
+| Archive docs note | Add or move a curated internal document | `docs/notes/**`, `docs/raw/**` when provenance matters, `docs/_index/*.yml`, `docs/INDEX.md` | `docs/wiki/`, uncataloged durable notes | `npm run validate` when practical; confirm index paths exist |
 | New content lane | Add a new public collection and route surface | `src/content.config.ts`, `src/pages`, `src/layouts`, `src/lib/content.ts`, validation scripts, project docs | Treating a lane as a folder-only change | `npm run validate`; preview listing and detail routes |
 | Route, layout, or style change | Change visible site behavior or reading experience | `src/pages`, `src/layouts`, `src/components`, `src/styles/global.css` | One-note palettes, nested cards, broken mobile text, missing focus states | `npm run validate`; browser check affected routes |
 
@@ -60,7 +60,7 @@ Read the smallest useful set for the task.
 - New thoughts should start private unless the user explicitly wants public memory.
 - Public memory export requires `confidentiality: public`, `surfaces: [memory-public]`, `review.status: accepted`, and at least one safe source.
 - `docs/raw/` preserves source wording and provenance; curated explanations belong in a stable topic folder under `docs/notes/`.
-- `docs/wiki/` and `graphify-out/` are generated navigation layers, not source of truth.
+- `docs/wiki/` is a generated navigation layer, not source of truth.
 - Source-grounded articles need evidence packets or equivalent source notes; do not rely on memory for source-specific claims.
 - Direct quotes must stay short enough for `scripts/validate-content.mjs` blockquote checks.
 
@@ -73,16 +73,7 @@ When adding, moving, or deleting a durable curated note under `docs/notes/`:
 3. Update `docs/INDEX.md` so humans can find the note.
 4. Confirm every catalog path points to an existing file.
 
-Do not catalog generated `docs/wiki/` pages or `graphify-out/` files as primary sources.
-
-## Graphify Rules
-
-- Before architecture or codebase answers, read `graphify-out/GRAPH_REPORT.md`.
-- If a generated wiki exists under `graphify-out/wiki/`, use it for navigation before broad raw-file reads.
-- For cross-module relationship questions, prefer `graphify query`, `graphify path`, or `graphify explain` after checking the report.
-- Verify important claims against `src/`, `scripts/`, `docs/raw/`, or `docs/notes/`.
-- After modifying code files, run `graphify update .`.
-- Documentation-only changes do not require a graph refresh unless the task explicitly updates navigation artifacts.
+Do not catalog generated `docs/wiki/` pages as primary sources.
 
 ## Common Failure Modes
 
@@ -91,6 +82,5 @@ Do not catalog generated `docs/wiki/` pages or `graphify-out/` files as primary 
 - Letting `/memory` read private `memory/**` files directly.
 - Editing `/memory` behavior in `src/pages/memory.astro` before checking the focused module under `src/lib/memory/`.
 - Adding a curated docs note without updating `catalog.yml`, `topics.yml` when needed, and `docs/INDEX.md`.
-- Treating `graphify-out/` as source material instead of generated navigation.
 - Changing a content lane without updating schema, routes, helpers, validation, navigation, and docs together.
 - Editing broad root docs when a small task-specific docs link would be enough.

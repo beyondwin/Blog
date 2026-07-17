@@ -265,7 +265,6 @@ source 접근이 막히면 글을 억지로 만들지 않는다.
 | `docs/raw/` | 원문 wording과 provenance가 중요한 source capture |
 | `docs/notes/<topic>/` | 사람이 다듬은 장기 보관 문서 |
 | `docs/wiki/` | 생성된 navigation |
-| `graphify-out/` | 생성된 knowledge graph |
 
 curated note를 추가하거나 옮길 때:
 
@@ -274,7 +273,7 @@ curated note를 추가하거나 옮길 때:
 3. 안정적인 retrieval category가 새로 생겼다면 [docs/_index/topics.yml](../../_index/topics.yml)을 갱신한다.
 4. [docs/INDEX.md](../../INDEX.md)를 갱신한다.
 
-`docs/wiki/`와 `graphify-out/`은 source of truth가 아니다. 중요한 답변은 `docs/raw/` 또는 `docs/notes/`에서 다시 확인한다.
+`docs/wiki/`는 source of truth가 아니다. 중요한 답변은 `docs/raw/` 또는 `docs/notes/`에서 다시 확인한다.
 
 ## Focused Verification
 
@@ -302,6 +301,3 @@ npm run build
 
 Astro route가 보이지 않는다
 : 파일이 올바른 collection 폴더에 있는지, `draft: true`가 아닌지, 파일명이 route slug와 맞는지 확인한다. 개발 서버의 content state가 꼬였으면 서버를 재시작한다.
-
-Graphify 갱신이 실패한다
-: code file을 수정했다면 `graphify update .`를 다시 실행한다. graph node 수가 줄어 overwrite를 거부하는 경우에는 변경 의도를 확인한 뒤 `graphify update . --force`를 쓴다.

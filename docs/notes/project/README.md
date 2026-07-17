@@ -49,4 +49,4 @@
 - project 문서는 일반 글감이나 외부 리서치 노트와 섞지 않는다.
 - schema, route, command, validation gate가 바뀌면 reference와 how-to를 같은 변경에서 갱신한다.
 - 운영자가 따라 할 수 없는 표현은 삭제한다. “관리한다”, “지원한다” 대신 어느 파일을 어떻게 바꾸고 어떤 명령으로 확인하는지 쓴다.
-- 생성된 `docs/wiki/`와 `graphify-out/`은 navigation layer다. 중요한 판단은 `src/`, `scripts/`, `docs/notes/`, `docs/raw/`에서 다시 확인한다.
+- 생성된 `docs/wiki/`는 navigation layer다. 중요한 판단은 `src/`, `scripts/`, `docs/notes/`, `docs/raw/`에서 다시 확인한다.

@@ -144,5 +144,4 @@ After writing:
 2. Run `npm run validate`.
 3. Open `/articles/` and the article page in the local browser.
 4. Check visible title, metadata, prose width, links, and mobile wrapping.
-5. Run `graphify update . --force` after graphable file changes.
-6. Leave unrelated dirty files unstaged and unmodified.
+5. Leave unrelated dirty files unstaged and unmodified.
