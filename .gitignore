@@ -16,12 +16,9 @@ dist/
 # Test and coverage output
 coverage/
 
-# Generated knowledge/navigation output
-graphify-out/
+# Generated navigation output
 docs/wiki/*
 !docs/wiki/README.md
-docs/_graph/*
-!docs/_graph/README.md
 
 # Local/private archive intake
 docs/_inbox/

@@ -370,5 +370,3 @@ Classification: probe-backed observation plus general static-analysis boundary.
   `git diff --check`.
 - Confirm the built article route and key source links.
 - Inspect desktop and mobile rendering.
-- Run `graphify update .` after authored content changes and do not commit the
-  ignored generated output.

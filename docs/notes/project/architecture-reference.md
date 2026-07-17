@@ -283,7 +283,7 @@ matches. Detail pages do not read `memory/**` directly.
 | `src/lib/memory/*.test.mjs` | public memory data, lookup, graph model, filters, content links, article compatibility, and page payload behavior. |
 | `src/lib/memoryData.test.mjs` | compatibility re-export behavior. |
 
-## Docs And Graph Layers
+## Docs Layers
 
 `docs/`는 curated library다.
 
@@ -292,6 +292,3 @@ matches. Detail pages do not read `memory/**` directly.
 - `notes/`: curated docs.
 - `_index/`: catalog and topic metadata.
 - `wiki/`: generated navigation.
-- `_graph/`: graph artifact notes.
-
-`graphify-out/`은 generated knowledge graph다. architecture/codebase 질문 전에는 [graphify-out/GRAPH_REPORT.md](../../../graphify-out/GRAPH_REPORT.md)를 읽는다. `graphify-out/wiki/index.md`가 생기면 graph navigation entry point로 사용한다.

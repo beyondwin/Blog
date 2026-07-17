@@ -82,10 +82,9 @@ docs/_inbox   -> unsorted intake
 docs/raw      -> original wording and provenance
 docs/notes    -> curated library
 docs/wiki     -> generated navigation
-graphify-out  -> generated graph navigation
 ```
 
-중요한 답변은 generated layer가 아니라 `docs/raw/` 또는 `docs/notes/`에서 확인한다. generated wiki와 graph는 빠른 길찾기 도구다.
+중요한 답변은 generated layer가 아니라 `docs/raw/` 또는 `docs/notes/`에서 확인한다. generated wiki는 빠른 길찾기 도구다.
 
 trade-off는 index 유지보수다. curated note를 추가하면 `catalog.yml`, `topics.yml`, `docs/INDEX.md`를 맞춰야 한다. 이 비용은 나중에 찾을 수 없는 문서를 계속 쌓는 비용보다 작다.
 

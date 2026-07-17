@@ -256,12 +256,6 @@ npm run build
 npm run validate
 ```
 
-After code changes:
-
-```bash
-graphify update .
-```
-
 ## Execution Order
 
 1. Implement schema validation test-first.
@@ -271,7 +265,7 @@ graphify update .
 5. Implement memory data loader.
 6. Build `/memory` route and styles.
 7. Add navigation.
-8. Run full verification and Graphify refresh.
+8. Run full verification.
 
 Each implementation task should commit only files listed in the execution plan.
 Do not stage unrelated dirty worktree files.
