@@ -11,6 +11,19 @@ Use the human-facing project docs for explanation:
 - [Architecture reference](architecture-reference.md)
 - [Design and content rationale](design-and-content-rationale.md)
 
+## Scoped Guidance And Skills
+
+Start from the root `AGENTS.md`, then read the closest guidance before editing:
+
+| Scope | Guidance | Project skill |
+| --- | --- | --- |
+| Astro routes, layouts, components, styles, interactions | `src/AGENTS.md` | `site-change` |
+| MDX content and source-grounded writing | `src/AGENTS.md`, `src/content/AGENTS.md` | `research-and-publish` |
+| Archive documents and indexes | `docs/AGENTS.md` | `archive-and-memory` |
+| Private memory and public projection inputs | `memory/AGENTS.md` | `archive-and-memory` |
+
+Critical safety rules live in `AGENTS.md`. Long repeatable procedures live in `.agents/skills/`; use the smallest matching skill set. Graphify is not a project operating dependency.
+
 ## Read Order
 
 Read the smallest useful set for the task.
@@ -46,8 +59,8 @@ Read the smallest useful set for the task.
 
 | Change type | Minimum verification | Extra verification |
 | --- | --- | --- |
-| Docs-only project note | `git diff --check` | `npm run validate` before final closeout |
-| Archive docs note or index change | `git diff --check`, path check for catalog entries | `npm run validate` |
+| Docs-only project note | `npm run agent:check`, `git diff --check` | `npm run validate` before final closeout |
+| Archive docs note or index change | `npm run agent:check`, `git diff --check` | `npm run validate` |
 | Ordinary content | `npm run validate` | Route preview when text quality or layout matters |
 | Source-grounded article | `npm run validate` | Rendered route review and evidence packet check |
 | Memory projection | `npm run memory:validate`, `npm run validate` | Preview `/memory/` when UI or projection output changes |
@@ -84,3 +97,6 @@ Do not catalog generated `docs/wiki/` pages as primary sources.
 - Adding a curated docs note without updating `catalog.yml`, `topics.yml` when needed, and `docs/INDEX.md`.
 - Changing a content lane without updating schema, routes, helpers, validation, navigation, and docs together.
 - Editing broad root docs when a small task-specific docs link would be enough.
+- Starting work in a scoped subtree without reading its closest `AGENTS.md`.
+- Repeating a long workflow manually instead of using the matching project skill.
+- Treating Graphify as a project operating dependency after its removal.
