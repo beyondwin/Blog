@@ -133,6 +133,46 @@
   source: internal workflow
   updated: 2026-06-25
 
+- title: AGENTS.md vs Agent Skills Evidence Packet
+  path: docs/notes/article-factory/agents-md-vs-agent-skills-evidence.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Evidence packet comparing persistent AGENTS.md guidance and on-demand Agent Skills using vendor evaluation data, public Next.js results, specifications, and instruction-quality research.
+  source: src/content/articles/agents-md-vs-agent-skills-evidence.mdx
+  updated: 2026-07-26
+
+- title: Shared AI Conversation Evidence Boundaries Research Packet
+  path: docs/notes/article-factory/shared-ai-conversation-evidence-boundaries.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Evidence packet defining what can and cannot be claimed from an inaccessible social post and shared AI conversation, including snapshot and hidden-input boundaries.
+  source: src/content/articles/shared-ai-conversation-evidence-boundaries.mdx
+  updated: 2026-07-26
+
+- title: Uncle Bob AI Code Review Evidence Packet
+  path: docs/notes/article-factory/uncle-bob-ai-code-review-evidence.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Evidence packet for a source and runtime inspection of crap4java, its fail-open unknown-coverage policy, CRAP threshold behavior, and the limits of automated code review.
+  source: src/content/articles/uncle-bob-ai-code-review-evidence.mdx
+  updated: 2026-07-26
+
+- title: AWS Static Frontend and Serverless BFF Research Packet
+  path: docs/notes/article-factory/aws-static-frontend-serverless-bff.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Evidence packet for a CloudFront, S3, API Gateway, Lambda, and private Spring architecture, covering runtime constraints, origin security, networking, cost, and operational blind spots.
+  source: src/content/articles/aws-static-frontend-serverless-bff.mdx
+  updated: 2026-07-26
+
 - title: Graphify Code Knowledge Graph Deep-Dive Research Packet
   path: docs/notes/article-factory/graphify-code-knowledge-graph-deep-dive.md
   topic: skills/agent-workflows
