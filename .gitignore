@@ -51,3 +51,4 @@ pnpm-debug.log*
 .idea/
 .vscode/
 output/playwright
+/tmp/
