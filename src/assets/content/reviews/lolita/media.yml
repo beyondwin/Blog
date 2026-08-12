@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 롤리타 문학동네 세계문학전집 105 2013 무선판 표지
+    credit: 알라딘 상품 이미지
+    sourceUrl: https://image.aladin.co.kr/product/2264/95/cover500/8954620434_3.jpg
+    isbn13: "9788954620437"
+    edition: 문학동네 세계문학전집 105, 2013 무선판, 김진준 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:0ac7527f245e52005c2278f818e2b2b06cec07c225c7a7dcbb5d8056057ad51d

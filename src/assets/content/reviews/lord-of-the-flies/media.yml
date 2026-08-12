@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 파리대왕 민음사 세계문학전집 19 표지
+    credit: 민음사 공식 표지
+    sourceUrl: https://minumsa.minumsa.com/wp-content/uploads/bookcover/019_%ED%8C%8C%EB%A6%AC%EB%8C%80%EC%99%95-500x842.jpg
+    isbn13: "9788937460197"
+    edition: 민음사 세계문학전집 19, 1999 반양장, 유종호 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:d52e4c5aa9fac202335b4a3a2b324891bfa8ee7aecc79f550df6d205af187308

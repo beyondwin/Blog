@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 가난한 찰리의 연감 김영사 2024 공식 번역 양장 표지
+    credit: 출판유통통합전산망
+    sourceUrl: https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg
+    isbn13: "9788934911388"
+    edition: 김영사 2024 공식 번역 양장, 피터 코프먼 엮음, 김태훈 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a

@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 우리가 겨울을 지나온 방식 나무옆의자 2023 일반판 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/118785110/XL
+    isbn13: "9791161571492"
+    edition: 나무옆의자 2023 일반판
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:12461752be2a87ba403d03e214102ba53492d9cd28e559bc21352e13bba463e6
