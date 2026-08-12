@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 팩트풀니스 김영사 2019판 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/69724044/XL
+    isbn13: "9788934985068"
+    edition: 김영사 2019판, 이창신 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 실제 독서 판본과 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:b33eafae337acb129da7309fda02ead4bbb1f950f5ccbd789806af63f4827caf

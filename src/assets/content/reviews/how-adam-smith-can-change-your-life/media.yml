@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 내 안에서 나를 만드는 것들 세계사 2015 초판 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/22659314/XL
+    isbn13: "9788933870648"
+    edition: 세계사 2015 초판, 이현주 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:eea49839231272b1f03fccb2eb88f4dd1467cccaad89085852adeabd23668642

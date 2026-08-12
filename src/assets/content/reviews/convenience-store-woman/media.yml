@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 편의점 인간 살림출판사 2016 양장 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/33129949/XL
+    isbn13: "9788952235268"
+    edition: 살림출판사 2016 양장, 김석희 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:a4264d7125c3e846cf3da624261846af82d3270fe04a8b9e0752b9389a987cb8

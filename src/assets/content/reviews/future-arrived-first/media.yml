@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 먼저 온 미래 동아시아 2025 초판 표지
+    credit: 대한출판문화협회 KOBIC
+    sourceUrl: https://www.kobic.net/bookImage/book/coverImg/202507/9788962626605C001.jpg
+    isbn13: "9788962626605"
+    edition: 동아시아 2025 초판
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:ec4fc247f075c2afeb2c3777b4897ff2166f7e34685bd4940b298de75a12901b

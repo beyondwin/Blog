@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 괴테는 모든 것을 말했다 리프 2025 한국어 초판 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/164510819/XL
+    isbn13: "9791194530701"
+    edition: 리프 2025 한국어 초판, 이지수 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:dfa171a06be873225b70434dbfae6e829bf41aff7e2791eea2564248bb42416c

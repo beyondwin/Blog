@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 싯다르타 문학동네 세계문학전집 173 2018 원판 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/67723866/XL
+    isbn13: "9788954654418"
+    edition: 문학동네 세계문학전집 173, 2018 원판, 권혁준 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:4e957b1fb0ada2f2582c40cd54215fec63c9ecf2c0c222250be93eda067e8251

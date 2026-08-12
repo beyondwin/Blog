@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 그들의 생각을 바꾸는 방법 웅진지식하우스 2023 종이책 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/117664857/XL
+    isbn13: "9788901269405"
+    edition: 웅진지식하우스 2023 종이책, 이수경 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:394821abfdccd4283ae779e148c0c521a5baa4c48e9b7518e5f29ebafeb3e4d4

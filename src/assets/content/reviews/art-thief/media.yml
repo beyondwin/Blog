@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 예술 도둑 생각의힘 2024 초판 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/133133202/XL
+    isbn13: "9791193166659"
+    edition: 생각의힘 2024 초판, 염지선 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:2d3a8e4d6cb4828a56dfae42edbb22e6b8c85141df46289ea5fabe978d491671

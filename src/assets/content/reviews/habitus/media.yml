@@ -1,0 +1,13 @@
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 아비투스 다산초당 2023 양장특별판 표지
+    credit: YES24 상품 이미지
+    sourceUrl: https://image.yes24.com/goods/118146744/XL
+    isbn13: "9791130698366"
+    edition: 다산초당 2023 양장특별판, 배명자 옮김
+    verifiedAt: "2026-08-13"
+    rightsNote: 서평의 판본 식별용 썸네일로만 로컬 저장함. 재배포 권한은 별도로 확인되지 않았으며 다른 용도의 재사용을 허용하지 않음.
+    checksum: sha256:8f9e221a1ae7fcd14abd42a4b14ed2f895b3274bb7fb171f164bb777f41810fc
