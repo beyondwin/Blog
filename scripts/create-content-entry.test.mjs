@@ -1,10 +1,15 @@
 import { access, mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContentEntry } from './create-content-entry.mjs';
 
 const roots = [];
+const execFileAsync = promisify(execFile);
+const cliPath = fileURLToPath(new URL('./create-content-entry.mjs', import.meta.url));
 
 async function tempRoot() {
   const root = await mkdtemp(join(tmpdir(), 'content-entry-'));
@@ -159,6 +164,35 @@ describe('structured content scaffolder', () => {
 
     expect(result.contentPath).toBe('src/content/ideas/quiet-search.mdx');
     expect(result.manifestPath).toBe('src/assets/content/ideas/quiet-search/media.yml');
+    expect(await exists(join(root, 'src'))).toBe(false);
+  });
+
+  it.each([
+    ['omitted', []],
+    ['blank', ['--date', '']],
+  ])('defaults an %s CLI date to the local calendar date without writing in dry-run', async (_label, dateArgs) => {
+    const root = await tempRoot();
+    const expectedDate = new Intl.DateTimeFormat('en-CA').format(new Date());
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [cliPath, 'idea', '--slug', 'quiet-search', '--title', '조용한 검색', ...dateArgs, '--dry-run'],
+      { cwd: root },
+    );
+
+    expect(stderr).toBe('');
+    expect(stdout).toContain(`createdAt: "${expectedDate}"`);
+    expect(stdout).toContain(`updatedAt: "${expectedDate}"`);
+    expect(await exists(join(root, 'src'))).toBe(false);
+  });
+
+  it('rejects an explicitly invalid CLI date before writes', async () => {
+    const root = await tempRoot();
+
+    await expect(execFileAsync(
+      process.execPath,
+      [cliPath, 'idea', '--slug', 'bad-date', '--title', 'Bad date', '--date', '2026-02-30'],
+      { cwd: root },
+    )).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('valid calendar date') });
     expect(await exists(join(root, 'src'))).toBe(false);
   });
 });
