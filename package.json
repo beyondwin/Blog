@@ -21,7 +21,7 @@
     "memory:validate": "node scripts/memory/project.mjs --validate",
     "media:validate": "node scripts/validate-media.mjs",
     "agent:check": "node scripts/agent-check.mjs",
-    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run article:quality && npm run memory:validate && npm run test && npm run build"
+    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm run test && npm run build"
   },
   "dependencies": {
     "@astrojs/mdx": "^7.0.0",
