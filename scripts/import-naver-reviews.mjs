@@ -42,7 +42,7 @@ const slugByLogNo = {
   224147334654: 'how-we-crossed-winter',
   224136546661: 'convenience-store-woman',
   224126488699: 'miracles-of-namiya-general-store',
-  224104661846: 'the-life-you-can-save',
+  224104661846: 'doing-good-better',
   224079263345: 'factfulness',
 };
 
