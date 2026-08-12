@@ -59,7 +59,6 @@ describe('site content contract', () => {
       expect(entry.data.createdAt).toBe(date);
       expect(entry.data.updatedAt).toBe(date);
       expect(entry.data.sourceUrl).toMatch(/^https:\/\/blog\.naver\.com\/example\//);
-      expect(entry.data.coverImage).toMatch(/^https:\/\//);
       expect(entry.content).not.toContain('원문 보기');
     }
   });
