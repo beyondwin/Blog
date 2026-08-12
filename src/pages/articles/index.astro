@@ -2,9 +2,10 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { buildRecordsPresentation } from '../../lib/recordsPresentation';
+import { isPublicEntry } from '../../lib/content/publication';
 import '../../styles/records-literary.css';
 
-const entries = (await getCollection('articles', ({ data }) => !data.draft)).sort((a, b) => (
+const entries = (await getCollection('articles', isPublicEntry)).sort((a, b) => (
   b.data.updatedAt.getTime() - a.data.updatedAt.getTime()
 ));
 const presentation = buildRecordsPresentation(entries);

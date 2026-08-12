@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import LiteraryFooter from '../../components/LiteraryFooter.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { loadLiterarySearchRecords } from '../../lib/searchData';
@@ -78,8 +79,19 @@ const groupedRecords = Object.fromEntries(groupOrder.map((kind) => [
                     data-search-topics={record.topics.join('\n').toLocaleLowerCase('ko')}
                     hidden={!initialMatchIds.has(record.id)}
                   >
-                    <h4>{record.title}</h4>
-                    <p>이유: <span data-match-reason>{initialMatch?.matchReason ?? ''}</span>{record.date && <> · {record.date}</>}</p>
+                    {record.kind === 'reading' && (
+                      <span class="search-result__cover" aria-hidden="true">
+                        {record.media ? (
+                          <Image src={record.media.asset} alt="" loading="lazy" decoding="async" />
+                        ) : (
+                          <b>표지<br />확인 중</b>
+                        )}
+                      </span>
+                    )}
+                    <span class="search-result__copy">
+                      <h4>{record.title}</h4>
+                      <p>이유: <span data-match-reason>{initialMatch?.matchReason ?? ''}</span>{record.date && <> · {record.date}</>}</p>
+                    </span>
                   </a>
                 );
               })}

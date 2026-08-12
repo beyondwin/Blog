@@ -1,0 +1,44 @@
+---
+import { Image } from 'astro:assets';
+import { resolveFigureContext } from '../lib/content/figureContext';
+import { resolveContentMedia } from '../lib/content/mediaRegistry';
+
+interface Props {
+  media: string;
+  caption?: string;
+  collection?: 'articles';
+  slug?: string;
+}
+
+const { media, caption, collection, slug } = Astro.props;
+const routeContext = collection && slug
+  ? { collection, slug }
+  : resolveFigureContext(Astro.url.pathname);
+const resolved = resolveContentMedia(routeContext.collection, routeContext.slug, media);
+const provenance = resolved.item.sourcePath
+  ? `저장소 원본 · ${resolved.item.sourcePath}`
+  : `출처 확인 · ${resolved.item.verifiedAt}`;
+---
+
+<figure class="content-figure">
+  <Image
+    src={resolved.asset}
+    alt={resolved.item.alt}
+    widths={[720, 1080, 1600]}
+    sizes="(max-width: 760px) calc(100vw - 40px), min(72ch, 100vw - 80px)"
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption>
+    <span>{caption ?? resolved.item.alt}</span>
+    <small>{resolved.item.credit} · {provenance}</small>
+  </figcaption>
+</figure>
+
+<style>
+  .content-figure { margin: 2.6rem 0; }
+  .content-figure :global(img) { display: block; height: auto; width: 100%; }
+  .content-figure figcaption { border-top: 1px solid var(--literary-line, #d9d7d0); display: grid; gap: 0.25rem; margin-top: 0.75rem; padding-top: 0.65rem; }
+  .content-figure figcaption span { color: var(--literary-ink, #171717); font-size: 0.82rem; line-height: 1.5; }
+  .content-figure figcaption small { color: var(--literary-soft, #686868); font-size: 0.7rem; line-height: 1.5; overflow-wrap: anywhere; }
+</style>

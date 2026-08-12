@@ -30,7 +30,11 @@
 .search-group--reading h3 { color: var(--reading); }
 .search-group--memory h3 { color: var(--memory); }
 
-.search-result { display: block; border-bottom: 1px solid color-mix(in srgb, var(--literary-line), transparent 14%); color: inherit; padding: 20px 0 17px; text-decoration: none; }
+.search-result { display: flex; align-items: center; border-bottom: 1px solid color-mix(in srgb, var(--literary-line), transparent 14%); color: inherit; gap: 14px; padding: 20px 0 17px; text-decoration: none; }
+.search-result__copy { display: block; min-width: 0; }
+.search-result__cover { align-items: center; background: var(--literary-paper-deep, #efede6); display: flex; flex: 0 0 42px; height: 58px; justify-content: center; overflow: hidden; }
+.search-result__cover img { height: 100%; object-fit: cover; width: 100%; }
+.search-result__cover b { color: var(--literary-soft); font-size: 8px; font-weight: 500; line-height: 1.35; text-align: center; }
 .search-result[hidden], .search-group[hidden], .search-no-result[hidden] { display: none; }
 .search-result h4 { margin: 0 0 9px; font-size: 21px; font-weight: 400; line-height: 1.45; text-wrap: balance; }
 .search-result p { margin: 0; color: var(--literary-soft); font-size: 12px; line-height: 1.5; }

@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import BaseLayout from './BaseLayout.astro';
 import {
@@ -6,6 +7,7 @@ import {
   getOneSentenceJudgment,
 } from '../lib/bookshelfPresentation';
 import '../styles/bookshelf-literary.css';
+import type { RecordDetail } from '../lib/content/viewModels';
 
 type ReviewEntry = CollectionEntry<'reviews'>;
 
@@ -16,12 +18,14 @@ interface RelatedBook {
 
 interface Props {
   entry: ReviewEntry;
+  detail: RecordDetail;
   relatedBooks?: RelatedBook[];
 }
 
-const { entry, relatedBooks = [] } = Astro.props;
-const date = entry.data.completedAt ?? entry.data.createdAt;
-const judgment = getOneSentenceJudgment(entry.data.description);
+const { entry, detail, relatedBooks = [] } = Astro.props;
+const date = detail.primaryDate;
+const judgment = getOneSentenceJudgment(detail.verdict ?? detail.description);
+const authorLine = detail.authors.join(' · ');
 ---
 
 <BaseLayout
@@ -32,24 +36,24 @@ const judgment = getOneSentenceJudgment(entry.data.description);
 >
   <article class="shell review-literary">
     <aside class="review-literary__book" aria-label="책 정보">
-      {entry.data.coverImage ? (
+      {detail.media ? (
         <figure>
-          <img
-            src={entry.data.coverImage}
-            alt={`${entry.data.itemTitle} 도서 표지`}
+          <Image
+            src={detail.media.asset}
+            alt={detail.media.item.alt}
             loading="eager"
             decoding="async"
           />
         </figure>
       ) : (
         <div class="review-literary__cover-fallback" aria-label="표지 확인 중">
-          <span>{entry.data.itemTitle}</span>
+          <span>{detail.title}</span>
           <b>표지 확인 중</b>
         </div>
       )}
 
       <dl>
-        {entry.data.itemAuthor && <><dt>저자</dt><dd>{entry.data.itemAuthor}</dd></>}
+        {detail.authors.length > 0 && <><dt>저자</dt><dd>{authorLine}</dd></>}
         <div class="review-literary__completed">
           <dt>완독</dt>
           <dd><time datetime={date.toISOString()}>{formatLiteraryDate(date)}</time></dd>
@@ -59,8 +63,8 @@ const judgment = getOneSentenceJudgment(entry.data.description);
 
     <div class="review-literary__reading">
       <header>
-        <h1>{entry.data.itemTitle}</h1>
-        {entry.data.itemAuthor && <p>{entry.data.itemAuthor}</p>}
+        <h1>{detail.title}</h1>
+        {detail.authors.length > 0 && <p>{authorLine}</p>}
         <time class="review-literary__mobile-date" datetime={date.toISOString()}>{formatLiteraryDate(date)}</time>
         <span class="literary-registration" aria-hidden="true"></span>
         <blockquote>{judgment}</blockquote>

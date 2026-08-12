@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { buildHomePresentation, selectHomeMemories } from './homePresentation';
+import { toRecordSummary } from './content/viewModels';
+
+const localCover = {
+  item: { id: 'cover', kind: 'book-cover', alt: '검증된 표지' },
+  asset: { src: '/_astro/local-cover.jpg', width: 400, height: 600, format: 'jpg' },
+};
 
 function article(id, title, date) {
   return {
@@ -17,7 +23,7 @@ function article(id, title, date) {
   };
 }
 
-function review(id, title, date) {
+function review(id, title, date, options = {}) {
   return {
     id,
     collection: 'reviews',
@@ -29,7 +35,9 @@ function review(id, title, date) {
       completedAt: new Date(date),
       createdAt: new Date(date),
       updatedAt: new Date(date),
-      coverImage: `https://example.com/${id}.jpg`,
+      itemAuthor: options.itemAuthor ?? ['저자 한', '저자 두'],
+      coverState: options.coverState ?? 'verified',
+      coverMedia: options.coverState === 'hold' ? undefined : 'cover',
       tags: ['book'],
       status: 'published',
       draft: false,
@@ -59,7 +67,13 @@ describe('home presentation', () => {
       review('habitus', '아비투스', '2026-03-10'),
     ];
 
-    const result = buildHomePresentation({ articles, reviews });
+    const result = buildHomePresentation(
+      { articles, reviews },
+      (...args) => {
+        expect(args).toHaveLength(1);
+        return toRecordSummary(args[0], () => localCover);
+      },
+    );
 
     expect(result.featuredReview?.id).toBe('changing-their-minds');
     expect(result.featuredArticle?.id).toBe('uncle-bob-ai-code-review-evidence');
@@ -78,16 +92,18 @@ describe('home presentation', () => {
       'factfulness',
       'habitus',
     ]);
+    expect(result.featuredReview.media.asset.src).toBe('/_astro/local-cover.jpg');
+    expect(result.featuredReview.authors).toEqual(['저자 한', '저자 두']);
   });
 
   it('falls back to available real content without duplicating a sparse corpus', () => {
     const loneArticle = article('only-article', '유일한 기술 기록', '2026-08-01');
     const loneReview = review('only-review', '유일한 읽기 기록', '2026-07-01');
 
-    const result = buildHomePresentation({
-      articles: [loneArticle],
-      reviews: [loneReview],
-    });
+    const result = buildHomePresentation(
+      { articles: [loneArticle], reviews: [loneReview] },
+      (entry) => toRecordSummary(entry, () => localCover),
+    );
 
     expect(result.featuredReview?.id).toBe('only-review');
     expect(result.featuredArticle?.id).toBe('only-article');

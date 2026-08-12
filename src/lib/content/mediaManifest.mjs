@@ -39,6 +39,8 @@ const mediaItemSchema = z
     edition: z.string().trim().min(1).optional(),
     verifiedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     rightsNote: z.string().trim().min(1),
+    width: z.number().int().positive().optional(),
+    height: z.number().int().positive().optional(),
     checksum: z.string().regex(/^sha256:[a-f0-9]{64}$/),
   })
   .strict()
@@ -48,6 +50,13 @@ const mediaItemSchema = z
         code: 'custom',
         message: 'media item requires exactly one of sourceUrl or sourcePath',
         path: ['sourceUrl'],
+      });
+    }
+    if (Number(item.width !== undefined) + Number(item.height !== undefined) === 1) {
+      context.addIssue({
+        code: 'custom',
+        message: 'media item dimensions require both width and height',
+        path: ['width'],
       });
     }
   });

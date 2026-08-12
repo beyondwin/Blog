@@ -1,3 +1,5 @@
+import type { ResolvedMedia } from './content/mediaRegistry';
+
 export type LiterarySearchKind = 'technical' | 'reading' | 'memory' | 'topic';
 export type LiteraryMatchedField = 'title' | 'description' | 'topic';
 
@@ -9,6 +11,8 @@ export interface LiterarySearchRecord {
   topics: string[];
   href: string;
   date?: string;
+  media?: ResolvedMedia;
+  coverState?: 'verified' | 'hold';
 }
 
 export interface LiterarySearchMatch {

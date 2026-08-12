@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import matter from 'gray-matter';
 import { describe, expect, it } from 'vitest';
 import { isPublicEntry } from '../src/lib/content/publication';
+import { parseMediaManifest } from '../src/lib/content/mediaManifest.mjs';
 
 const root = process.cwd();
 const contentCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel'];
@@ -135,6 +137,42 @@ describe('existing content migration contract', () => {
     expect(publicSourcePathsForThought('personal-sites-should-show-records-first')).toEqual([
       'DESIGN.md',
     ]);
+  });
+
+  it('owns the three pgvector diagrams through exact local manifest records', async () => {
+    const bundle = join(root, 'src', 'assets', 'content', 'articles', 'pgvector-hybrid-search');
+    const manifest = parseMediaManifest(await readFile(join(bundle, 'media.yml'), 'utf8'), 'pgvector media.yml');
+    const expected = [
+      ['embedding-flow', 'embedding-flow.png', 1941, 1054, '4cdb6a8e6290c568952fd4ba10a250f888b77c8ee061ef0245a332b98673e1bf'],
+      ['architecture', 'architecture.png', 2048, 685, 'ebe7b867ad26dc87e2cf53aa8d74db8b0b2e47a148f67474899af71d719d9e93'],
+      ['ivfflat-cluster', 'ivfflat-cluster.png', 2048, 1038, '86835667a6e083dce29be7fc4dd6d215132bb5ee8bddf692a4364f2b8b2648c0'],
+    ];
+
+    expect(manifest.items).toHaveLength(3);
+    for (const [id, file, width, height, digest] of expected) {
+      const bytes = await readFile(join(bundle, file));
+      expect(manifest.items.find((item) => item.id === id)).toMatchObject({
+        id,
+        file,
+        kind: 'diagram',
+        credit: 'beyondwin',
+        sourcePath: 'src/content/articles/pgvector-hybrid-search.mdx',
+        verifiedAt: '2026-08-13',
+        rightsNote: 'beyondwin article diagram; repository-authored asset',
+        width,
+        height,
+        checksum: `sha256:${digest}`,
+      });
+      expect(createHash('sha256').update(bytes).digest('hex')).toBe(digest);
+    }
+
+    const article = await readFile(join(root, 'src', 'content', 'articles', 'pgvector-hybrid-search.mdx'), 'utf8');
+    expect(article.match(/<Figure media="[^"]+" \/>/g)).toEqual([
+      '<Figure media="embedding-flow" />',
+      '<Figure media="architecture" />',
+      '<Figure media="ivfflat-cluster" />',
+    ]);
+    expect(article).not.toContain('/images/articles/pgvector-');
   });
 
   it('does not expose non-published content as public', () => {

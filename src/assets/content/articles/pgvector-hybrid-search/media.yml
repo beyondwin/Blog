@@ -1,0 +1,35 @@
+version: 1
+items:
+  - id: embedding-flow
+    file: embedding-flow.png
+    kind: diagram
+    alt: 텍스트가 임베딩 모델을 거쳐 벡터로 바뀌는 흐름
+    credit: beyondwin
+    sourcePath: src/content/articles/pgvector-hybrid-search.mdx
+    verifiedAt: "2026-08-13"
+    rightsNote: beyondwin article diagram; repository-authored asset
+    width: 1941
+    height: 1054
+    checksum: sha256:4cdb6a8e6290c568952fd4ba10a250f888b77c8ee061ef0245a332b98673e1bf
+  - id: architecture
+    file: architecture.png
+    kind: diagram
+    alt: PostgreSQL 안에서 일반 거래 데이터와 description 벡터를 함께 관리하는 구조
+    credit: beyondwin
+    sourcePath: src/content/articles/pgvector-hybrid-search.mdx
+    verifiedAt: "2026-08-13"
+    rightsNote: beyondwin article diagram; repository-authored asset
+    width: 2048
+    height: 685
+    checksum: sha256:ebe7b867ad26dc87e2cf53aa8d74db8b0b2e47a148f67474899af71d719d9e93
+  - id: ivfflat-cluster
+    file: ivfflat-cluster.png
+    kind: diagram
+    alt: IVFFLAT 클러스터 검색 흐름
+    credit: beyondwin
+    sourcePath: src/content/articles/pgvector-hybrid-search.mdx
+    verifiedAt: "2026-08-13"
+    rightsNote: beyondwin article diagram; repository-authored asset
+    width: 2048
+    height: 1038
+    checksum: sha256:86835667a6e083dce29be7fc4dd6d215132bb5ee8bddf692a4364f2b8b2648c0

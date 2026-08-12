@@ -324,6 +324,10 @@ async function validateManifest(root, absolutePath, state) {
       } else if (dimensions.width === 0 || dimensions.height === 0) {
         state.errors.add(`${assetRepoPath}: raster dimensions must be greater than zero`);
       } else {
+        if (item.width !== undefined && item.height !== undefined
+          && (dimensions.width !== item.width || dimensions.height !== item.height)) {
+          state.errors.add(`${assetRepoPath}: raster dimensions ${dimensions.width}x${dimensions.height} do not match media.yml ${item.width}x${item.height}`);
+        }
         if (item.kind === 'book-cover' && dimensions.width < 300) {
           state.errors.add(`${assetRepoPath}: book cover width ${dimensions.width}px is below 300px`);
         }

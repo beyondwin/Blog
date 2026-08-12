@@ -1,5 +1,7 @@
 import type { SiteCollection, SiteEntry } from '../content';
 import { toRecordSummary, type RecordSummary } from './viewModels';
+export { isPublicEntry } from './publicationState';
+import { isPublicEntry } from './publicationState';
 
 export interface HomeLimits {
   openRecords: number;
@@ -16,13 +18,6 @@ export interface HomeSelection {
   shelf: RecordSummary[];
 }
 
-type PublicStateEntry = {
-  data?: {
-    status?: unknown;
-    draft?: unknown;
-  };
-};
-
 type CollectionSections = Partial<Record<SiteCollection, readonly unknown[]>>;
 type SummaryMapper = (entry: SiteEntry) => RecordSummary;
 
@@ -34,10 +29,6 @@ function recordKey(entry: Pick<SiteEntry, 'collection' | 'id'>): string {
 
 function boundedLimit(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
-}
-
-export function isPublicEntry(entry: PublicStateEntry): boolean {
-  return entry.data?.status === 'published' && entry.data.draft === false;
 }
 
 export function visibleCollectionKeys(sections: CollectionSections): SiteCollection[] {

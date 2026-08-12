@@ -340,4 +340,19 @@ describe('repository media validation', () => {
       'src/assets/content/articles/note/truncated.jpg: cannot read JPG dimensions from file header',
     );
   });
+
+  it('rejects raster dimensions that drift from an explicit manifest declaration', async () => {
+    const root = await makeRepository();
+    const image = validPng(640, 480);
+    await put(root, 'docs/source.md', '# source\n');
+    await put(root, 'src/assets/content/articles/note/diagram.png', image);
+    const manifest = mediaManifest([{
+      id: 'diagram', file: 'diagram.png', kind: 'diagram', sourcePath: 'docs/source.md', checksum: checksum(image),
+    }]).replace('    checksum:', '    width: 800\n    height: 600\n    checksum:');
+    await put(root, 'src/assets/content/articles/note/media.yml', manifest);
+
+    expect((await validateMediaRepository(root)).errors).toContain(
+      'src/assets/content/articles/note/diagram.png: raster dimensions 640x480 do not match media.yml 800x600',
+    );
+  });
 });
