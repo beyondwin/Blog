@@ -858,10 +858,11 @@ code {
 }
 
 .prose blockquote {
-  border-left: 3px solid var(--accent);
+  border-inline-start: 1px solid var(--accent);
   background: transparent;
   color: var(--ink);
-  padding: 4px 0 4px 18px;
+  padding-block: 4px;
+  padding-inline: 18px 0;
 }
 
 .callout {
