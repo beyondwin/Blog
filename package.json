@@ -18,6 +18,7 @@
     "memory:review": "node scripts/memory/review.mjs",
     "memory:project": "node scripts/memory/project.mjs",
     "memory:validate": "node scripts/memory/project.mjs --validate",
+    "media:validate": "node scripts/validate-media.mjs",
     "agent:check": "node scripts/agent-check.mjs",
     "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run article:quality && npm run memory:validate && npm run test && npm run build"
   },
