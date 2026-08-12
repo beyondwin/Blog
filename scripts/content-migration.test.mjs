@@ -47,6 +47,7 @@ const publicEntries = allEntries.filter((entry) => isPublicEntry({
   data: { ...entry.data, draft: entry.data.draft ?? false },
 }));
 const publicMemory = JSON.parse(await readFile(join(root, 'src', 'data', 'memory.public.json'), 'utf8'));
+const astroConfig = await readFile(join(root, 'astro.config.mjs'), 'utf8');
 
 describe('existing content migration contract', () => {
   it('keeps the approved corpus counts and hides examples', () => {
@@ -82,6 +83,18 @@ describe('existing content migration contract', () => {
     }
     expect(new Set(isbnValues)).toHaveLength(18);
     expect(new Set(reviewSlugs)).toHaveLength(18);
+  });
+
+  it('uses Doing Good Better as the canonical review identity', () => {
+    const reviewSlugs = realReviews.map((review) => review.slug);
+
+    expect(reviewSlugs).toContain('doing-good-better');
+    expect(reviewSlugs).not.toContain('the-life-you-can-save');
+  });
+
+  it('keeps the legacy review route as a static redirect', () => {
+    expect(astroConfig).toContain("'/reviews/the-life-you-can-save/'");
+    expect(astroConfig).toContain("'/reviews/doing-good-better/'");
   });
 
   it('does not expose non-published content as public', () => {
