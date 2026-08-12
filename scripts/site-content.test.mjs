@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -58,8 +58,8 @@ async function exists(path) {
   }
 }
 
-async function writeFetchFixture(directory) {
-  const fixturePath = join(directory, 'fetch-fixture.mjs');
+async function writeFetchFixture(directory, options = {}) {
+  const fixturePath = join(directory, options.name ?? 'fetch-fixture.mjs');
   const html = `
     <script>{"thumbnail":"https:\\/\\/example.com\\/discovered-cover.jpg"}</script>
     <div class="se-main-container">
@@ -67,7 +67,16 @@ async function writeFetchFixture(directory) {
       <p class="se-text-paragraph">두 번째 문단도 함께 남습니다.</p>
     <div class="post_footer_contents"></div>
   `;
-  await writeFile(fixturePath, `globalThis.fetch = async () => ({ ok: true, text: async () => ${JSON.stringify(html)} });\n`);
+  const imports = options.failReport
+    ? `import { promises as fs } from 'node:fs';\nimport { syncBuiltinESMExports } from 'node:module';\nconst originalWriteFile = fs.writeFile;\nfs.writeFile = async (path, ...args) => {\n  if (String(path).endsWith('naver-review-intake.json')) throw new Error('injected intake report failure');\n  return originalWriteFile(path, ...args);\n};\nsyncBuiltinESMExports();\n`
+    : '';
+  const swap = options.swap
+    ? `import { rename, symlink } from 'node:fs/promises';\nlet swapped = false;\nasync function swapParent() {\n  if (swapped) return;\n  swapped = true;\n  await rename(${JSON.stringify(options.swap.parent)}, ${JSON.stringify(options.swap.moved)});\n  await symlink(${JSON.stringify(options.swap.trap)}, ${JSON.stringify(options.swap.parent)}, 'dir');\n}\n`
+    : '';
+  const fetchImplementation = options.fetchFailure
+    ? `globalThis.setTimeout = (callback) => { callback(); return 0; };\nglobalThis.fetch = async () => ({ ok: false, status: 503, text: async () => '' });\n`
+    : `globalThis.fetch = async () => {${options.swap ? '\n  await swapParent();' : ''}\n  return { ok: true, text: async () => ${JSON.stringify(html)} };\n};\n`;
+  await writeFile(fixturePath, `${imports}${swap}${fetchImplementation}`);
   return fixturePath;
 }
 
@@ -167,6 +176,75 @@ describe('site content contract', () => {
       code: 1,
       stderr: expect.stringContaining('local intake'),
     });
+  });
+
+  it('leaves no destination or staging directory when fetching fails', async () => {
+    const directory = await temporaryRoot();
+    const fixturePath = await writeFetchFixture(directory, { fetchFailure: true });
+    const parentDirectory = join(directory, 'docs/_inbox');
+    const outputDirectory = join(parentDirectory, 'review-intake');
+
+    await expect(execFileAsync(
+      process.execPath,
+      ['--import', fixturePath, importerPath, '--output', 'docs/_inbox/review-intake'],
+      { cwd: directory },
+    )).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('503') });
+
+    expect(await exists(outputDirectory)).toBe(false);
+    expect(await exists(parentDirectory)).toBe(false);
+  });
+
+  it('cleans a failed staged bundle and permits an atomic retry', async () => {
+    const directory = await temporaryRoot();
+    const parentDirectory = join(directory, 'docs/_inbox');
+    const outputDirectory = join(parentDirectory, 'review-intake');
+    await mkdir(parentDirectory, { recursive: true });
+    const failingFixture = await writeFetchFixture(directory, {
+      failReport: true,
+      name: 'failing-report-fixture.mjs',
+    });
+
+    await expect(execFileAsync(
+      process.execPath,
+      ['--import', failingFixture, importerPath, '--output', 'docs/_inbox/review-intake'],
+      { cwd: directory },
+    )).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining('injected intake report failure'),
+    });
+    expect(await exists(outputDirectory)).toBe(false);
+    expect(await readdir(parentDirectory)).toEqual([]);
+
+    const successfulFixture = await writeFetchFixture(directory, { name: 'retry-fixture.mjs' });
+    await execFileAsync(
+      process.execPath,
+      ['--import', successfulFixture, importerPath, '--output', 'docs/_inbox/review-intake'],
+      { cwd: directory },
+    );
+    expect((await readdir(outputDirectory)).filter((file) => file.endsWith('.mdx'))).toHaveLength(18);
+  });
+
+  it('rejects a destination whose parent becomes a symlink while reviews are fetched', async () => {
+    const directory = await temporaryRoot();
+    const parentDirectory = join(directory, 'safe-parent');
+    const movedParent = join(directory, 'safe-parent-before-swap');
+    const trapDirectory = join(directory, 'trap');
+    await mkdir(parentDirectory);
+    await mkdir(trapDirectory);
+    const fixturePath = await writeFetchFixture(directory, {
+      swap: { parent: parentDirectory, moved: movedParent, trap: trapDirectory },
+    });
+
+    await expect(execFileAsync(
+      process.execPath,
+      ['--import', fixturePath, importerPath, '--output', 'safe-parent/review-intake'],
+      { cwd: directory },
+    )).rejects.toMatchObject({
+      code: 1,
+      stderr: expect.stringContaining('symbolic link'),
+    });
+    expect(await exists(join(trapDirectory, 'review-intake'))).toBe(false);
+    expect(await exists(join(movedParent, 'review-intake'))).toBe(false);
   });
 
   it('refuses to rewrite a previously generated intake directory', async () => {

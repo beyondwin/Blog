@@ -1,5 +1,5 @@
-import { lstat, mkdir, realpath, writeFile } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { lstat, mkdir, mkdtemp, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 const blogId = 'moveattack';
 
@@ -167,45 +167,96 @@ function isInside(parent, target) {
   return pathFromParent === '' || (!pathFromParent.startsWith('..') && !isAbsolute(pathFromParent));
 }
 
-async function canonicalizeFuturePath(path) {
-  let existingAncestor = resolve(path);
-  const missingSegments = [];
+async function resolveRepositoryRelativePath(path) {
+  const requestedPath = resolve(path);
+  const workingDirectory = await realpath(process.cwd());
+  let current = requestedPath;
+  const segments = [];
 
   while (true) {
+    let info;
     try {
-      const canonicalAncestor = await realpath(existingAncestor);
-      return resolve(canonicalAncestor, ...missingSegments.reverse());
+      info = await lstat(current);
+      const canonical = await realpath(current);
+      if (canonical === workingDirectory) break;
+      if (info.isSymbolicLink()) {
+        throw new Error(`output path contains a symbolic link: ${current}`);
+      }
+      if (current !== requestedPath && !info.isDirectory()) {
+        throw new Error(`output path component is not a directory: ${current}`);
+      }
     } catch (error) {
       if (error?.code !== 'ENOENT') throw error;
-      const parent = dirname(existingAncestor);
-      if (parent === existingAncestor) throw error;
-      missingSegments.push(basename(existingAncestor));
-      existingAncestor = parent;
     }
+
+    const parent = dirname(current);
+    if (parent === current) {
+      throw new Error('--output must resolve inside the current repository');
+    }
+    segments.push(basename(current));
+    current = parent;
   }
+
+  const relativePath = segments.reverse().join(sep);
+  if (!relativePath) throw new Error('--output must name a new directory inside the current repository');
+  return { relativePath, workingDirectory };
 }
 
-async function assertNewLocalIntakeDirectory(outputDirectory) {
-  const workingDirectory = await realpath(process.cwd());
-  const absoluteOutput = await canonicalizeFuturePath(resolve(process.cwd(), outputDirectory));
+async function resolveLocalDestination(outputDirectory) {
+  const requestedPath = resolve(process.cwd(), outputDirectory);
+  const { relativePath, workingDirectory } = await resolveRepositoryRelativePath(requestedPath);
+  const absoluteOutput = resolve(workingDirectory, relativePath);
   const publicRoots = [resolve(workingDirectory, 'src'), resolve(workingDirectory, 'public')];
   if (publicRoots.some((root) => isInside(root, absoluteOutput))) {
     throw new Error('--output must be a local intake directory outside src/ and public/');
   }
 
+  return {
+    finalPath: absoluteOutput,
+    name: basename(absoluteOutput),
+    parentPath: dirname(absoluteOutput),
+    relativePath,
+    workingDirectory,
+  };
+}
+
+async function assertDestinationMissing(path) {
   try {
-    await lstat(absoluteOutput);
-    throw new Error(`output directory already exists: ${absoluteOutput}`);
+    await lstat(path);
+    throw new Error(`output directory already exists: ${path}`);
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error;
   }
+}
 
-  return absoluteOutput;
+async function prepareCanonicalParent(destination) {
+  const parentRelative = relative(destination.workingDirectory, destination.parentPath);
+  const segments = parentRelative === '' ? [] : parentRelative.split(sep);
+  let current = destination.workingDirectory;
+
+  for (const segment of segments) {
+    current = join(current, segment);
+    try {
+      await mkdir(current);
+    } catch (error) {
+      if (error?.code !== 'EEXIST') throw error;
+    }
+
+    const info = await lstat(current);
+    if (info.isSymbolicLink()) throw new Error(`output path contains a symbolic link: ${current}`);
+    if (!info.isDirectory()) throw new Error(`output path component is not a directory: ${current}`);
+    if (await realpath(current) !== current) {
+      throw new Error(`output path is not canonical: ${current}`);
+    }
+  }
+
+  return realpath(destination.parentPath);
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const outputDirectory = await assertNewLocalIntakeDirectory(args.outputDirectory);
+  const initialDestination = await resolveLocalDestination(args.outputDirectory);
+  await assertDestinationMissing(initialDestination.finalPath);
   const records = [];
 
   for (const [logNo, title, date] of reviews) {
@@ -219,28 +270,63 @@ async function main() {
     records.push({ slug, sourceUrl, discoveredCoverUrl, content });
   }
 
+  const destination = await resolveLocalDestination(args.outputDirectory);
+  await assertDestinationMissing(destination.finalPath);
+  const canonicalParent = await prepareCanonicalParent(destination);
+  const reservedDestination = await resolveLocalDestination(args.outputDirectory);
+  if (
+    reservedDestination.finalPath !== destination.finalPath
+    || await realpath(reservedDestination.parentPath) !== canonicalParent
+  ) {
+    throw new Error('output parent changed before intake staging');
+  }
+
+  let stagingDirectory;
   try {
-    await mkdir(dirname(outputDirectory), { recursive: true });
-    await mkdir(outputDirectory);
+    stagingDirectory = await mkdtemp(join(canonicalParent, `.${destination.name}-staging-`));
+    const canonicalStaging = await realpath(stagingDirectory);
+    if (dirname(canonicalStaging) !== canonicalParent || !isInside(canonicalParent, canonicalStaging)) {
+      throw new Error('intake staging directory escaped its canonical parent');
+    }
+
+    for (const record of records) {
+      await writeFile(join(stagingDirectory, `${record.slug}.mdx`), record.content, { flag: 'wx' });
+    }
+
+    const report = records.map(({ slug, sourceUrl, discoveredCoverUrl }) => ({
+      slug,
+      sourceUrl,
+      discoveredCoverUrl,
+    }));
+    await writeFile(
+      join(stagingDirectory, 'naver-review-intake.json'),
+      `${JSON.stringify(report, null, 2)}\n`,
+      { flag: 'wx' },
+    );
+
+    const finalDestination = await resolveLocalDestination(args.outputDirectory);
+    if (
+      finalDestination.finalPath !== destination.finalPath
+      || await realpath(finalDestination.parentPath) !== canonicalParent
+    ) {
+      throw new Error('output parent changed before atomic intake publish');
+    }
+    const finalStaging = await realpath(stagingDirectory);
+    if (dirname(finalStaging) !== canonicalParent || !isInside(canonicalParent, finalStaging)) {
+      throw new Error('intake staging directory escaped before atomic publish');
+    }
+    await assertDestinationMissing(finalDestination.finalPath);
+    await rename(stagingDirectory, finalDestination.finalPath);
+    stagingDirectory = undefined;
+
+    for (const record of records) {
+      console.log(`Wrote ${join(finalDestination.finalPath, `${record.slug}.mdx`)}`);
+    }
+    console.log(`Wrote ${join(finalDestination.finalPath, 'naver-review-intake.json')}`);
   } catch (error) {
-    if (error?.code === 'EEXIST') throw new Error(`output directory already exists: ${outputDirectory}`);
+    if (stagingDirectory) await rm(stagingDirectory, { recursive: true, force: true });
     throw error;
   }
-
-  for (const record of records) {
-    const filePath = join(outputDirectory, `${record.slug}.mdx`);
-    await writeFile(filePath, record.content, { flag: 'wx' });
-    console.log(`Wrote ${filePath}`);
-  }
-
-  const reportPath = join(outputDirectory, 'naver-review-intake.json');
-  const report = records.map(({ slug, sourceUrl, discoveredCoverUrl }) => ({
-    slug,
-    sourceUrl,
-    discoveredCoverUrl,
-  }));
-  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
-  console.log(`Wrote ${reportPath}`);
 }
 
 await main();
