@@ -83,6 +83,16 @@
   source: docs/superpowers/specs/2026-07-01-blog-agent-docs-runbook-design.md
   updated: 2026-07-01
 
+- title: 리뷰 verdict 검토 패킷
+  path: docs/notes/content-migration/review-verdicts.md
+  topic: project
+  type: workflow
+  language: ko
+  status: organized
+  summary: 기존 책 리뷰 18개의 description과 본문 첫 판단 문장을 대조하고 verdict 승인 상태를 기록하는 마이그레이션 검토표.
+  source: src/content/reviews
+  updated: 2026-08-12
+
 - title: 아키텍처 레퍼런스
   path: docs/notes/project/architecture-reference.md
   topic: project
