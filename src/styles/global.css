@@ -1871,6 +1871,25 @@ code {
   object-fit: cover;
 }
 
+.lead-cover-placeholder {
+  align-content: center;
+  color: var(--literary-soft);
+  display: grid;
+  font-family: var(--literary-serif);
+  font-size: 11px;
+  gap: 10px;
+  justify-items: center;
+  line-height: 1.45;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.lead-cover-placeholder b {
+  font-family: var(--literary-sans);
+  font-size: 8px;
+  font-weight: 500;
+}
+
 .lead-record__copy {
   display: flex;
   min-height: 240px;

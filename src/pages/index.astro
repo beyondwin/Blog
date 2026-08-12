@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ReadingLeadCover from '../components/ReadingLeadCover.astro';
 import { loadHomePresentation } from '../lib/homeData';
 import { selectHomeMemories } from '../lib/homePresentation';
 import { loadPublicMemoryData } from '../lib/memoryData';
@@ -43,16 +44,7 @@ function noteLabel(memoryType: string): string {
         <article class="lead-record lead-record--review">
           <p class="record-kicker record-kicker--reading">READING NOTE</p>
           <div class="lead-record__review-grid">
-            {featuredReview.media && (
-              <Image
-                class="lead-cover lead-cover--tall"
-                src={featuredReview.media.asset}
-                alt={featuredReview.media.item.alt}
-                width={240}
-                height={336}
-                loading="eager"
-              />
-            )}
+            <ReadingLeadCover entry={featuredReview} tall />
             <div class="lead-record__copy">
               <h2>{featuredReview.title}</h2>
               <p>{featuredReview.description}</p>
@@ -79,16 +71,7 @@ function noteLabel(memoryType: string): string {
         <article class="lead-record lead-record--reading">
           <p class="record-kicker record-kicker--reading">READING NOTE</p>
           <div class="lead-record__review-grid">
-            {featuredReading.media && (
-              <Image
-                class="lead-cover"
-                src={featuredReading.media.asset}
-                alt={featuredReading.media.item.alt}
-                width={220}
-                height={308}
-                loading="eager"
-              />
-            )}
+            <ReadingLeadCover entry={featuredReading} />
             <div class="lead-record__copy">
               <h2>{featuredReading.title}</h2>
               <p>{featuredReading.description}</p>

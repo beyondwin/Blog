@@ -7,6 +7,7 @@ items:
     file: cover.jpg
     kind: book-cover
     alt: 팩트풀니스 한국어판 표지
+    caption: 팩트풀니스 한국어판 표지 자료
     credit: 김영사
     sourceUrl: https://example.com/book
     isbn13: "9788934985068"
@@ -20,7 +21,10 @@ describe('media manifest', () => {
   it('parses and resolves a valid item', () => {
     const manifest = parseMediaManifest(validMediaManifest, 'media.yml');
 
-    expect(findMediaItem(manifest, 'cover').isbn13).toBe('9788934985068');
+    expect(findMediaItem(manifest, 'cover')).toMatchObject({
+      caption: '팩트풀니스 한국어판 표지 자료',
+      isbn13: '9788934985068',
+    });
   });
 
   it('preserves declared raster dimensions for repository-authored diagrams', () => {

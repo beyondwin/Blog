@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { buildMediaRegistry } from './mediaRegistry';
 
 const validMediaManifest = `version: 1
@@ -7,6 +7,7 @@ items:
     file: cover.jpg
     kind: book-cover
     alt: 팩트풀니스 한국어판 표지
+    caption: 팩트풀니스 한국어판 표지 자료
     credit: 김영사
     sourceUrl: https://example.com/book
     isbn13: "9788934985068"
@@ -27,10 +28,12 @@ describe('media registry', () => {
       { [assetPath]: imageMetadata },
     );
 
-    expect(registry.resolve('reviews', 'factfulness', 'cover')).toMatchObject({
+    const resolved = registry.resolve('reviews', 'factfulness', 'cover');
+    expect(resolved).toMatchObject({
       item: { id: 'cover', kind: 'book-cover' },
       asset: { src: '/_astro/cover.hash.jpg', width: 451, height: 687 },
     });
+    expectTypeOf(resolved.item.caption).toEqualTypeOf<string | undefined>();
   });
 
   it('normalizes Vite-relative glob keys', () => {

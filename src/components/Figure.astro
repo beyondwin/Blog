@@ -1,23 +1,21 @@
 ---
 import { Image } from 'astro:assets';
 import { resolveFigureContext } from '../lib/content/figureContext';
+import { buildFigurePresentation } from '../lib/content/figurePresentation';
 import { resolveContentMedia } from '../lib/content/mediaRegistry';
 
 interface Props {
   media: string;
-  caption?: string;
   collection?: 'articles';
   slug?: string;
 }
 
-const { media, caption, collection, slug } = Astro.props;
+const { media, collection, slug } = Astro.props;
 const routeContext = collection && slug
   ? { collection, slug }
   : resolveFigureContext(Astro.url.pathname);
 const resolved = resolveContentMedia(routeContext.collection, routeContext.slug, media);
-const provenance = resolved.item.sourcePath
-  ? `저장소 원본 · ${resolved.item.sourcePath}`
-  : `출처 확인 · ${resolved.item.verifiedAt}`;
+const presentation = buildFigurePresentation(resolved.item);
 ---
 
 <figure class="content-figure">
@@ -30,8 +28,16 @@ const provenance = resolved.item.sourcePath
     decoding="async"
   />
   <figcaption>
-    <span>{caption ?? resolved.item.alt}</span>
-    <small>{resolved.item.credit} · {provenance}</small>
+    <span>{presentation.caption}</span>
+    <small>
+      {presentation.credit} · {
+        presentation.provenanceHref ? (
+          <a href={presentation.provenanceHref} rel="noreferrer">{presentation.provenanceLabel}</a>
+        ) : (
+          presentation.provenanceLabel
+        )
+      }
+    </small>
   </figcaption>
 </figure>
 
@@ -41,4 +47,5 @@ const provenance = resolved.item.sourcePath
   .content-figure figcaption { border-top: 1px solid var(--literary-line, #d9d7d0); display: grid; gap: 0.25rem; margin-top: 0.75rem; padding-top: 0.65rem; }
   .content-figure figcaption span { color: var(--literary-ink, #171717); font-size: 0.82rem; line-height: 1.5; }
   .content-figure figcaption small { color: var(--literary-soft, #686868); font-size: 0.7rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .content-figure figcaption a { color: inherit; text-underline-offset: 0.18em; }
 </style>
