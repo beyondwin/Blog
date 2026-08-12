@@ -33,6 +33,22 @@ describe('media manifest', () => {
     expect(() => parseMediaManifest(validMediaManifest.replace('cover.jpg', file), 'media.yml')).toThrow('file');
   });
 
+  it.each(['cover.gif', 'cover.svg', 'cover.pdf', 'cover.txt', 'cover.JPG'])(
+    'rejects unsupported or non-lowercase media file %s',
+    (file) => {
+      expect(() =>
+        parseMediaManifest(validMediaManifest.replace('cover.jpg', file), 'content/reviews/book/media.yml'),
+      ).toThrow('content/reviews/book/media.yml: file');
+    },
+  );
+
+  it.each(['cover.jpg', 'cover.jpeg', 'cover.png', 'cover.webp', 'cover.avif'])(
+    'accepts registry-supported media file %s',
+    (file) => {
+      expect(parseMediaManifest(validMediaManifest.replace('cover.jpg', file), 'media.yml').items[0].file).toBe(file);
+    },
+  );
+
   it('rejects book covers without edition metadata', () => {
     expect(() =>
       parseMediaManifest(validMediaManifest.replace('    edition: 2019 한국어판\n', ''), 'media.yml'),
