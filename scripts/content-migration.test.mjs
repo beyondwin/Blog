@@ -49,6 +49,13 @@ const publicEntries = allEntries.filter((entry) => isPublicEntry({
 const publicMemory = JSON.parse(await readFile(join(root, 'src', 'data', 'memory.public.json'), 'utf8'));
 const astroConfig = await readFile(join(root, 'astro.config.mjs'), 'utf8');
 
+function publicSourcePathsForThought(slug) {
+  const thought = publicMemory.thoughts.find((candidate) => candidate.slug === slug);
+  const sourcesById = new Map(publicMemory.sources.map((source) => [source.id, source]));
+
+  return (thought?.sources ?? []).map((sourceId) => sourcesById.get(sourceId)?.path);
+}
+
 describe('existing content migration contract', () => {
   it('keeps the approved corpus counts and hides examples', () => {
     expect(realArticles).toHaveLength(16);
@@ -104,6 +111,30 @@ describe('existing content migration contract', () => {
   it('keeps the legacy review route as a static redirect', () => {
     expect(astroConfig).toContain("'/reviews/the-life-you-can-save/'");
     expect(astroConfig).toContain("'/reviews/doing-good-better/'");
+  });
+
+  it('preserves exact article sources as direct public-memory links', () => {
+    expect(publicSourcePathsForThought('agent-harnesses-are-operating-systems')).toEqual([
+      'src/content/articles/lazycodex-agent-harness-analysis.mdx',
+    ]);
+    expect(publicSourcePathsForThought('ai-design-tools-need-judgment-loops')).toEqual([
+      'src/content/articles/ai-design-references.mdx',
+    ]);
+    expect(publicSourcePathsForThought('context-quality-is-routing-problem')).toEqual([
+      'src/content/articles/context-refinement-system-design.mdx',
+    ]);
+    expect(publicSourcePathsForThought('local-agent-products-are-work-shells')).toEqual([
+      'src/content/articles/open-design-repo-analysis.mdx',
+    ]);
+  });
+
+  it('keeps redesign-sensitive public thoughts on source re-review without relinking them', () => {
+    expect(publicSourcePathsForThought('memory-needs-retrieval-not-decoration')).toEqual([
+      'src/pages/memory.astro',
+    ]);
+    expect(publicSourcePathsForThought('personal-sites-should-show-records-first')).toEqual([
+      'DESIGN.md',
+    ]);
   });
 
   it('does not expose non-published content as public', () => {
