@@ -1,27 +1,218 @@
 ---
-import ContentCard from '../../components/ContentCard.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { collectionMeta, getContentByCollection } from '../../lib/content';
+import { getCollection } from 'astro:content';
+import { buildRecordsPresentation } from '../../lib/recordsPresentation';
+import '../../styles/records-literary.css';
 
-const entries = await getContentByCollection('articles');
-const meta = collectionMeta.articles;
+const entries = (await getCollection('articles', ({ data }) => !data.draft)).sort((a, b) => (
+  b.data.updatedAt.getTime() - a.data.updatedAt.getTime()
+));
+const presentation = buildRecordsPresentation(entries);
+const { lead } = presentation;
+const formatDate = (date: Date) => new Intl.DateTimeFormat('ko', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(date).replaceAll(' ', '');
+const statusLabel = (status: string) => status === 'review' ? '검토 중' : status === 'archived' ? '보관' : '발행';
+const entryYear = (entry: typeof entries[number]) => String(entry.data.updatedAt.getFullYear());
+const selectedEntryId = 'agents-md-vs-agent-skills-evidence';
+const leftColumnIds = new Set([
+  'shared-ai-conversation-evidence-boundaries',
+  'aws-static-frontend-serverless-bff',
+  'agents-md-vs-agent-skills-evidence',
+]);
+const rightColumnIds = new Set([
+  'oh-my-pi-deep-review',
+  'graphify-code-knowledge-graph-deep-dive',
+]);
 ---
 
-<BaseLayout title="Articles · beyondwin" description={meta.description}>
-  <section class="shell hero">
-    <p class="site-label">Development</p>
-    <h1>{meta.navLabel}</h1>
-    <p>{meta.description}</p>
-  </section>
-  <section class="shell">
-    {entries.length > 0 ? (
-      <div class="content-grid">
-        {entries.map((entry) => <ContentCard entry={entry} />)}
+<BaseLayout
+  title="기록 · beyondwin"
+  description="읽고 실행한 기술을, 다시 판단할 수 있는 근거와 함께 남깁니다."
+  pageClass="literary-page literary-records"
+  headerVariant="literary"
+>
+  <div class="records-page shell">
+    <aside class="records-rail" aria-label="기록 필터">
+      <h1>기록</h1>
+      <span class="literary-registration" aria-hidden="true"></span>
+      <p class="records-rail__statement">읽고 실행한 기술을,<br />다시 판단할 수 있는<br />근거와 함께 남깁니다.</p>
+
+      <form class="records-filter" data-record-filter>
+        <fieldset>
+          <legend>주제</legend>
+          {presentation.topics.map((topic) => (
+            <label><input type="checkbox" name="topic" value={topic} /> <span>{topic}</span></label>
+          ))}
+        </fieldset>
+        <fieldset>
+          <legend>연도</legend>
+          {presentation.years.map((year) => (
+            <label><input type="checkbox" name="year" value={year} /> <span>{year}</span></label>
+          ))}
+        </fieldset>
+        <fieldset>
+          <legend>근거 상태</legend>
+          {presentation.states.map((state) => (
+            <label><input type="checkbox" name="state" value={state} /> <span>{state}</span></label>
+          ))}
+        </fieldset>
+        <button type="reset">초기화</button>
+      </form>
+
+      <p class="records-annotation">기록은 판단의 재료입니다.<br />결론이 아니라 근거를 남깁니다.</p>
+    </aside>
+
+    <main class="records-field">
+      {lead ? (
+        <article
+          class="records-lead"
+          data-record-entry
+          data-topics={JSON.stringify(lead.data.tags)}
+          data-year={entryYear(lead)}
+          data-state={lead.evidenceState}
+        >
+          <div class="records-lead__main">
+            <p class="records-type">주요 탐구</p>
+            <a class="records-lead__title" href={`/articles/${lead.id}/`}>
+              <h2>{lead.data.title}</h2>
+            </a>
+            <p class="records-lead__description">{lead.data.description}</p>
+            <p class="records-meta">
+              <time datetime={lead.data.updatedAt.toISOString()}>{formatDate(lead.data.updatedAt)}</time>
+              <span>{lead.evidenceState}</span>
+              {lead.data.tags.includes('source-grounded') && <span>source-grounded</span>}
+            </p>
+          </div>
+
+          <aside class="records-lead__evidence" aria-label="근거 상태">
+            <span class="records-registration" aria-hidden="true">01</span>
+            <h3>근거 상태</h3>
+            <p>{lead.evidenceState}</p>
+            {lead.evidenceSignals.slice(-2).map((signal) => <span>{signal} <b aria-hidden="true">✓</b></span>)}
+          </aside>
+
+          {lead.evidenceSignals.length > 0 && (
+            <div class="records-evidence-strip" aria-label="문서 근거 단서">
+              <strong>근거 단서</strong>
+              {lead.evidenceSignals.slice(0, 3).map((signal) => <span>✓ {signal}</span>)}
+              {lead.excerpt && <code>{lead.excerpt}</code>}
+            </div>
+          )}
+        </article>
+      ) : (
+        <p class="records-empty">아직 공개된 기술 기록이 없습니다.</p>
+      )}
+
+      <div class="records-sequence" aria-live="polite">
+        {presentation.entries.map((entry, index) => (
+          <article
+            class:list={['records-entry', {
+              'records-entry--selected': entry.id === selectedEntryId,
+              'records-entry--wide': index % 5 === 2,
+              'records-entry--left': leftColumnIds.has(entry.id),
+              'records-entry--right': rightColumnIds.has(entry.id),
+            }]}
+            data-record-entry
+            data-record-id={entry.id}
+            data-topics={JSON.stringify(entry.data.tags)}
+            data-year={entryYear(entry)}
+            data-state={statusLabel(entry.data.status)}
+          >
+            <p class="records-type">{entry.data.tags.includes('source-grounded') ? 'source-grounded' : entry.data.tags[0]}</p>
+            <a href={`/articles/${entry.id}/`}>
+              <h2>{entry.data.title}</h2>
+              <span aria-hidden="true">→</span>
+            </a>
+            <p>{entry.data.description}</p>
+            <p class="records-meta">
+              <time datetime={entry.data.updatedAt.toISOString()}>{formatDate(entry.data.updatedAt)}</time>
+              <span>{statusLabel(entry.data.status)}</span>
+            </p>
+          </article>
+        ))}
       </div>
-    ) : (
-      <div class="empty-state">
-        <p>아직 공개된 개발 글이 없습니다.</p>
-      </div>
-    )}
-  </section>
+      <p class="records-no-results" hidden>선택한 조건과 맞는 기록이 없습니다. 필터를 초기화해 다시 펼쳐 보세요.</p>
+    </main>
+  </div>
+
+  <details class="records-drawer">
+    <summary>필터 <span aria-hidden="true">＋</span></summary>
+    <form class="records-filter records-filter--drawer" data-record-filter>
+      <fieldset>
+        <legend>주제</legend>
+        {presentation.topics.map((topic) => (
+          <label><input type="checkbox" name="topic" value={topic} /> <span>{topic}</span></label>
+        ))}
+      </fieldset>
+      <fieldset>
+        <legend>연도</legend>
+        {presentation.years.map((year) => (
+          <label><input type="checkbox" name="year" value={year} /> <span>{year}</span></label>
+        ))}
+      </fieldset>
+      <fieldset>
+        <legend>근거 상태</legend>
+        {presentation.states.map((state) => (
+          <label><input type="checkbox" name="state" value={state} /> <span>{state}</span></label>
+        ))}
+      </fieldset>
+      <button type="reset">초기화</button>
+    </form>
+  </details>
+
+  <footer class="literary-footer shell">
+    <span>© beyondwin</span>
+    <p>이 사이트는 한 사람의 느린 기록으로 만들어집니다.</p>
+    <nav aria-label="Footer"><a href="/">소개</a><a href="/tags/">색인</a><a href="/memory/">기억</a></nav>
+  </footer>
 </BaseLayout>
+
+<script>
+  const forms = Array.from(document.querySelectorAll<HTMLFormElement>('[data-record-filter]'));
+  const records = Array.from(document.querySelectorAll<HTMLElement>('[data-record-entry]'));
+  const empty = document.querySelector<HTMLElement>('.records-no-results');
+
+  const selectedValues = (name: string) => new Set(forms.flatMap((form) => (
+    Array.from(form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`), (input) => input.value)
+  )));
+
+  const applyFilters = () => {
+    const topics = selectedValues('topic');
+    const years = selectedValues('year');
+    const states = selectedValues('state');
+    let visible = 0;
+
+    records.forEach((record) => {
+      const recordTopics = new Set(JSON.parse(record.dataset.topics ?? '[]'));
+      const topicMatch = topics.size === 0 || [...topics].some((topic) => recordTopics.has(topic));
+      const yearMatch = years.size === 0 || years.has(record.dataset.year ?? '');
+      const stateMatch = states.size === 0 || states.has(record.dataset.state ?? '');
+      record.hidden = !(topicMatch && yearMatch && stateMatch);
+      if (!record.hidden) visible += 1;
+    });
+
+    if (empty) empty.hidden = visible > 0;
+  };
+
+  forms.forEach((form) => {
+    form.addEventListener('change', (event) => {
+      const input = event.target as HTMLInputElement;
+      if (!input.name) return;
+      forms.forEach((other) => {
+        if (other === form) return;
+        const peer = Array.from(other.elements).find((element) => (
+          element instanceof HTMLInputElement && element.name === input.name && element.value === input.value
+        ));
+        if (peer instanceof HTMLInputElement) peer.checked = input.checked;
+      });
+      applyFilters();
+    });
+    form.addEventListener('reset', () => requestAnimationFrame(() => {
+      forms.forEach((other) => other.querySelectorAll<HTMLInputElement>('input').forEach((input) => { input.checked = false; }));
+      applyFilters();
+    }));
+  });
+</script>

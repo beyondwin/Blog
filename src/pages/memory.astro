@@ -1,299 +1,137 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import {
-  buildMemoryPagePayload,
-  getMemoryGraphEdgeCoordinates,
-  getMemorySourceCountLabel,
-  loadPublicMemoryData,
-} from '../lib/memory';
+import LiteraryFooter from '../components/LiteraryFooter.astro';
+import { buildMemoryPagePayload, loadPublicMemoryData, sortLiteraryMemoryThoughts } from '../lib/memory';
+import '../styles/memory-literary.css';
 
 const memory = loadPublicMemoryData();
-const memoryPayload = buildMemoryPagePayload(memory);
-const graph = memoryPayload.graph;
-const hasThoughts = memory.thoughts.length > 0;
-const latestGenerated = memory.generatedAt
-  ? new Intl.DateTimeFormat('ko', { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(memory.generatedAt))
-  : null;
-const clientPayload = {
-  graph: memoryPayload.graph,
-  details: memoryPayload.details,
-  fallbackRelationships: memoryPayload.fallbackRelationships,
-};
+const thoughts = sortLiteraryMemoryThoughts(memory.thoughts);
+const payload = buildMemoryPagePayload(memory);
+const selected = thoughts.find((thought) => thought.slug === 'memory-needs-retrieval-not-decoration') ?? thoughts[0];
+const selectedId = selected ? `thought:${selected.slug}` : null;
+const typeLabel = (value: string) => ({ semantic: '의미', procedural: '절차', reflective: '성찰', episodic: '경험' }[value] ?? value);
+const edgeLabel = (value: string) => ({ supports: '지지한다', extends: '확장한다', instantiates: '구체화한다', refines: '다듬는다', contradicts: '반박한다', related: '관련된다' }[value] ?? value);
 ---
 
-<BaseLayout title="Memory · beyondwin" description="공개해도 되는 생각, 근거, 주제를 다시 찾기 위한 개인 메모리.">
-  <section class="memory-app shell" data-memory-app>
-    {hasThoughts ? (
-      <>
-        <aside class="memory-app__rail" aria-label="Memory filters">
-          <div class="memory-app__title">
-            <p class="memory-eyebrow">Knowledge Graph</p>
-            <h1>Second Brain</h1>
-            <p>공개해도 되는 생각과 근거만 그래프로 탐색합니다.</p>
-          </div>
+<BaseLayout
+  title="기억 · beyondwin"
+  description="공개된 기억 문장을 검색하고 직접 연결된 근거와 관계를 살펴봅니다."
+  pageClass="literary-page literary-memory"
+  headerVariant="literary"
+>
+  <div class="memory-sheet shell" data-memory-archive>
+    <header class="memory-mobile-search">
+      <label class="memory-search">
+        <span class="sr-only">기억 검색</span>
+        <input type="search" placeholder="문장, 주제, 출처 검색" data-memory-search />
+        <i aria-hidden="true"></i>
+      </label>
+      <p class="memory-search-status" data-memory-status hidden>검색어에 일치하는 문장이 없습니다.</p>
+    </header>
 
-          <dl class="memory-app__stats" aria-label="Memory statistics">
-            <div><dt>Thoughts</dt><dd>{memory.counts.thoughts}</dd></div>
-            <div><dt>Topics</dt><dd>{memory.counts.topics}</dd></div>
-            <div><dt>Edges</dt><dd>{memory.counts.edges}</dd></div>
-            <div><dt>Sources</dt><dd>{memory.counts.sources}</dd></div>
-          </dl>
-
-          <p class="memory-app__generated">{latestGenerated ? `Last projected ${latestGenerated}` : 'Projection date unavailable'}</p>
-
-          <label class="memory-app__search">
-            <span>Search memory</span>
-            <input type="search" placeholder="topic, claim, source" data-memory-search />
-          </label>
-
-          <div class="memory-app__control-group" aria-label="Lenses">
-            <h2>Lens</h2>
-            <div class="memory-app__chips">
-              {graph.facets.lenses.map((lens) => (
-                <button class={`memory-app__chip ${lens.id === 'all' ? 'is-active' : ''}`} type="button" data-memory-lens={lens.id} aria-pressed={lens.id === 'all' ? 'true' : 'false'}>
-                  <span>{lens.label}</span>
-                  <b>{lens.count}</b>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div class="memory-app__control-group" aria-label="Topics">
-            <h2>Topics</h2>
-            <div class="memory-app__chips">
-              {graph.facets.topics.map((topic) => (
-                <button class="memory-app__chip" type="button" data-memory-topic={topic.id} aria-pressed="false">
-                  <span>{topic.label}</span>
-                  <b>{topic.count}</b>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div class="memory-app__control-group" aria-label="Sources">
-            <h2>Sources</h2>
-            <div class="memory-app__chips">
-              {graph.facets.sources.map((source) => (
-                <button class="memory-app__chip" type="button" data-memory-source={source.id} aria-pressed="false">
-                  <span>{source.label}</span>
-                  <b>{source.count}</b>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div class="memory-app__control-group" aria-label="Memory types">
-            <h2>Node types</h2>
-            <div class="memory-app__chips">
-              {graph.facets.memoryTypes.map((type) => (
-                <button class="memory-app__chip" type="button" data-memory-type={type.id} aria-pressed="false">
-                  <span>{type.label}</span>
-                  <b>{type.count}</b>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div class="memory-app__control-group" aria-label="Edge types">
-            <h2>Edge types</h2>
-            <div class="memory-app__chips">
-              {graph.facets.edgeTypes.map((type) => (
-                <button class="memory-app__chip" type="button" data-memory-edge-type={type.id} aria-pressed="false">
-                  <span>{type.label}</span>
-                  <b>{type.count}</b>
-                </button>
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        <main class="memory-app__main">
-          <div class="memory-graph-toolbar" aria-label="Graph controls">
-            <div class="memory-graph-toolbar__group" role="group" aria-label="Graph layout">
-              <button class="memory-graph-tool is-active" type="button" data-memory-layout="brain" aria-pressed="true">Brain</button>
-              <button class="memory-graph-tool" type="button" data-memory-layout="cluster" aria-pressed="false">Cluster</button>
-              <button class="memory-graph-tool" type="button" data-memory-layout="timeline" aria-pressed="false">Timeline</button>
-            </div>
-            <div class="memory-graph-toolbar__group" role="group" aria-label="Graph display">
-              <button class="memory-graph-tool" type="button" data-memory-reset>Reset</button>
-              <button class="memory-graph-tool is-active" type="button" data-memory-labels aria-pressed="true">Labels</button>
-              <button class="memory-graph-tool" type="button" data-memory-density="wide" aria-pressed="false">Wide</button>
-            </div>
-          </div>
-
-          <div class="memory-graph-stage" data-memory-graph data-memory-layout-mode="brain" data-memory-density-mode="normal">
-            <svg class="memory-graph-edges" viewBox="0 0 100 100" role="presentation" aria-hidden="true" preserveAspectRatio="none">
-              {graph.edges.map((edge) => {
-                const coords = getMemoryGraphEdgeCoordinates(graph, edge);
-                return (
-                  <line
-                    x1={coords.x1}
-                    y1={coords.y1}
-                    x2={coords.x2}
-                    y2={coords.y2}
-                    data-memory-edge={edge.id}
-                    data-memory-edge-type={edge.type}
-                    data-memory-edge-derived={String(edge.derived)}
-                  />
-                );
-              })}
-            </svg>
-
-            {graph.nodes.map((node) => (
-              <button
-                class={`memory-graph-node memory-graph-node--${node.kind} ${node.id === graph.selectedFallback ? 'is-selected' : ''}`}
-                type="button"
-                style={`--x:${node.position.x};--y:${node.position.y};--weight:${node.weight};`}
-                data-memory-node={node.id}
-                data-memory-kind={node.kind}
-                data-memory-topics={node.topicIds.join(' ')}
-                data-memory-sources={node.sourceIds.join(' ')}
-                data-memory-type={node.memoryType ?? ''}
-                data-memory-text={`${node.label} ${node.sublabel ?? ''} ${node.memoryType ?? ''} ${node.origin ?? ''}`}
-                aria-pressed={node.id === graph.selectedFallback ? 'true' : 'false'}
-                aria-label={`${node.kind}: ${node.label}`}
-              >
-                <span>{node.label}</span>
-              </button>
-            ))}
-
-            <div class="memory-no-results memory-no-results--graph" data-memory-graph-empty hidden>
-              <h2>No matching graph nodes</h2>
-              <p>검색어와 필터를 줄이면 다시 볼 수 있습니다.</p>
-              <button type="button" data-memory-reset>Reset filters</button>
-            </div>
-          </div>
-
-          <section class="memory-secondary" aria-label="Memory fallback views">
-            <div class="memory-tabs" role="tablist" aria-label="Memory views">
-              <button class="memory-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="memory-list" data-memory-tab="memory-list">List</button>
-              <button class="memory-tab" type="button" role="tab" aria-selected="false" aria-controls="memory-library" data-memory-tab="memory-library">Library</button>
-              <button class="memory-tab" type="button" role="tab" aria-selected="false" aria-controls="memory-sources" data-memory-tab="memory-sources">Sources</button>
-            </div>
-
-            <div class="memory-panel is-active" id="memory-list" role="tabpanel">
-              <div class="memory-thought-stack" aria-label="Public thoughts">
-              {memory.thoughts.map((thought) => (
-                <button
-                  class={`memory-thought-row ${`thought:${thought.slug}` === graph.selectedFallback ? 'is-selected' : ''}`}
-                  type="button"
-                  data-memory-list-item
-                  data-memory-node={`thought:${thought.slug}`}
-                  data-memory-topics={thought.topics.map((topic) => memoryPayload.topicIdsByLabel[topic] ?? '').join(' ')}
-                  data-memory-sources={thought.sources.map((source) => `source:${source}`).join(' ')}
-                  data-memory-type={thought.memoryType}
-                  data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}
-                >
-                  <div>
-                    <span>{thought.memoryType}</span>
-                    <h2>{thought.claimKo}</h2>
-                    <p>{thought.claimEn}</p>
-                  </div>
-                  <div class="memory-chip-row">
-                  {thought.topics.map((topic) => <span>{topic}</span>)}
-                  <span>{getMemorySourceCountLabel(thought.sources.length)}</span>
-                </div>
-              </button>
-            ))}
-                <div class="memory-no-results" data-memory-list-empty hidden>
-                <h2>No matching thoughts</h2>
-                  <p>검색어와 필터를 줄이면 다시 볼 수 있습니다.</p>
-                <button type="button" data-memory-reset>Reset filters</button>
-              </div>
-            </div>
-          </div>
-
-            <div class="memory-panel" id="memory-library" role="tabpanel" hidden>
-          <div class="memory-library">
-            {memory.topics.map((topic) => (
-                  <section class="memory-topic" id={`topic-${topic.slug}`} data-memory-topic-group={topic.id}>
-                <div>
-                  <h2>{topic.label}</h2>
-                  <p>{topic.count} public thoughts</p>
-                </div>
-                <div class="memory-thought-list">
-                  {memory.thoughts
-                    .filter((thought) => thought.topics.includes(topic.label))
-                    .map((thought) => (
-                      <button
-                        class="memory-thought-card"
-                        type="button"
-                            data-memory-list-item
-                            data-memory-node={`thought:${thought.slug}`}
-                            data-memory-topics={thought.topics.map((label) => memoryPayload.topicIdsByLabel[label] ?? '').join(' ')}
-                            data-memory-sources={thought.sources.map((source) => `source:${source}`).join(' ')}
-                            data-memory-type={thought.memoryType}
-                        data-memory-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')} ${thought.sources.join(' ')}`}
-                      >
-                        <h3>{thought.claimKo}</h3>
-                        <p>{thought.claimEn}</p>
-                        <div class="memory-chip-row">
-                          <span>{thought.memoryType}</span>
-                          <span>{getMemorySourceCountLabel(thought.sources.length)}</span>
-                        </div>
-                      </button>
-                    ))}
-                </div>
-              </section>
-            ))}
-                <div class="memory-no-results" data-memory-list-empty hidden>
-              <h2>No matching library entries</h2>
-              <p>현재 조건에 맞는 public thought가 없습니다.</p>
-              <button type="button" data-memory-reset>Reset filters</button>
-            </div>
-          </div>
+    <aside class="memory-rail">
+      <h1>기억</h1>
+      <label class="memory-search memory-search--desktop">
+        <span class="sr-only">기억 검색</span>
+        <input type="search" placeholder="문장, 주제, 출처 검색" data-memory-search />
+        <i aria-hidden="true"></i>
+      </label>
+      <details class="memory-filters">
+        <summary>주제 · 근거 필터</summary>
+        <div>
+          {memory.topics.map((topic) => (
+            <label><input type="checkbox" value={topic.label} data-memory-filter="topic" /> {topic.label}</label>
+          ))}
+          {Array.from(new Set(thoughts.map((thought) => thought.memoryType))).map((kind) => (
+            <label><input type="checkbox" value={kind} data-memory-filter="type" /> {typeLabel(kind)}</label>
+          ))}
         </div>
+      </details>
+    </aside>
 
-            <div class="memory-panel" id="memory-sources" role="tabpanel" hidden>
-          <div class="memory-source-grid">
-            {memory.sources.map((source) => {
-              const resolved = memoryPayload.sourcesById[source.id];
-              const content = (
-                <>
-                  <span>{source.kind}{resolved?.routeable ? ' · public route' : ' · repo source'}</span>
-                  <h2>{source.title}</h2>
-                  <p>{source.count} linked thoughts{source.date ? ` · ${source.date}` : ''}</p>
-                  {source.path && <small>{source.path}</small>}
-                </>
-              );
+    <main class="memory-ledger" id="memory-list">
+      <div class="memory-ledger__heading"><span>번호</span><span>기억 문장</span></div>
+      <ol class="memory-sentences" aria-label={`공개 기억 ${thoughts.length}개`}>
+        {thoughts.map((thought, index) => (
+          <li
+            class:list={{ 'is-selected': thought.slug === selected?.slug }}
+            data-memory-item
+            data-memory-id={`thought:${thought.slug}`}
+            data-memory-search-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')}`.toLocaleLowerCase()}
+            data-memory-topics={thought.topics.join(' ')}
+            data-memory-type={thought.memoryType}
+          >
+            <a href={`#memory-detail-${thought.slug}`} data-memory-select={`thought:${thought.slug}`}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <strong>{thought.claimKo}</strong>
+            </a>
+          </li>
+        ))}
+      </ol>
+      <p class="memory-empty" data-memory-empty hidden>검색어에 일치하는 문장이 없습니다.</p>
+    </main>
 
-              return resolved?.href ? (
-                    <a class="memory-source-card" href={resolved.href} data-memory-source-card={`source:${source.id}`}>
-                  {content}
-                </a>
-              ) : (
-                    <button class="memory-source-card memory-source-card--static" type="button" data-memory-source-card={`source:${source.id}`}>
-                  {content}
-                </button>
-              );
-            })}
-          </div>
-              <div class="memory-no-results" data-memory-source-empty hidden>
-            <h2>No matching sources</h2>
-            <p>현재 조건에 연결된 source가 없습니다.</p>
-            <button type="button" data-memory-reset>Reset filters</button>
-          </div>
-        </div>
+    <aside class="memory-detail-stack" aria-label="선택한 기억 상세">
+      {thoughts.map((thought) => {
+        const detail = payload.details[`thought:${thought.slug}`];
+        return (
+          <section
+            id={`memory-detail-${thought.slug}`}
+            class:list={['memory-detail-panel', { 'is-default': `thought:${thought.slug}` === selectedId }]}
+            data-memory-detail={`thought:${thought.slug}`}
+          >
+            <div class="memory-sheet-handle" aria-hidden="true"></div>
+            <div class="memory-detail-panel__topline">
+              <p>선택한 기억</p>
+              <a href="#memory-list" aria-label="상세 닫기">×</a>
+            </div>
+            <h2>{thought.claimKo}</h2>
+            <span class="memory-detail-rule" aria-hidden="true"></span>
+
+            <div class="memory-detail-section">
+              <h3>주제</h3>
+              <p class="memory-topic-list">{thought.topics.join('　/　')}</p>
+            </div>
+
+            <div class="memory-detail-section">
+              <h3>직접 연결된 문장</h3>
+              {detail.directConnections?.length ? (
+                <ul class="memory-connections">
+                  {detail.directConnections.map((connection) => {
+                    const connectedIndex = thoughts.findIndex((item) => `thought:${item.slug}` === connection.thought.id);
+                    const connectedSlug = connection.thought.id.replace('thought:', '');
+                    return (
+                      <li>
+                        <a href={`#memory-detail-${connectedSlug}`} data-memory-select={connection.thought.id}>
+                          <span>{String(connectedIndex + 1).padStart(2, '0')}</span>
+                          <strong>{connection.thought.title}</strong>
+                          <small>{edgeLabel(connection.type)}</small>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : <p class="memory-quiet">직접 연결된 공개 문장이 없습니다.</p>}
+            </div>
+
+            <div class="memory-detail-section memory-provenance">
+              <h3>출처</h3>
+              <ul>
+                {detail.sources?.map((source) => (
+                  <li>
+                    {source.href ? <a href={source.href}>{source.title}</a> : <span>{source.title}</span>}
+                    <small>{source.routeable ? '공개 기록' : '공개 근거 표기'}</small>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <a class="memory-view-switch" href={`/memory/map/#map-${thought.slug}`}>관계 지도로 보기 <span aria-hidden="true">→</span></a>
           </section>
-        </main>
+        );
+      })}
+    </aside>
+  </div>
 
-        <aside class="memory-app__drawer" aria-label="Selected memory node" data-memory-detail>
-          <p class="memory-eyebrow">Selected</p>
-          <h2 data-memory-detail-title>{graph.selectedFallback ? memoryPayload.details[graph.selectedFallback]?.title : 'No selected node'}</h2>
-          <p data-memory-detail-body>{graph.selectedFallback ? memoryPayload.details[graph.selectedFallback]?.body : 'Select a node to inspect its public evidence.'}</p>
-          <div class="memory-chip-row" data-memory-detail-chips></div>
-          <div class="memory-detail-list" data-memory-detail-sources></div>
-          <div class="memory-detail-list" data-memory-detail-relationships></div>
-        </aside>
-      </>
-    ) : (
-      <div class="empty-state">
-        <p>No public memory projection yet. Run <code>npm run memory:project</code> after adding accepted public thoughts.</p>
-      </div>
-    )}
-  </section>
-
-  <script is:inline type="application/json" id="memory-payload" set:html={JSON.stringify(clientPayload)} />
-
+  <LiteraryFooter />
   <script is:inline src="/scripts/memory-workbench.js" defer></script>
 </BaseLayout>

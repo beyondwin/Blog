@@ -1,0 +1,17 @@
+---
+import type { EmptyLane } from '../lib/indexPresentation';
+import { getEmptyLaneCopy } from '../lib/indexPresentation';
+
+interface Props { lane: EmptyLane }
+const { lane } = Astro.props;
+const copy = getEmptyLaneCopy(lane);
+---
+
+<section class="empty-lane" aria-labelledby={`empty-${lane}`}>
+  <p class="empty-lane__marker">{copy.marker}</p>
+  <h1 id={`empty-${lane}`}>{copy.title}</h1>
+  <span class="literary-registration" aria-hidden="true"></span>
+  <p>{copy.fact}</p>
+  <p>{copy.condition}</p>
+  <a href={copy.href}>{copy.linkLabel} <span aria-hidden="true">→</span></a>
+</section>

@@ -2,25 +2,23 @@
 import { getCollection, render } from 'astro:content';
 import Callout from '../../components/Callout.astro';
 import ReviewLayout from '../../layouts/ReviewLayout.astro';
-import { findContentMemoryLinks, loadPublicMemoryData } from '../../lib/memory';
+import { findRelatedBooks } from '../../lib/bookshelfPresentation';
 
 export async function getStaticPaths() {
   const entries = await getCollection('reviews', ({ data }) => !data.draft);
   return entries.map((entry) => ({
     params: { slug: entry.id },
-    props: { entry },
+    props: {
+      entry,
+      relatedBooks: findRelatedBooks(entry, entries),
+    },
   }));
 }
 
-const { entry } = Astro.props;
+const { entry, relatedBooks } = Astro.props;
 const { Content } = await render(entry);
-const relatedMemory = findContentMemoryLinks(
-  loadPublicMemoryData(),
-  `src/content/reviews/${entry.id}.mdx`,
-  entry.data.tags,
-);
 ---
 
-<ReviewLayout entry={entry} relatedMemory={relatedMemory}>
+<ReviewLayout entry={entry} relatedBooks={relatedBooks}>
   <Content components={{ Callout }} />
 </ReviewLayout>

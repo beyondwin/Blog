@@ -1,0 +1,680 @@
+.literary-bookshelf .bookshelf-archive {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  min-height: calc(100vh - 136px);
+  padding-block: 54px 76px;
+}
+
+.literary-bookshelf .bookshelf-rail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 56px;
+  border-right: 1px solid var(--literary-line);
+  padding: 3px 30px 0 14px;
+}
+
+.literary-bookshelf .bookshelf-rail h1 {
+  margin: 0;
+  font-size: clamp(29px, 2.25vw, 38px);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.literary-bookshelf .bookshelf-rail__mark {
+  display: block;
+  width: 42px;
+  height: 2px;
+  margin-top: 16px;
+  background: var(--reading);
+}
+
+.literary-bookshelf .bookshelf-rail nav p {
+  margin: 0 0 13px;
+  font-size: 14px;
+}
+
+.literary-bookshelf .bookshelf-rail ol,
+.literary-bookshelf .bookshelf-shelves ol,
+.literary-bookshelf .bookshelf-judgments ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.literary-bookshelf .bookshelf-rail li {
+  border-top: 1px solid color-mix(in srgb, var(--literary-line), transparent 18%);
+}
+
+.literary-bookshelf .bookshelf-rail a {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: inherit;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.literary-bookshelf .bookshelf-rail b {
+  font-weight: 400;
+}
+
+.literary-bookshelf .bookshelf-field {
+  min-width: 0;
+  padding-left: clamp(34px, 4.3vw, 70px);
+}
+
+.literary-bookshelf .bookshelf-field__header,
+.literary-bookshelf .bookshelf-judgments > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.literary-bookshelf .bookshelf-field__header p,
+.literary-bookshelf .bookshelf-field__header span {
+  margin: 0;
+  font-size: 17px;
+}
+
+.literary-bookshelf .bookshelf-field__header span,
+.literary-bookshelf .bookshelf-judgments > header span {
+  color: var(--literary-soft);
+  font-size: 12px;
+}
+
+.literary-bookshelf .bookshelf-shelves {
+  display: grid;
+  gap: 58px;
+  margin-top: 36px;
+}
+
+.literary-bookshelf .bookshelf-tier {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(24px, 3.8vw, 62px);
+  align-items: end;
+  padding: 0 22px;
+}
+
+.literary-bookshelf .bookshelf-tier li {
+  min-width: 0;
+}
+
+.literary-bookshelf .bookshelf-volume {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.literary-bookshelf .bookshelf-volume__shelf {
+  position: relative;
+  display: block;
+  border-bottom: 5px double color-mix(in srgb, var(--literary-line), var(--literary-ink) 18%);
+  padding-bottom: 12px;
+}
+
+.literary-bookshelf .bookshelf-volume__shelf::after {
+  position: absolute;
+  right: -7px;
+  bottom: -8px;
+  left: -7px;
+  height: 7px;
+  background: rgb(23 27 28 / 11%);
+  filter: blur(5px);
+  content: "";
+}
+
+.literary-bookshelf .bookshelf-volume__cover {
+  display: flex;
+  height: clamp(180px, 19vw, 270px);
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.literary-bookshelf .bookshelf-tier li:first-child .bookshelf-volume__shelf::before {
+  position: absolute;
+  right: calc(-1 * clamp(24px, 3.8vw, 62px));
+  bottom: -5px;
+  left: -22px;
+  z-index: -1;
+  height: 5px;
+  border-bottom: 5px double color-mix(in srgb, var(--literary-line), var(--literary-ink) 18%);
+  content: "";
+}
+
+.literary-bookshelf .bookshelf-tier li:last-child .bookshelf-volume__shelf::before {
+  position: absolute;
+  right: -22px;
+  bottom: -5px;
+  left: calc(-1 * clamp(24px, 3.8vw, 62px));
+  z-index: -1;
+  height: 5px;
+  border-bottom: 5px double color-mix(in srgb, var(--literary-line), var(--literary-ink) 18%);
+  content: "";
+}
+
+.literary-bookshelf .bookshelf-volume__cover img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 2px 5px 7px rgb(22 30 34 / 22%);
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.literary-bookshelf .bookshelf-volume:hover .bookshelf-volume__cover img {
+  transform: translateY(-3px);
+  box-shadow: 3px 8px 11px rgb(22 30 34 / 24%);
+}
+
+.literary-bookshelf .bookshelf-volume__copy {
+  display: grid;
+  min-height: 136px;
+  align-content: start;
+  gap: 7px;
+}
+
+.literary-bookshelf .bookshelf-volume__copy strong {
+  font-size: clamp(17px, 1.35vw, 22px);
+  font-weight: 400;
+  line-height: 1.36;
+  word-break: keep-all;
+}
+
+.literary-bookshelf .bookshelf-volume__copy em,
+.literary-bookshelf .bookshelf-volume__copy time,
+.literary-bookshelf .bookshelf-volume__copy small {
+  color: var(--literary-soft);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.65;
+}
+
+.literary-bookshelf .bookshelf-volume__copy small {
+  margin-top: 5px;
+  color: var(--literary-ink);
+  font-size: 14px;
+}
+
+.literary-bookshelf .bookshelf-judgments {
+  margin-top: 76px;
+  scroll-margin-top: 20px;
+}
+
+.literary-bookshelf .bookshelf-judgments > header {
+  border-bottom: 1px solid var(--literary-line);
+  padding-bottom: 12px;
+}
+
+.literary-bookshelf .bookshelf-judgments h2,
+.literary-bookshelf .bookshelf-awaiting h2 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 400;
+}
+
+.literary-bookshelf .bookshelf-judgments ol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(32px, 5vw, 80px);
+}
+
+.literary-bookshelf .bookshelf-judgments li {
+  min-width: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--literary-line), transparent 18%);
+  scroll-margin-top: 20px;
+}
+
+.literary-bookshelf .bookshelf-judgments a {
+  display: grid;
+  min-height: 138px;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  color: inherit;
+  padding: 18px 0;
+  text-decoration: none;
+}
+
+.literary-bookshelf .bookshelf-judgments__cover {
+  display: flex;
+  width: 54px;
+  height: 78px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--literary-line), transparent 10%);
+  color: var(--literary-soft);
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.literary-bookshelf .bookshelf-judgments__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.literary-bookshelf .bookshelf-judgments__cover b {
+  font-weight: 400;
+}
+
+.literary-bookshelf .bookshelf-judgments__copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.literary-bookshelf .bookshelf-judgments__copy strong {
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.literary-bookshelf .bookshelf-judgments__copy time {
+  color: var(--literary-soft);
+  font: 11px/1.4 var(--literary-mono);
+}
+
+.literary-bookshelf .bookshelf-judgments__copy > span {
+  color: var(--reading);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.literary-bookshelf .bookshelf-awaiting,
+.literary-bookshelf .bookshelf-empty {
+  margin-top: 56px;
+  border-top: 1px solid var(--literary-line);
+  padding-top: 18px;
+}
+
+.literary-bookshelf .bookshelf-awaiting ul {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.literary-bookshelf .bookshelf-awaiting a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--literary-line);
+  color: inherit;
+  text-decoration: none;
+}
+
+.literary-bookshelf .bookshelf-awaiting span {
+  color: var(--literary-soft);
+  font-size: 12px;
+}
+
+.literary-review .review-literary {
+  display: grid;
+  grid-template-columns: minmax(210px, 286px) minmax(0, 760px);
+  gap: clamp(56px, 8.5vw, 126px);
+  justify-content: center;
+  align-items: start;
+  padding-block: 70px 88px;
+}
+
+.literary-review .review-literary__book {
+  min-width: 0;
+}
+
+.literary-review .review-literary__book figure {
+  display: flex;
+  min-height: 330px;
+  align-items: flex-start;
+  justify-content: center;
+  margin: 0;
+}
+
+.literary-review .review-literary__book figure img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 440px;
+  object-fit: contain;
+  box-shadow: 3px 7px 10px rgb(22 30 34 / 24%);
+}
+
+.literary-review .review-literary__cover-fallback {
+  display: flex;
+  width: min(100%, 250px);
+  aspect-ratio: 2 / 3;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid var(--literary-line);
+  padding: 24px 18px;
+}
+
+.literary-review .review-literary__cover-fallback span {
+  font-size: 20px;
+  line-height: 1.45;
+}
+
+.literary-review .review-literary__cover-fallback b {
+  color: var(--literary-soft);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.literary-review .review-literary__book dl {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 13px 18px;
+  margin: 30px 0 0;
+  border-bottom: 1px solid var(--literary-line);
+  padding-bottom: 26px;
+  font-size: 14px;
+}
+
+.literary-review .review-literary__completed {
+  display: contents;
+}
+
+.literary-review .review-literary__book dt {
+  color: var(--literary-soft);
+}
+
+.literary-review .review-literary__book dd {
+  margin: 0;
+}
+
+.literary-review .review-literary__reading {
+  min-width: 0;
+}
+
+.literary-review .review-literary__reading > header {
+  border-bottom: 1px solid var(--literary-line);
+  padding: 28px 0 34px;
+}
+
+.literary-review .review-literary__reading h1 {
+  max-width: none;
+  margin: 0;
+  color: var(--literary-ink);
+  font-size: clamp(38px, 4vw, 56px);
+  font-weight: 400;
+  line-height: 1.28;
+  letter-spacing: 0;
+  text-wrap: balance;
+  word-break: keep-all;
+}
+
+.literary-review .review-literary__mobile-date { display: none; }
+
+.literary-review .review-literary__reading > header > p {
+  margin: 18px 0 0;
+  color: var(--literary-soft);
+  font-size: 16px;
+}
+
+.literary-review .review-literary__reading blockquote {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--memory);
+  font-size: clamp(19px, 2vw, 25px);
+  line-height: 1.75;
+  word-break: keep-all;
+}
+
+.literary-review .review-literary__prose {
+  max-width: 70ch;
+  padding-top: 30px;
+  color: var(--literary-ink);
+  font-size: 18px;
+  line-height: 1.92;
+}
+
+.literary-review .review-literary__prose :where(p, ul, ol, blockquote) {
+  margin: 0 0 1.65em;
+}
+
+.literary-review .review-literary__prose :where(h2, h3) {
+  margin: 2.5em 0 .8em;
+  color: var(--literary-ink);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.literary-review .review-literary__prose h2 { font-size: 28px; }
+.literary-review .review-literary__prose h3 { font-size: 22px; }
+
+.literary-review .review-literary__prose a {
+  text-decoration-color: var(--reading);
+  text-decoration-thickness: 1px;
+}
+
+.literary-review .review-literary__prose :where(img, pre, table) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.literary-review .review-literary__related {
+  grid-column: 1 / -1;
+  width: min(100%, 1040px);
+  margin-top: 6px;
+  justify-self: center;
+}
+
+.literary-review .review-literary__related h2 {
+  margin: 0;
+  border-bottom: 1px solid var(--literary-line);
+  color: var(--reading);
+  padding-bottom: 12px;
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.literary-review .review-literary__related ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.literary-review .review-literary__related a {
+  display: grid;
+  min-height: 60px;
+  grid-template-columns: minmax(180px, .55fr) minmax(0, 1fr);
+  gap: 30px;
+  align-items: center;
+  border-bottom: 1px solid var(--literary-line);
+  color: inherit;
+  text-decoration: none;
+}
+
+.literary-review .review-literary__related strong {
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.literary-review .review-literary__related span {
+  color: var(--literary-soft);
+  font-size: 13px;
+}
+
+@media (max-width: 980px) {
+  .literary-bookshelf .bookshelf-archive {
+    grid-template-columns: 156px minmax(0, 1fr);
+  }
+
+  .literary-bookshelf .bookshelf-rail { padding-right: 22px; }
+  .literary-bookshelf .bookshelf-field { padding-left: 28px; }
+  .literary-bookshelf .bookshelf-tier { gap: 22px; padding-inline: 10px; }
+  .literary-bookshelf .bookshelf-volume__copy small { font-size: 13px; }
+
+  .literary-review .review-literary {
+    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
+    gap: 48px;
+  }
+}
+
+@media (max-width: 720px) {
+  .literary-bookshelf .bookshelf-archive {
+    display: block;
+    min-height: 0;
+    padding-block: 29px 58px;
+  }
+
+  .literary-bookshelf .bookshelf-rail {
+    display: block;
+    border-right: 0;
+    padding: 0;
+  }
+
+  .literary-bookshelf .bookshelf-rail h1 { font-size: 30px; }
+  .literary-bookshelf .bookshelf-rail__mark { margin-top: 11px; }
+  .literary-bookshelf .bookshelf-rail nav { margin-top: 20px; }
+  .literary-bookshelf .bookshelf-rail nav p { display: none; }
+
+  .literary-bookshelf .bookshelf-rail ol {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--literary-line);
+  }
+
+  .literary-bookshelf .bookshelf-rail li { flex: 0 0 88px; border-top: 0; }
+  .literary-bookshelf .bookshelf-field { padding-left: 0; }
+
+  .literary-bookshelf .bookshelf-field__header {
+    padding: 16px 0 0;
+  }
+
+  .literary-bookshelf .bookshelf-field__header p,
+  .literary-bookshelf .bookshelf-field__header span { font-size: 13px; }
+
+  .literary-bookshelf .bookshelf-shelves {
+    gap: 45px;
+    margin-top: 29px;
+  }
+
+  .literary-bookshelf .bookshelf-tier {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 11px;
+    padding: 0;
+  }
+
+  .literary-bookshelf .bookshelf-volume { gap: 12px; }
+  .literary-bookshelf .bookshelf-volume__shelf { border-bottom-width: 4px; padding-bottom: 8px; }
+  .literary-bookshelf .bookshelf-tier li:first-child .bookshelf-volume__shelf::before {
+    right: -11px;
+    left: 0;
+    border-bottom-width: 4px;
+  }
+  .literary-bookshelf .bookshelf-tier li:last-child .bookshelf-volume__shelf::before {
+    right: 0;
+    left: -11px;
+    border-bottom-width: 4px;
+  }
+  .literary-bookshelf .bookshelf-volume__cover { height: 126px; }
+  .literary-bookshelf .bookshelf-volume__copy { min-height: 0; }
+  .literary-bookshelf .bookshelf-volume__copy :where(strong, em, small) { display: none; }
+  .literary-bookshelf .bookshelf-volume__copy time { font: 9px/1.3 var(--literary-mono); }
+
+  .literary-bookshelf .bookshelf-judgments { margin-top: 58px; }
+  .literary-bookshelf .bookshelf-judgments h2 { font-size: 22px; }
+  .literary-bookshelf .bookshelf-judgments ol { display: block; }
+
+  .literary-bookshelf .bookshelf-judgments a {
+    min-height: 128px;
+    grid-template-columns: 54px minmax(0, 1fr);
+    gap: 15px;
+    padding: 16px 0;
+  }
+
+  .literary-bookshelf .bookshelf-judgments__copy strong { font-size: 16px; }
+  .literary-bookshelf .bookshelf-judgments__copy > span { font-size: 13px; }
+
+  .literary-review .review-literary {
+    display: block;
+    padding-block: 30px 58px;
+  }
+
+  .literary-review .review-literary__book figure {
+    min-height: 0;
+  }
+
+  .literary-review .review-literary__book figure img {
+    max-width: 190px;
+    max-height: 284px;
+  }
+
+  .literary-review .review-literary__cover-fallback {
+    width: 180px;
+    margin-inline: auto;
+  }
+
+  .literary-review .review-literary__book dl {
+    width: min(100%, 300px);
+    margin: 22px auto 0;
+    padding-bottom: 18px;
+    font-size: 13px;
+  }
+
+  .literary-review .review-literary__completed { display: none; }
+
+  .literary-review .review-literary__reading > header {
+    padding: 30px 0 25px;
+    text-align: center;
+  }
+
+  .literary-review .review-literary__reading h1 {
+    max-width: none;
+    font-size: clamp(30px, 9vw, 38px);
+  }
+
+  .literary-review .review-literary__mobile-date {
+    display: block;
+    margin: 13px 0 0;
+    color: var(--literary-soft);
+    font: 11px/1.4 var(--literary-mono);
+  }
+
+  .literary-review .review-literary__reading .literary-registration {
+    margin-inline: auto;
+  }
+
+  .literary-review .review-literary__reading blockquote {
+    margin-inline: auto;
+    font-size: 19px;
+    line-height: 1.72;
+    text-align: left;
+  }
+
+  .literary-review .review-literary__prose {
+    padding-top: 25px;
+    font-size: 16px;
+    line-height: 1.9;
+  }
+
+  .literary-review .review-literary__prose h2 { font-size: 23px; }
+  .literary-review .review-literary__prose h3 { font-size: 20px; }
+  .literary-review .review-literary__related { margin-top: 45px; }
+  .literary-review .review-literary__related h2 { font-size: 19px; }
+
+  .literary-review .review-literary__related a {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 12px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .literary-bookshelf .bookshelf-volume__cover img {
+    transform: none !important;
+  }
+}

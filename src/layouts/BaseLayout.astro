@@ -1,15 +1,20 @@
 ---
 import SiteHeader from '../components/SiteHeader.astro';
 import '../styles/global.css';
+import '../styles/literary.css';
 
 interface Props {
   title?: string;
   description?: string;
+  pageClass?: string;
+  headerVariant?: 'default' | 'literary';
 }
 
 const {
   title = 'beyondwin',
   description = '개발, 독서, 아이디어, 여행에서 오래 남길 만한 기록을 모아 둔 개인 아카이브.',
+  pageClass,
+  headerVariant = 'default',
 } = Astro.props;
 ---
 
@@ -23,8 +28,8 @@ const {
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   </head>
-  <body>
-    <SiteHeader />
+  <body class={pageClass}>
+    <SiteHeader variant={headerVariant} />
     <main class="site-main">
       <slot />
     </main>

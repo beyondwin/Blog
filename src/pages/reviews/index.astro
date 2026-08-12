@@ -1,27 +1,138 @@
 ---
-import ContentCard from '../../components/ContentCard.astro';
+import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { collectionMeta, getContentByCollection } from '../../lib/content';
+import { getEntryHref } from '../../lib/content';
+import {
+  buildBookshelfPresentation,
+  formatLiteraryDate,
+  getOneSentenceJudgment,
+} from '../../lib/bookshelfPresentation';
+import '../../styles/bookshelf-literary.css';
 
-const entries = await getContentByCollection('reviews');
-const meta = collectionMeta.reviews;
+const entries = await getCollection('reviews', ({ data }) => !data.draft);
+const presentation = buildBookshelfPresentation(entries);
+const leadYear = presentation.yearCounts[0];
 ---
 
-<BaseLayout title="Reviews · beyondwin" description={meta.description}>
-  <section class="shell hero">
-    <p class="site-label">Reading</p>
-    <h1>{meta.navLabel}</h1>
-    <p>{meta.description}</p>
-  </section>
-  <section class="shell">
-    {entries.length > 0 ? (
-      <div class="content-grid">
-        {entries.map((entry) => <ContentCard entry={entry} />)}
+<BaseLayout
+  title="책장 · beyondwin"
+  description="읽고 난 뒤 오래 남은 판단을 책과 함께 보관하는 서가."
+  pageClass="literary-page literary-bookshelf"
+  headerVariant="literary"
+>
+  <div class="shell bookshelf-archive">
+    <aside class="bookshelf-rail" aria-labelledby="bookshelf-title">
+      <div>
+        <h1 id="bookshelf-title">읽은 책</h1>
+        <span class="bookshelf-rail__mark" aria-hidden="true"></span>
       </div>
-    ) : (
-      <div class="empty-state">
-        <p>아직 공개된 서평이나 리뷰가 없습니다.</p>
-      </div>
-    )}
-  </section>
+
+      <nav aria-label="완독 연도별 기록 수">
+        <p>연도별 보기</p>
+        <ol>
+          {presentation.yearCounts.map(({ year, count }) => (
+            <li>
+              <a href={`#reviews-${year}`}>
+                <span>{year}</span>
+                <b>{count}</b>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </aside>
+
+    <main class="bookshelf-field">
+      <header class="bookshelf-field__header">
+        <p>{leadYear ? `${leadYear.year}년 · ${leadYear.count}권` : '아직 비어 있는 책장'}</p>
+        <span>모두 {entries.length}권</span>
+      </header>
+
+      {presentation.shelfTiers.length > 0 ? (
+        <section class="bookshelf-shelves" aria-label="최근 읽은 책 표지">
+          {presentation.shelfTiers.map((tier, tierIndex) => (
+            <ol class:list={['bookshelf-tier', `bookshelf-tier--${tierIndex + 1}`]}>
+              {tier.map((entry) => (
+                <li>
+                  <a class="bookshelf-volume" href={getEntryHref(entry)}>
+                    <span class="bookshelf-volume__shelf">
+                      <span class="bookshelf-volume__cover">
+                        <img
+                          src={entry.data.coverImage}
+                          alt={`${entry.data.itemTitle} 도서 표지`}
+                          loading={tierIndex === 0 ? 'eager' : 'lazy'}
+                          decoding="async"
+                        />
+                      </span>
+                    </span>
+                    <span class="bookshelf-volume__copy">
+                      <strong>{entry.data.itemTitle}</strong>
+                      {entry.data.itemAuthor && <em>{entry.data.itemAuthor}</em>}
+                      <time datetime={(entry.data.completedAt ?? entry.data.createdAt).toISOString()}>
+                        {formatLiteraryDate(entry.data.completedAt ?? entry.data.createdAt)}
+                      </time>
+                      <small>{getOneSentenceJudgment(entry.data.description)}</small>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ol>
+          ))}
+        </section>
+      ) : (
+        <p class="bookshelf-empty">아직 표지를 확인한 읽기 기록이 없습니다.</p>
+      )}
+
+      <section class="bookshelf-judgments" aria-labelledby="judgment-title">
+        <header>
+          <h2 id="judgment-title">읽은 책의 판단</h2>
+          <span>{presentation.judgmentEntries.length}개의 기록</span>
+        </header>
+
+        <ol>
+          {presentation.judgmentEntries.map((entry, index) => {
+            const entryDate = entry.data.completedAt ?? entry.data.createdAt;
+            const previousEntry = presentation.judgmentEntries[index - 1];
+            const previousDate = previousEntry?.data.completedAt ?? previousEntry?.data.createdAt;
+            const beginsYear = !previousDate || previousDate.getFullYear() !== entryDate.getFullYear();
+            return (
+              <li id={beginsYear ? `reviews-${entryDate.getFullYear()}` : undefined}>
+                <a href={getEntryHref(entry)}>
+                  <span class="bookshelf-judgments__cover" aria-hidden="true">
+                    {entry.data.coverImage ? (
+                      <img src={entry.data.coverImage} alt="" loading="lazy" decoding="async" />
+                    ) : (
+                      <b>표지<br />확인 중</b>
+                    )}
+                  </span>
+                  <span class="bookshelf-judgments__copy">
+                    <strong>{entry.data.itemTitle}</strong>
+                    <time datetime={entryDate.toISOString()}>{formatLiteraryDate(entryDate)}</time>
+                    <span>{getOneSentenceJudgment(entry.data.description)}</span>
+                  </span>
+                </a>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+
+      {presentation.missingCoverEntries.length > 0 && (
+        <section class="bookshelf-awaiting" aria-labelledby="awaiting-title">
+          <h2 id="awaiting-title">표지를 확인하고 있는 책</h2>
+          <ul>
+            {presentation.missingCoverEntries.map((entry) => (
+              <li><a href={getEntryHref(entry)}>{entry.data.itemTitle}<span>표지 확인 중</span></a></li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </main>
+  </div>
+
+  <footer class="shell literary-footer">
+    <span>© beyondwin</span>
+    <p>이 사이트는 한 사람의 느린 기록으로 만들어집니다.</p>
+    <nav aria-label="보조 메뉴"><a href="/tags/">색인</a><a href="/memory/">기억</a></nav>
+  </footer>
 </BaseLayout>
