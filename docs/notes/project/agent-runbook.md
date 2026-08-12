@@ -49,6 +49,7 @@ Read the smallest useful set for the task.
 | Review | Add a book, article, tool, course, or media review | `src/content/reviews/*.mdx` | Review layout and imported review contracts unless requested | `npm run validate`; preview the generated review route, such as `/reviews/my-review/`, for substantial prose |
 | Idea | Add a seed, sketch, or proposal | `src/content/ideas/*.mdx` | Schema defaults without explicit `maturity` | `npm run validate` |
 | Travel note | Add a travel or place record | `src/content/travel/*.mdx` | Collection routing and unrelated travel entries | `npm run validate` |
+| Structured content record | Scaffold an article, review, scene, or idea with its media bundle | `src/content/<collection>/`, `src/assets/content/<collection>/<slug>/media.yml` | Writing assets outside the bundle, unsafe/incomplete manifest provenance, assuming a scaffold is public | `npm run media:validate`; `npm run validate` |
 | Queue analysis | Turn a queued URL into an analysis entry | `queue.md`, `src/content/analysis/*.mdx` | Fabricated source claims, paywalled source guesses, missing `output:` metadata | `npm run validate`; confirm `queue.md` metadata |
 | Public memory projection | Promote accepted public thoughts to `/memory` | `memory/thoughts/*.md`, `memory/edges.jsonl`, `memory/sources.jsonl`, `src/data/memory.public.json` | Direct imports from `memory/**` in public routes, private thoughts, unsafe source paths | `npm run memory:validate`; `npm run validate` before closeout |
 | Archive docs note | Add or move a curated internal document | `docs/notes/**`, `docs/raw/**` when provenance matters, `docs/_index/*.yml`, `docs/INDEX.md` | `docs/wiki/`, uncataloged durable notes | `npm run validate` when practical; confirm index paths exist |
@@ -67,9 +68,33 @@ Read the smallest useful set for the task.
 | Route, layout, style, or component | `npm run validate` | Browser check on desktop and mobile-sized viewport |
 | New content lane | `npm run validate` | Listing route and detail route preview |
 
+## Structured Content Handoff
+
+Use these commands from the repository root:
+
+```bash
+npm run content:new -- <article|review|scene|idea> ...
+npm run article:new -- ...
+npm run media:validate
+npm run validate
+```
+
+Only `status: "published"` with `draft: false` (`published && !draft`) is
+public. A scaffold is intentionally `review` and draft. Keep each asset and
+its `media.yml` under `src/assets/content/<collection>/<slug>/`; the manifest
+records asset metadata and provenance, not a UI-specific path.
+
+The separate design/route task consumes `src/lib/content/viewModels.ts` and
+already-resolved `ResolvedMedia` from `src/lib/content/mediaRegistry.ts`.
+Publication selection belongs to `src/lib/content/publication.ts`. Do not
+repeat manifest/path resolution in pages, layouts, or components. That task
+must also replace the current detail-route `!draft`-only filter with
+`published && !draft`; this foundation does not modify design-owned routes.
+
 ## Public And Private Boundaries
 
 - `/memory` reads `src/data/memory.public.json`; it must not import or parse `memory/**` directly.
+- Content is public only when `published && !draft`; do not treat non-draft review or archived entries as public.
 - New thoughts should start private unless the user explicitly wants public memory.
 - Public memory export requires `confidentiality: public`, `surfaces: [memory-public]`, `review.status: accepted`, and at least one safe source.
 - `docs/raw/` preserves source wording and provenance; curated explanations belong in a stable topic folder under `docs/notes/`.
@@ -91,11 +116,13 @@ Do not catalog generated `docs/wiki/` pages as primary sources.
 ## Common Failure Modes
 
 - Adding an MDX file without running `npm run validate`.
+- Treating the current non-strict `media:validate` legacy-cover warnings as a clean migration; they are allowed for now but new work uses local manifest media IDs.
 - Publishing a `source-grounded` article without source evidence or the required article-quality headings.
 - Letting `/memory` read private `memory/**` files directly.
 - Editing `/memory` behavior in `src/pages/memory.astro` before checking the focused module under `src/lib/memory/`.
 - Adding a curated docs note without updating `catalog.yml`, `topics.yml` when needed, and `docs/INDEX.md`.
 - Changing a content lane without updating schema, routes, helpers, validation, navigation, and docs together.
+- Assuming current detail routes enforce publication state: they presently enforce only `!draft` and need the separate route/design correction.
 - Editing broad root docs when a small task-specific docs link would be enough.
 - Starting work in a scoped subtree without reading its closest `AGENTS.md`.
 - Repeating a long workflow manually instead of using the matching project skill.
