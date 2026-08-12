@@ -103,6 +103,7 @@ Path: `src/content/travel/`
 | `/analysis/[slug]/` | `src/pages/analysis/[slug].astro` | non-draft analysis detail. |
 | `/reviews/` | `src/pages/reviews/index.astro` | review listing. |
 | `/reviews/[slug]/` | `src/pages/reviews/[slug].astro` | non-draft review detail. |
+| `/reviews/the-life-you-can-save/` | `astro.config.mjs` redirect | `/reviews/doing-good-better/`로 보내는 static meta-refresh compatibility page. HTTP 301을 보장하지 않는다. |
 | `/ideas/` | `src/pages/ideas/index.astro` | idea listing. |
 | `/ideas/[slug]/` | `src/pages/ideas/[slug].astro` | non-draft idea detail. |
 | `/travel/` | `src/pages/travel/index.astro` | travel listing. |
@@ -125,6 +126,15 @@ relative `file`, `kind`, `alt`, `credit`, 정확히 하나의 `sourceUrl` 또는
 여기에 `sourceUrl`, ISBN-13 `isbn13`, `edition`을 추가로 요구한다. manifest와
 validator는 path traversal, manifest 밖의 asset, remote image hotlink, missing/
 orphaned asset, duplicate checksum, media reference mismatch를 거부한다.
+
+기존 Naver review 18개는 remote `coverImage`를 제거하고 구조화 서지로 옮겼다.
+17개는 판본 식별용 local cover와 provenance manifest를 가지며, 재배포 권한이
+별도로 확인되지 않았다는 warning은 의도적으로 유지한다.
+`devotion-of-suspect-x`는 동일 판본 source image가 300px 최소 폭에 못 미쳐
+`coverState: "hold"`이고 `coverMedia`가 없다. 냉정한 이타주의자 review의
+canonical content와 asset slug는 `doing-good-better`다. 역사적 verdict는 원문과
+동일한 후보를 작성자가 승인한 뒤 적용했으며 importer는 새 verdict를 자동으로
+승인하지 않는다.
 
 UI는 asset 경로나 manifest를 직접 해석하지 않는다. `src/lib/content/viewModels.ts`
 가 제공하는 summary/detail model과 이미 resolve된 `ResolvedMedia`를 소비하고,
@@ -246,13 +256,14 @@ matches. Detail pages do not read `memory/**` directly.
 | `npm run content:new -- <article\|review\|scene\|idea> ...` | `node scripts/create-content-entry.mjs` | collision-safe draft MDX와 empty `media.yml` bundle을 함께 scaffold한다. |
 | `npm run article:new` | `node scripts/create-article-packet.mjs` | evidence packet과 article draft 생성. |
 | `npm run media:validate` | `node scripts/validate-media.mjs` | content media manifest, provenance, asset, reference를 non-strict mode로 검사한다. legacy `coverImage`는 warning만 낸다. |
+| `node scripts/import-naver-reviews.mjs --output <new-local-intake-directory>` | `scripts/import-naver-reviews.mjs` | 원문 title/body/date/source를 보존한 review/draft intake와 비공개 cover 조사 JSON을 신규 directory에 생성한다. |
 | `npm run article:quality` | `node scripts/article-quality.mjs` | source-grounded article shape 검사. |
 | `npm run memory:seed` | `node scripts/memory/seed.mjs` | memory review candidate 생성. |
 | `npm run memory:review -- report` | `node scripts/memory/review.mjs report` | generated memory candidates를 읽기 쉬운 local review report로 만든다. |
 | `npm run memory:review -- promote <slug> --reviewed-at YYYY-MM-DD` | `node scripts/memory/review.mjs promote` | 선택한 candidate를 검증된 public thought markdown으로 승격한다. |
 | `npm run memory:project` | `node scripts/memory/project.mjs` | `src/data/memory.public.json` 생성. |
 | `npm run memory:validate` | `node scripts/memory/project.mjs --validate` | public memory 입력 검증. JSON은 쓰지 않는다. |
-| `npm run validate` | chained command | content, article quality, memory, tests, build 전체 gate. |
+| `npm run validate` | chained command | content, strict media, article quality, memory, tests, build 전체 gate. |
 
 ## Validation Gates
 
@@ -291,11 +302,12 @@ matches. Detail pages do not read `memory/**` directly.
 
 ### `scripts/validate-media.mjs`
 
-`npm run media:validate`는 non-strict gate다. legacy `coverImage`가 남은 기존
-review는 `coverMedia`로 옮겨야 한다는 warning을 내지만 exit 0을 유지한다.
-`--strict`에서만 이 warning은 error가 된다. 검증은 각 `media.yml`의 required
-provenance field, 안전한 canonical path, checksum, referenced file, orphan file,
-중복 선언, content media ID를 함께 검사한다.
+`npm run media:validate`는 필요할 때 쓰는 non-strict 진단이다. legacy
+`coverImage`는 warning을 내지만 exit 0을 유지한다. 기본 완료 명령인
+`npm run validate`는 정확히 `npm run media:validate -- --strict`를 호출하므로 이
+warning을 error로 승격한다. 검증은 각 `media.yml`의 required provenance field,
+안전한 canonical path, checksum, referenced file, orphan file, 중복 선언,
+content media ID를 함께 검사한다.
 
 ## Queue Parser
 

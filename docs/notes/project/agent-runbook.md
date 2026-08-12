@@ -91,6 +91,24 @@ repeat manifest/path resolution in pages, layouts, or components. That task
 must also replace the current detail-route `!draft`-only filter with
 `published && !draft`; this foundation does not modify design-owned routes.
 
+`npm run validate` includes the strict media gate
+`npm run media:validate -- --strict`. Naver review intake must use a new local
+directory outside `src/` and `public/`:
+
+```bash
+node scripts/import-naver-reviews.mjs \
+  --output docs/_inbox/naver-reviews-YYYY-MM-DD
+```
+
+The importer emits `status: "review"`, `draft: true`, never `coverImage`, and
+keeps a discovered cover URL only in the local `naver-review-intake.json`.
+Do not move an intake into the corpus until bibliography/media review and an
+explicit verdict approval are complete. The migrated corpus has 18 reviews:
+17 source-identified local covers and one `devotion-of-suspect-x` HOLD because
+the matching image is below 300px. `doing-good-better` is canonical; the old
+route is only a static meta-refresh compatibility page, not a guaranteed HTTP
+301 redirect.
+
 ## Public And Private Boundaries
 
 - `/memory` reads `src/data/memory.public.json`; it must not import or parse `memory/**` directly.
@@ -116,7 +134,8 @@ Do not catalog generated `docs/wiki/` pages as primary sources.
 ## Common Failure Modes
 
 - Adding an MDX file without running `npm run validate`.
-- Treating the current non-strict `media:validate` legacy-cover warnings as a clean migration; they are allowed for now but new work uses local manifest media IDs.
+- Running only non-strict `media:validate` and treating warnings as completion; `npm run validate` runs strict media validation and is the required final gate.
+- Running the Naver importer without a new local intake directory, or copying discovered cover URLs into public frontmatter.
 - Publishing a `source-grounded` article without source evidence or the required article-quality headings.
 - Letting `/memory` read private `memory/**` files directly.
 - Editing `/memory` behavior in `src/pages/memory.astro` before checking the focused module under `src/lib/memory/`.

@@ -42,9 +42,11 @@ ISBN-13, edition도 필요하다.
 npm run media:validate
 ```
 
-이 non-strict 검사에서 기존 `coverImage` review는 legacy warning을 낼 수 있지만
-성공한다. 새 media는 remote URL을 직접 렌더링하지 말고 manifest ID
-(`featuredMedia`, `coverMedia`, `leadMedia`)로 참조한다.
+이 명령은 필요할 때 쓰는 non-strict 진단이다. 전체 완료 gate인
+`npm run validate`는 `npm run media:validate -- --strict`를 실행하므로 legacy
+`coverImage`나 원격 image hotlink가 하나라도 남으면 실패한다. 새 media는 remote
+URL을 직접 렌더링하지 말고 manifest ID (`featuredMedia`, `coverMedia`,
+`leadMedia`)로 참조한다.
 
 ## How to Add An Ordinary Article
 
@@ -145,6 +147,40 @@ items:
 - `rating`은 선택값이며 0 이상 5 이하 숫자다.
 - `completedAt`이 있으면 review의 표시 날짜로 우선 사용된다.
 - review frontmatter의 `sourceUrl`은 원문 리뷰 또는 검토 대상의 URL이다. cover의 출처와 권리 근거는 `media.yml` item의 `sourceUrl`, `credit`, `rightsNote`에 별도로 기록한다.
+
+### Naver review intake
+
+Naver importer는 공개 콘텐츠를 직접 갱신하지 않는다. 기존 18개 review가 있는
+`src/content/reviews/`를 기본 출력으로 사용하지 않으며, 매번 존재하지 않는 local
+intake directory를 명시해야 한다.
+
+```bash
+node scripts/import-naver-reviews.mjs \
+  --output docs/_inbox/naver-reviews-2026-08-13
+```
+
+생성된 MDX는 원문 title, body, 날짜, Naver `sourceUrl`을 보존하지만 항상
+`status: "review"`, `draft: true`다. 발견한 cover URL은 public frontmatter에
+쓰지 않고 같은 intake directory의 `naver-review-intake.json`에만 조사 단서로
+남긴다. 출력 경로는 `src/`와 `public/` 아래일 수 없고, 이미 존재하는 directory는
+덮어쓰지 않는다.
+
+intake를 실제 review로 옮기기 전에는 서지와 판본을 확인하고 다음 중 하나를
+선택한다.
+
+- 검증된 local cover와 완전한 `media.yml`이 있으면 `coverState: "verified"`와
+  `coverMedia: "cover"`를 쓴다.
+- 판본과 source-identical image를 검증하지 못하면 `coverState: "hold"`만 쓴다.
+- 본문에서 뽑은 `verdict`는 작성자 승인을 받기 전에는 frontmatter로 옮기지 않는다.
+
+기존 18개 Naver review 마이그레이션에서는 17개 표지를 판본 식별용 local
+asset으로 옮겼고, 재배포 권한이 별도로 확인되지 않았다는 provenance warning을
+보존했다. `devotion-of-suspect-x`는 확인한 동일 판본 이미지가 repository의
+300px 최소 폭을 충족하지 않아 `coverState: "hold"`로 남는다. 18개 verdict는
+원문 첫 판단 문장과 동일한 후보를 작성자가 명시적으로 승인한 뒤에만 적용했다.
+`doing-good-better`가 올바른 canonical slug이며, 이전
+`/reviews/the-life-you-can-save/` 경로는 adapter 없는 static build에서 새 경로를
+가리키는 meta-refresh HTML을 생성한다. 이 동작을 HTTP 301로 설명하지 않는다.
 
 ## How to Add An Idea
 

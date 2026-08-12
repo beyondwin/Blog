@@ -1,8 +1,7 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { lstat, mkdir, realpath, writeFile } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 const blogId = 'moveattack';
-const outputDirectory = join(process.cwd(), 'src', 'content', 'reviews');
 
 const reviews = [
   ['224317941520', '그들의 생각을 바꾸는 방법', '2026-06-16'],
@@ -143,22 +142,105 @@ async function fetchReview(logNo) {
   throw lastError;
 }
 
+function parseArgs(argv) {
+  let outputDirectory = '';
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg !== '--output') throw new Error(`unknown argument: ${arg}`);
+    const value = argv[index + 1];
+    if (!value || value.startsWith('--')) throw new Error('--output requires a value');
+    if (outputDirectory) throw new Error('--output may only be provided once');
+    outputDirectory = value;
+    index += 1;
+  }
+
+  if (!outputDirectory) {
+    throw new Error('Usage: node scripts/import-naver-reviews.mjs --output <new-local-intake-directory>');
+  }
+
+  return { outputDirectory };
+}
+
+function isInside(parent, target) {
+  const pathFromParent = relative(parent, target);
+  return pathFromParent === '' || (!pathFromParent.startsWith('..') && !isAbsolute(pathFromParent));
+}
+
+async function canonicalizeFuturePath(path) {
+  let existingAncestor = resolve(path);
+  const missingSegments = [];
+
+  while (true) {
+    try {
+      const canonicalAncestor = await realpath(existingAncestor);
+      return resolve(canonicalAncestor, ...missingSegments.reverse());
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      const parent = dirname(existingAncestor);
+      if (parent === existingAncestor) throw error;
+      missingSegments.push(basename(existingAncestor));
+      existingAncestor = parent;
+    }
+  }
+}
+
+async function assertNewLocalIntakeDirectory(outputDirectory) {
+  const workingDirectory = await realpath(process.cwd());
+  const absoluteOutput = await canonicalizeFuturePath(resolve(process.cwd(), outputDirectory));
+  const publicRoots = [resolve(workingDirectory, 'src'), resolve(workingDirectory, 'public')];
+  if (publicRoots.some((root) => isInside(root, absoluteOutput))) {
+    throw new Error('--output must be a local intake directory outside src/ and public/');
+  }
+
+  try {
+    await lstat(absoluteOutput);
+    throw new Error(`output directory already exists: ${absoluteOutput}`);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+
+  return absoluteOutput;
+}
+
 async function main() {
-  await mkdir(outputDirectory, { recursive: true });
+  const args = parseArgs(process.argv.slice(2));
+  const outputDirectory = await assertNewLocalIntakeDirectory(args.outputDirectory);
+  const records = [];
 
   for (const [logNo, title, date] of reviews) {
     const html = await fetchReview(logNo);
     const body = extractParagraphs(html);
-    const coverImage = extractCoverImage(html);
+    const discoveredCoverUrl = extractCoverImage(html);
     const sourceUrl = `https://blog.naver.com/${blogId}/${logNo}`;
     const description = buildDescription(body, title);
     const slug = slugByLogNo[logNo] ?? `naver-review-${logNo}`;
-    const filePath = join(outputDirectory, `${slug}.mdx`);
-    const content = `---\ntitle: ${yamlString(title)}\ndescription: ${yamlString(description)}\nitemType: "book"\nitemTitle: ${yamlString(title)}\ncompletedAt: "${date}"\ncreatedAt: "${date}"\nupdatedAt: "${date}"\ntags: ["book", "review", "naver-archive"]\nstatus: "published"\nsourceUrl: "${sourceUrl}"\ncoverImage: "${coverImage}"\n---\n\n${markdownEscape(body || `${title}을 읽고 남긴 서평입니다.`)}\n`;
+    const content = `---\ntitle: ${yamlString(title)}\ndescription: ${yamlString(description)}\nitemType: "book"\nitemTitle: ${yamlString(title)}\ncompletedAt: "${date}"\ncreatedAt: "${date}"\nupdatedAt: "${date}"\ntags: ["book", "review", "naver-archive"]\nstatus: "review"\ndraft: true\nsourceUrl: "${sourceUrl}"\n---\n\n${markdownEscape(body || `${title}을 읽고 남긴 서평입니다.`)}\n`;
+    records.push({ slug, sourceUrl, discoveredCoverUrl, content });
+  }
 
-    await writeFile(filePath, content);
+  try {
+    await mkdir(dirname(outputDirectory), { recursive: true });
+    await mkdir(outputDirectory);
+  } catch (error) {
+    if (error?.code === 'EEXIST') throw new Error(`output directory already exists: ${outputDirectory}`);
+    throw error;
+  }
+
+  for (const record of records) {
+    const filePath = join(outputDirectory, `${record.slug}.mdx`);
+    await writeFile(filePath, record.content, { flag: 'wx' });
     console.log(`Wrote ${filePath}`);
   }
+
+  const reportPath = join(outputDirectory, 'naver-review-intake.json');
+  const report = records.map(({ slug, sourceUrl, discoveredCoverUrl }) => ({
+    slug,
+    sourceUrl,
+    discoveredCoverUrl,
+  }));
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, { flag: 'wx' });
+  console.log(`Wrote ${reportPath}`);
 }
 
 await main();
