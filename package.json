@@ -12,6 +12,7 @@
     "preview": "astro preview",
     "test": "vitest run",
     "sync": "node scripts/sync.mjs",
+    "content:new": "node scripts/create-content-entry.mjs",
     "article:new": "node scripts/create-article-packet.mjs",
     "article:quality": "node scripts/article-quality.mjs",
     "memory:seed": "node scripts/memory/seed.mjs",

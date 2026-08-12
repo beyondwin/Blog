@@ -1,6 +1,10 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  emptyMediaManifest,
+  validateContentDate,
+  validateContentSlug,
+  writeFilesExclusively,
+} from './create-content-entry.mjs';
 
 const socialHosts = new Set([
   'threads.com',
@@ -51,7 +55,7 @@ function yamlString(value) {
 function normalizeInput(input) {
   const date = input.date ?? new Intl.DateTimeFormat('en-CA').format(new Date());
   const title = input.title.trim();
-  const slug = input.slug?.trim() || slugifyTitle(title);
+  const slug = validateContentSlug(input.slug?.trim() || slugifyTitle(title));
   const classified = input.inputType
     ? { type: input.inputType, value: input.input }
     : classifyInput(input.input ?? title);
@@ -61,7 +65,7 @@ function normalizeInput(input) {
     slug,
     input: classified.value,
     inputType: classified.type,
-    date,
+    date: validateContentDate(date),
   };
 }
 
@@ -185,23 +189,20 @@ export async function createArticleFactoryFiles(input, options = {}) {
   const normalized = normalizeInput(input);
   const packetPath = `docs/notes/article-factory/${normalized.slug}.md`;
   const articlePath = `src/content/articles/${normalized.slug}.mdx`;
+  const manifestPath = `src/assets/content/articles/${normalized.slug}/media.yml`;
   const files = [
     { path: packetPath, content: buildPacketMarkdown(normalized) },
     { path: articlePath, content: buildArticleMarkdown(normalized) },
+    { path: manifestPath, content: emptyMediaManifest },
   ];
 
-  if (!options.dryRun) {
-    for (const file of files) {
-      const absolutePath = join(root, file.path);
-      await mkdir(dirname(absolutePath), { recursive: true });
-      await writeFile(absolutePath, file.content);
-    }
-  }
+  await writeFilesExclusively(files, { root, dryRun: options.dryRun });
 
   return {
     slug: normalized.slug,
     packetPath,
     articlePath,
+    manifestPath,
     files,
   };
 }
@@ -247,6 +248,7 @@ async function main() {
 
   console.log(`Article packet: ${result.packetPath}`);
   console.log(`Article draft: ${result.articlePath}`);
+  console.log(`Media manifest: ${result.manifestPath}`);
 
   if (args.dryRun) {
     for (const file of result.files) {
