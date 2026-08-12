@@ -218,6 +218,14 @@ visitedAt: "2026-06-30"
 ```
 
 `visitedAt`이 있으면 travel note의 표시 날짜로 우선 사용된다.
+`status: "published"`로 바꾸기 전에는 `privacyReviewed: true`와 검증된 local
+asset을 가리키는 `leadMedia`가 모두 필요하다. review/draft scaffold에는 이 공개
+전용 필드를 요구하지 않는다.
+
+모든 collection에서 `updatedAt`은 `createdAt`보다 빠를 수 없다. published review는
+`itemAuthor`, 유효한 `isbn13`, `publisher`, 승인된 `verdict`, `coverState`가 필요하다.
+`coverState: "verified"`는 `coverMedia`를 요구하고 `coverState: "hold"`는 이를
+금지한다. 이 조건은 `npm run validate`의 content gate에서 검사된다.
 
 ## How to Create A Source-Grounded Article Draft
 
@@ -407,4 +415,10 @@ npm run build
 : 출력의 `excluded={...}`를 본다. 흔한 이유는 `private`, `notAccepted`, `notPublicSurface`, `missingSource`, `invalidSource`, `unsupportedSchema`다.
 
 Astro route가 보이지 않는다
-: 파일이 올바른 collection 폴더에 있는지, `status: "published"`와 `draft: false`가 모두 맞는지, 파일명이 route slug와 맞는지 확인한다. 개발 서버의 content state가 꼬였으면 서버를 재시작한다. 현재 detail routes는 legacy `!draft` filter만 사용하므로 `review`/`archived`가 detail route에 남을 수 있다. 이 불일치는 별도 route/design 구현에서 `published && !draft`로 고쳐야 한다.
+: 파일이 올바른 collection 폴더에 있는지, `status: "published"`와 `draft: false`가 모두 맞는지, 파일명이 route slug와 맞는지 확인한다. 개발 서버의 content state가 꼬였으면 서버를 재시작한다. list와 detail route는 모두 shared `published && !draft` selector를 사용한다.
+
+실제 article source 16개 중 현재 공개된 것은 12개다.
+`agents-md-vs-agent-skills-evidence`, `aws-static-frontend-serverless-bff`,
+`shared-ai-conversation-evidence-boundaries`, `uncle-bob-ai-code-review-evidence`
+4개는 publication authorization이 없어 의도적으로 `status: review`를 유지한다.
+검증 또는 migration 위험 해소 요청만으로 이 상태를 바꾸지 않는다.

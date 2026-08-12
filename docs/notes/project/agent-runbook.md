@@ -84,12 +84,21 @@ public. A scaffold is intentionally `review` and draft. Keep each asset and
 its `media.yml` under `src/assets/content/<collection>/<slug>/`; the manifest
 records asset metadata and provenance, not a UI-specific path.
 
-The separate design/route task consumes `src/lib/content/viewModels.ts` and
+The design/route layer consumes `src/lib/content/viewModels.ts` and
 already-resolved `ResolvedMedia` from `src/lib/content/mediaRegistry.ts`.
 Publication selection belongs to `src/lib/content/publication.ts`. Do not
-repeat manifest/path resolution in pages, layouts, or components. That task
-must also replace the current detail-route `!draft`-only filter with
-`published && !draft`; this foundation does not modify design-owned routes.
+repeat manifest/path resolution in pages, layouts, or components. Public
+list/detail/home/search/tag surfaces now consistently require
+`published && !draft`; `scripts/publication-surfaces.test.mjs` guards this
+route-level contract.
+
+The corpus preserves 16 real article sources, but only 12 are currently
+public. These four remain `status: review` pending explicit publication
+authorization: `agents-md-vs-agent-skills-evidence`,
+`aws-static-frontend-serverless-bff`,
+`shared-ai-conversation-evidence-boundaries`, and
+`uncle-bob-ai-code-review-evidence`. Risk-resolution work is not publication
+authorization.
 
 `npm run validate` includes the strict media gate
 `npm run media:validate -- --strict`. Naver review intake must use a new local
@@ -141,7 +150,7 @@ Do not catalog generated `docs/wiki/` pages as primary sources.
 - Editing `/memory` behavior in `src/pages/memory.astro` before checking the focused module under `src/lib/memory/`.
 - Adding a curated docs note without updating `catalog.yml`, `topics.yml` when needed, and `docs/INDEX.md`.
 - Changing a content lane without updating schema, routes, helpers, validation, navigation, and docs together.
-- Assuming current detail routes enforce publication state: they presently enforce only `!draft` and need the separate route/design correction.
+- Treating a request to resolve migration or validation risk as permission to publish a `review` entry.
 - Editing broad root docs when a small task-specific docs link would be enough.
 - Starting work in a scoped subtree without reading its closest `AGENTS.md`.
 - Repeating a long workflow manually instead of using the matching project skill.

@@ -305,4 +305,31 @@ describe('site content contract', () => {
 
     expect(source).toContain('<script is:inline src="/scripts/memory-workbench.js" defer></script>');
   });
+
+  it('progressively enhances all public memory details instead of shipping one wrong default', async () => {
+    const page = await readFile(join(root, 'src', 'pages', 'memory.astro'), 'utf8');
+    const script = await readFile(join(root, 'public', 'scripts', 'memory-workbench.js'), 'utf8');
+
+    expect(page).not.toContain('is-default');
+    expect(page).toContain('<noscript>');
+    expect(page).toContain('data-memory-detail');
+    expect(script).toContain('memory-workbench-state.mjs');
+    expect(script).toContain('applyMemorySelection');
+  });
+
+  it('ships search as a visible full public index before JavaScript filters it', async () => {
+    const page = await readFile(join(root, 'src', 'pages', 'search', 'index.astro'), 'utf8');
+
+    expect(page).not.toContain('Astro.url.searchParams');
+    expect(page).not.toContain('hidden={!initialMatchIds.has(record.id)}');
+    expect(page).toContain('공개 색인');
+    expect(page).toContain('matchLiterarySearchFields');
+  });
+
+  it('keeps a visible three-pixel keyboard focus ring on the mobile search input', async () => {
+    const css = await readFile(join(root, 'src', 'styles', 'search-literary.css'), 'utf8');
+
+    expect(css).not.toMatch(/search-box input:focus\s*\{[^}]*outline:\s*0/);
+    expect(css).toMatch(/search-box input:focus-visible\s*\{[^}]*3px/);
+  });
 });

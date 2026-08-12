@@ -43,6 +43,9 @@ const entriesByCollection = Object.fromEntries(await Promise.all(
 ));
 const allEntries = contentCollections.flatMap((collection) => entriesByCollection[collection]);
 const realArticles = entriesByCollection.articles.filter((entry) => entry.data.draft !== true);
+const publicArticles = entriesByCollection.articles.filter((entry) => isPublicEntry({
+  data: { ...entry.data, draft: entry.data.draft ?? false },
+}));
 const realReviews = entriesByCollection.reviews.filter((entry) => entry.data.draft !== true);
 const exampleEntries = allEntries.filter((entry) => entry.slug.startsWith('example-'));
 const publicEntries = allEntries.filter((entry) => isPublicEntry({
@@ -65,6 +68,22 @@ describe('existing content migration contract', () => {
     expect(publicMemory.thoughts).toHaveLength(7);
     expect(exampleEntries).toHaveLength(5);
     expect(exampleEntries.every((entry) => entry.data.draft === true)).toBe(true);
+  });
+
+  it('preserves four real articles in review until publication is explicitly authorized', () => {
+    const pending = realArticles
+      .filter((entry) => entry.data.status === 'review')
+      .map((entry) => entry.slug)
+      .sort();
+
+    expect(publicArticles).toHaveLength(12);
+    expect(pending).toEqual([
+      'agents-md-vs-agent-skills-evidence',
+      'aws-static-frontend-serverless-bff',
+      'shared-ai-conversation-evidence-boundaries',
+      'uncle-bob-ai-code-review-evidence',
+    ]);
+    expect(realArticles).toHaveLength(publicArticles.length + pending.length);
   });
 
   it('requires structured review bibliography', () => {
