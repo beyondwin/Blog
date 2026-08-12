@@ -87,7 +87,8 @@ function normalizeInput(input) {
   const title = typeof input.title === 'string' ? input.title.trim() : '';
   if (!title) throw new Error('title is required');
 
-  const date = validateContentDate(input.date ?? today());
+  const requestedDate = typeof input.date === 'string' ? input.date.trim() : input.date;
+  const date = validateContentDate(requestedDate || today());
   const isbn = validateIsbn13(input.isbn);
   const location = typeof input.location === 'string' ? input.location.trim() : '';
   if (input.kind === 'scene' && !location) throw new Error('location is required for scene');
@@ -235,7 +236,8 @@ function parseArgs(argv) {
       args.dryRun = true;
     } else if (valueFlags.has(arg)) {
       const value = argv[index + 1];
-      if (!value || value.startsWith('--')) throw new Error(`${arg} requires a value`);
+      if (value === undefined || value.startsWith('--')) throw new Error(`${arg} requires a value`);
+      if (!value && arg !== '--date') throw new Error(`${arg} requires a value`);
       args[valueFlags.get(arg)] = value;
       index += 1;
     } else if (!arg.startsWith('--') && !args.kind) {
