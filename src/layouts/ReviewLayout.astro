@@ -1,36 +1,96 @@
 ---
 import type { CollectionEntry } from 'astro:content';
-import ContentMemoryLinks from '../components/ContentMemoryLinks.astro';
 import BaseLayout from './BaseLayout.astro';
-import { formatDate, getEntryDate } from '../lib/content';
-import type { ContentMemoryLinks as ContentMemoryLinksModel } from '../lib/memoryData';
+import {
+  formatLiteraryDate,
+  getOneSentenceJudgment,
+} from '../lib/bookshelfPresentation';
+import '../styles/bookshelf-literary.css';
 
-interface Props {
-  entry: CollectionEntry<'reviews'>;
-  relatedMemory?: ContentMemoryLinksModel;
+type ReviewEntry = CollectionEntry<'reviews'>;
+
+interface RelatedBook {
+  entry: ReviewEntry;
+  relationshipReason: string;
 }
 
-const { entry, relatedMemory } = Astro.props;
-const date = getEntryDate(entry);
+interface Props {
+  entry: ReviewEntry;
+  relatedBooks?: RelatedBook[];
+}
+
+const { entry, relatedBooks = [] } = Astro.props;
+const date = entry.data.completedAt ?? entry.data.createdAt;
+const judgment = getOneSentenceJudgment(entry.data.description);
 ---
 
-<BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
-  <div class="shell article-shell">
-    <article class="article-body">
-      <div class="article-kicker">
-        <span>Review</span>
-        <span>{formatDate(date)}</span>
-      </div>
-      <h1>{entry.data.title}</h1>
-      {entry.data.coverImage && (
-        <figure class="review-cover">
-          <img src={entry.data.coverImage} alt={`${entry.data.itemTitle} 도서 표지`} loading="eager" decoding="async" />
+<BaseLayout
+  title={`${entry.data.title} · beyondwin`}
+  description={judgment}
+  pageClass="literary-page literary-review"
+  headerVariant="literary"
+>
+  <article class="shell review-literary">
+    <aside class="review-literary__book" aria-label="책 정보">
+      {entry.data.coverImage ? (
+        <figure>
+          <img
+            src={entry.data.coverImage}
+            alt={`${entry.data.itemTitle} 도서 표지`}
+            loading="eager"
+            decoding="async"
+          />
         </figure>
+      ) : (
+        <div class="review-literary__cover-fallback" aria-label="표지 확인 중">
+          <span>{entry.data.itemTitle}</span>
+          <b>표지 확인 중</b>
+        </div>
       )}
-      <div class="prose">
+
+      <dl>
+        {entry.data.itemAuthor && <><dt>저자</dt><dd>{entry.data.itemAuthor}</dd></>}
+        <div class="review-literary__completed">
+          <dt>완독</dt>
+          <dd><time datetime={date.toISOString()}>{formatLiteraryDate(date)}</time></dd>
+        </div>
+      </dl>
+    </aside>
+
+    <div class="review-literary__reading">
+      <header>
+        <h1>{entry.data.itemTitle}</h1>
+        {entry.data.itemAuthor && <p>{entry.data.itemAuthor}</p>}
+        <time class="review-literary__mobile-date" datetime={date.toISOString()}>{formatLiteraryDate(date)}</time>
+        <span class="literary-registration" aria-hidden="true"></span>
+        <blockquote>{judgment}</blockquote>
+      </header>
+
+      <div class="review-literary__prose prose">
         <slot />
       </div>
-      <ContentMemoryLinks memory={relatedMemory} />
-    </article>
-  </div>
+    </div>
+
+    {relatedBooks.length > 0 && (
+      <aside class="review-literary__related" aria-labelledby="related-books-title">
+        <h2 id="related-books-title">함께 읽으면 좋은 책</h2>
+        <ol>
+          {relatedBooks.slice(0, 3).map(({ entry: related, relationshipReason }) => (
+            <li>
+              <a href={`/reviews/${related.id}/`}>
+                <strong>{related.data.itemTitle}</strong>
+                <span>{relationshipReason}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </aside>
+    )}
+  </article>
+
+  <footer class="shell literary-footer">
+    <span>© beyondwin</span>
+    <p>이 사이트는 한 사람의 느린 기록으로 만들어집니다.</p>
+    <nav aria-label="보조 메뉴"><a href="/reviews/">책장</a><a href="/tags/">색인</a></nav>
+  </footer>
 </BaseLayout>

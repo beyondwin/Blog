@@ -10,6 +10,15 @@ export interface MemoryDetailSource {
   unresolved?: boolean;
 }
 
+export interface MemoryDirectConnection {
+  type: string;
+  direction: 'inbound' | 'outbound';
+  thought: {
+    id: string;
+    title: string;
+  };
+}
+
 export interface MemoryPageDetail {
   id: string;
   kind: 'thought' | 'topic' | 'source';
@@ -22,6 +31,7 @@ export interface MemoryPageDetail {
   theses?: string[];
   sources?: MemoryDetailSource[];
   relationships?: string[];
+  directConnections?: MemoryDirectConnection[];
   href?: string | null;
   routeable?: boolean;
   sourceKind?: string;
@@ -76,6 +86,24 @@ export function buildMemoryPagePayload(memory: MemoryPublicData): MemoryPagePayl
       relationships: (lookup.edgesByThoughtSlug.get(thought.slug) ?? [])
         .filter((edge) => edge.type !== 'topic-tag')
         .map((edge) => relationshipLabel(edge, thoughtLabels, topicLabels)),
+      directConnections: (lookup.edgesByThoughtSlug.get(thought.slug) ?? [])
+        .flatMap((edge) => {
+          const connectedSlug = edge.from === thought.slug ? edge.to : edge.from;
+          const connectedThought = lookup.thoughtsBySlug.get(connectedSlug);
+
+          if (!connectedThought) {
+            return [];
+          }
+
+          return [{
+            type: edge.type,
+            direction: edge.from === thought.slug ? 'outbound' : 'inbound',
+            thought: {
+              id: prefixedThoughtId(connectedThought.slug),
+              title: connectedThought.claimKo,
+            },
+          } satisfies MemoryDirectConnection];
+        }),
     },
   ])) as Record<string, MemoryPageDetail>;
   const topicDetails = Object.fromEntries(memory.topics.map((topic) => [
@@ -151,4 +179,41 @@ export function getMemoryGraphEdgeCoordinates(
     x2: to?.position.x ?? 50,
     y2: to?.position.y ?? 50,
   };
+}
+
+const literaryMemoryMapPositions = [
+  { x: 44, y: 16 },
+  { x: 16, y: 38 },
+  { x: 68, y: 38 },
+  { x: 42, y: 58 },
+  { x: 14, y: 76 },
+  { x: 68, y: 76 },
+  { x: 45, y: 94 },
+] as const;
+
+const literaryMemoryThoughtOrder = [
+  'agent-harnesses-are-operating-systems',
+  'agent-workflows-need-review-gates',
+  'context-quality-is-routing-problem',
+  'local-agent-products-are-work-shells',
+  'ai-design-tools-need-judgment-loops',
+  'memory-needs-retrieval-not-decoration',
+  'personal-sites-should-show-records-first',
+] as const;
+
+export function getLiteraryMemoryMapPosition(index: number): { x: number; y: number } {
+  return literaryMemoryMapPositions[index] ?? { x: 50, y: 50 };
+}
+
+export function sortLiteraryMemoryThoughts<T extends { slug: string }>(thoughts: T[]): T[] {
+  const rank = new Map<string, number>(literaryMemoryThoughtOrder.map((slug, index) => [slug, index]));
+
+  return thoughts
+    .map((thought, index) => ({ thought, index }))
+    .sort((a, b) => {
+      const aRank = rank.get(a.thought.slug) ?? literaryMemoryThoughtOrder.length + a.index;
+      const bRank = rank.get(b.thought.slug) ?? literaryMemoryThoughtOrder.length + b.index;
+      return aRank - bRank;
+    })
+    .map(({ thought }) => thought);
 }

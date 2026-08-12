@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildMemoryPagePayload,
   getMemoryGraphEdgeCoordinates,
+  getLiteraryMemoryMapPosition,
   getMemorySourceCountLabel,
+  sortLiteraryMemoryThoughts,
 } from './pagePayload.ts';
 import { makeMemory } from './testFixture.mjs';
 
@@ -45,6 +47,28 @@ describe('memory page payload', () => {
     });
   });
 
+  it('exposes only direct thought-to-thought connections for the literary archive', () => {
+    const payload = buildMemoryPagePayload(makeMemory());
+
+    expect(payload.details['thought:routing-problem'].directConnections).toEqual([
+      {
+        type: 'supports',
+        direction: 'outbound',
+        thought: {
+          id: 'thought:review-gates',
+          title: '에이전트 워크플로우에는 리뷰 게이트가 필요하다.',
+        },
+      },
+    ]);
+    expect(payload.details['thought:review-gates'].directConnections).toEqual([
+      expect.objectContaining({
+        type: 'supports',
+        direction: 'inbound',
+        thought: expect.objectContaining({ id: 'thought:routing-problem' }),
+      }),
+    ]);
+  });
+
   it('computes graph edge coordinates from graph node positions', () => {
     const payload = buildMemoryPagePayload(makeMemory());
     const edge = payload.graph.edges.find((item) => item.type === 'supports');
@@ -55,6 +79,34 @@ describe('memory page payload', () => {
       x2: 30,
       y2: 40,
     });
+  });
+
+  it('places the seven public thoughts in the approved printed-map sequence', () => {
+    expect(Array.from({ length: 7 }, (_, index) => getLiteraryMemoryMapPosition(index))).toEqual([
+      { x: 44, y: 16 },
+      { x: 16, y: 38 },
+      { x: 68, y: 38 },
+      { x: 42, y: 58 },
+      { x: 14, y: 76 },
+      { x: 68, y: 76 },
+      { x: 45, y: 94 },
+    ]);
+  });
+
+  it('uses the approved editorial sentence order without dropping unknown thoughts', () => {
+    const thoughts = [
+      { slug: 'ai-design-tools-need-judgment-loops' },
+      { slug: 'unknown-future-thought' },
+      { slug: 'local-agent-products-are-work-shells' },
+      { slug: 'context-quality-is-routing-problem' },
+    ];
+
+    expect(sortLiteraryMemoryThoughts(thoughts).map((thought) => thought.slug)).toEqual([
+      'context-quality-is-routing-problem',
+      'local-agent-products-are-work-shells',
+      'ai-design-tools-need-judgment-loops',
+      'unknown-future-thought',
+    ]);
   });
 
   it('formats source count labels', () => {

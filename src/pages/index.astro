@@ -1,152 +1,179 @@
 ---
-import ContentCard from '../components/ContentCard.astro';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import {
-  collectionMeta,
-  formatDate,
-  getAllContent,
-  getEntryDate,
-  getEntryHref,
-  getHomeSections,
-} from '../lib/content';
+import { getEntryDate, getEntryHref } from '../lib/content';
+import { loadHomePresentation } from '../lib/homeData';
+import { selectHomeMemories } from '../lib/homePresentation';
 import { loadPublicMemoryData } from '../lib/memoryData';
 
-const entries = await getAllContent();
-const sections = await getHomeSections();
 const memory = loadPublicMemoryData();
-const editorialPool = [...sections.articles, ...sections.analysis].sort((a, b) => {
-  return getEntryDate(b).getTime() - getEntryDate(a).getTime();
-});
-const featured = editorialPool[0] ?? entries[0];
-const leadStack = editorialPool.slice(featured ? 1 : 0, featured ? 4 : 5);
-const latest = entries
-  .filter((entry) => entry.id !== featured?.id || entry.collection !== featured?.collection)
-  .slice(0, 8);
-const articleTags = Array.from(
-  new Set(editorialPool.flatMap((entry) => entry.data.tags)),
-).slice(0, 12);
-const homeCollections = ['articles', 'analysis', 'reviews', 'ideas', 'memory'] as const;
-const sectionLabels = {
-  articles: '개발',
-  analysis: '분석',
-  reviews: '독서',
-  ideas: '아이디어',
-  memory: '메모리',
-};
-const homeLanes = homeCollections.map((collection) => {
-  if (collection === 'memory') {
-    return {
-      href: '/memory/',
-      label: sectionLabels.memory,
-      count: memory.counts.thoughts,
-      description: '공개 가능한 생각, 근거, 주제를 다시 찾기 위한 메모리입니다.',
-    };
-  }
+const {
+  featuredReview,
+  featuredArticle,
+  featuredReading,
+  openRecords,
+  books,
+} = await loadHomePresentation();
+const connectedMemories = selectHomeMemories(memory.thoughts);
 
-  return {
-    href: collectionMeta[collection].href,
-    label: sectionLabels[collection],
-    count: sections[collection].length,
-    description: collectionMeta[collection].description,
-  };
-});
+function numericDate(date: Date): string {
+  return date.toISOString().slice(0, 10).replaceAll('-', '.');
+}
+
+function noteLabel(memoryType: string): string {
+  return memoryType === 'reflective' ? 'READING NOTE' : 'THOUGHT NOTE';
+}
 ---
 
-<BaseLayout>
-  <section class="shell home-hero">
-    <div class="home-hero__copy">
-      <p class="site-label">Articles / Analysis / Reusable judgement</p>
-      <h1>읽고, 실행하고, 다시 판단할 수 있게 남깁니다.</h1>
-      <p>
-        에이전트 워크플로우, 개발 도구, 제품 구조를 직접 확인한 뒤
-        나중에 같은 결정을 내릴 때 꺼내 쓸 수 있는 기술 글로 정리합니다.
-      </p>
-      <div class="home-hero__actions" aria-label="Primary actions">
-        <a href="/articles/">Articles</a>
-        <a href="/analysis/">Analysis</a>
-      </div>
-    </div>
-    <aside class="home-hero__panel" aria-label="Archive summary">
-      <strong>현재 색인</strong>
-      <span><em>Articles</em><b>{sections.articles.length}</b></span>
-      <span><em>Analysis</em><b>{sections.analysis.length}</b></span>
-      <span><em>All notes</em><b>{entries.length}</b></span>
-      <span><em>Memory</em><b><a href="/memory/">Map</a></b></span>
-    </aside>
-  </section>
+<BaseLayout
+  pageClass="literary-home"
+  headerVariant="literary"
+  description="책과 기술 사이에서 오래 남은 판단을 기록하는 beyondwin 개인 문학 아카이브."
+>
+  <div class="literary-sheet">
+    <section class="home-opening" aria-labelledby="home-statement">
+      <header class="editor-note">
+        <h1 id="home-statement"><span>책과 기술 사이에서</span><span>오래 남은 것들.</span></h1>
+        <span class="registration-rule" aria-hidden="true"></span>
+        <p class="editor-note__label">Editor’s Note</p>
+        <p class="editor-note__copy">읽고 실행한 뒤에도<br />다시 꺼내 볼 수 있는 판단을<br />기록합니다.</p>
+        <p class="editor-signature">— beyondwin</p>
+      </header>
 
-  <section class="shell editorial-grid" aria-label="Featured writing">
-    {featured ? (
-      <a class="featured-entry" href={getEntryHref(featured)}>
-        <span class="featured-entry__label">{collectionMeta[featured.collection].navLabel} · Featured</span>
-        <h2>{featured.data.title}</h2>
-        <p>{featured.data.description}</p>
-        <small>{formatDate(getEntryDate(featured))}</small>
-      </a>
-    ) : (
-      <div class="featured-entry">
-        <span class="featured-entry__label">Latest</span>
-        <h2>아직 공개 글이 없습니다.</h2>
-        <p>MDX 파일을 추가하면 이 영역에 최신 글이 표시됩니다.</p>
-      </div>
-    )}
-
-    <div class="latest-list latest-list--lead">
-      <div class="section-heading">
-        <h2>Start here</h2>
-        <a href="/articles/">전체 Articles</a>
-      </div>
-      {leadStack.length > 0 ? (
-        <ol>
-          {leadStack.map((entry) => (
-            <li>
-              <a href={getEntryHref(entry)}>
-                <span>{collectionMeta[entry.collection].navLabel}</span>
-                <strong>{entry.data.title}</strong>
-                <time>{formatDate(getEntryDate(entry))}</time>
-              </a>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p class="muted">새 글이 추가되면 최신 목록이 채워집니다.</p>
+      {featuredReview && (
+        <article class="lead-record lead-record--review">
+          <p class="record-kicker record-kicker--reading">READING NOTE</p>
+          <div class="lead-record__review-grid">
+            {featuredReview.data.coverImage && (
+              <img
+                class="lead-cover lead-cover--tall"
+                src={featuredReview.data.coverImage}
+                alt={`${featuredReview.data.itemTitle} 표지`}
+                width="240"
+                height="336"
+                loading="eager"
+              />
+            )}
+            <div class="lead-record__copy">
+              <h2>{featuredReview.data.itemTitle}</h2>
+              <p>{featuredReview.data.description}</p>
+              <p class="record-date"><span>완독</span> {numericDate(getEntryDate(featuredReview))}</p>
+              <a class="record-link record-link--reading" href={getEntryHref(featuredReview)}>읽기 기록 보기 <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </article>
       )}
-    </div>
-  </section>
 
-  <section class="shell lane-strip" aria-label="Writing categories">
-    {homeLanes.map((lane) => (
-      <a class="lane-link" href={lane.href}>
-        <span>{lane.label}</span>
-        <strong>{lane.count}</strong>
-        <p>{lane.description}</p>
-      </a>
-    ))}
-  </section>
+      {featuredArticle && (
+        <article class="lead-record lead-record--technical">
+          <p class="record-kicker record-kicker--technical">TECHNICAL NOTE</p>
+          <div class="lead-record__copy">
+            <h2>{featuredArticle.data.title}</h2>
+            <p>{featuredArticle.data.description}</p>
+            <p class="record-date"><span>업데이트</span> {numericDate(getEntryDate(featuredArticle))}</p>
+            <a class="record-link record-link--technical" href={getEntryHref(featuredArticle)}>기술 문서 읽기 <span aria-hidden="true">→</span></a>
+          </div>
+        </article>
+      )}
 
-  <section class="shell archive-section">
-    <div class="section-heading">
-      <div>
-        <h2>Latest stories</h2>
-        <p>최근 글을 먼저 훑고, 태그로 다시 좁힙니다.</p>
+      {featuredReading && (
+        <article class="lead-record lead-record--reading">
+          <p class="record-kicker record-kicker--reading">READING NOTE</p>
+          <div class="lead-record__review-grid">
+            {featuredReading.data.coverImage && (
+              <img
+                class="lead-cover"
+                src={featuredReading.data.coverImage}
+                alt={`${featuredReading.data.itemTitle} 표지`}
+                width="220"
+                height="308"
+                loading="eager"
+              />
+            )}
+            <div class="lead-record__copy">
+              <h2>{featuredReading.data.itemTitle}</h2>
+              <p>{featuredReading.data.description}</p>
+              <p class="record-date"><span>완독</span> {numericDate(getEntryDate(featuredReading))}</p>
+              <a class="record-link record-link--reading" href={getEntryHref(featuredReading)}>읽기 기록 보기 <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+        </article>
+      )}
+    </section>
+
+    <section class="home-ledger home-ledger--open" aria-labelledby="open-records-title">
+      <div class="home-section-heading">
+        <h2 id="open-records-title">지금 펼쳐 둔 기록</h2>
+        <span class="registration-rule" aria-hidden="true"></span>
       </div>
-      <a href="/tags/">태그 색인</a>
-    </div>
-    {articleTags.length > 0 && (
-      <nav class="topic-rack" aria-label="Article topics">
-        {articleTags.map((tag) => (
-          <a href={`/tags/${encodeURIComponent(tag)}/`}>{tag}</a>
+      <div class="open-record-list">
+        {openRecords.map((entry) => (
+          <a href={getEntryHref(entry)} class="open-record-row">
+            <span class="open-record-row__title">{entry.data.title}</span>
+            <time datetime={getEntryDate(entry).toISOString()}>{numericDate(getEntryDate(entry))}</time>
+            <span class="open-record-row__type">기술 문서</span>
+          </a>
         ))}
+        {connectedMemories[0] && (
+          <a href={`/memory/?thought=${connectedMemories[0].slug}`} class="open-record-row">
+            <span class="open-record-row__title">{connectedMemories[0].claimKo}</span>
+            <time aria-hidden="true"></time>
+            <span class="open-record-row__type">공개 기억</span>
+          </a>
+        )}
+      </div>
+    </section>
+
+    <section class="home-books" aria-labelledby="books-title">
+      <div class="home-section-heading home-section-heading--books">
+        <h2 id="books-title">읽은 책</h2>
+        <span class="registration-rule" aria-hidden="true"></span>
+        <nav class="shelf-index" aria-label="책장 페이지">
+          <span>1 / {Math.max(books.length, 1)}</span>
+          <a href="/reviews/" aria-label="이전 책">‹</a>
+          <a href="/reviews/" aria-label="다음 책">›</a>
+        </nav>
+      </div>
+      <div class="book-shelf">
+        <div class="book-shelf__books">
+          {books.map((book) => book.data.coverImage && (
+            <a href={getEntryHref(book)} aria-label={`${book.data.itemTitle} 읽기 기록`}>
+              <img
+                src={book.data.coverImage}
+                alt={`${book.data.itemTitle} 표지`}
+                width="220"
+                height="308"
+                loading="lazy"
+              />
+            </a>
+          ))}
+        </div>
+        <span class="book-shelf__ledge" aria-hidden="true"></span>
+      </div>
+    </section>
+
+    <section class="home-ledger home-ledger--memory" aria-labelledby="memory-title">
+      <div class="home-section-heading">
+        <h2 id="memory-title">이어진 기억</h2>
+        <span class="registration-rule" aria-hidden="true"></span>
+      </div>
+      <div class="memory-sentence-list">
+        {connectedMemories.map((thought) => (
+          <a href={`/memory/?thought=${thought.slug}`}>
+            <span>{thought.claimKo}</span>
+            <small>{noteLabel(thought.memoryType)}</small>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <footer class="literary-footer">
+      <span>© beyondwin</span>
+      <p>이 사이트는 한 사람의 느린 기록으로 만들어집니다.</p>
+      <nav aria-label="Footer navigation">
+        <a href="/">소개</a>
+        <a href="/tags/">노트 목록</a>
+        <a href="/memory/">아카이브</a>
       </nav>
-    )}
-    {entries.length > 0 ? (
-      <div class="content-grid content-grid--index">
-        {latest.map((entry) => <ContentCard entry={entry} />)}
-      </div>
-    ) : (
-      <div class="empty-state">
-        <p>No published content yet.</p>
-      </div>
-    )}
-  </section>
+    </footer>
+  </div>
 </BaseLayout>

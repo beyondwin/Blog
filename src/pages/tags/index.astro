@@ -1,30 +1,63 @@
 ---
+import LiteraryFooter from '../../components/LiteraryFooter.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { getAllTags } from '../../lib/content';
+import { getAllContent } from '../../lib/content';
+import { buildTagIndex } from '../../lib/indexPresentation';
+import { loadPublicMemoryData } from '../../lib/memory';
+import '../../styles/index-literary.css';
 
-const tags = await getAllTags();
+const entries = await getAllContent();
+const memory = loadPublicMemoryData();
+const contentTags = buildTagIndex(entries.map((entry) => entry.data.tags));
+const memoryTopics = [...memory.topics].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+const years = Array.from(new Set(entries.map((entry) => entry.data.createdAt.getFullYear()))).sort((a, b) => b - a);
 ---
 
-<BaseLayout title="Tags · beyondwin" description="주제별로 글을 찾아봅니다.">
-  <section class="shell hero">
-    <p class="site-label">Index</p>
-    <h1>Tags</h1>
-    <p>글을 쓴 날짜보다 다시 찾을 때 떠올리는 단어를 기준으로 묶었습니다.</p>
-  </section>
-  <section class="shell">
-    {tags.length > 0 ? (
-      <div class="tag-index">
-        {tags.map((tag) => (
-          <a href={`/tags/${encodeURIComponent(tag)}/`}>
-            <span>{tag}</span>
-            <small>Browse</small>
-          </a>
+<BaseLayout
+  title="색인 · beyondwin"
+  description="기록, 읽은 책, 공개 기억을 주제와 연도로 찾아보는 색인."
+  pageClass="literary-page literary-index"
+  headerVariant="literary"
+>
+  <div class="shell index-sheet">
+    <header class="index-intro">
+      <p>INDEX</p>
+      <h1>색인</h1>
+      <span class="literary-registration" aria-hidden="true"></span>
+      <p>날짜보다 다시 찾을 때<br />떠올리는 단어를 기준으로<br />기록을 묶었습니다.</p>
+    </header>
+
+    <section class="index-register" aria-labelledby="topic-index-title">
+      <header>
+        <h2 id="topic-index-title">주제</h2>
+        <span>{contentTags.length}개</span>
+      </header>
+      <ol>
+        {contentTags.map((tag, index) => (
+          <li>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <a href={`/tags/${encodeURIComponent(tag.label)}/`}>{tag.label}</a>
+            <small>{tag.count}</small>
+          </li>
         ))}
-      </div>
-    ) : (
-      <div class="empty-state">
-        <p>No tags yet.</p>
-      </div>
-    )}
-  </section>
+      </ol>
+    </section>
+
+    <aside class="index-memory">
+      <section>
+        <header><h2>공개 기억</h2><span>{memory.counts.thoughts}</span></header>
+        <ul>
+          {memoryTopics.slice(0, 8).map((topic) => (
+            <li><a href={`/memory/?topic=${encodeURIComponent(topic.slug)}`}>{topic.label}</a><span>{topic.count}</span></li>
+          ))}
+        </ul>
+        <a class="index-memory__more" href="/memory/">기억 문장 보기 <span>→</span></a>
+      </section>
+      <section class="index-years">
+        <header><h2>연도</h2></header>
+        <p>{years.join('　/　')}</p>
+      </section>
+    </aside>
+  </div>
+  <LiteraryFooter />
 </BaseLayout>

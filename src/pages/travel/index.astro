@@ -1,27 +1,26 @@
 ---
 import ContentCard from '../../components/ContentCard.astro';
+import EmptyLane from '../../components/EmptyLane.astro';
+import LiteraryFooter from '../../components/LiteraryFooter.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { collectionMeta, getContentByCollection } from '../../lib/content';
+import '../../styles/empty-literary.css';
 
 const entries = await getContentByCollection('travel');
 const meta = collectionMeta.travel;
 ---
 
-<BaseLayout title="Travel · beyondwin" description={meta.description}>
-  <section class="shell hero">
-    <p class="site-label">Field notes</p>
-    <h1>{meta.navLabel}</h1>
-    <p>{meta.description}</p>
-  </section>
-  <section class="shell">
+<BaseLayout title="장면 · beyondwin" description={meta.description} pageClass="literary-page literary-empty" headerVariant="literary">
+  <div class="shell empty-sheet">
+  <section>
     {entries.length > 0 ? (
       <div class="content-grid">
         {entries.map((entry) => <ContentCard entry={entry} />)}
       </div>
     ) : (
-      <div class="empty-state">
-        <p>아직 공개된 여행기가 없습니다.</p>
-      </div>
+      <EmptyLane lane="travel" />
     )}
   </section>
+  </div>
+  <LiteraryFooter />
 </BaseLayout>
