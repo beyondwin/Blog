@@ -36,6 +36,7 @@ const requiredFields = {
 const allowedFormats = new Set(['research-report', 'essay', 'visual-page']);
 const allowedMaturities = new Set(['seed', 'sketch', 'proposal']);
 const allowedStatuses = new Set(['review', 'published', 'archived']);
+const allowedCoverStates = new Set(['verified', 'hold']);
 
 async function collectMdxFiles(directory) {
   const files = [];
@@ -113,6 +114,34 @@ function validateIdeas(filePath, data) {
   return errors;
 }
 
+function validatePublishedReview(filePath, data) {
+  const errors = [];
+  if (data.status !== 'published') return errors;
+
+  const required = ['itemAuthor', 'isbn13', 'publisher', 'verdict', 'coverState'];
+  if (required.some((field) => data[field] === undefined || data[field] === null || data[field] === '')) {
+    errors.push(`${filePath}: published review requires itemAuthor, isbn13, publisher, verdict, and coverState`);
+  }
+  if (data.coverState && !allowedCoverStates.has(data.coverState)) {
+    errors.push(`${filePath}: published review coverState must be verified or hold`);
+  }
+  if (data.coverState === 'verified' && !data.coverMedia) {
+    errors.push(`${filePath}: coverState verified requires coverMedia`);
+  }
+  if (data.coverState === 'hold' && data.coverMedia) {
+    errors.push(`${filePath}: coverState hold forbids coverMedia`);
+  }
+
+  return errors;
+}
+
+function validatePublishedTravel(filePath, data) {
+  if (data.status === 'published' && (data.privacyReviewed !== true || !data.leadMedia)) {
+    return [`${filePath}: published travel requires privacyReviewed true and leadMedia`];
+  }
+  return [];
+}
+
 function validateShared(filePath, data) {
   const errors = [];
 
@@ -122,6 +151,12 @@ function validateShared(filePath, data) {
 
   if (!Array.isArray(data.tags)) {
     errors.push(`${filePath}: tags must be an array`);
+  }
+
+  const createdAt = new Date(data.createdAt);
+  const updatedAt = new Date(data.updatedAt);
+  if (!Number.isNaN(createdAt.getTime()) && !Number.isNaN(updatedAt.getTime()) && updatedAt < createdAt) {
+    errors.push(`${filePath}: updatedAt must be on or after createdAt`);
   }
 
   return errors;
@@ -165,10 +200,15 @@ for (const collection of Object.keys(requiredFields)) {
 
     if (collection === 'reviews') {
       errors.push(...validateSourceUrl(filePath, parsed.data));
+      errors.push(...validatePublishedReview(filePath, parsed.data));
     }
 
     if (collection === 'ideas') {
       errors.push(...validateIdeas(filePath, parsed.data));
+    }
+
+    if (collection === 'travel') {
+      errors.push(...validatePublishedTravel(filePath, parsed.data));
     }
   }
 }

@@ -33,7 +33,7 @@
 | `title` | string | required, non-empty |
 | `description` | string | required, non-empty |
 | `createdAt` | date | `z.coerce.date()` |
-| `updatedAt` | date | `z.coerce.date()` |
+| `updatedAt` | date | `z.coerce.date()`, `updatedAt >= createdAt` |
 | `tags` | string[] | default `[]`, item은 non-empty |
 | `status` | enum | `review`, `published`, `archived`; default `review` |
 | `draft` | boolean | default `false`; public selection에서는 `false`여야 한다. |
@@ -77,11 +77,15 @@ Path: `src/content/reviews/`
 | --- | --- | --- |
 | `itemType` | enum | `book`, `article`, `tool`, `course`, `other` |
 | `itemTitle` | string | required, non-empty |
-| `itemAuthor` | string | optional |
+| `itemAuthor` | string 또는 string[] | published review에서 required |
+| `isbn13` | string | published review에서 required, ISBN-13 형식 |
+| `publisher` | string | published review에서 required |
+| `verdict` | string | published review에서 required, non-empty |
+| `coverState` | enum | published review에서 `verified` 또는 `hold` required |
+| `coverMedia` | media id | `coverState: verified`에서 required, `hold`에서 forbidden |
 | `rating` | number | optional, 0-5 |
 | `completedAt` | date | optional, display date 우선순위 1 |
 | `sourceUrl` | URL | optional |
-| `coverImage` | URL | optional |
 
 ### `travel`
 
@@ -91,6 +95,8 @@ Path: `src/content/travel/`
 | --- | --- | --- |
 | `location` | string | required, non-empty |
 | `visitedAt` | date | optional, display date 우선순위 1 |
+| `privacyReviewed` | boolean | published travel에서 `true` required |
+| `leadMedia` | media id | published travel에서 required |
 
 ## Route Map
 
@@ -98,16 +104,16 @@ Path: `src/content/travel/`
 | --- | --- | --- |
 | `/` | `src/pages/index.astro` | 최신 article/analysis featured, lane count, tag rack, latest list, memory count. |
 | `/articles/` | `src/pages/articles/index.astro` | article listing. |
-| `/articles/[slug]/` | `src/pages/articles/[slug].astro` | non-draft article detail. |
+| `/articles/[slug]/` | `src/pages/articles/[slug].astro` | published non-draft article detail. |
 | `/analysis/` | `src/pages/analysis/index.astro` | analysis listing. |
-| `/analysis/[slug]/` | `src/pages/analysis/[slug].astro` | non-draft analysis detail. |
+| `/analysis/[slug]/` | `src/pages/analysis/[slug].astro` | published non-draft analysis detail. |
 | `/reviews/` | `src/pages/reviews/index.astro` | review listing. |
-| `/reviews/[slug]/` | `src/pages/reviews/[slug].astro` | non-draft review detail. |
+| `/reviews/[slug]/` | `src/pages/reviews/[slug].astro` | published non-draft review detail. |
 | `/reviews/the-life-you-can-save/` | `astro.config.mjs` redirect | `/reviews/doing-good-better/`로 보내는 static meta-refresh compatibility page. HTTP 301을 보장하지 않는다. |
 | `/ideas/` | `src/pages/ideas/index.astro` | idea listing. |
-| `/ideas/[slug]/` | `src/pages/ideas/[slug].astro` | non-draft idea detail. |
+| `/ideas/[slug]/` | `src/pages/ideas/[slug].astro` | published non-draft idea detail. |
 | `/travel/` | `src/pages/travel/index.astro` | travel listing. |
-| `/travel/[slug]/` | `src/pages/travel/[slug].astro` | non-draft travel detail. |
+| `/travel/[slug]/` | `src/pages/travel/[slug].astro` | published non-draft travel detail. |
 | `/tags/` | `src/pages/tags/index.astro` | all public content tag index. |
 | `/tags/[tag]/` | `src/pages/tags/[tag].astro` | tag-filtered public content listing. |
 | `/memory/` | `src/pages/memory.astro` | generated public memory projection. |
@@ -144,9 +150,15 @@ media resolution은 `src/lib/content/mediaRegistry.ts`에서 한 번만 한다. 
 route/layout 디자인 구현이 사용할 handoff 경계이며, 해당 구현은 이 계약을
 다시 만들거나 private memory를 읽으면 안 된다.
 
-현재 detail route의 `getStaticPaths()`는 아직 `!draft`만 필터링한다. 이
-foundation의 `published && !draft` 계약과 다르므로, 후속 route/design 구현이
-반드시 `review`와 `archived` detail route를 제외하도록 별도로 고쳐야 한다.
+모든 public list/detail/home/search/tag surface는 shared selector 또는 그 selector를
+사용하는 public aggregator를 거친다. `getStaticPaths()`도 `published && !draft`를
+요구하므로 `review`와 `archived` entry의 detail route를 만들지 않는다.
+
+실제 article source 16개는 모두 보존되어 있다. 그중 12개만 현재 public이며,
+`agents-md-vs-agent-skills-evidence`, `aws-static-frontend-serverless-bff`,
+`shared-ai-conversation-evidence-boundaries`, `uncle-bob-ai-code-review-evidence`
+4개는 `status: review`로 publication authorization을 기다린다. migration 위험을
+해결하라는 요청은 이 4개를 publish하라는 승인으로 해석하지 않는다.
 
 ## Content Helper Contracts
 

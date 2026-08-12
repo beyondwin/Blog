@@ -28,7 +28,7 @@ const typeLabel = (value: string) => ({ semantic: '의미', procedural: '절차'
   pageClass="literary-page literary-memory literary-memory-map"
   headerVariant="literary"
 >
-  <div class="memory-map-sheet shell" data-memory-map>
+  <div class="memory-map-sheet shell" data-memory-map data-memory-fallback={selectedId ?? ''}>
     <aside class="memory-map-rail">
       <h1>기억</h1>
       <label class="memory-search">

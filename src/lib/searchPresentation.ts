@@ -25,6 +25,18 @@ function normalize(value: string): string {
   return value.trim().toLocaleLowerCase('ko');
 }
 
+export function matchLiterarySearchFields(
+  record: Pick<LiterarySearchRecord, 'title' | 'description' | 'topics'>,
+  query: string,
+): LiteraryMatchedField | null {
+  const normalizedQuery = normalize(query);
+  if (!normalizedQuery) return null;
+  if (normalize(record.title).includes(normalizedQuery)) return 'title';
+  if (normalize(record.description).includes(normalizedQuery)) return 'description';
+  if (record.topics.some((topic) => normalize(topic).includes(normalizedQuery))) return 'topic';
+  return null;
+}
+
 function humanField(field: LiteraryMatchedField, kind: LiterarySearchKind): string {
   if (field === 'title' && kind === 'reading') return '책 제목';
   if (field === 'title' && kind === 'memory') return '기억 문장';
@@ -37,19 +49,11 @@ export function buildSearchMatches(
   records: LiterarySearchRecord[],
   query: string,
 ): LiterarySearchMatch[] {
-  const normalizedQuery = normalize(query);
-  if (!normalizedQuery) return [];
+  if (!normalize(query)) return [];
 
   const matches: LiterarySearchMatch[] = [];
   for (const record of records) {
-    let matchedField: LiteraryMatchedField | null = null;
-    if (normalize(record.title).includes(normalizedQuery)) {
-      matchedField = 'title';
-    } else if (normalize(record.description).includes(normalizedQuery)) {
-      matchedField = 'description';
-    } else if (record.topics.some((topic) => normalize(topic).includes(normalizedQuery))) {
-      matchedField = 'topic';
-    }
+    const matchedField = matchLiterarySearchFields(record, query);
 
     if (matchedField) {
       matches.push({

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildSearchMatches, summarizeSearchMatches } from './searchPresentation.ts';
+import { buildSearchMatches, matchLiterarySearchFields, summarizeSearchMatches } from './searchPresentation.ts';
 
 const records = [
   {
@@ -40,6 +40,19 @@ const records = [
 ];
 
 describe('literary search presentation', () => {
+  it('uses the same browser-safe field matcher for query filtering', () => {
+    expect(matchLiterarySearchFields({
+      title: '팩트풀니스',
+      description: '데이터로 세상을 읽는 법',
+      topics: ['book', 'risk'],
+    }, '세상')).toBe('description');
+    expect(matchLiterarySearchFields({
+      title: '팩트풀니스',
+      description: '데이터로 세상을 읽는 법',
+      topics: ['book', 'risk'],
+    }, 'RISK')).toBe('topic');
+    expect(matchLiterarySearchFields({ title: '팩트풀니스', description: '', topics: [] }, '')).toBeNull();
+  });
   it('groups real matches and explains the first matching field', () => {
     const matches = buildSearchMatches(records, '검증');
 

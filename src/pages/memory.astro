@@ -7,8 +7,8 @@ import '../styles/memory-literary.css';
 const memory = loadPublicMemoryData();
 const thoughts = sortLiteraryMemoryThoughts(memory.thoughts);
 const payload = buildMemoryPagePayload(memory);
-const selected = thoughts.find((thought) => thought.slug === 'memory-needs-retrieval-not-decoration') ?? thoughts[0];
-const selectedId = selected ? `thought:${selected.slug}` : null;
+const fallback = thoughts.find((thought) => thought.slug === 'memory-needs-retrieval-not-decoration') ?? thoughts[0];
+const fallbackId = fallback ? `thought:${fallback.slug}` : '';
 const typeLabel = (value: string) => ({ semantic: '의미', procedural: '절차', reflective: '성찰', episodic: '경험' }[value] ?? value);
 const edgeLabel = (value: string) => ({ supports: '지지한다', extends: '확장한다', instantiates: '구체화한다', refines: '다듬는다', contradicts: '반박한다', related: '관련된다' }[value] ?? value);
 ---
@@ -19,7 +19,7 @@ const edgeLabel = (value: string) => ({ supports: '지지한다', extends: '확�
   pageClass="literary-page literary-memory"
   headerVariant="literary"
 >
-  <div class="memory-sheet shell" data-memory-archive>
+  <div class="memory-sheet shell" data-memory-archive data-memory-fallback={fallbackId}>
     <header class="memory-mobile-search">
       <label class="memory-search">
         <span class="sr-only">기억 검색</span>
@@ -54,14 +54,13 @@ const edgeLabel = (value: string) => ({ supports: '지지한다', extends: '확�
       <ol class="memory-sentences" aria-label={`공개 기억 ${thoughts.length}개`}>
         {thoughts.map((thought, index) => (
           <li
-            class:list={{ 'is-selected': thought.slug === selected?.slug }}
             data-memory-item
             data-memory-id={`thought:${thought.slug}`}
             data-memory-search-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')}`.toLocaleLowerCase()}
             data-memory-topics={thought.topics.join(' ')}
             data-memory-type={thought.memoryType}
           >
-            <a href={`#memory-detail-${thought.slug}`} data-memory-select={`thought:${thought.slug}`}>
+            <a href={`/memory/?thought=${thought.slug}#memory-detail-${thought.slug}`} data-memory-select={`thought:${thought.slug}`}>
               <span>{String(index + 1).padStart(2, '0')}</span>
               <strong>{thought.claimKo}</strong>
             </a>
@@ -72,12 +71,13 @@ const edgeLabel = (value: string) => ({ supports: '지지한다', extends: '확�
     </main>
 
     <aside class="memory-detail-stack" aria-label="선택한 기억 상세">
+      <noscript><p class="memory-progressive-note">JavaScript 없이도 아래 공개 기억 7개의 문장, 연결, 출처를 모두 읽을 수 있습니다.</p></noscript>
       {thoughts.map((thought) => {
         const detail = payload.details[`thought:${thought.slug}`];
         return (
           <section
             id={`memory-detail-${thought.slug}`}
-            class:list={['memory-detail-panel', { 'is-default': `thought:${thought.slug}` === selectedId }]}
+            class="memory-detail-panel"
             data-memory-detail={`thought:${thought.slug}`}
           >
             <div class="memory-sheet-handle" aria-hidden="true"></div>
@@ -102,7 +102,7 @@ const edgeLabel = (value: string) => ({ supports: '지지한다', extends: '확�
                     const connectedSlug = connection.thought.id.replace('thought:', '');
                     return (
                       <li>
-                        <a href={`#memory-detail-${connectedSlug}`} data-memory-select={connection.thought.id}>
+                        <a href={`/memory/?thought=${connectedSlug}#memory-detail-${connectedSlug}`} data-memory-select={connection.thought.id}>
                           <span>{String(connectedIndex + 1).padStart(2, '0')}</span>
                           <strong>{connection.thought.title}</strong>
                           <small>{edgeLabel(connection.type)}</small>
