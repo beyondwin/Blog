@@ -118,6 +118,23 @@ describe('repository media validation', () => {
     ]);
   });
 
+  it('rejects unsupported media extensions while parsing before reading the declared asset', async () => {
+    const root = await makeRepository();
+    await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([
+      {
+        id: 'diagram',
+        file: 'diagram.svg',
+        kind: 'diagram',
+        sourcePath: 'docs/source.md',
+        checksum: `sha256:${'0'.repeat(64)}`,
+      },
+    ]));
+
+    expect((await validateMediaRepository(root)).errors).toEqual([
+      'src/assets/content/articles/note/media.yml: file must use a lowercase .jpg, .jpeg, .png, .webp or .avif extension',
+    ]);
+  });
+
   it('treats legacy cover URLs as warnings until strict mode', async () => {
     const root = await makeRepository();
     await put(root, 'src/content/reviews/book.mdx', `---\ncoverImage: https://example.com/cover.jpg\n---\n`);

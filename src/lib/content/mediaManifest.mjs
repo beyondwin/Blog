@@ -2,6 +2,10 @@ import { z } from 'astro/zod';
 import { parse } from 'yaml';
 
 const mediaKindSchema = z.enum(['book-cover', 'photo', 'diagram', 'screenshot', 'illustration']);
+const mediaFileSchema = safeRelativePath('file').refine(
+  (value) => /\.(?:jpg|jpeg|png|webp|avif)$/.test(value),
+  'file must use a lowercase .jpg, .jpeg, .png, .webp or .avif extension',
+);
 
 function safeRelativePath(field) {
   return z
@@ -25,7 +29,7 @@ const externalUrlSchema = z
 const mediaItemSchema = z
   .object({
     id: z.string().trim().min(1).regex(/^[a-z0-9][a-z0-9-]*$/),
-    file: safeRelativePath('file'),
+    file: mediaFileSchema,
     kind: mediaKindSchema,
     alt: z.string().trim().min(1),
     credit: z.string().trim().min(1),
