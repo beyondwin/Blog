@@ -80,17 +80,53 @@ function sha256(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
 function pngDimensions(bytes) {
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  if (
-    bytes.length < 33
-    || !bytes.subarray(0, 8).equals(signature)
-    || bytes.readUInt32BE(8) !== 13
-    || bytes.toString('ascii', 12, 16) !== 'IHDR'
-  ) {
-    return null;
+  if (bytes.length < 8 || !bytes.subarray(0, 8).equals(signature)) return null;
+
+  let dimensions = null;
+  let hasIdat = false;
+  let offset = 8;
+
+  while (offset < bytes.length) {
+    if (offset + 12 > bytes.length) return null;
+    const length = bytes.readUInt32BE(offset);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    const chunkEnd = dataEnd + 4;
+    if (dataEnd < dataStart || chunkEnd > bytes.length) return null;
+
+    const type = bytes.toString('ascii', offset + 4, offset + 8);
+    const expectedCrc = bytes.readUInt32BE(dataEnd);
+    if (crc32(bytes.subarray(offset + 4, dataEnd)) !== expectedCrc) return null;
+
+    if (offset === 8) {
+      if (type !== 'IHDR' || length !== 13) return null;
+      dimensions = { width: bytes.readUInt32BE(dataStart), height: bytes.readUInt32BE(dataStart + 4) };
+    } else if (type === 'IHDR') {
+      return null;
+    } else if (type === 'IDAT') {
+      hasIdat = true;
+    } else if (type === 'IEND') {
+      if (length !== 0 || !hasIdat || chunkEnd !== bytes.length) return null;
+      return dimensions;
+    }
+
+    offset = chunkEnd;
   }
-  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+
+  return null;
 }
 
 function jpegDimensions(bytes) {
