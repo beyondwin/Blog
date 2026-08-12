@@ -12,6 +12,40 @@ npm run validate
 
 검증이 실패하면 결과를 먼저 고친다. route preview가 필요한 글은 `npm run dev`로 실제 페이지까지 확인한다.
 
+## How to Scaffold Structured Content And Media
+
+새 record는 content와 media bundle을 함께 만든다.
+
+```bash
+npm run content:new -- <article|review|scene|idea> ...
+```
+
+예를 들어 slug와 title을 지정한다.
+
+```bash
+npm run content:new -- review --slug factfulness --title "Factfulness" --isbn 9788934985068
+```
+
+명령은 collision-safe하게 `src/content/<collection>/<slug>.mdx`와
+`src/assets/content/<collection>/<slug>/media.yml`를 같이 만든다. scaffold는
+언제나 `status: "review"`, `draft: true`이며, 검토 후 `status: "published"`와
+`draft: false`를 모두 설정할 때만 public이다. `published && !draft` 외의 어떤
+상태도 공개 조건으로 쓰지 않는다.
+
+asset 파일과 `media.yml`은 반드시 같은
+`src/assets/content/<collection>/<slug>/` 아래에 둔다. manifest item에는 `id`,
+`file`, `kind`, `alt`, `credit`, 하나의 `sourceUrl` 또는 `sourcePath`,
+`verifiedAt`, `rightsNote`, `checksum`을 기록한다. `book-cover`에는 source URL,
+ISBN-13, edition도 필요하다.
+
+```bash
+npm run media:validate
+```
+
+이 non-strict 검사에서 기존 `coverImage` review는 legacy warning을 낼 수 있지만
+성공한다. 새 media는 remote URL을 직접 렌더링하지 말고 manifest ID
+(`featuredMedia`, `coverMedia`, `leadMedia`)로 참조한다.
+
 ## How to Add An Ordinary Article
 
 개발 글이나 기술 에세이는 `src/content/articles/`에 둔다.
@@ -120,8 +154,10 @@ visitedAt: "2026-06-30"
 외부 자료나 저장소를 깊게 읽고 쓰는 article은 evidence packet과 article draft를 같이 만든다.
 
 ```bash
-npm run article:new -- "LazyCodex" --title "LazyCodex는 Codex를 어떻게 바꾸는가" --slug "lazycodex"
+npm run article:new -- ...
 ```
+
+실제 호출에서는 source label, `--title`, `--slug`를 제공한다.
 
 생성물:
 
@@ -280,6 +316,7 @@ curated note를 추가하거나 옮길 때:
 작업 종류에 따라 더 빠른 명령을 먼저 돌릴 수 있다.
 
 ```bash
+npm run media:validate
 npm run article:quality
 npm run memory:validate
 npm test
@@ -300,4 +337,4 @@ npm run build
 : 출력의 `excluded={...}`를 본다. 흔한 이유는 `private`, `notAccepted`, `notPublicSurface`, `missingSource`, `invalidSource`, `unsupportedSchema`다.
 
 Astro route가 보이지 않는다
-: 파일이 올바른 collection 폴더에 있는지, `draft: true`가 아닌지, 파일명이 route slug와 맞는지 확인한다. 개발 서버의 content state가 꼬였으면 서버를 재시작한다.
+: 파일이 올바른 collection 폴더에 있는지, `status: "published"`와 `draft: false`가 모두 맞는지, 파일명이 route slug와 맞는지 확인한다. 개발 서버의 content state가 꼬였으면 서버를 재시작한다. 현재 detail routes는 legacy `!draft` filter만 사용하므로 `review`/`archived`가 detail route에 남을 수 있다. 이 불일치는 별도 route/design 구현에서 `published && !draft`로 고쳐야 한다.

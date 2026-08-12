@@ -36,7 +36,11 @@
 | `updatedAt` | date | `z.coerce.date()` |
 | `tags` | string[] | default `[]`, item은 non-empty |
 | `status` | enum | `review`, `published`, `archived`; default `review` |
-| `draft` | boolean | default `false`; route/listing에서 제외 |
+| `draft` | boolean | default `false`; public selection에서는 `false`여야 한다. |
+
+공개 콘텐츠의 유일한 조건은 `status === "published" && draft === false`, 즉
+`published && !draft`다. `review`, `archived`, 그리고 `draft: true`는 모두
+public listing, tag, home selection에서 제외한다.
 
 ### `analysis`
 
@@ -107,6 +111,32 @@ Path: `src/content/travel/`
 | `/tags/[tag]/` | `src/pages/tags/[tag].astro` | tag-filtered public content listing. |
 | `/memory/` | `src/pages/memory.astro` | generated public memory projection. |
 
+## Structured Content Foundation Contracts
+
+콘텐츠와 media asset은 별도 경로를 공유한다.
+
+- MDX: `src/content/<collection>/<slug>.mdx`
+- media bundle: `src/assets/content/<collection>/<slug>/`
+- manifest: 같은 bundle의 `media.yml`
+
+`media.yml`은 `version: 1`과 `items`를 가진다. 각 item은 `id`, canonical
+relative `file`, `kind`, `alt`, `credit`, 정확히 하나의 `sourceUrl` 또는
+`sourcePath`, `verifiedAt`, `rightsNote`, `checksum`을 기록한다. `book-cover`는
+여기에 `sourceUrl`, ISBN-13 `isbn13`, `edition`을 추가로 요구한다. manifest와
+validator는 path traversal, manifest 밖의 asset, remote image hotlink, missing/
+orphaned asset, duplicate checksum, media reference mismatch를 거부한다.
+
+UI는 asset 경로나 manifest를 직접 해석하지 않는다. `src/lib/content/viewModels.ts`
+가 제공하는 summary/detail model과 이미 resolve된 `ResolvedMedia`를 소비하고,
+media resolution은 `src/lib/content/mediaRegistry.ts`에서 한 번만 한다. 공개
+선택과 home의 중복 제거는 `src/lib/content/publication.ts`에 있다. 이는 후속
+route/layout 디자인 구현이 사용할 handoff 경계이며, 해당 구현은 이 계약을
+다시 만들거나 private memory를 읽으면 안 된다.
+
+현재 detail route의 `getStaticPaths()`는 아직 `!draft`만 필터링한다. 이
+foundation의 `published && !draft` 계약과 다르므로, 후속 route/design 구현이
+반드시 `review`와 `archived` detail route를 제외하도록 별도로 고쳐야 한다.
+
 ## Content Helper Contracts
 
 [src/lib/content.ts](../../../src/lib/content.ts)의 public behavior:
@@ -118,7 +148,7 @@ Path: `src/content/travel/`
 - `getEntryTypeLabel(entry)`: analysis `format`은 title case로 변환하고, 나머지는 collection label을 쓴다.
 - `formatDate(date)`: `ko` locale로 날짜를 표시한다.
 - `estimateReadingMinutes(text)`: 260 words per minute 기준, 최소 1분.
-- `getContentByCollection(collection)`: draft 제외 후 최신순 정렬.
+- `getContentByCollection(collection)`: `published && !draft`만 최신순 정렬.
 - `getAllContent()`: 모든 collection을 병합해 최신순 정렬.
 - `getHomeSections()`: home page용 collection별 entry 배열.
 - `getAllTags()`: 공개 콘텐츠 tag를 중복 제거 후 locale sort.
@@ -213,7 +243,9 @@ matches. Detail pages do not read `memory/**` directly.
 | `npm run preview` | `astro preview` | built site preview. |
 | `npm test` | `vitest run` | 전체 test 실행. |
 | `npm run sync` | `node scripts/sync.mjs` | sync workflow entry point. |
+| `npm run content:new -- <article\|review\|scene\|idea> ...` | `node scripts/create-content-entry.mjs` | collision-safe draft MDX와 empty `media.yml` bundle을 함께 scaffold한다. |
 | `npm run article:new` | `node scripts/create-article-packet.mjs` | evidence packet과 article draft 생성. |
+| `npm run media:validate` | `node scripts/validate-media.mjs` | content media manifest, provenance, asset, reference를 non-strict mode로 검사한다. legacy `coverImage`는 warning만 낸다. |
 | `npm run article:quality` | `node scripts/article-quality.mjs` | source-grounded article shape 검사. |
 | `npm run memory:seed` | `node scripts/memory/seed.mjs` | memory review candidate 생성. |
 | `npm run memory:review -- report` | `node scripts/memory/review.mjs report` | generated memory candidates를 읽기 쉬운 local review report로 만든다. |
@@ -256,6 +288,14 @@ matches. Detail pages do not read `memory/**` directly.
 - source path safety와 existence.
 - public thought edge endpoint validity.
 - projection eligibility count.
+
+### `scripts/validate-media.mjs`
+
+`npm run media:validate`는 non-strict gate다. legacy `coverImage`가 남은 기존
+review는 `coverMedia`로 옮겨야 한다는 warning을 내지만 exit 0을 유지한다.
+`--strict`에서만 이 warning은 error가 된다. 검증은 각 `media.yml`의 required
+provenance field, 안전한 canonical path, checksum, referenced file, orphan file,
+중복 선언, content media ID를 함께 검사한다.
 
 ## Queue Parser
 
