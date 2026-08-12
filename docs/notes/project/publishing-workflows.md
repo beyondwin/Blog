@@ -85,32 +85,66 @@ npm run media:validate
 
 리뷰는 `src/content/reviews/`에 둔다. 책, 글, 도구, 강의, 기타 리뷰가 모두 이 lane을 쓴다.
 
+먼저 review scaffold를 생성한다.
+
+```bash
+npm run content:new -- review --slug factfulness --title "Factfulness" --isbn 9788934985068
+```
+
+검증한 local cover를 사용할 때는 생성된 frontmatter에 `coverState`와
+`coverMedia`를 추가한다.
+
 ```mdx
 ---
-title: "공개 리뷰 제목"
+title: "Factfulness"
 description: "한 문장 요약."
 createdAt: "2026-06-30"
 updatedAt: "2026-06-30"
 tags: ["book"]
 status: "review"
+draft: true
 itemType: "book"
-itemTitle: "원본 항목 제목"
-itemAuthor: "Author name"
+itemTitle: "Factfulness"
+itemAuthor: "Hans Rosling"
+isbn13: "9788934985068"
 rating: 4
 completedAt: "2026-06-30"
-sourceUrl: "https://example.com/original"
-coverImage: "https://example.com/cover.jpg"
+sourceUrl: "https://example.com/original-review-or-source"
+coverState: "verified"
+coverMedia: "cover"
 ---
 
 리뷰 본문.
 ```
+
+이 상태는 실제 `src/assets/content/reviews/factfulness/cover.jpg`와 같은
+폴더의 `media.yml` 항목이 모두 있을 때만 쓴다.
+
+```yaml
+version: 1
+items:
+  - id: cover
+    file: cover.jpg
+    kind: book-cover
+    alt: 팩트풀니스 한국어판 표지
+    credit: 출판사 또는 권리자
+    sourceUrl: https://example.com/cover-provenance
+    isbn13: "9788934985068"
+    edition: 한국어판 판본 설명
+    verifiedAt: "2026-06-30"
+    rightsNote: 저장 및 재배포 권한 확인 내용
+    checksum: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+```
+
+검증한 local cover가 없다면 `coverState: "hold"`만 기록하고
+`coverMedia`와 legacy `coverImage`는 모두 두지 않는다.
 
 제약:
 
 - `itemType`은 `book`, `article`, `tool`, `course`, `other` 중 하나다.
 - `rating`은 선택값이며 0 이상 5 이하 숫자다.
 - `completedAt`이 있으면 review의 표시 날짜로 우선 사용된다.
-- `sourceUrl`과 `coverImage`는 있으면 유효한 URL이어야 한다.
+- review frontmatter의 `sourceUrl`은 원문 리뷰 또는 검토 대상의 URL이다. cover의 출처와 권리 근거는 `media.yml` item의 `sourceUrl`, `credit`, `rightsNote`에 별도로 기록한다.
 
 ## How to Add An Idea
 
