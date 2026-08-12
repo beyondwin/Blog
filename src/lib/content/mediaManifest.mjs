@@ -32,6 +32,7 @@ const mediaItemSchema = z
     file: mediaFileSchema,
     kind: mediaKindSchema,
     alt: z.string().trim().min(1),
+    caption: z.string().trim().min(1).optional(),
     credit: z.string().trim().min(1),
     sourceUrl: externalUrlSchema.optional(),
     sourcePath: safeRelativePath('sourcePath').optional(),

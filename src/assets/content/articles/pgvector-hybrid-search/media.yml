@@ -4,6 +4,7 @@ items:
     file: embedding-flow.png
     kind: diagram
     alt: 텍스트가 임베딩 모델을 거쳐 벡터로 바뀌는 흐름
+    caption: 텍스트가 임베딩 모델을 거쳐 벡터로 바뀌는 흐름
     credit: beyondwin
     sourcePath: src/content/articles/pgvector-hybrid-search.mdx
     verifiedAt: "2026-08-13"
@@ -15,6 +16,7 @@ items:
     file: architecture.png
     kind: diagram
     alt: PostgreSQL 안에서 일반 거래 데이터와 description 벡터를 함께 관리하는 구조
+    caption: PostgreSQL 안에서 일반 거래 데이터와 description 벡터를 함께 관리하는 구조
     credit: beyondwin
     sourcePath: src/content/articles/pgvector-hybrid-search.mdx
     verifiedAt: "2026-08-13"
@@ -26,6 +28,7 @@ items:
     file: ivfflat-cluster.png
     kind: diagram
     alt: IVFFLAT 클러스터 검색 흐름
+    caption: IVFFLAT 클러스터 검색 흐름
     credit: beyondwin
     sourcePath: src/content/articles/pgvector-hybrid-search.mdx
     verifiedAt: "2026-08-13"

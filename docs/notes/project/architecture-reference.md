@@ -121,8 +121,9 @@ Path: `src/content/travel/`
 - manifest: 같은 bundle의 `media.yml`
 
 `media.yml`은 `version: 1`과 `items`를 가진다. 각 item은 `id`, canonical
-relative `file`, `kind`, `alt`, `credit`, 정확히 하나의 `sourceUrl` 또는
-`sourcePath`, `verifiedAt`, `rightsNote`, `checksum`을 기록한다. `book-cover`는
+relative `file`, `kind`, `alt`, optional `caption`, `credit`, 정확히 하나의
+`sourceUrl` 또는 `sourcePath`, `verifiedAt`, `rightsNote`, `checksum`을 기록한다.
+optional `width`와 `height`는 함께 선언하며 실제 raster header와 일치해야 한다. `book-cover`는
 여기에 `sourceUrl`, ISBN-13 `isbn13`, `edition`을 추가로 요구한다. manifest와
 validator는 path traversal, manifest 밖의 asset, remote image hotlink, missing/
 orphaned asset, duplicate checksum, media reference mismatch를 거부한다.

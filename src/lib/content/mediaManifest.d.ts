@@ -4,6 +4,7 @@ interface MediaItemBase {
   id: string;
   file: string;
   alt: string;
+  caption?: string;
   credit: string;
   verifiedAt: string;
   rightsNote: string;

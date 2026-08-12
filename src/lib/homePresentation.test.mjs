@@ -112,6 +112,24 @@ describe('home presentation', () => {
     expect(result.books).toEqual([]);
   });
 
+  it('keeps a HOLD review as a lead with explicit fallback state and no resolved media', () => {
+    const holdReview = review('hold-review', '표지 확인 중인 책', '2026-07-01', { coverState: 'hold' });
+
+    const result = buildHomePresentation(
+      { articles: [], reviews: [holdReview] },
+      (entry) => toRecordSummary(entry, () => {
+        throw new Error('HOLD media must not resolve');
+      }),
+    );
+
+    expect(result.featuredReview).toMatchObject({
+      id: 'hold-review',
+      coverState: 'hold',
+      title: '표지 확인 중인 책',
+    });
+    expect(result.featuredReview?.media).toBeUndefined();
+  });
+
   it('selects the approved real public-memory sentences in their editorial order', () => {
     const thoughts = [
       { slug: 'agent-harnesses-are-operating-systems', claimKo: '에이전트 하네스 문장' },

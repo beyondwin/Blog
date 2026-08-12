@@ -273,6 +273,24 @@ describe('site content contract', () => {
     expect(layout).toContain('detail.authors.join');
   });
 
+  it('keeps a defined cover column for both home reading leads when media is on HOLD', async () => {
+    const home = await readFile(join(root, 'src', 'pages', 'index.astro'), 'utf8');
+    const cover = await readFile(join(root, 'src', 'components', 'ReadingLeadCover.astro'), 'utf8');
+
+    expect(home.match(/<ReadingLeadCover entry=\{featured(?:Review|Reading)\}/g)).toHaveLength(2);
+    expect(cover).toContain('lead-cover-placeholder');
+    expect(cover).toContain('표지 확인 중');
+    expect(cover).toContain('entry.media');
+  });
+
+  it('renders Figure external provenance as a no-JavaScript link', async () => {
+    const figure = await readFile(join(root, 'src', 'components', 'Figure.astro'), 'utf8');
+
+    expect(figure).toContain('buildFigurePresentation');
+    expect(figure).toContain('<a href={presentation.provenanceHref}');
+    expect(figure).toContain('rel="noreferrer"');
+  });
+
   it('keeps review detail pages focused on the article body', async () => {
     const layout = await readFile(join(root, 'src', 'layouts', 'ReviewLayout.astro'), 'utf8');
 
