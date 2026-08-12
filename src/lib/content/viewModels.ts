@@ -17,6 +17,8 @@ export interface RecordSummary {
   description: string;
   primaryDate: Date;
   tags: string[];
+  authors: string[];
+  coverState?: 'verified' | 'hold';
   evidenceState?: 'personal' | 'source-grounded' | 'verified';
   verdict?: string;
   media?: ResolvedMedia;
@@ -54,6 +56,11 @@ function mediaIdFor(entry: SiteEntry): string | undefined {
   return undefined;
 }
 
+function authorsFor(entry: SiteEntry): string[] {
+  if (entry.collection !== 'reviews' || !entry.data.itemAuthor) return [];
+  return Array.isArray(entry.data.itemAuthor) ? [...entry.data.itemAuthor] : [entry.data.itemAuthor];
+}
+
 function resolveOptionalMedia(
   entry: SiteEntry,
   resolveMedia: ContentMediaResolver,
@@ -81,6 +88,7 @@ export function toRecordSummary(
     description: entry.data.description,
     primaryDate: getEntryDate(entry),
     tags: [...entry.data.tags],
+    authors: authorsFor(entry),
   };
 
   if (entry.collection === 'articles' && entry.data.evidenceState) {
@@ -89,6 +97,9 @@ export function toRecordSummary(
 
   if (entry.collection === 'reviews' && entry.data.verdict) {
     summary.verdict = entry.data.verdict;
+  }
+  if (entry.collection === 'reviews' && entry.data.coverState) {
+    summary.coverState = entry.data.coverState;
   }
 
   const media = resolveOptionalMedia(entry, resolveMedia);
@@ -102,15 +113,8 @@ export function toRecordDetail(
   directMemory: DirectMemoryInput,
   resolveMedia: ContentMediaResolver = resolveContentMedia,
 ): RecordDetail {
-  const authors = entry.collection === 'reviews' && entry.data.itemAuthor
-    ? Array.isArray(entry.data.itemAuthor)
-      ? [...entry.data.itemAuthor]
-      : [entry.data.itemAuthor]
-    : [];
-
   const detail: RecordDetail = {
     ...toRecordSummary(entry, resolveMedia),
-    authors,
     readEditionVerified: entry.collection === 'reviews'
       ? entry.data.readEditionVerified
       : false,

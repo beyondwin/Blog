@@ -2061,7 +2061,8 @@ code {
   flex: 0 1 138px;
 }
 
-.book-shelf__books img {
+.book-shelf__books img,
+.book-cover-fallback {
   display: block;
   width: 100%;
   max-height: 178px;
@@ -2071,6 +2072,24 @@ code {
   box-shadow: 0 8px 8px rgba(42, 33, 20, 0.13), 1px 1px 1px rgba(42, 33, 20, 0.17);
   object-fit: cover;
   transition: transform 140ms ease;
+}
+
+.book-cover-fallback {
+  align-content: center;
+  color: var(--literary-soft);
+  font-family: var(--literary-serif);
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.book-cover-fallback b {
+  display: block;
+  font-family: var(--literary-sans);
+  font-size: 8px;
+  font-weight: 500;
+  margin-top: 8px;
 }
 
 .book-shelf__books a:hover img,
@@ -2407,7 +2426,8 @@ code {
     flex: 1 1 0;
   }
 
-  .book-shelf__books img {
+  .book-shelf__books img,
+  .book-cover-fallback {
     max-height: 104px;
     box-shadow: 0 4px 4px rgba(42, 33, 20, 0.12);
   }

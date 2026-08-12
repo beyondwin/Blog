@@ -7,6 +7,8 @@ interface MediaItemBase {
   credit: string;
   verifiedAt: string;
   rightsNote: string;
+  width?: number;
+  height?: number;
   checksum: string;
 }
 

@@ -1,4 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
+import { isPublicEntry } from './content/publicationState';
 
 export type SiteEntry =
   | CollectionEntry<'analysis'>
@@ -96,7 +97,7 @@ export async function getContentByCollection(collection: SiteCollection): Promis
   const { getCollection } = await import('astro:content');
   const entries = await getCollection(
     collection,
-    ({ data }) => data.status === 'published' && !data.draft,
+    isPublicEntry,
   );
 
   return (entries as SiteEntry[]).sort((a, b) => {

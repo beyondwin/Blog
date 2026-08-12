@@ -1,6 +1,6 @@
 ---
+import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { getEntryDate, getEntryHref } from '../lib/content';
 import { loadHomePresentation } from '../lib/homeData';
 import { selectHomeMemories } from '../lib/homePresentation';
 import { loadPublicMemoryData } from '../lib/memoryData';
@@ -43,21 +43,21 @@ function noteLabel(memoryType: string): string {
         <article class="lead-record lead-record--review">
           <p class="record-kicker record-kicker--reading">READING NOTE</p>
           <div class="lead-record__review-grid">
-            {featuredReview.data.coverImage && (
-              <img
+            {featuredReview.media && (
+              <Image
                 class="lead-cover lead-cover--tall"
-                src={featuredReview.data.coverImage}
-                alt={`${featuredReview.data.itemTitle} 표지`}
-                width="240"
-                height="336"
+                src={featuredReview.media.asset}
+                alt={featuredReview.media.item.alt}
+                width={240}
+                height={336}
                 loading="eager"
               />
             )}
             <div class="lead-record__copy">
-              <h2>{featuredReview.data.itemTitle}</h2>
-              <p>{featuredReview.data.description}</p>
-              <p class="record-date"><span>완독</span> {numericDate(getEntryDate(featuredReview))}</p>
-              <a class="record-link record-link--reading" href={getEntryHref(featuredReview)}>읽기 기록 보기 <span aria-hidden="true">→</span></a>
+              <h2>{featuredReview.title}</h2>
+              <p>{featuredReview.description}</p>
+              <p class="record-date"><span>완독</span> {numericDate(featuredReview.primaryDate)}</p>
+              <a class="record-link record-link--reading" href={featuredReview.href}>읽기 기록 보기 <span aria-hidden="true">→</span></a>
             </div>
           </div>
         </article>
@@ -67,10 +67,10 @@ function noteLabel(memoryType: string): string {
         <article class="lead-record lead-record--technical">
           <p class="record-kicker record-kicker--technical">TECHNICAL NOTE</p>
           <div class="lead-record__copy">
-            <h2>{featuredArticle.data.title}</h2>
-            <p>{featuredArticle.data.description}</p>
-            <p class="record-date"><span>업데이트</span> {numericDate(getEntryDate(featuredArticle))}</p>
-            <a class="record-link record-link--technical" href={getEntryHref(featuredArticle)}>기술 문서 읽기 <span aria-hidden="true">→</span></a>
+            <h2>{featuredArticle.title}</h2>
+            <p>{featuredArticle.description}</p>
+            <p class="record-date"><span>업데이트</span> {numericDate(featuredArticle.primaryDate)}</p>
+            <a class="record-link record-link--technical" href={featuredArticle.href}>기술 문서 읽기 <span aria-hidden="true">→</span></a>
           </div>
         </article>
       )}
@@ -79,21 +79,21 @@ function noteLabel(memoryType: string): string {
         <article class="lead-record lead-record--reading">
           <p class="record-kicker record-kicker--reading">READING NOTE</p>
           <div class="lead-record__review-grid">
-            {featuredReading.data.coverImage && (
-              <img
+            {featuredReading.media && (
+              <Image
                 class="lead-cover"
-                src={featuredReading.data.coverImage}
-                alt={`${featuredReading.data.itemTitle} 표지`}
-                width="220"
-                height="308"
+                src={featuredReading.media.asset}
+                alt={featuredReading.media.item.alt}
+                width={220}
+                height={308}
                 loading="eager"
               />
             )}
             <div class="lead-record__copy">
-              <h2>{featuredReading.data.itemTitle}</h2>
-              <p>{featuredReading.data.description}</p>
-              <p class="record-date"><span>완독</span> {numericDate(getEntryDate(featuredReading))}</p>
-              <a class="record-link record-link--reading" href={getEntryHref(featuredReading)}>읽기 기록 보기 <span aria-hidden="true">→</span></a>
+              <h2>{featuredReading.title}</h2>
+              <p>{featuredReading.description}</p>
+              <p class="record-date"><span>완독</span> {numericDate(featuredReading.primaryDate)}</p>
+              <a class="record-link record-link--reading" href={featuredReading.href}>읽기 기록 보기 <span aria-hidden="true">→</span></a>
             </div>
           </div>
         </article>
@@ -107,9 +107,9 @@ function noteLabel(memoryType: string): string {
       </div>
       <div class="open-record-list">
         {openRecords.map((entry) => (
-          <a href={getEntryHref(entry)} class="open-record-row">
-            <span class="open-record-row__title">{entry.data.title}</span>
-            <time datetime={getEntryDate(entry).toISOString()}>{numericDate(getEntryDate(entry))}</time>
+          <a href={entry.href} class="open-record-row">
+            <span class="open-record-row__title">{entry.title}</span>
+            <time datetime={entry.primaryDate.toISOString()}>{numericDate(entry.primaryDate)}</time>
             <span class="open-record-row__type">기술 문서</span>
           </a>
         ))}
@@ -135,15 +135,19 @@ function noteLabel(memoryType: string): string {
       </div>
       <div class="book-shelf">
         <div class="book-shelf__books">
-          {books.map((book) => book.data.coverImage && (
-            <a href={getEntryHref(book)} aria-label={`${book.data.itemTitle} 읽기 기록`}>
-              <img
-                src={book.data.coverImage}
-                alt={`${book.data.itemTitle} 표지`}
-                width="220"
-                height="308"
-                loading="lazy"
-              />
+          {books.map((book) => (
+            <a href={book.href} aria-label={`${book.title} 읽기 기록`}>
+              {book.media ? (
+                <Image
+                  src={book.media.asset}
+                  alt={book.media.item.alt}
+                  width={220}
+                  height={308}
+                  loading="lazy"
+                />
+              ) : (
+                <span class="book-cover-fallback">{book.title}<b>표지 확인 중</b></span>
+              )}
             </a>
           ))}
         </div>

@@ -5,6 +5,16 @@ import {
   formatLiteraryDate,
   getOneSentenceJudgment,
 } from './bookshelfPresentation';
+import { toRecordSummary } from './content/viewModels';
+
+const localCover = {
+  item: { id: 'cover', kind: 'book-cover', alt: '검증된 표지' },
+  asset: { src: '/_astro/local-cover.jpg', width: 400, height: 600, format: 'jpg' },
+};
+
+const summarize = (entry) => toRecordSummary(entry, () => (
+  entry.data.coverState === 'verified' ? localCover : undefined
+));
 
 function review(id, date, options = {}) {
   const title = options.title ?? `책 ${id}`;
@@ -20,7 +30,9 @@ function review(id, date, options = {}) {
       completedAt: new Date(date),
       createdAt: new Date(date),
       updatedAt: new Date(date),
-      coverImage: options.coverImage,
+      itemAuthor: options.itemAuthor ?? ['저자 한', '저자 두'],
+      coverState: options.coverState ?? 'hold',
+      coverMedia: options.coverState === 'verified' ? 'cover' : undefined,
       tags: options.tags ?? ['book', 'review', 'naver-archive'],
       status: 'published',
       draft: false,
@@ -31,19 +43,22 @@ function review(id, date, options = {}) {
 describe('bookshelf presentation', () => {
   it('keeps the physical shelf finite while the year rail and judgments cover every review', () => {
     const reviews = [
-      review('a', '2026-06-16', { coverImage: 'https://example.com/a.jpg' }),
-      review('b', '2026-06-02', { coverImage: 'https://example.com/b.jpg' }),
-      review('c', '2026-05-27', { coverImage: 'https://example.com/c.jpg' }),
-      review('d', '2026-05-19', { coverImage: 'https://example.com/d.jpg' }),
-      review('e', '2026-05-12', { coverImage: 'https://example.com/e.jpg' }),
-      review('f', '2026-04-21', { coverImage: 'https://example.com/f.jpg' }),
-      review('g', '2026-04-16', { coverImage: 'https://example.com/g.jpg' }),
-      review('h', '2026-04-06', { coverImage: 'https://example.com/h.jpg' }),
-      review('i', '2026-03-24', { coverImage: 'https://example.com/i.jpg' }),
+      review('a', '2026-06-16', { coverState: 'verified' }),
+      review('b', '2026-06-02', { coverState: 'verified' }),
+      review('c', '2026-05-27', { coverState: 'verified' }),
+      review('d', '2026-05-19', { coverState: 'verified' }),
+      review('e', '2026-05-12', { coverState: 'verified' }),
+      review('f', '2026-04-21', { coverState: 'verified' }),
+      review('g', '2026-04-16', { coverState: 'verified' }),
+      review('h', '2026-04-06', { coverState: 'verified' }),
+      review('i', '2026-03-24', { coverState: 'verified' }),
       review('j', '2025-12-10'),
     ];
 
-    const result = buildBookshelfPresentation(reviews);
+    const result = buildBookshelfPresentation(reviews, (...args) => {
+      expect(args).toHaveLength(1);
+      return summarize(args[0]);
+    });
 
     expect(result.yearCounts).toEqual([
       { year: 2026, count: 9 },
@@ -56,6 +71,8 @@ describe('bookshelf presentation', () => {
       'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
     ]);
     expect(result.missingCoverEntries.map((entry) => entry.id)).toEqual(['j']);
+    expect(result.shelfTiers[0][0].media.asset.src).toBe('/_astro/local-cover.jpg');
+    expect(result.shelfTiers[0][0].authors).toEqual(['저자 한', '저자 두']);
   });
 
   it('uses only the first authored sentence as the shelf judgment', () => {
@@ -66,18 +83,18 @@ describe('bookshelf presentation', () => {
 
   it('places available covers in the approved literary shelf order without duplication', () => {
     const reviews = [
-      review('art-thief', '2026-04-06', { coverImage: 'https://example.com/art-thief.jpg' }),
-      review('changing-their-minds', '2026-06-16', { coverImage: 'https://example.com/changing.jpg' }),
-      review('siddhartha', '2026-03-24', { coverImage: 'https://example.com/siddhartha.jpg' }),
-      review('black-swan', '2026-05-27', { coverImage: 'https://example.com/black-swan.jpg' }),
-      review('poor-charlies-almanack', '2026-04-16', { coverImage: 'https://example.com/charlie.jpg' }),
-      review('lord-of-the-flies', '2026-06-02', { coverImage: 'https://example.com/lord.jpg' }),
-      review('nevertheless', '2026-05-19', { coverImage: 'https://example.com/nevertheless.jpg' }),
-      review('goethe-said-everything', '2026-05-12', { coverImage: 'https://example.com/goethe.jpg' }),
-      review('another-book', '2026-06-20', { coverImage: 'https://example.com/another.jpg' }),
+      review('art-thief', '2026-04-06', { coverState: 'verified' }),
+      review('changing-their-minds', '2026-06-16', { coverState: 'verified' }),
+      review('siddhartha', '2026-03-24', { coverState: 'verified' }),
+      review('black-swan', '2026-05-27', { coverState: 'verified' }),
+      review('poor-charlies-almanack', '2026-04-16', { coverState: 'verified' }),
+      review('lord-of-the-flies', '2026-06-02', { coverState: 'verified' }),
+      review('nevertheless', '2026-05-19', { coverState: 'verified' }),
+      review('goethe-said-everything', '2026-05-12', { coverState: 'verified' }),
+      review('another-book', '2026-06-20', { coverState: 'verified' }),
     ];
 
-    const result = buildBookshelfPresentation(reviews);
+    const result = buildBookshelfPresentation(reviews, summarize);
 
     expect(result.shelfTiers.flat().map((entry) => entry.id)).toEqual([
       'changing-their-minds',

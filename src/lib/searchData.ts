@@ -1,6 +1,7 @@
-import { getAllContent, getAllTags, getEntryDate, getEntryHref } from './content';
+import { getAllContent, getAllTags } from './content';
 import { loadPublicMemoryData } from './memory';
 import type { LiterarySearchRecord } from './searchPresentation';
+import { toRecordSummary } from './content/viewModels';
 
 function numericDate(date: Date): string {
   return date.toISOString().slice(0, 10).replaceAll('-', '.');
@@ -10,15 +11,20 @@ export async function loadLiterarySearchRecords(): Promise<LiterarySearchRecord[
   const [entries, tags] = await Promise.all([getAllContent(), getAllTags()]);
   const memory = loadPublicMemoryData();
 
-  const contentRecords: LiterarySearchRecord[] = entries.map((entry) => ({
-    id: `${entry.collection}:${entry.id}`,
-    kind: entry.collection === 'reviews' ? 'reading' : 'technical',
-    title: entry.collection === 'reviews' ? entry.data.itemTitle : entry.data.title,
-    description: entry.data.description,
-    topics: entry.data.tags,
-    href: getEntryHref(entry),
-    date: numericDate(getEntryDate(entry)),
-  }));
+  const contentRecords: LiterarySearchRecord[] = entries.map((entry) => {
+    const summary = toRecordSummary(entry);
+    return {
+      id: `${entry.collection}:${entry.id}`,
+      kind: entry.collection === 'reviews' ? 'reading' : 'technical',
+      title: summary.title,
+      description: summary.description,
+      topics: summary.tags,
+      href: summary.href,
+      date: numericDate(summary.primaryDate),
+      ...(summary.media ? { media: summary.media } : {}),
+      ...(summary.coverState ? { coverState: summary.coverState } : {}),
+    };
+  });
 
   const memoryRecords: LiterarySearchRecord[] = memory.thoughts.map((thought) => ({
     id: `memory:${thought.slug}`,

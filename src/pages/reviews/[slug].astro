@@ -3,9 +3,11 @@ import { getCollection, render } from 'astro:content';
 import Callout from '../../components/Callout.astro';
 import ReviewLayout from '../../layouts/ReviewLayout.astro';
 import { findRelatedBooks } from '../../lib/bookshelfPresentation';
+import { isPublicEntry } from '../../lib/content/publication';
+import { toRecordDetail } from '../../lib/content/viewModels';
 
 export async function getStaticPaths() {
-  const entries = await getCollection('reviews', ({ data }) => !data.draft);
+  const entries = await getCollection('reviews', isPublicEntry);
   return entries.map((entry) => ({
     params: { slug: entry.id },
     props: {
@@ -17,8 +19,9 @@ export async function getStaticPaths() {
 
 const { entry, relatedBooks } = Astro.props;
 const { Content } = await render(entry);
+const detail = toRecordDetail(entry, { linked: [] });
 ---
 
-<ReviewLayout entry={entry} relatedBooks={relatedBooks}>
+<ReviewLayout entry={entry} detail={detail} relatedBooks={relatedBooks}>
   <Content components={{ Callout }} />
 </ReviewLayout>

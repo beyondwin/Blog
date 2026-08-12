@@ -1,4 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
+import { toRecordSummary, type RecordSummary } from './content/viewModels';
 
 type ArticleEntry = CollectionEntry<'articles'>;
 type ReviewEntry = CollectionEntry<'reviews'>;
@@ -9,12 +10,14 @@ interface HomePresentationInput {
 }
 
 interface HomePresentation {
-  featuredReview?: ReviewEntry;
-  featuredArticle?: ArticleEntry;
-  featuredReading?: ReviewEntry;
-  openRecords: ArticleEntry[];
-  books: ReviewEntry[];
+  featuredReview?: RecordSummary;
+  featuredArticle?: RecordSummary;
+  featuredReading?: RecordSummary;
+  openRecords: RecordSummary[];
+  books: RecordSummary[];
 }
+
+type SummaryMapper = (entry: ArticleEntry | ReviewEntry) => RecordSummary;
 
 const approvedLeadIds = {
   featuredReview: 'changing-their-minds',
@@ -62,7 +65,7 @@ function orderPreferred<T extends { id: string }>(entries: T[], ids: readonly st
 export function buildHomePresentation({
   articles,
   reviews,
-}: HomePresentationInput): HomePresentation {
+}: HomePresentationInput, summarize: SummaryMapper = toRecordSummary): HomePresentation {
   const featuredReview = findPreferred(reviews, approvedLeadIds.featuredReview);
   const featuredArticle = findPreferred(articles, approvedLeadIds.featuredArticle);
   const featuredReading = reviews.find((entry) => (
@@ -77,17 +80,17 @@ export function buildHomePresentation({
   ].filter(Boolean));
 
   return {
-    featuredReview,
-    featuredArticle,
-    featuredReading,
+    featuredReview: featuredReview ? summarize(featuredReview) : undefined,
+    featuredArticle: featuredArticle ? summarize(featuredArticle) : undefined,
+    featuredReading: featuredReading ? summarize(featuredReading) : undefined,
     openRecords: orderPreferred(
       articles.filter((entry) => !usedArticleIds.has(entry.id)),
       approvedOpenRecordIds,
-    ).slice(0, 2),
+    ).slice(0, 2).map((entry) => summarize(entry)),
     books: orderPreferred(
       reviews.filter((entry) => !usedReviewIds.has(entry.id)),
       approvedBookIds,
-    ).slice(0, 8),
+    ).slice(0, 8).map((entry) => summarize(entry)),
   };
 }
 

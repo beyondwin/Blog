@@ -42,6 +42,7 @@ function reviewEntry(overrides: Record<string, unknown> = {}): SiteEntry {
       editionLabel: '2019 한국어판',
       readEditionVerified: false,
       verdict: '공포보다 비율을 먼저 보게 한다.',
+      coverState: 'verified',
       coverMedia: 'cover',
       relationships: [
         { target: 'articles/calibration', relation: 'extends', reason: '판단 교정을 확장한다.' },
@@ -69,6 +70,8 @@ describe('content view models', () => {
       description: '세상을 사실로 읽는 법',
       primaryDate: new Date('2020-05-05'),
       tags: ['판단'],
+      authors: ['한스 로슬링', '올라 로슬링'],
+      coverState: 'verified',
       verdict: '공포보다 비율을 먼저 보게 한다.',
       media: cover,
     });
@@ -81,6 +84,17 @@ describe('content view models', () => {
     });
 
     expect(result.media).toBeUndefined();
+    expect(result.coverState).toBe('verified');
+  });
+
+  it('preserves an explicit cover hold without attempting remote fallback', () => {
+    const result = toRecordSummary(reviewEntry({ coverState: 'hold', coverMedia: undefined }), () => {
+      throw new Error('a hold must not resolve media');
+    });
+
+    expect(result.coverState).toBe('hold');
+    expect(result.media).toBeUndefined();
+    expect(result.authors).toEqual(['한스 로슬링', '올라 로슬링']);
   });
 
   it('normalizes a single review author and only exposes exact-source memory', () => {

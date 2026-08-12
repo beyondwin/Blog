@@ -1,4 +1,5 @@
 import type { CollectionEntry } from 'astro:content';
+import { toRecordSummary, type RecordSummary } from './content/viewModels';
 
 type ReviewEntry = CollectionEntry<'reviews'>;
 
@@ -20,11 +21,13 @@ function getReviewDate(entry: ReviewEntry): Date {
   return entry.data.completedAt ?? entry.data.createdAt;
 }
 
-function hasVerifiedCover(entry: ReviewEntry): boolean {
-  return /^https?:\/\//.test(entry.data.coverImage ?? '');
+type SummaryMapper = (entry: ReviewEntry) => RecordSummary;
+
+function hasVerifiedCover(entry: RecordSummary): boolean {
+  return entry.coverState === 'verified' && Boolean(entry.media);
 }
 
-export function buildBookshelfPresentation(entries: ReviewEntry[]) {
+export function buildBookshelfPresentation(entries: ReviewEntry[], summarize: SummaryMapper = toRecordSummary) {
   const orderedEntries = [...entries].sort((left, right) => (
     getReviewDate(right).getTime() - getReviewDate(left).getTime()
   ));
@@ -35,7 +38,8 @@ export function buildBookshelfPresentation(entries: ReviewEntry[]) {
     counts.set(year, (counts.get(year) ?? 0) + 1);
   }
 
-  const coverEntries = orderedEntries.filter(hasVerifiedCover);
+  const summaries = orderedEntries.map((entry) => summarize(entry));
+  const coverEntries = summaries.filter(hasVerifiedCover);
   const byId = new Map(coverEntries.map((entry) => [entry.id, entry]));
   const preferredEntries = approvedShelfIds.flatMap((id) => {
     const entry = byId.get(id);
@@ -53,8 +57,8 @@ export function buildBookshelfPresentation(entries: ReviewEntry[]) {
       shelfEntries.slice(0, tierSize),
       shelfEntries.slice(tierSize, shelfSize),
     ].filter((tier) => tier.length > 0),
-    judgmentEntries: orderedEntries,
-    missingCoverEntries: orderedEntries.filter((entry) => !hasVerifiedCover(entry)),
+    judgmentEntries: summaries,
+    missingCoverEntries: summaries.filter((entry) => !hasVerifiedCover(entry)),
   };
 }
 

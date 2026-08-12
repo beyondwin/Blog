@@ -23,6 +23,22 @@ describe('media manifest', () => {
     expect(findMediaItem(manifest, 'cover').isbn13).toBe('9788934985068');
   });
 
+  it('preserves declared raster dimensions for repository-authored diagrams', () => {
+    const diagram = validMediaManifest
+      .replace('id: cover', 'id: architecture')
+      .replace('file: cover.jpg', 'file: architecture.png')
+      .replace('kind: book-cover', 'kind: diagram')
+      .replace('    sourceUrl: https://example.com/book\n', '    sourcePath: src/content/articles/pgvector-hybrid-search.mdx\n')
+      .replace('    isbn13: "9788934985068"\n', '')
+      .replace('    edition: 2019 한국어판\n', '')
+      .replace('    checksum:', '    width: 2048\n    height: 685\n    checksum:');
+
+    expect(findMediaItem(parseMediaManifest(diagram, 'media.yml'), 'architecture')).toMatchObject({
+      width: 2048,
+      height: 685,
+    });
+  });
+
   it('rejects path traversal', () => {
     expect(() => parseMediaManifest(validMediaManifest.replace('cover.jpg', '../cover.jpg'), 'media.yml')).toThrow(
       'file',

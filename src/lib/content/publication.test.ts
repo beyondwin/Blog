@@ -30,6 +30,7 @@ function summary(item: SiteEntry): RecordSummary {
     description: item.id,
     primaryDate: new Date('2026-08-12'),
     tags: [],
+    authors: [],
   };
 }
 

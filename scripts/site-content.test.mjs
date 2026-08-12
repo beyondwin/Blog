@@ -268,7 +268,9 @@ describe('site content contract', () => {
     const layout = await readFile(join(root, 'src', 'layouts', 'ReviewLayout.astro'), 'utf8');
 
     expect(layout).not.toContain('원문 보기');
-    expect(layout).toContain('coverImage');
+    expect(layout).not.toContain('coverImage');
+    expect(layout).toContain('detail.media');
+    expect(layout).toContain('detail.authors.join');
   });
 
   it('keeps review detail pages focused on the article body', async () => {

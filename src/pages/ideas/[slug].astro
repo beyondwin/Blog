@@ -1,11 +1,12 @@
 ---
 import { getCollection, render } from 'astro:content';
 import Callout from '../../components/Callout.astro';
+import { isPublicEntry } from '../../lib/content/publication';
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
 import { findContentMemoryLinks, loadPublicMemoryData } from '../../lib/memory';
 
 export async function getStaticPaths() {
-  const entries = await getCollection('ideas', ({ data }) => !data.draft);
+  const entries = await getCollection('ideas', isPublicEntry);
   return entries.map((entry) => ({
     params: { slug: entry.id },
     props: { entry },
