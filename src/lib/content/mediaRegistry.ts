@@ -1,6 +1,5 @@
 import type { ImageMetadata } from 'astro';
-import type { MediaItem, MediaManifest } from './mediaManifest';
-import { parseMediaManifest } from './mediaManifest.mjs';
+import { parseMediaManifest, type MediaItem } from './mediaManifest.mjs';
 
 const manifestSources = import.meta.glob<string>('../../assets/content/**/media.yml', {
   eager: true,
@@ -67,7 +66,7 @@ export function buildMediaRegistry(
     manifestPaths.add(manifestPath);
 
     const [, collection, slug] = match;
-    const manifest = parseMediaManifest(source, manifestPath) as MediaManifest;
+    const manifest = parseMediaManifest(source, manifestPath);
     const manifestDirectory = manifestPath.slice(0, -'/media.yml'.length);
     const ids = new Set<string>();
 
