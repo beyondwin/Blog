@@ -24,22 +24,39 @@ async function put(root, relativePath, contents) {
   await writeFile(path, contents);
 }
 
-function png(width, height) {
-  const bytes = Buffer.alloc(33);
-  bytes.set(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
-  bytes.writeUInt32BE(13, 8);
-  bytes.write('IHDR', 12, 'ascii');
-  bytes.writeUInt32BE(width, 16);
-  bytes.writeUInt32BE(height, 20);
-  bytes.set(Buffer.from([8, 6, 0, 0, 0]), 24);
-  return bytes;
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
-function validMinimalPng() {
-  return Buffer.from(
+function validPng(width = 1, height = 1) {
+  const bytes = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
     'base64',
   );
+  bytes.writeUInt32BE(width, 16);
+  bytes.writeUInt32BE(height, 20);
+  bytes.writeUInt32BE(crc32(bytes.subarray(12, 29)), 29);
+  return bytes;
+}
+
+function withoutPngChunk(bytes, type) {
+  let offset = 8;
+  while (offset + 12 <= bytes.length) {
+    const length = bytes.readUInt32BE(offset);
+    const chunkEnd = offset + 12 + length;
+    if (bytes.toString('ascii', offset + 4, offset + 8) === type) {
+      return Buffer.concat([bytes.subarray(0, offset), bytes.subarray(chunkEnd)]);
+    }
+    offset = chunkEnd;
+  }
+  throw new Error(`missing PNG chunk ${type}`);
 }
 
 function jpeg(width, height) {
@@ -82,7 +99,7 @@ describe('repository media validation', () => {
 
   it('accepts local PNG and JPEG media and public-memory relationships', async () => {
     const root = await makeRepository();
-    const diagram = validMinimalPng();
+    const diagram = validPng();
     const cover = jpeg(320, 480);
     await put(root, 'docs/source.md', '# Source\n');
     await put(root, 'src/data/memory.public.json', '{"thoughts":[{"slug":"public-thought"}]}\n');
@@ -137,7 +154,7 @@ describe('repository media validation', () => {
 
   it('reports missing manifest metadata and duplicate checksums deterministically', async () => {
     const root = await makeRepository();
-    const image = png(640, 480);
+    const image = validPng(640, 480);
     await put(root, 'src/assets/content/articles/note/a.png', image);
     await put(root, 'src/assets/content/articles/note/b.png', image);
     const valid = mediaManifest([
@@ -156,8 +173,8 @@ describe('repository media validation', () => {
   it('validates source paths and raster dimensions from file headers', async () => {
     const root = await makeRepository();
     const smallCover = jpeg(299, 500);
-    const huge = png(4001, 3000);
-    const zero = png(0, 100);
+    const huge = validPng(4001, 3000);
+    const zero = validPng(0, 100);
     await put(root, 'src/assets/content/reviews/book/small.jpg', smallCover);
     await put(root, 'src/assets/content/reviews/book/huge.png', huge);
     await put(root, 'src/assets/content/reviews/book/zero.png', zero);
@@ -204,7 +221,7 @@ describe('repository media validation', () => {
 
   it('does not follow declared asset symlinks outside their manifest directory', async () => {
     const root = await makeRepository();
-    const privateImage = validMinimalPng();
+    const privateImage = validPng();
     await put(root, 'docs/source.md', '# Source\n');
     await put(root, 'memory/private.png', privateImage);
     await put(root, 'src/assets/content/reviews/other/outside.png', privateImage);
@@ -229,7 +246,7 @@ describe('repository media validation', () => {
 
   it('rejects a truncated PNG that contains only signature and partial IHDR data', async () => {
     const root = await makeRepository();
-    const truncated = png(640, 480).subarray(0, 24);
+    const truncated = validPng(640, 480).subarray(0, 24);
     await put(root, 'src/assets/content/articles/note/truncated.png', truncated);
     await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([
       { id: 'truncated', file: 'truncated.png', kind: 'diagram', sourcePath: 'docs/missing.md', checksum: checksum(truncated) },
@@ -237,6 +254,60 @@ describe('repository media validation', () => {
 
     expect((await validateMediaRepository(root)).errors).toContain(
       'src/assets/content/articles/note/truncated.png: cannot read PNG dimensions from file header',
+    );
+  });
+
+  it('rejects a PNG with a bad IHDR CRC', async () => {
+    const root = await makeRepository();
+    const invalid = validPng(640, 480);
+    invalid[29] ^= 0xff;
+    await put(root, 'src/assets/content/articles/note/invalid.png', invalid);
+    await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([
+      { id: 'invalid', file: 'invalid.png', kind: 'diagram', sourcePath: 'docs/missing.md', checksum: checksum(invalid) },
+    ]));
+
+    expect((await validateMediaRepository(root)).errors).toContain(
+      'src/assets/content/articles/note/invalid.png: cannot read PNG dimensions from file header',
+    );
+  });
+
+  it('rejects a PNG without an IDAT chunk', async () => {
+    const root = await makeRepository();
+    const invalid = withoutPngChunk(validPng(640, 480), 'IDAT');
+    await put(root, 'src/assets/content/articles/note/invalid.png', invalid);
+    await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([
+      { id: 'invalid', file: 'invalid.png', kind: 'diagram', sourcePath: 'docs/missing.md', checksum: checksum(invalid) },
+    ]));
+
+    expect((await validateMediaRepository(root)).errors).toContain(
+      'src/assets/content/articles/note/invalid.png: cannot read PNG dimensions from file header',
+    );
+  });
+
+  it('rejects a PNG without a terminal IEND chunk', async () => {
+    const root = await makeRepository();
+    const invalid = withoutPngChunk(validPng(640, 480), 'IEND');
+    await put(root, 'src/assets/content/articles/note/invalid.png', invalid);
+    await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([
+      { id: 'invalid', file: 'invalid.png', kind: 'diagram', sourcePath: 'docs/missing.md', checksum: checksum(invalid) },
+    ]));
+
+    expect((await validateMediaRepository(root)).errors).toContain(
+      'src/assets/content/articles/note/invalid.png: cannot read PNG dimensions from file header',
+    );
+  });
+
+  it('rejects a PNG truncated inside a chunk', async () => {
+    const root = await makeRepository();
+    const complete = validPng(640, 480);
+    const invalid = complete.subarray(0, complete.length - 3);
+    await put(root, 'src/assets/content/articles/note/invalid.png', invalid);
+    await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([
+      { id: 'invalid', file: 'invalid.png', kind: 'diagram', sourcePath: 'docs/missing.md', checksum: checksum(invalid) },
+    ]));
+
+    expect((await validateMediaRepository(root)).errors).toContain(
+      'src/assets/content/articles/note/invalid.png: cannot read PNG dimensions from file header',
     );
   });
 
