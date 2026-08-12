@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -25,12 +25,21 @@ async function put(root, relativePath, contents) {
 }
 
 function png(width, height) {
-  const bytes = Buffer.alloc(24);
+  const bytes = Buffer.alloc(33);
   bytes.set(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  bytes.writeUInt32BE(13, 8);
   bytes.write('IHDR', 12, 'ascii');
   bytes.writeUInt32BE(width, 16);
   bytes.writeUInt32BE(height, 20);
+  bytes.set(Buffer.from([8, 6, 0, 0, 0]), 24);
   return bytes;
+}
+
+function validMinimalPng() {
+  return Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  );
 }
 
 function jpeg(width, height) {
@@ -73,7 +82,7 @@ describe('repository media validation', () => {
 
   it('accepts local PNG and JPEG media and public-memory relationships', async () => {
     const root = await makeRepository();
-    const diagram = png(800, 600);
+    const diagram = validMinimalPng();
     const cover = jpeg(320, 480);
     await put(root, 'docs/source.md', '# Source\n');
     await put(root, 'src/data/memory.public.json', '{"thoughts":[{"slug":"public-thought"}]}\n');
@@ -164,5 +173,83 @@ describe('repository media validation', () => {
     expect(result.errors).toContain('src/assets/content/reviews/book/huge.png: raster dimensions 4001x3000 exceed 12 megapixels');
     expect(result.errors).toContain('src/assets/content/reviews/book/zero.png: raster dimensions must be greater than zero');
     expect(result.errors).toContain('src/assets/content/reviews/book/media.yml: sourcePath "docs/missing.md" does not exist');
+  });
+
+  it('does not follow content symlinks into private memory or outside the repository', async () => {
+    const root = await makeRepository();
+    const outside = await mkdtemp(join(tmpdir(), 'validate-media-outside-'));
+    roots.push(outside);
+    await put(root, 'memory/private.mdx', `---\n---\n![secret](https://example.com/private.png)\n`);
+    await put(outside, 'outside.mdx', `---\n---\n![outside](https://example.com/outside.png)\n`);
+    await mkdir(join(root, 'src/content/articles'), { recursive: true });
+    await symlink(join(root, 'memory/private.mdx'), join(root, 'src/content/articles/private.mdx'));
+    await symlink(join(outside, 'outside.mdx'), join(root, 'src/content/articles/outside.mdx'));
+
+    expect((await validateMediaRepository(root)).errors).toEqual([
+      'src/content/articles/outside.mdx: symbolic link is not allowed',
+      'src/content/articles/private.mdx: symbolic link is not allowed',
+    ]);
+  });
+
+  it('does not follow a media manifest symlink outside the asset subtree', async () => {
+    const root = await makeRepository();
+    await put(root, 'docs/external-media.yml', 'version: 1\nitems: []\n');
+    await mkdir(join(root, 'src/assets/content/articles/note'), { recursive: true });
+    await symlink(join(root, 'docs/external-media.yml'), join(root, 'src/assets/content/articles/note/media.yml'));
+
+    expect((await validateMediaRepository(root)).errors).toEqual([
+      'src/assets/content/articles/note/media.yml: symbolic link is not allowed',
+    ]);
+  });
+
+  it('does not follow declared asset symlinks outside their manifest directory', async () => {
+    const root = await makeRepository();
+    const privateImage = validMinimalPng();
+    await put(root, 'docs/source.md', '# Source\n');
+    await put(root, 'memory/private.png', privateImage);
+    await put(root, 'src/assets/content/reviews/other/outside.png', privateImage);
+    await mkdir(join(root, 'src/assets/content/reviews/book'), { recursive: true });
+    await symlink(join(root, 'memory/private.png'), join(root, 'src/assets/content/reviews/book/private.png'));
+    await symlink(
+      join(root, 'src/assets/content/reviews/other/outside.png'),
+      join(root, 'src/assets/content/reviews/book/outside.png'),
+    );
+    await put(root, 'src/assets/content/reviews/book/media.yml', mediaManifest([
+      { id: 'private', file: 'private.png', kind: 'photo', sourcePath: 'docs/source.md', checksum: checksum(privateImage) },
+      { id: 'outside', file: 'outside.png', kind: 'photo', sourcePath: 'docs/source.md', checksum: checksum(privateImage) },
+    ]));
+
+    expect((await validateMediaRepository(root)).errors).toEqual([
+      `src/assets/content/reviews/book/media.yml: checksum ${checksum(privateImage)} is declared by multiple media items: "outside", "private"`,
+      'src/assets/content/reviews/book/outside.png: symbolic link is not allowed',
+      'src/assets/content/reviews/book/private.png: symbolic link is not allowed',
+      'src/assets/content/reviews/other/outside.png: asset is not declared in media.yml',
+    ]);
+  });
+
+  it('rejects a truncated PNG that contains only signature and partial IHDR data', async () => {
+    const root = await makeRepository();
+    const truncated = png(640, 480).subarray(0, 24);
+    await put(root, 'src/assets/content/articles/note/truncated.png', truncated);
+    await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([
+      { id: 'truncated', file: 'truncated.png', kind: 'diagram', sourcePath: 'docs/missing.md', checksum: checksum(truncated) },
+    ]));
+
+    expect((await validateMediaRepository(root)).errors).toContain(
+      'src/assets/content/articles/note/truncated.png: cannot read PNG dimensions from file header',
+    );
+  });
+
+  it('rejects a JPEG truncated after its SOF dimensions without an EOI marker', async () => {
+    const root = await makeRepository();
+    const truncated = jpeg(640, 480).subarray(0, -2);
+    await put(root, 'src/assets/content/articles/note/truncated.jpg', truncated);
+    await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([
+      { id: 'truncated', file: 'truncated.jpg', kind: 'photo', sourcePath: 'docs/missing.md', checksum: checksum(truncated) },
+    ]));
+
+    expect((await validateMediaRepository(root)).errors).toContain(
+      'src/assets/content/articles/note/truncated.jpg: cannot read JPG dimensions from file header',
+    );
   });
 });

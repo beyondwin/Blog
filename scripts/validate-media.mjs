@@ -15,26 +15,41 @@ function compare(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-async function collectFiles(directory, predicate) {
+async function scanTree(directory) {
   const files = [];
+  const symlinks = [];
 
-  try {
-    const entries = await readdir(directory, { withFileTypes: true });
-    entries.sort((left, right) => compare(left.name, right.name));
-
-    for (const entry of entries) {
-      const path = join(directory, entry.name);
-      if (entry.isDirectory()) {
-        files.push(...await collectFiles(path, predicate));
-      } else if ((entry.isFile() || entry.isSymbolicLink()) && predicate(path)) {
-        files.push(path);
+  async function walk(currentDirectory, checkRoot = false) {
+    try {
+      if (checkRoot) {
+        const rootInfo = await lstat(currentDirectory);
+        if (rootInfo.isSymbolicLink()) {
+          symlinks.push(currentDirectory);
+          return;
+        }
+        if (!rootInfo.isDirectory()) return;
       }
+
+      const entries = await readdir(currentDirectory, { withFileTypes: true });
+      entries.sort((left, right) => compare(left.name, right.name));
+
+      for (const entry of entries) {
+        const path = join(currentDirectory, entry.name);
+        if (entry.isSymbolicLink()) {
+          symlinks.push(path);
+        } else if (entry.isDirectory()) {
+          await walk(path);
+        } else if (entry.isFile()) {
+          files.push(path);
+        }
+      }
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
     }
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw error;
   }
 
-  return files;
+  await walk(directory, true);
+  return { files: files.sort(compare), symlinks: symlinks.sort(compare) };
 }
 
 function repoPath(root, path) {
@@ -67,7 +82,12 @@ function sha256(bytes) {
 
 function pngDimensions(bytes) {
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  if (bytes.length < 24 || !bytes.subarray(0, 8).equals(signature) || bytes.toString('ascii', 12, 16) !== 'IHDR') {
+  if (
+    bytes.length < 33
+    || !bytes.subarray(0, 8).equals(signature)
+    || bytes.readUInt32BE(8) !== 13
+    || bytes.toString('ascii', 12, 16) !== 'IHDR'
+  ) {
     return null;
   }
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
@@ -77,14 +97,21 @@ function jpegDimensions(bytes) {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
 
   let offset = 2;
+  let dimensions = null;
   while (offset < bytes.length) {
     while (offset < bytes.length && bytes[offset] === 0xff) offset += 1;
     if (offset >= bytes.length) return null;
     const marker = bytes[offset];
     offset += 1;
 
-    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd9)) continue;
-    if (marker === 0xd9 || marker === 0xda || offset + 2 > bytes.length) return null;
+    if (marker === 0xd9) return dimensions;
+    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) continue;
+    if (marker === 0xda) {
+      return dimensions && bytes.length >= 2 && bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9
+        ? dimensions
+        : null;
+    }
+    if (offset + 2 > bytes.length) return null;
 
     const length = bytes.readUInt16BE(offset);
     if (length < 2 || offset + length > bytes.length) return null;
@@ -94,7 +121,7 @@ function jpegDimensions(bytes) {
       || (marker >= 0xcd && marker <= 0xcf);
     if (isStartOfFrame) {
       if (length < 7) return null;
-      return { height: bytes.readUInt16BE(offset + 3), width: bytes.readUInt16BE(offset + 5) };
+      dimensions = { height: bytes.readUInt16BE(offset + 3), width: bytes.readUInt16BE(offset + 5) };
     }
     offset += length;
   }
@@ -108,17 +135,38 @@ function rasterDimensions(bytes, extension) {
   return null;
 }
 
-async function isReadableRepositoryFile(root, path) {
+async function inspectRepositoryFile(root, path, allowedRoot) {
   try {
     const info = await lstat(path);
-    if (!info.isFile() && !info.isSymbolicLink()) return false;
-    const [resolvedRoot, resolved] = await Promise.all([realpath(root), realpath(path)]);
-    if (!isInside(resolvedRoot, resolved)) return false;
-    return (await stat(resolved)).isFile();
+    if (info.isSymbolicLink()) return 'symlink';
+    if (!info.isFile()) return 'missing';
+    const resolved = await realpath(path);
+    if (!isInside(root, resolved) || !isInside(allowedRoot, resolved)) return 'outside';
+    return (await stat(resolved)).isFile() ? 'ok' : 'missing';
   } catch (error) {
-    if (error?.code === 'ENOENT') return false;
+    if (error?.code === 'ENOENT') return 'missing';
     throw error;
   }
+}
+
+async function retainContainedFiles(root, paths, allowedRoot, errors) {
+  const retained = [];
+  const allowedPath = repoPath(root, allowedRoot);
+
+  for (const path of paths) {
+    const fileState = await inspectRepositoryFile(root, path, allowedRoot);
+    if (fileState === 'ok') {
+      retained.push(path);
+    } else if (fileState === 'symlink') {
+      errors.add(`${repoPath(root, path)}: symbolic link is not allowed`);
+    } else if (fileState === 'outside') {
+      errors.add(`${repoPath(root, path)}: file resolves outside ${allowedPath}`);
+    } else {
+      errors.add(`${repoPath(root, path)}: file does not exist`);
+    }
+  }
+
+  return retained;
 }
 
 function inspectRawManifest(raw, manifestPath, errors, checksumDeclarations) {
@@ -157,6 +205,16 @@ function inspectRawManifest(raw, manifestPath, errors, checksumDeclarations) {
 async function loadPublicMemorySlugs(root, errors) {
   const path = join(root, 'src', 'data', 'memory.public.json');
   try {
+    const fileState = await inspectRepositoryFile(root, path, join(root, 'src', 'data'));
+    if (fileState === 'symlink') {
+      errors.add('src/data/memory.public.json: symbolic link is not allowed');
+      return new Set();
+    }
+    if (fileState === 'outside') {
+      errors.add('src/data/memory.public.json: file resolves outside src/data');
+      return new Set();
+    }
+    if (fileState === 'missing') return new Set();
     const parsed = JSON.parse(await readFile(path, 'utf8'));
     return new Set((Array.isArray(parsed?.thoughts) ? parsed.thoughts : [])
       .map((thought) => thought?.slug)
@@ -191,7 +249,7 @@ async function validateManifest(root, absolutePath, state) {
     return;
   }
 
-  const manifestDirectory = resolve(absolutePath, '..');
+  const manifestDirectory = await realpath(resolve(absolutePath, '..'));
   state.manifests.set(absolutePath, manifest);
 
   for (const item of manifest.items) {
@@ -203,7 +261,16 @@ async function validateManifest(root, absolutePath, state) {
     }
     state.declaredAssets.add(assetPath);
 
-    if (!await isReadableRepositoryFile(root, assetPath)) {
+    const assetState = await inspectRepositoryFile(root, assetPath, manifestDirectory);
+    if (assetState === 'symlink') {
+      state.errors.add(`${assetRepoPath}: symbolic link is not allowed`);
+      continue;
+    }
+    if (assetState === 'outside') {
+      state.errors.add(`${assetRepoPath}: media file resolves outside its manifest directory`);
+      continue;
+    }
+    if (assetState === 'missing') {
       state.errors.add(`${assetRepoPath}: media file does not exist or resolves outside the repository`);
       continue;
     }
@@ -232,7 +299,7 @@ async function validateManifest(root, absolutePath, state) {
 
     if (item.sourcePath) {
       const sourcePath = resolve(root, item.sourcePath);
-      if (!isInside(root, sourcePath) || !await isReadableRepositoryFile(root, sourcePath)) {
+      if (!isInside(root, sourcePath) || await inspectRepositoryFile(root, sourcePath, root) !== 'ok') {
         state.errors.add(`${manifestPath}: sourcePath "${item.sourcePath}" does not exist`);
       }
     } else if (item.sourceUrl && item.rightsNote.trim()) {
@@ -285,7 +352,7 @@ async function validateContentFile(root, absolutePath, targets, state, strict) {
 }
 
 export async function validateMediaRepository(root, { strict = false } = {}) {
-  const repositoryRoot = resolve(root);
+  const repositoryRoot = await realpath(resolve(root));
   const contentRoot = join(repositoryRoot, 'src', 'content');
   const assetsRoot = join(repositoryRoot, 'src', 'assets', 'content');
   const state = {
@@ -296,11 +363,32 @@ export async function validateMediaRepository(root, { strict = false } = {}) {
     warnings: new Set(),
   };
 
-  const [contentFiles, manifestFiles, assetFiles] = await Promise.all([
-    collectFiles(contentRoot, (path) => contentExtensions.has(extname(path).toLowerCase())),
-    collectFiles(assetsRoot, (path) => path.endsWith(`${sep}media.yml`)),
-    collectFiles(assetsRoot, (path) => !path.endsWith(`${sep}media.yml`)),
+  const [contentTree, assetTree] = await Promise.all([
+    scanTree(contentRoot),
+    scanTree(assetsRoot),
   ]);
+  for (const path of [...contentTree.symlinks, ...assetTree.symlinks]) {
+    state.errors.add(`${repoPath(repositoryRoot, path)}: symbolic link is not allowed`);
+  }
+
+  const contentFiles = await retainContainedFiles(
+    repositoryRoot,
+    contentTree.files.filter((path) => contentExtensions.has(extname(path).toLowerCase())),
+    contentRoot,
+    state.errors,
+  );
+  const manifestFiles = await retainContainedFiles(
+    repositoryRoot,
+    assetTree.files.filter((path) => path.endsWith(`${sep}media.yml`)),
+    assetsRoot,
+    state.errors,
+  );
+  const assetFiles = await retainContainedFiles(
+    repositoryRoot,
+    assetTree.files.filter((path) => !path.endsWith(`${sep}media.yml`)),
+    assetsRoot,
+    state.errors,
+  );
 
   for (const manifestPath of manifestFiles) {
     await validateManifest(repositoryRoot, manifestPath, state);
