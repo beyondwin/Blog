@@ -29,6 +29,10 @@ describe('media manifest', () => {
     );
   });
 
+  it.each(['./cover.jpg', 'images//cover.jpg'])('rejects non-canonical file path %s', (file) => {
+    expect(() => parseMediaManifest(validMediaManifest.replace('cover.jpg', file), 'media.yml')).toThrow('file');
+  });
+
   it('rejects book covers without edition metadata', () => {
     expect(() =>
       parseMediaManifest(validMediaManifest.replace('    edition: 2019 한국어판\n', ''), 'media.yml'),

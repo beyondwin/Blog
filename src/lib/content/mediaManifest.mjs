@@ -11,8 +11,8 @@ function safeRelativePath(field) {
     .refine((value) => {
       if (value.includes('\\')) return false;
       if (value.startsWith('/') || /^[A-Za-z]:\//.test(value)) return false;
-      return value.split('/').every((segment) => segment !== '..');
-    }, `${field} must be a repository-relative path without .. segments`);
+      return value.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+    }, `${field} must be a canonical repository-relative path without empty, . or .. segments`);
 }
 
 const externalUrlSchema = z
