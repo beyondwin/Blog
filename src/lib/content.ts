@@ -1,4 +1,3 @@
-import { getCollection } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 
 export type SiteEntry =
@@ -94,7 +93,11 @@ export function estimateReadingMinutes(text: string): number {
 }
 
 export async function getContentByCollection(collection: SiteCollection): Promise<SiteEntry[]> {
-  const entries = await getCollection(collection, ({ data }) => !data.draft);
+  const { getCollection } = await import('astro:content');
+  const entries = await getCollection(
+    collection,
+    ({ data }) => data.status === 'published' && !data.draft,
+  );
 
   return (entries as SiteEntry[]).sort((a, b) => {
     return getEntryDate(b).getTime() - getEntryDate(a).getTime();
