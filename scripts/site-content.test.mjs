@@ -317,6 +317,29 @@ describe('site content contract', () => {
     expect(script).toContain('applyMemorySelection');
   });
 
+  it('lets a targeted mobile memory detail override the enhanced selected-panel hide rule', async () => {
+    const css = await readFile(join(root, 'src', 'styles', 'memory-literary.css'), 'utf8');
+    const mobileCss = css.slice(css.indexOf('@media (max-width: 720px)'));
+    const hiddenSelectedRule = mobileCss.indexOf(
+      '.memory-sheet.is-enhanced .memory-detail-panel.is-selected { display: none; }',
+    );
+    const visibleTargetRule = mobileCss.search(
+      /\.memory-sheet\.is-enhanced \.memory-detail-panel:target,\s*\.memory-detail-panel:target,\s*\.memory-relation-panel:target\s*\{[^}]*display: block;/,
+    );
+
+    expect(hiddenSelectedRule).toBeGreaterThanOrEqual(0);
+    expect(visibleTargetRule).toBeGreaterThan(hiddenSelectedRule);
+  });
+
+  it('keeps targeted mobile memory details visible without JavaScript enhancement', async () => {
+    const css = await readFile(join(root, 'src', 'styles', 'memory-literary.css'), 'utf8');
+    const mobileCss = css.slice(css.indexOf('@media (max-width: 720px)'));
+
+    expect(mobileCss).toMatch(
+      /(?:^|\n)\s*\.memory-detail-panel:target,\s*\.memory-relation-panel:target\s*\{[^}]*display: block;/,
+    );
+  });
+
   it('ships search as a visible full public index before JavaScript filters it', async () => {
     const page = await readFile(join(root, 'src', 'pages', 'search', 'index.astro'), 'utf8');
 
