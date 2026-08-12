@@ -85,6 +85,15 @@ describe('existing content migration contract', () => {
     expect(new Set(reviewSlugs)).toHaveLength(18);
   });
 
+  it('does not claim the displayed winter edition was the edition read', () => {
+    const review = realReviews.find((entry) => entry.slug === 'how-we-crossed-winter');
+
+    expect(review).toBeDefined();
+    expect(review.data.isbn13).toBe('9791161571492');
+    expect(review.data.editionLabel).toContain('2023 일반판');
+    expect(review.data.readEditionVerified).toBe(false);
+  });
+
   it('uses Doing Good Better as the canonical review identity', () => {
     const reviewSlugs = realReviews.map((review) => review.slug);
 

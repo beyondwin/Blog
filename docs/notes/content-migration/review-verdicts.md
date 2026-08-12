@@ -8,6 +8,11 @@
 
 사용자는 2026-08-13 남은 리스크 해결과 main 병합을 승인했고, 이 범위에 원문과 동일한 18개 후보 verdict의 전체 반영을 포함했다. 아래 모든 행을 `approved`로 기록했으며 동일 문장을 review frontmatter의 `verdict`로 옮겼다.
 
+## 판본·표지 예외 기록
+
+- `how-we-crossed-winter`: 기존 Naver 저장 표지는 리더스원 큰글자판 ISBN `9791161571683`이지만, 현재 표시용 표지는 2023 일반판 ISBN `9791161571492`다. 표시 판본과 실제 독서 판본의 일치 여부를 확인할 수 없으므로 `readEditionVerified: false`를 유지한다.
+- `devotion-of-suspect-x`: 장부의 정확한 YES24 판본 이미지는 폭 270px로 저장소의 책 표지 최소 폭 300px 기준에 미달한다. 다른 판본이나 기존 Naver 운영 복사본으로 대체하지 않고 `coverState: hold`로 두며 `coverMedia`와 로컬 manifest는 만들지 않는다.
+
 | slug | current description | first judgment | proposed verdict | status |
 | --- | --- | --- | --- | --- |
 | `art-thief` | 예술 도둑은 예술품 절도 실화를 다룬 책이지만, 읽고 나면 결국 중독에 대한 이야기로 남는다. 주인공은 돈을 벌기 위해 예술품을 훔친 사람이 아니다. 그를 계속 움직이게 한 건 이익이 아니라 훔치는 순간에 느끼는... | 예술 도둑은 중독에 관한 기록이다. | 예술 도둑은 중독에 관한 기록이다. | approved |
