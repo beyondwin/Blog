@@ -147,6 +147,7 @@
   .memory-sheet.is-enhanced .memory-detail-panel.is-selected { display: none; }
   .memory-detail-panel.is-default,
   .memory-relation-panel.is-default { display: none; }
+  .memory-sheet.is-enhanced .memory-detail-panel:target,
   .memory-detail-panel:target,
   .memory-relation-panel:target { display: block; outline: 0; }
   .memory-sheet-handle { display: block; width: 42px; height: 3px; margin: -7px auto 17px; background: var(--literary-line); }
