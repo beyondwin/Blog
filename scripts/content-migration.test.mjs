@@ -76,13 +76,12 @@ describe('existing content migration contract', () => {
       .map((entry) => entry.slug)
       .sort();
 
-    expect(publicArticles).toHaveLength(12);
+    expect(publicArticles).toHaveLength(13);
     expect(pending).toEqual([
       'agents-md-vs-agent-skills-evidence',
       'aws-static-frontend-serverless-bff',
       'shared-ai-conversation-evidence-boundaries',
       'uncle-bob-ai-code-review-evidence',
-      'why-i-read-in-the-ai-era',
     ]);
     expect(realArticles).toHaveLength(publicArticles.length + pending.length);
   });
