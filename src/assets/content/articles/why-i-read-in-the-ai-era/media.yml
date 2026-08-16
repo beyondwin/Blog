@@ -1,7 +1,7 @@
 version: 1
 items:
   - id: reading-desk-light
-    file: reading-desk-light.png
+    file: reading-desk-light.webp
     kind: illustration
     alt: 책상 위에 펼쳐진 책과 은은한 조명, 가장자리에 희미하게 보이는 노트북
     caption: 답을 빠르게 얻는 도구 옆에서, 천천히 따라가는 독서
@@ -11,9 +11,9 @@ items:
     rightsNote: beyondwin essay illustration; repository-authored asset generated for this article
     width: 1536
     height: 1024
-    checksum: sha256:cadfc27306a34c84b6c533be58489e13cfa569a407b0401f9261d3158f6fa67b
+    checksum: sha256:80aa2907605c0d40905be54e23b28be55af7810c84effe70e28b091ac1074564
   - id: judgment-scale
-    file: judgment-scale.png
+    file: judgment-scale.webp
     kind: illustration
     alt: 한쪽에는 쌓인 서류, 다른 쪽에는 펼쳐진 노트가 놓인 저울
     caption: 많아진 답과, 그 답을 어떻게 받아들일지에 대한 판단
@@ -23,9 +23,9 @@ items:
     rightsNote: beyondwin essay illustration; repository-authored asset generated for this article
     width: 1536
     height: 1024
-    checksum: sha256:300072d8b3c84ef720c2ef8a4c54d605b6cb51a2e076c5367ff0cda50def0adb
+    checksum: sha256:107e50f560279a85c7c127bd6933ea3144ee155f55853cf2b436d9b39e2a2316
   - id: shared-reading-table
-    file: shared-reading-table.png
+    file: shared-reading-table.webp
     kind: illustration
     alt: 둥근 탁자 위에 서로 다른 책갈피가 꽂힌 책 세 권이 펼쳐져 있는 모습
     caption: 같은 책을 읽어도 서로 다른 책이 되는 자리
@@ -35,4 +35,4 @@ items:
     rightsNote: beyondwin essay illustration; repository-authored asset generated for this article
     width: 1536
     height: 1024
-    checksum: sha256:809a8c8a4ed6c6736c0393f2b5c408fe80c82e9ddf92032834f5a6a62c8b3a48
+    checksum: sha256:aed74b79ff9ac95023f3504c05402d45aae3c561df3e14563e6f4111c4dc4b98
