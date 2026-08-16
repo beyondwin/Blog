@@ -63,20 +63,20 @@ function publicSourcePathsForThought(slug) {
 
 describe('existing content migration contract', () => {
   it('keeps the approved corpus counts and hides examples', () => {
-    expect(realArticles).toHaveLength(16);
+    expect(realArticles).toHaveLength(17);
     expect(realReviews).toHaveLength(18);
     expect(publicMemory.thoughts).toHaveLength(7);
     expect(exampleEntries).toHaveLength(5);
     expect(exampleEntries.every((entry) => entry.data.draft === true)).toBe(true);
   });
 
-  it('preserves four real articles in review until publication is explicitly authorized', () => {
+  it('preserves real articles in review until publication is explicitly authorized', () => {
     const pending = realArticles
       .filter((entry) => entry.data.status === 'review')
       .map((entry) => entry.slug)
       .sort();
 
-    expect(publicArticles).toHaveLength(12);
+    expect(publicArticles).toHaveLength(13);
     expect(pending).toEqual([
       'agents-md-vs-agent-skills-evidence',
       'aws-static-frontend-serverless-bff',

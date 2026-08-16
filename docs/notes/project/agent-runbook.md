@@ -92,7 +92,7 @@ list/detail/home/search/tag surfaces now consistently require
 `published && !draft`; `scripts/publication-surfaces.test.mjs` guards this
 route-level contract.
 
-The corpus preserves 16 real article sources, but only 12 are currently
+The corpus preserves 17 real article sources, but only 13 are currently
 public. These four remain `status: review` pending explicit publication
 authorization: `agents-md-vs-agent-skills-evidence`,
 `aws-static-frontend-serverless-bff`,
