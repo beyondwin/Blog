@@ -92,13 +92,13 @@ list/detail/home/search/tag surfaces now consistently require
 `published && !draft`; `scripts/publication-surfaces.test.mjs` guards this
 route-level contract.
 
-The corpus preserves 16 real article sources, but only 12 are currently
-public. These four remain `status: review` pending explicit publication
+The corpus preserves 17 real article sources, but only 12 are currently
+public. These five remain `status: review` pending explicit publication
 authorization: `agents-md-vs-agent-skills-evidence`,
 `aws-static-frontend-serverless-bff`,
-`shared-ai-conversation-evidence-boundaries`, and
-`uncle-bob-ai-code-review-evidence`. Risk-resolution work is not publication
-authorization.
+`shared-ai-conversation-evidence-boundaries`,
+`uncle-bob-ai-code-review-evidence`, and `why-i-read-in-the-ai-era`.
+Risk-resolution work is not publication authorization.
 
 `npm run validate` includes the strict media gate
 `npm run media:validate -- --strict`. Naver review intake must use a new local
