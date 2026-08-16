@@ -29,15 +29,11 @@ const presentation = buildFigurePresentation(resolved.item);
   />
   <figcaption>
     <span>{presentation.caption}</span>
-    <small>
-      {presentation.credit} · {
-        presentation.provenanceHref ? (
-          <a href={presentation.provenanceHref} rel="noreferrer">{presentation.provenanceLabel}</a>
-        ) : (
-          presentation.provenanceLabel
-        )
-      }
-    </small>
+    {presentation.provenanceHref && (
+      <small>
+        {presentation.credit} · <a href={presentation.provenanceHref} rel="noreferrer">{presentation.provenanceLabel}</a>
+      </small>
+    )}
   </figcaption>
 </figure>
 
