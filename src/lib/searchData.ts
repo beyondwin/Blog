@@ -44,7 +44,7 @@ export async function loadSearchRecords(): Promise<SearchRecord[]> {
     id: `topic:${topic}`,
     kind: 'topic',
     title: topic,
-    description: '공개 기록과 기억을 잇는 주제명',
+    description: '찾기로 이어진 단어',
     topics: [topic],
     href: tags.includes(topic)
       ? `/tags/${encodeURIComponent(topic)}/`
