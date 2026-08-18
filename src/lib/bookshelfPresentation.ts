@@ -58,6 +58,15 @@ export function formatReadMonth(date: Date): string {
   return `${date.getUTCFullYear()}년 ${date.getUTCMonth() + 1}월에 읽음`;
 }
 
+export function formatBookWhisper(publisher?: string, edition?: string): string {
+  const imprint = publisher?.trim() ?? '';
+  const plate = edition?.trim() ?? '';
+  if (!imprint) return plate;
+  if (!plate) return imprint;
+  if (plate.includes(imprint)) return plate;
+  return `${imprint} · ${plate}`;
+}
+
 function reviewTargetId(target: string): string | undefined {
   const match = /^reviews\/([a-z0-9][a-z0-9-]*)$/.exec(target);
   return match?.[1];

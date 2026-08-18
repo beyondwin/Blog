@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBookshelfPresentation,
   findRelatedBooks,
+  formatBookWhisper,
   formatLiteraryDate,
   formatReadMonth,
   getOneSentenceJudgment,
@@ -141,6 +142,16 @@ describe('bookshelf presentation', () => {
     expect(formatReadMonth(new Date('2026-05-27'))).toBe('2026년 5월에 읽음');
   });
 
+  it('does not repeat a publisher already named in the edition', () => {
+    expect(formatBookWhisper(
+      '동녘사이언스',
+      '동녘사이언스 2018 개정증보판, 차익종·김현구 옮김',
+    )).toBe('동녘사이언스 2018 개정증보판, 차익종·김현구 옮김');
+    expect(formatBookWhisper('문학동네', '세계문학전집 173')).toBe('문학동네 · 세계문학전집 173');
+    expect(formatBookWhisper('문학동네')).toBe('문학동네');
+    expect(formatBookWhisper(undefined, '무선판')).toBe('무선판');
+  });
+
   it('keeps book pages free of the literary shelf and staff tickets', async () => {
     const index = await readFile(new URL('../pages/reviews/index.astro', import.meta.url), 'utf8');
     const layout = await readFile(new URL('../layouts/ReviewLayout.astro', import.meta.url), 'utf8');
@@ -158,11 +169,15 @@ describe('bookshelf presentation', () => {
     expect(index).toContain('SiteFooter');
     expect(index).toContain('book-objects');
     expect(index).toContain('book-diary');
+    expect(index).toContain('book-cover--set" aria-hidden="true"');
     expect(layout).toContain('SiteFooter');
     expect(layout).toContain('itemTitle');
     expect(layout).toContain('formatReadMonth');
+    expect(layout).toContain('formatBookWhisper');
+    expect(layout).toContain('slot="header-mark"');
     expect(css).not.toMatch(/\.book-verdict\s*\{[^}]*display:\s*none/);
     expect(css).not.toMatch(/\.book-title\s*\{[^}]*display:\s*none/);
     expect(css).not.toMatch(/\.book-author\s*\{[^}]*display:\s*none/);
+    expect(css).not.toMatch(/position:\s*fixed;[\s\S]*left:\s*12px/);
   });
 });

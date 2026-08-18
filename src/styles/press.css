@@ -60,6 +60,13 @@ html {
   border-bottom: 1px solid color-mix(in oklch, var(--mark) 50%, var(--booth));
 }
 
+.press-page .site-header__lead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
 .press-page .brand,
 .press-page .brand__text {
   color: var(--ink);
@@ -982,7 +989,7 @@ html {
   min-width: 0;
 }
 
-.book-cover--remnant {
+.site-header .book-cover--remnant {
   display: none;
 }
 
@@ -1084,23 +1091,21 @@ html {
     top: auto;
   }
 
-  .book-cover--remnant {
-    display: none;
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    z-index: 12;
+  .press-page .site-header.is-reading {
+    position: sticky;
+    top: 0;
+  }
+
+  .site-header.is-reading .book-cover--remnant {
+    display: block;
     width: 28px;
     max-width: 28px;
     height: 42px;
+    flex: 0 0 28px;
     box-shadow: 0 2px 6px color-mix(in oklch, var(--ink) 18%, transparent);
   }
 
-  .book-cover--remnant.is-visible {
-    display: block;
-  }
-
-  .book-cover--remnant.book-cover--set {
+  .site-header .book-cover--remnant.book-cover--set {
     padding: 0.2em;
     font-size: 0.38rem;
     overflow: hidden;
