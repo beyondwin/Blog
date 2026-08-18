@@ -238,9 +238,9 @@ html {
 
 .home-writing p {
   margin: 0;
-  color: var(--soft);
+  color: var(--ink);
   font-size: 17px;
-  line-height: 1.6;
+  line-height: 1.8;
 }
 
 .home-writing:hover h1 {
@@ -418,17 +418,25 @@ html {
 .home-proof {
   align-self: start;
   max-width: 18em;
-  color: var(--proof);
   font-size: 1.5rem;
   font-weight: 600;
-  line-height: 1.3;
   letter-spacing: 0;
+}
+
+.press-proof {
+  color: var(--proof);
+  line-height: 1.3;
+}
+
+.home-proof {
+  color: color-mix(in oklch, var(--proof) 80%, var(--ink));
+  line-height: 1.45;
 }
 
 .press-proof a,
 .home-proof a {
   color: inherit;
-  text-decoration-color: color-mix(in oklch, var(--proof) 48%, transparent);
+  text-decoration-color: color-mix(in oklch, currentColor 48%, transparent);
 }
 
 .press-page :where(a, button, input, textarea, select, summary):focus-visible {
