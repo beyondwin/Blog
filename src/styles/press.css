@@ -1195,7 +1195,8 @@ html {
 }
 
 .memory-thought__companions a {
-  color: color-mix(in oklch, var(--proof) 80%, var(--ink));
+  /* Same 70% proof mix as .memory-sentence: 4.70:1 at 16px/600. */
+  color: color-mix(in oklch, var(--proof) 70%, var(--ink));
   font-weight: 600;
   line-height: 1.5;
   text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);

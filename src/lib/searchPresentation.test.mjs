@@ -5,6 +5,7 @@ import {
   buildSearchMatches,
   matchLiterarySearchFields,
   summarizeSearchMatches,
+  topicRecordHref,
 } from './searchPresentation.ts';
 
 const records = [
@@ -100,5 +101,11 @@ describe('search presentation', () => {
     expect(buildSearchInventory(records).map((record) => record.id)).toEqual(
       records.map((record) => record.id),
     );
+  });
+
+  it('sends content tags to the tag page and memory-only topics to search', () => {
+    expect(topicRecordHref('testing', ['testing', '문학'])).toBe('/tags/testing/');
+    expect(topicRecordHref('ai-workflow', ['testing', '문학'])).toBe('/search/?q=ai-workflow');
+    expect(topicRecordHref('문장 습관', [])).toBe(`/search/?q=${encodeURIComponent('문장 습관')}`);
   });
 });

@@ -84,4 +84,13 @@ describe('sentence and search surfaces', () => {
     expect(page).toContain('emptyQueryKinds');
     expect(page).toContain("['writing', 'book', 'sentence']");
   });
+
+  it('search topics do not mint retired workbench hrefs', async () => {
+    const data = await source('src/lib/searchData.ts');
+    const presentation = await source('src/lib/searchPresentation.ts');
+    expect(data).not.toContain('/memory/?topic=');
+    expect(presentation).not.toContain('/memory/?topic=');
+    expect(presentation).toContain('/search/?q=');
+    expect(data).toContain('topicRecordHref');
+  });
 });

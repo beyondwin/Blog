@@ -1,6 +1,6 @@
 import { getAllContent, getAllTags } from './content';
 import { loadPublicMemoryData } from './memory';
-import type { SearchRecord } from './searchPresentation';
+import { topicRecordHref, type SearchRecord } from './searchPresentation';
 import { toRecordSummary } from './content/viewModels';
 import { memoryThoughtHref } from './siteChrome';
 
@@ -46,9 +46,7 @@ export async function loadSearchRecords(): Promise<SearchRecord[]> {
     title: topic,
     description: '찾기로 이어진 단어',
     topics: [topic],
-    href: tags.includes(topic)
-      ? `/tags/${encodeURIComponent(topic)}/`
-      : `/memory/?topic=${encodeURIComponent(topic)}`,
+    href: topicRecordHref(topic, tags),
   }));
 
   return [...contentRecords, ...memoryRecords, ...topicRecords];
