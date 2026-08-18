@@ -1,0 +1,13 @@
+---
+const html = await Astro.slots.render('default');
+const fold = html.includes('질문') && html.includes('짧은 판단');
+---
+
+{fold ? (
+  <details class="article-brief">
+    <summary>질문과 짧은 판단</summary>
+    <table set:html={html}></table>
+  </details>
+) : (
+  <table set:html={html}></table>
+)}

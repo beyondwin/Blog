@@ -4,7 +4,7 @@ import BaseLayout from './BaseLayout.astro';
 import {
   articleJudgment,
   articleSpecies,
-  articleStake,
+  parseColophon,
   type ArticleImpression,
   type LeftoverSentence,
   type RecordsArticle,
@@ -22,8 +22,8 @@ interface Props {
   headings?: TocItem[];
   readingMinutes?: number;
   previousImpressions?: ArticleImpression[];
-  relatedArticles?: ArticleImpression[];
   leftoverSentence?: LeftoverSentence;
+  colophon?: string;
 }
 
 const {
@@ -31,19 +31,18 @@ const {
   headings = [],
   readingMinutes,
   previousImpressions = [],
-  relatedArticles = [],
   leftoverSentence: leftover,
+  colophon,
 } = Astro.props;
 
 const article = entry.collection === 'articles' ? entry as RecordsArticle : undefined;
 const species = article ? articleSpecies(article) : undefined;
-const judgment = article
-  ? (species === '조사' ? articleJudgment(article) : articleStake(article))
-  : entry.data.description;
+const judgment = article ? articleJudgment(article) : entry.data.description;
 const kicker = species === '조사' && readingMinutes
   ? `조사 · ${readingMinutes}분`
   : species;
 const toc = headings.filter((heading) => heading.depth === 2 && heading.label !== '확인한 자료');
+const colophonBlocks = colophon ? parseColophon(colophon) : [];
 ---
 
 <BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
@@ -62,24 +61,7 @@ const toc = headings.filter((heading) => heading.depth === 2 && heading.label !=
       )}
     </header>
 
-    <div class="article-flow">
-      <div class="prose article-prose"><slot /></div>
-      {leftover && (
-        <aside class="article-leftover">
-          <p>남은 문장</p>
-          <a href={leftover.href}>{leftover.claim}</a>
-        </aside>
-      )}
-      {relatedArticles.length > 0 && previousImpressions.length === 0 && (
-        <aside class="article-continue" aria-label="이어 읽기">
-          {relatedArticles.map((related) => (
-            <p>
-              <a href={related.href}>{related.title}</a>
-              {related.reason && <span>{related.reason}</span>}
-            </p>
-          ))}
-        </aside>
-      )}
+    <div class="article-read">
       {species === '조사' && toc.length > 0 && (
         <nav class="article-toc" aria-label="절">
           <ol>
@@ -89,7 +71,51 @@ const toc = headings.filter((heading) => heading.depth === 2 && heading.label !=
           </ol>
         </nav>
       )}
+      <div class="prose article-prose"><slot /></div>
     </div>
+
+    {leftover && (
+      <aside class="article-leftover">
+        <p>남은 문장</p>
+        <a href={leftover.href}>{leftover.claim}</a>
+      </aside>
+    )}
+
+    {colophonBlocks.length > 0 && (
+      <section class="article-colophon">
+        <h2>확인한 자료</h2>
+        {colophonBlocks.map((block) => (
+          block.type === 'ul' ? (
+            <ul>
+              {block.items.map((item) => (
+                <li>
+                  {item.href ? <a href={item.href}>{item.label}</a> : item.label}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>{block.text}</p>
+          )
+        ))}
+      </section>
+    )}
   </article>
   <SiteFooter />
 </BaseLayout>
+
+<script>
+  const source = document.querySelector<HTMLElement>('.article-prose h2#확인한-자료');
+  const dest = document.querySelector<HTMLElement>('.article-colophon h2');
+  if (source) {
+    let node: Element | null = source;
+    while (node) {
+      const next = node.nextElementSibling;
+      node.setAttribute('hidden', '');
+      node = next;
+    }
+    if (dest) {
+      source.removeAttribute('id');
+      dest.id = '확인한-자료';
+    }
+  }
+</script>
