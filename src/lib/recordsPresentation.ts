@@ -1,7 +1,19 @@
 import type { CollectionEntry } from 'astro:content';
+import { memoryThoughtHref } from './siteChrome';
 
 export type RecordsArticle = CollectionEntry<'articles'>;
 export type ArticleSpecies = '조사' | '에세이';
+
+export interface ArticleImpression {
+  href: string;
+  title: string;
+  reason: string;
+}
+
+export interface LeftoverSentence {
+  href: string;
+  claim: string;
+}
 
 interface Heading {
   depth: number;
@@ -50,6 +62,55 @@ export function articleStake(entry: { data: { description: string; dek?: string 
   return entry.data.dek ?? entry.data.description;
 }
 
+function firstParagraph(body: string): string {
+  return body
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .find((block) => block && !block.startsWith('#') && !block.startsWith('|')) ?? '';
+}
+
+export function articleJudgment(entry: RecordsArticle): string {
+  const emphasis = firstParagraph(articleBody(entry)).match(/\*\*([^*]+)\*\*/);
+  if (emphasis) return emphasis[1].trim();
+  return articleStake(entry);
+}
+
+function articleTargetId(target: string): string | undefined {
+  const match = /^articles\/([a-z0-9][a-z0-9-]*)$/.exec(target);
+  return match?.[1];
+}
+
+export function previousImpressions(
+  entry: RecordsArticle,
+  publicArticles: RecordsArticle[],
+): ArticleImpression[] {
+  const byId = new Map(publicArticles.map((article) => [article.id, article]));
+
+  return (entry.data.relationships ?? []).flatMap((relationship) => {
+    const id = articleTargetId(relationship.target);
+    if (!id || id === entry.id) return [];
+    const target = byId.get(id);
+    if (!target) return [];
+    return [{
+      href: `/articles/${id}/`,
+      title: target.data.title,
+      reason: relationship.reason,
+    }];
+  });
+}
+
+export function leftoverSentence(memory?: {
+  linked: Array<{ slug: string; claimKo: string }>;
+  related: Array<{ slug: string; claimKo: string }>;
+}): LeftoverSentence | undefined {
+  const thought = memory?.linked[0] ?? memory?.related[0];
+  if (!thought) return undefined;
+  return {
+    href: memoryThoughtHref(thought.slug),
+    claim: thought.claimKo,
+  };
+}
+
 function toIndexItem(entry: RecordsArticle): ArticleIndexItem {
   const species = articleSpecies(entry);
 
@@ -94,32 +155,23 @@ export function buildArticlePresentation(
   candidates: RecordsArticle[],
   headings: Heading[],
 ) {
-  const tags = new Set(entry.data.tags);
-  const related = candidates
-    .filter((candidate) => candidate.id !== entry.id)
-    .map((candidate) => ({
-      entry: candidate,
-      sharedTopics: candidate.data.tags.filter((tag) => tags.has(tag)).length,
-    }))
-    .filter(({ sharedTopics }) => sharedTopics > 0)
-    .sort((a, b) => (
-      b.sharedTopics - a.sharedTopics
-      || b.entry.data.updatedAt.getTime() - a.entry.data.updatedAt.getTime()
-    ))
-    .slice(0, 3)
-    .map(({ entry: relatedEntry }) => relatedEntry);
+  const impressions = previousImpressions(entry, candidates);
+  const related = impressions.slice(0, 2);
   const words = articleBody(entry).trim().split(/\s+/).filter(Boolean).length;
 
   return {
     toc: headings
-      .filter((heading) => heading.depth === 2 || heading.depth === 3)
+      .filter((heading) => heading.depth === 2 && heading.text !== '확인한 자료')
       .map((heading) => ({
         depth: heading.depth,
         href: `#${heading.slug}`,
         label: heading.text,
       })),
     readingMinutes: Math.max(1, Math.round(words / 260)),
+    previousImpressions: impressions,
     related,
+    species: articleSpecies(entry),
+    judgment: articleJudgment(entry),
   };
 }
 

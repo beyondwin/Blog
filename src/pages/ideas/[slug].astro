@@ -3,7 +3,6 @@ import { getCollection, render } from 'astro:content';
 import Callout from '../../components/Callout.astro';
 import { isPublicEntry } from '../../lib/content/publication';
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
-import { findContentMemoryLinks, loadPublicMemoryData } from '../../lib/memory';
 
 export async function getStaticPaths() {
   const entries = await getCollection('ideas', isPublicEntry);
@@ -15,13 +14,8 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
-const relatedMemory = findContentMemoryLinks(
-  loadPublicMemoryData(),
-  `src/content/ideas/${entry.id}.mdx`,
-  entry.data.tags,
-);
 ---
 
-<ArticleLayout entry={entry} relatedMemory={relatedMemory}>
+<ArticleLayout entry={entry}>
   <Content components={{ Callout }} />
 </ArticleLayout>

@@ -1,11 +1,15 @@
 ---
-import ContentMemoryLinks from '../components/ContentMemoryLinks.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 import BaseLayout from './BaseLayout.astro';
-import { formatDate, getEntryDate, getEntryTypeLabel } from '../lib/content';
+import {
+  articleJudgment,
+  articleSpecies,
+  articleStake,
+  type ArticleImpression,
+  type LeftoverSentence,
+  type RecordsArticle,
+} from '../lib/recordsPresentation';
 import type { SiteEntry } from '../lib/content';
-import type { ContentMemoryLinks as ContentMemoryLinksModel } from '../lib/memoryData';
-import type { RecordsArticle } from '../lib/recordsPresentation';
-import '../styles/records-literary.css';
 
 interface TocItem {
   depth: number;
@@ -17,132 +21,75 @@ interface Props {
   entry: SiteEntry;
   headings?: TocItem[];
   readingMinutes?: number;
-  relatedArticles?: RecordsArticle[];
-  relatedMemory?: ContentMemoryLinksModel;
+  previousImpressions?: ArticleImpression[];
+  relatedArticles?: ArticleImpression[];
+  leftoverSentence?: LeftoverSentence;
 }
 
-const { entry, headings = [], readingMinutes, relatedArticles = [], relatedMemory } = Astro.props;
-const date = getEntryDate(entry);
-const detail = entry.collection === 'travel'
-  ? entry.data.location
-  : entry.collection === 'ideas'
-    ? entry.data.maturity
-    : getEntryTypeLabel(entry);
-const literaryArticle = entry.collection === 'articles';
-const formatLiteraryDate = (value: Date) => new Intl.DateTimeFormat('ko', {
-  year: 'numeric', month: '2-digit', day: '2-digit',
-}).format(value).replaceAll(' ', '');
-const marginalMemory = relatedMemory?.linked[0] ?? relatedMemory?.related[0];
+const {
+  entry,
+  headings = [],
+  readingMinutes,
+  previousImpressions = [],
+  relatedArticles = [],
+  leftoverSentence: leftover,
+} = Astro.props;
+
+const article = entry.collection === 'articles' ? entry as RecordsArticle : undefined;
+const species = article ? articleSpecies(article) : undefined;
+const judgment = article
+  ? (species === '조사' ? articleJudgment(article) : articleStake(article))
+  : entry.data.description;
+const kicker = species === '조사' && readingMinutes
+  ? `조사 · ${readingMinutes}분`
+  : species;
+const toc = headings.filter((heading) => heading.depth === 2 && heading.label !== '확인한 자료');
 ---
 
-{literaryArticle ? (
-  <BaseLayout
-    title={`${entry.data.title} · beyondwin`}
-    description={entry.data.description}
-    pageClass="literary-page literary-article"
-    headerVariant="literary"
-  >
-    <article class="article-reading shell">
-      {headings.length > 0 && (
-        <nav class="article-toc article-toc--desktop" aria-label="문서 목차">
-          <p>기술 문서</p>
+<BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
+  <article class="press-sheet article-sheet">
+    <header class="article-masthead">
+      {kicker && <p class="article-kicker">{kicker}</p>}
+      <h1>{entry.data.title}</h1>
+      {judgment && <p class="article-judgment">{judgment}</p>}
+      {previousImpressions.length > 0 && (
+        <nav class="article-impression" aria-label="쇄">
+          <span aria-current="page">이 쇄</span>
+          {previousImpressions.map((item) => (
+            <a href={item.href}>이전 쇄</a>
+          ))}
+        </nav>
+      )}
+    </header>
+
+    <div class="article-flow">
+      <div class="prose article-prose"><slot /></div>
+      {leftover && (
+        <aside class="article-leftover">
+          <p>남은 문장</p>
+          <a href={leftover.href}>{leftover.claim}</a>
+        </aside>
+      )}
+      {relatedArticles.length > 0 && previousImpressions.length === 0 && (
+        <aside class="article-continue" aria-label="이어 읽기">
+          {relatedArticles.map((related) => (
+            <p>
+              <a href={related.href}>{related.title}</a>
+              {related.reason && <span>{related.reason}</span>}
+            </p>
+          ))}
+        </aside>
+      )}
+      {species === '조사' && toc.length > 0 && (
+        <nav class="article-toc" aria-label="절">
           <ol>
-            {headings.map((heading, index) => (
-              <li class:list={{ 'is-depth-three': heading.depth === 3 }}>
-                <a href={heading.href} aria-current={index === 0 ? 'location' : undefined}>{heading.label}</a>
-              </li>
+            {toc.map((heading) => (
+              <li><a href={heading.href}>{heading.label}</a></li>
             ))}
           </ol>
         </nav>
       )}
-
-      <div class="article-reading__center">
-        <header class="article-title-block">
-          <p>기술 문서</p>
-          <h1>{entry.data.title}</h1>
-          <span class="literary-registration" aria-hidden="true"></span>
-          <p class="article-deck">{entry.data.description}</p>
-          <p class="article-byline">
-            <span>기술 문서</span>
-            <span>업데이트 <time datetime={entry.data.updatedAt.toISOString()}>{formatLiteraryDate(entry.data.updatedAt)}</time></span>
-            {readingMinutes && <span>{readingMinutes}분 읽기</span>}
-          </p>
-        </header>
-
-        {headings.length > 0 && (
-          <details class="article-toc article-toc--mobile">
-            <summary>목차 <span aria-hidden="true">⌄</span></summary>
-            <ol>
-              {headings.map((heading) => (
-                <li class:list={{ 'is-depth-three': heading.depth === 3 }}><a href={heading.href}>{heading.label}</a></li>
-              ))}
-            </ol>
-          </details>
-        )}
-
-        <div class="prose article-prose"><slot /></div>
-
-        {marginalMemory && (
-          <aside class="article-memory-note" aria-label="이어진 기억">
-            <p>이어진 기억</p>
-            <a href={marginalMemory.memoryHref}>{marginalMemory.claimKo}</a>
-          </aside>
-        )}
-      </div>
-
-      {relatedArticles.length > 0 && (
-        <aside class="article-context" aria-label="이어 읽기">
-          <h2>이어 읽기</h2>
-          <ol>
-            {relatedArticles.map((related) => {
-              const sharedTopics = related.data.tags.filter((tag) => entry.data.tags.includes(tag));
-              return (
-                <li>
-                  <a href={`/articles/${related.id}/`}>{related.data.title}<span aria-hidden="true">→</span></a>
-                  <p>관련 주제 · {sharedTopics.join(' · ')}</p>
-                </li>
-              );
-            })}
-          </ol>
-        </aside>
-      )}
-    </article>
-    <footer class="literary-footer shell">
-      <span>© beyondwin</span>
-      <p>이 사이트는 한 사람의 느린 기록으로 만들어집니다.</p>
-      <nav aria-label="Footer"><a href="/">소개</a><a href="/tags/">색인</a><a href="/memory/">기억</a></nav>
-    </footer>
-  </BaseLayout>
-) : (
-  <BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
-    <div class="shell article-shell">
-      <article class="article-body">
-        <div class="article-kicker"><span>{detail}</span><span>{formatDate(date)}</span></div>
-        <h1>{entry.data.title}</h1>
-        <p class="description">{entry.data.description}</p>
-        {entry.data.tags.length > 0 && <ul class="tag-list article-tag-list" aria-label="Tags">{entry.data.tags.map((tag) => <li>{tag}</li>)}</ul>}
-        <div class="prose"><slot /></div>
-        <ContentMemoryLinks memory={relatedMemory} />
-      </article>
     </div>
-  </BaseLayout>
-)}
-
-<script>
-  import { resolveTocTargetId } from '../lib/recordsPresentation';
-
-  const tocLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.article-toc--desktop a[href^="#"]'));
-  const sections = tocLinks.flatMap((link) => {
-    const section = document.getElementById(resolveTocTargetId(link.hash));
-    return section ? [{ link, section }] : [];
-  });
-  if (sections.length > 0 && 'IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-      if (!visible) return;
-      tocLinks.forEach((link) => link.removeAttribute('aria-current'));
-      sections.find(({ section }) => section === visible.target)?.link.setAttribute('aria-current', 'location');
-    }, { rootMargin: '-18% 0px -68% 0px' });
-    sections.forEach(({ section }) => observer.observe(section));
-  }
-</script>
+  </article>
+  <SiteFooter />
+</BaseLayout>

@@ -17,16 +17,21 @@ describe('literary index presentation', () => {
     ]);
   });
 
-  it('keeps empty lanes factual and visually distinct', () => {
-    expect(getEmptyLaneCopy('travel')).toEqual({
-      marker: 'A.',
-      title: '장면',
-      fact: '아직 공개한 장면이 없습니다.',
-      condition: '사진과 장소가 함께 남을 때 이곳에 놓입니다.',
-      href: '/tags/',
-      linkLabel: '색인으로 돌아가기',
-    });
-    expect(getEmptyLaneCopy('ideas').title).toBe('생각 노트');
-    expect(getEmptyLaneCopy('analysis').title).toBe('분석');
+  it('sends empty analysis back to writing, not a fake room', () => {
+    const copy = getEmptyLaneCopy('analysis');
+    expect(copy.href).toBe('/articles/');
+    expect(copy.fact).toContain('없습니다');
+    expect(copy.marker).toBeUndefined();
+  });
+
+  it('sends every empty lane to writing with one honest sentence', () => {
+    for (const lane of ['analysis', 'ideas', 'travel']) {
+      const copy = getEmptyLaneCopy(lane);
+      expect(copy.href).toBe('/articles/');
+      expect(copy.fact).toContain('없습니다');
+      expect(copy.marker).toBeUndefined();
+      expect(copy.fact).not.toMatch(/색인|기억|기록/);
+      expect(JSON.stringify(copy)).not.toMatch(/색인|기억|기록/);
+    }
   });
 });
