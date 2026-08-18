@@ -1,166 +1,83 @@
 ---
 import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import ReadingLeadCover from '../components/ReadingLeadCover.astro';
-import { loadHomePresentation } from '../lib/homeData';
-import { selectHomeMemories } from '../lib/homePresentation';
+import SiteFooter from '../components/SiteFooter.astro';
+import { loadHomePresentation, selectHomeThought } from '../lib/homeData';
 import { loadPublicMemoryData } from '../lib/memoryData';
 
-const memory = loadPublicMemoryData();
 const {
-  featuredReview,
   featuredArticle,
-  featuredReading,
-  openRecords,
-  books,
+  featuredReview,
+  moreArticles,
+  moreBooks,
 } = await loadHomePresentation();
-const connectedMemories = selectHomeMemories(memory.thoughts);
-
-function numericDate(date: Date): string {
-  return date.toISOString().slice(0, 10).replaceAll('-', '.');
-}
-
-function noteLabel(memoryType: string): string {
-  return memoryType === 'reflective' ? 'READING NOTE' : 'THOUGHT NOTE';
-}
+const featuredThought = selectHomeThought(loadPublicMemoryData().thoughts);
 ---
 
-<BaseLayout
-  pageClass="literary-home"
-  headerVariant="literary"
-  description="책과 기술 사이에서 오래 남은 판단을 기록하는 beyondwin 개인 문학 아카이브."
->
-  <div class="literary-sheet">
-    <section class="home-opening" aria-labelledby="home-statement">
-      <header class="editor-note">
-        <h1 id="home-statement"><span>책과 기술 사이에서</span><span>오래 남은 것들.</span></h1>
-        <span class="registration-rule" aria-hidden="true"></span>
-        <p class="editor-note__label">Editor’s Note</p>
-        <p class="editor-note__copy">읽고 실행한 뒤에도<br />다시 꺼내 볼 수 있는 판단을<br />기록합니다.</p>
-        <p class="editor-signature">— beyondwin</p>
-      </header>
-
-      {featuredReview && (
-        <article class="lead-record lead-record--review">
-          <p class="record-kicker record-kicker--reading">READING NOTE</p>
-          <div class="lead-record__review-grid">
-            <ReadingLeadCover entry={featuredReview} tall />
-            <div class="lead-record__copy">
-              <h2>{featuredReview.title}</h2>
-              <p>{featuredReview.description}</p>
-              <p class="record-date"><span>완독</span> {numericDate(featuredReview.primaryDate)}</p>
-              <a class="record-link record-link--reading" href={featuredReview.href}>읽기 기록 보기 <span aria-hidden="true">→</span></a>
-            </div>
-          </div>
-        </article>
-      )}
-
+<BaseLayout description="글과 책, 그리고 남는 문장.">
+  <div class="press-sheet home-sheet">
+    <article class="home-lead">
       {featuredArticle && (
-        <article class="lead-record lead-record--technical">
-          <p class="record-kicker record-kicker--technical">TECHNICAL NOTE</p>
-          <div class="lead-record__copy">
-            <h2>{featuredArticle.title}</h2>
-            <p>{featuredArticle.description}</p>
-            <p class="record-date"><span>업데이트</span> {numericDate(featuredArticle.primaryDate)}</p>
-            <a class="record-link record-link--technical" href={featuredArticle.href}>기술 문서 읽기 <span aria-hidden="true">→</span></a>
-          </div>
-        </article>
+        <a href={featuredArticle.href} class="home-writing">
+          <h1>{featuredArticle.title}</h1>
+          <p>{featuredArticle.description}</p>
+        </a>
       )}
-
-      {featuredReading && (
-        <article class="lead-record lead-record--reading">
-          <p class="record-kicker record-kicker--reading">READING NOTE</p>
-          <div class="lead-record__review-grid">
-            <ReadingLeadCover entry={featuredReading} />
-            <div class="lead-record__copy">
-              <h2>{featuredReading.title}</h2>
-              <p>{featuredReading.description}</p>
-              <p class="record-date"><span>완독</span> {numericDate(featuredReading.primaryDate)}</p>
-              <a class="record-link record-link--reading" href={featuredReading.href}>읽기 기록 보기 <span aria-hidden="true">→</span></a>
-            </div>
-          </div>
-        </article>
+      {featuredReview && (
+        <a href={featuredReview.href} class="home-book">
+          {featuredReview.media ? (
+            <Image
+              class="home-book__plate"
+              src={featuredReview.media.asset}
+              alt={featuredReview.media.item.alt}
+              width={180}
+              height={270}
+              loading="eager"
+            />
+          ) : (
+            <span class="home-book__plate home-book__plate--set">
+              <b>{featuredReview.title}</b>
+              {featuredReview.authors.length > 0 && <em>{featuredReview.authors.join(' · ')}</em>}
+            </span>
+          )}
+        </a>
       )}
-    </section>
-
-    <section class="home-ledger home-ledger--open" aria-labelledby="open-records-title">
-      <div class="home-section-heading">
-        <h2 id="open-records-title">지금 펼쳐 둔 기록</h2>
-        <span class="registration-rule" aria-hidden="true"></span>
-      </div>
-      <div class="open-record-list">
-        {openRecords.map((entry) => (
-          <a href={entry.href} class="open-record-row">
-            <span class="open-record-row__title">{entry.title}</span>
-            <time datetime={entry.primaryDate.toISOString()}>{numericDate(entry.primaryDate)}</time>
-            <span class="open-record-row__type">기술 문서</span>
+    </article>
+    {featuredThought && (
+      <aside class="home-proof">
+        <a href={featuredThought.href}>{featuredThought.claimKo}</a>
+      </aside>
+    )}
+    {moreArticles.length > 0 && (
+      <section class="home-more-writing" aria-label="글">
+        {moreArticles.map((article) => (
+          <a href={article.href}>{article.title}</a>
+        ))}
+      </section>
+    )}
+    {moreBooks.length > 0 && (
+      <section class="home-more-books" aria-label="책">
+        {moreBooks.map((book) => (
+          <a href={book.href} class="home-book">
+            {book.media ? (
+              <Image
+                class="home-book__plate"
+                src={book.media.asset}
+                alt={book.media.item.alt}
+                width={96}
+                height={144}
+                loading="lazy"
+              />
+            ) : (
+              <span class="home-book__plate home-book__plate--set">
+                <b>{book.title}</b>
+                {book.authors.length > 0 && <em>{book.authors.join(' · ')}</em>}
+              </span>
+            )}
           </a>
         ))}
-        {connectedMemories[0] && (
-          <a href={`/memory/?thought=${connectedMemories[0].slug}`} class="open-record-row">
-            <span class="open-record-row__title">{connectedMemories[0].claimKo}</span>
-            <time aria-hidden="true"></time>
-            <span class="open-record-row__type">공개 기억</span>
-          </a>
-        )}
-      </div>
-    </section>
-
-    <section class="home-books" aria-labelledby="books-title">
-      <div class="home-section-heading home-section-heading--books">
-        <h2 id="books-title">읽은 책</h2>
-        <span class="registration-rule" aria-hidden="true"></span>
-        <nav class="shelf-index" aria-label="책장 페이지">
-          <span>1 / {Math.max(books.length, 1)}</span>
-          <a href="/reviews/" aria-label="이전 책">‹</a>
-          <a href="/reviews/" aria-label="다음 책">›</a>
-        </nav>
-      </div>
-      <div class="book-shelf">
-        <div class="book-shelf__books">
-          {books.map((book) => (
-            <a href={book.href} aria-label={`${book.title} 읽기 기록`}>
-              {book.media ? (
-                <Image
-                  src={book.media.asset}
-                  alt={book.media.item.alt}
-                  width={220}
-                  height={308}
-                  loading="lazy"
-                />
-              ) : (
-                <span class="book-cover-fallback">{book.title}<b>표지 확인 중</b></span>
-              )}
-            </a>
-          ))}
-        </div>
-        <span class="book-shelf__ledge" aria-hidden="true"></span>
-      </div>
-    </section>
-
-    <section class="home-ledger home-ledger--memory" aria-labelledby="memory-title">
-      <div class="home-section-heading">
-        <h2 id="memory-title">이어진 기억</h2>
-        <span class="registration-rule" aria-hidden="true"></span>
-      </div>
-      <div class="memory-sentence-list">
-        {connectedMemories.map((thought) => (
-          <a href={`/memory/?thought=${thought.slug}`}>
-            <span>{thought.claimKo}</span>
-            <small>{noteLabel(thought.memoryType)}</small>
-          </a>
-        ))}
-      </div>
-    </section>
-
-    <footer class="literary-footer">
-      <span>© beyondwin</span>
-      <p>이 사이트는 한 사람의 느린 기록으로 만들어집니다.</p>
-      <nav aria-label="Footer navigation">
-        <a href="/">소개</a>
-        <a href="/tags/">노트 목록</a>
-        <a href="/memory/">아카이브</a>
-      </nav>
-    </footer>
+      </section>
+    )}
   </div>
+  <SiteFooter />
 </BaseLayout>

@@ -1,6 +1,8 @@
 import type { CollectionEntry } from 'astro:content';
 import { getContentByCollection } from './content';
-import { buildHomePresentation } from './homePresentation';
+import { buildHomePresentation, selectHomeThought } from './homePresentation';
+
+export { selectHomeThought };
 
 export async function loadHomePresentation() {
   const [articles, reviews] = await Promise.all([
