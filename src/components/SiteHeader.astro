@@ -1,42 +1,18 @@
 ---
-interface Props {
-  variant?: 'default' | 'literary';
-}
+import { publicNav } from '../lib/siteChrome';
 
-const { variant = 'default' } = Astro.props;
-const literary = variant === 'literary';
 const currentPath = Astro.url.pathname;
 const isCurrent = (href: string) => href === '/' ? currentPath === href : currentPath.startsWith(href);
-const navItems = literary
-  ? [
-      { href: '/articles/', label: '기록' },
-      { href: '/reviews/', label: '책장' },
-      { href: '/memory/', label: '기억' },
-      { href: '/tags/', label: '색인' },
-    ]
-  : [
-      { href: '/articles/', label: 'Articles' },
-      { href: '/analysis/', label: 'Analysis' },
-      { href: '/reviews/', label: 'Reviews' },
-      { href: '/ideas/', label: 'Ideas' },
-      { href: '/memory/', label: 'Memory' },
-    ];
 ---
 
-<header class:list={['site-header', { 'site-header--literary': literary }]}>
+<header class="site-header">
   <div class="shell site-header__inner">
     <a class="brand" href="/" aria-label="beyondwin home">
-      {!literary && <span class="brand__mark" aria-hidden="true"></span>}
+      <span class="brand__mark" aria-hidden="true"></span>
       <span class="brand__text">beyondwin</span>
     </a>
     <nav class="nav" aria-label="Primary navigation">
-      {navItems.map((item) => <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>{item.label}</a>)}
-      {literary && <a href="/search/" class="nav__search" aria-label="검색" aria-current={isCurrent('/search/') ? 'page' : undefined}><span aria-hidden="true"></span><b>검색</b></a>}
+      {publicNav.map((item) => <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>{item.label}</a>)}
     </nav>
-    {literary && (
-      <a class="nav-menu" href="/tags/" aria-label="전체 색인">
-        <span></span><span></span>
-      </a>
-    )}
   </div>
 </header>
