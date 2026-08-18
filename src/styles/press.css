@@ -106,7 +106,7 @@ html {
   justify-content: space-between;
   gap: 20px;
   margin-top: 28px;
-  color: var(--soft);
+  color: var(--ink);
   font-size: 13px;
 }
 
@@ -183,14 +183,14 @@ html {
   background-image:
     linear-gradient(
       to right,
-      oklch(0.62 0.14 230) 0 12.5%,
-      oklch(0.58 0.2 350) 12.5% 25%,
-      oklch(0.9 0.16 102) 25% 37.5%,
-      oklch(0.18 0.02 100) 37.5% 50%,
-      oklch(0.74 0.07 230) 50% 62.5%,
-      oklch(0.7 0.1 350) 62.5% 75%,
-      oklch(0.94 0.08 102) 75% 87.5%,
-      oklch(0.42 0.01 100) 87.5% 100%
+      oklch(0.68 0.2 230) 0 12.5%,
+      oklch(0.58 0.26 350) 12.5% 25%,
+      oklch(0.91 0.2 102) 25% 37.5%,
+      oklch(0.14 0.02 100) 37.5% 50%,
+      oklch(0.8 0.13 230) 50% 62.5%,
+      oklch(0.74 0.16 350) 62.5% 75%,
+      oklch(0.94 0.15 102) 75% 87.5%,
+      oklch(0.48 0.01 100) 87.5% 100%
     ),
     linear-gradient(var(--ink), var(--ink)),
     linear-gradient(var(--ink), var(--ink)),
@@ -306,10 +306,11 @@ html {
 
 .press-proof,
 .home-proof {
-  max-width: 28em;
+  max-width: 18em;
   color: var(--proof);
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
   letter-spacing: 0;
 }
 
