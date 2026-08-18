@@ -87,3 +87,9 @@ export function summarizeSearchMatches(matches: SearchMatch[]) {
     { total: 0, writing: 0, book: 0, sentence: 0, topic: 0 },
   );
 }
+
+export function topicRecordHref(topic: string, contentTags: readonly string[]): string {
+  return contentTags.includes(topic)
+    ? `/tags/${encodeURIComponent(topic)}/`
+    : `/search/?q=${encodeURIComponent(topic)}`;
+}
