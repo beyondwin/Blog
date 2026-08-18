@@ -42,7 +42,7 @@ for (const entry of presentation.judgmentEntries) {
                   decoding="async"
                 />
               ) : (
-                <span class="book-cover book-cover--set">
+                <span class="book-cover book-cover--set" aria-hidden="true">
                   <b>{entry.title}</b>
                   {entry.authors.length > 0 && <em>{entry.authors.join(' · ')}</em>}
                 </span>
@@ -74,7 +74,7 @@ for (const entry of presentation.judgmentEntries) {
                     decoding="async"
                   />
                 ) : (
-                  <span class="book-cover book-cover--small book-cover--set">
+                  <span class="book-cover book-cover--small book-cover--set" aria-hidden="true">
                     <b>{entry.title}</b>
                     {entry.authors.length > 0 && <em>{entry.authors.join(' · ')}</em>}
                   </span>

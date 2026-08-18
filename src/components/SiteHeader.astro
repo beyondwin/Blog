@@ -7,10 +7,13 @@ const isCurrent = (href: string) => href === '/' ? currentPath === href : curren
 
 <header class="site-header">
   <div class="shell site-header__inner">
-    <a class="brand" href="/" aria-label="beyondwin home">
-      <span class="brand__mark" aria-hidden="true"></span>
-      <span class="brand__text">beyondwin</span>
-    </a>
+    <div class="site-header__lead">
+      <slot />
+      <a class="brand" href="/" aria-label="beyondwin home">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__text">beyondwin</span>
+      </a>
+    </div>
     <nav class="nav" aria-label="Primary navigation">
       {publicNav.map((item) => <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>{item.label}</a>)}
     </nav>

@@ -36,7 +36,9 @@ const {
     FORM: 인쇄소 4색 교정 부스.
     FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
     -->
-    <SiteHeader />
+    <SiteHeader>
+      <slot name="header-mark" />
+    </SiteHeader>
     <main class="site-main">
       <slot />
     </main>
