@@ -1,6 +1,6 @@
 ---
-title: "Karpathy가 말한 그래프는 Graph Engineering이 아니다"
-description: "2026년 X에서 퍼진 Delete Everything, Keep Graph 영상을 자막과 2023년 CS25 원본, Graph Engineering 가이드, 11페이지 PDF와 대조해 그래프가 네 갈래로 갈라지는 지점을 정리한다."
+title: "2026년에 남길 것은 그래프 제품이 아니다"
+description: "유행 68분 영상은 2023년 수업의 재판매다. 2026년 Karpathy와 Anthropic 원전을 기준으로, 지금 읽을 자료와 버릴 자료를 가른다."
 createdAt: "2026-08-18"
 updatedAt: "2026-08-18"
 tags: ["AI", "Karpathy", "graph", "source-grounded"]
@@ -11,166 +11,130 @@ evidenceState: "source-grounded"
 relationships:
   - target: "articles/graphify-code-knowledge-graph-deep-dive"
     relation: "related"
-    reason: "이 블로그의 코드 지식 그래프와 강연의 계산 그래프는 같은 단어의 다른 대상이다."
+    reason: "이 블로그의 코드 지식 그래프와 2026년 위키·워크플로 원전은 같은 단어의 다른 대상이다."
   - target: "articles/andrej-karpathy-skills-analysis"
     relation: "related"
-    reason: "Karpathy 관련 기존 글과 이번 원문 대조를 이어 읽기 위한 연결이다."
+    reason: "Karpathy 관련 기존 글과 2026년 원전 대조를 이어 읽기 위한 연결이다."
 ---
 
-2026년 8월에 다시 돈 제목은 새 패러다임처럼 들린다. “전부 지우고 그래프만 남겨라.” 그런데 68분 영상을 자막으로 따라가면 Karpathy가 지우라고 한 것은 에이전트 프롬프트가 아니라 RNN이고, 남기라고 한 것은 GraphRAG가 아니라 attention이다. 내 결론은 짧다. **그래프라는 단어를 하나로 묶지 말고, 노드와 엣지가 어떤 질문을 푸는지부터 말해야 한다.**
+2023년 CS25는 트랜스포머가 왜 attention만 남겼는지 설명하는 수업이다. 그 설명은 아직 맞다. 다만 **2026년 에이전트 시스템을 설계하는 커리큘럼으로는 가치가 거의 없다.** 모델은 이미 그 위에서 돌고, 지금 병목은 검증, 기억, 병렬 작업의 비용이다. 내 결론은 이것이다. **유행 68분은 커리큘럼에서 빼고, 2026년 원전만 남겨라.**
 
-이 글은 2026년 8월 18일 기준으로 YouTube 미러 `XdbpCM4yGyE` 자막, X 원문 포스트, 공식 CS25 업로드 메타데이터, @hanakoxbt의 8단계 가이드 게시문, 그리고 Drive에 공유된 11페이지 PDF를 직접 대조한 결과다. X Article URL 자체는 로그인 벽이지만, 같은 날 올린 게시문에 본문이 그대로 있다.
+이 글은 2026년 8월 18일 기준으로 Karpathy의 Sequoia 정리, LLM Wiki gist, autoresearch 저장소, Anthropic의 에이전트·지식 그래프·Dynamic Workflows 문서를 직접 읽은 결과다. 68분 미러는 정체만 확인했고, 본론에서는 쓰지 않는다.
 
-| 질문 | 짧은 판단 |
-| --- | --- |
-| 이 영상은 2026년 신작 강연인가? | 아니다. 2023년 초 Stanford 발언이 이어 붙은 패키지다. |
-| “Delete everything”의 대상은? | RNN과 encoder bottleneck. 프롬프트 전체가 아니다. |
-| 강연의 그래프는 무엇인가? | 토큰이 노드이고 attention이 메시지 패싱인 계산 그래프. |
-| 2026년 Graph Engineering은 같은 말인가? | 아니다. 실행 경로, 지식 기억, 루프 감독이 한 단어에 섞여 있다. |
-| 이 블로그의 Graphify는? | 또 다른 네 번째 그래프. 코드 심볼과 파일의 지도다. |
+| 자료 | 연도 | 지금 읽을 이유 |
+| --- | --- | --- |
+| Sequoia AI Ascent + 본인 정리 | 2026-04 | 공식 2026 강연. agentic engineering과 검증. |
+| LLM Wiki gist | 2026-04 | 공식 기억 패턴. RAG 대신 누적 위키. |
+| autoresearch | 2026-03 | 공식 루프. 메트릭이 좋아질 때만 남긴다. |
+| Anthropic Cookbook / Dynamic Workflows | 2026-03, 2026-05 | 공식 지식 그래프와 공식 실행 오케스트레이션. |
+| 유행 68분 “Keep Graph” | 2023 수업 + 2026 포장 | 정체 확인용. 실무 커리큘럼에서 제외. |
 
 ## 먼저 알아야 할 개념
 
-그래프는 점과 화살표다. 어려워지는 이유는 점의 종류가 바뀌면 전혀 다른 기계가 되기 때문이다.
+2026년 원전이 나누는 층은 세 개다. “그래프”라는 한 단어로 묶이면 안 된다.
 
-이 묶음에는 최소 네 개의 그래프가 있다.
+| 층 | 2026 원전 | 하는 일 |
+| --- | --- | --- |
+| 검증 루프 | autoresearch, Sequoia | 한 일을 돌리고, 숫자나 테스트로 남길지 정한다 |
+| 실행 오케스트레이션 | Dynamic Workflows, Building effective agents | 너무 큰 일을 나눠 병렬로 돌리고 다시 모은다 |
+| 지속 기억 | LLM Wiki, Knowledge graph cookbook | 창이 닫혀도 남는 페이지나 엔티티를 유지한다 |
 
-| 이름 | 노드는 | 엣지는 | 푸는 질문 |
-| --- | --- | --- | --- |
-| 계산/어텐션 그래프 | 토큰, 패치, 히든 벡터 | “누가 누구에게 메시지를 보내는가” | 모델이 한 토큰을 어떻게 계산하는가 |
-| 실행 그래프 | 에이전트, 단계, 검증자 | “다음에 누가 도는가” | 일이 어떤 순서로 흐르는가 |
-| 기억 그래프 | 엔티티, 주장, 출처, 커밋 | `supports`, `supersedes`, `parent_of` | 나중에 무엇을 다시 찾아올 수 있는가 |
-| 코드 그래프 | 파일, 함수, 심볼 | `calls`, `imports`, `contains` | 이 코드가 구조적으로 어디에 붙는가 |
+Karpathy의 2026년 기억 장치는 그래프 데이터베이스가 아니다. [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)는 원본을 건드리지 않고, 마크다운 위키를 에이전트가 계속 고치는 패턴이다. Obsidian 그래프 뷰는 시각화일 뿐이다. Anthropic Cookbook의 그래프는 다른 물건이다. 엔티티와 typed relation으로 다중 홉 질문을 순회한다.
 
-Karpathy의 2023년 강연은 첫째다. 2026년 X의 Graph Engineering은 둘째와 셋째를 한 유행어로 묶는다. 이 저장소의 Graphify 글은 넷째다. 네 가지를 한 장의 다이어그램으로 합치면 그럴듯해 보이지만, 디버깅할 대상이 사라진다.
-
-한 줄로 줄이면 이렇다. **벡터 검색은 질문과 비슷한 글을 찾고, 실행 그래프는 다음 일꾼을 찾고, 기억 그래프는 연결된 사실을 찾고, 어텐션 그래프는 지금 이 토큰이 누구를 볼지 찾는다.**
+실행 층도 이름이 다르다. Anthropic은 이것을 Graph Engineering이라고 부르지 않는다. [Dynamic Workflows](https://claude.com/blog/introducing-dynamic-workflows-in-claude-code)는 Claude가 오케스트레이션 스크립트를 쓰고, 수십에서 수백 개의 서브에이전트를 병렬로 돌린 뒤 결과를 검증한다. 공식 글은 토큰이 훨씬 더 든다고 먼저 적는다.
 
 ## 실제 구조
 
-### 사람들이 받은 패키지
+### 2026년에 실제로 있는 원전
 
-@callanxai 포스트는 2026년 8월 17일에 올라왔고, 같은 날 기준으로 조회 10만, 북마크 1400을 넘겼다. 첨부 영상은 4,077,957ms, 약 68분이다. 카피는 강연 원문이 아니다.
+3월, Karpathy는 [autoresearch](https://github.com/karpathy/autoresearch)를 공개한다. 에이전트는 `train.py`만 고치고, 5분 학습 뒤 `val_bpb`가 좋아지면 커밋을 남기고 아니면 되돌린다. 사람이 고치는 파일은 `program.md`다. 기억은 트랜스크립트가 아니라 Git과 실험 기록이다.
 
-> Prompting is fading away. Delete everything else and keep the graph.
+4월, 그는 [LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)를 올린다. RAG는 질문마다 지식을 다시 발견한다. 위키는 한 번 컴파일하고 유지한다. 작업은 ingest, query, lint 세 가지다. 좋은 답은 다시 위키 페이지로 들어간다.
 
-그 아래 서사는 `LLMs → Prompts → Agents → Graphs`다. 답글 두 개는 이미 같은 클립을 “2023년 것”이라고 지적한다.
+같은 달 30일 Sequoia AI Ascent에서 그는 2026년 공식 대화를 한다. 영상은 [여기](https://www.youtube.com/watch?v=96jN2OCOfLs)고, 본인 정리는 [블로그](https://karpathy.bearblog.dev/sequoia-ascent-2026/)에 있다. 핵심은 세 줄이다. 2025년 12월 이후 에이전트 덩어리를 믿기 시작했다. vibe coding은 바닥을 올리고 agentic engineering은 천장을 올린다. 자동화는 명세가 아니라 검증이 되는 곳에서 빨라진다. 여기에도 Graph Engineering은 없다.
 
-함께 붙은 “full guide”는 `x.com/i/article/2087161603955326977`이다. Article URL은 로그인 벽이지만, 저자가 2026년 8월 11일에 올린 [게시문](https://x.com/hanakoxbt/status/2087167924410658912)에 8단계 본문이 있다. 제목은 `Graph Engineering: from 1 prompt to 100 agents running in one system`이다. Karpathy, Stanford, attention, “delete everything”은 한 번도 나오지 않는다.
+Anthropic은 같은 해를 문서로 채운다. 3월 Cookbook은 추출·해소·순회·평가를 노트북으로 보여 준다. 5월 28일 Dynamic Workflows는 한 패스로 안 되는 이관, 감사, 적대적 검증을 공식 제품 기능으로 올린다. [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)는 날짜가 2024년 12월이지만, 2026년에도 Anthropic이 가리키는 기본 패턴이다. workflow는 미리 정한 경로, agent는 모델이 다음 행동을 고르는 루프다.
 
-그쪽의 그래프는 실행 지도다. 노드는 한 일, 엣지는 “다음 단계가 이전 출력을 읽는가”, 팬아웃은 같은 역할을 여러 창으로 복제하는 일이다. 저자는 같은 달 다른 글에서 그래프를 지식 기억으로도 정의한다. 브랜드 이름은 하나고, 대상은 둘이다.
+### 유행 패키지는 여기서 뺀다
 
-자주 같이 도는 PDF는 11페이지짜리다. 표지 제목은 `Graph Engineering / The Karpathy Loop, Improved 1000x by Itself / The Anthropic Playbook`이다. 같은 표지에 이렇게 적혀 있다.
+2026년 8월 X에 다시 돈 68분은 이 목록에 없다. 자막과 공식 CS25 업로드를 대조하면 2023년 1월 수업과 그 무렵 키노트의 이어붙임이다. 카피인 “Prompting is fading away”는 자막에 없다. 2026년 Sequoia 대화에도 없다.
 
-> Independently compiled, July 2026 - not affiliated with Andrej Karpathy and Anthropic
-
-즉 이 PDF는 Anthropic 논문이 아니고, Karpathy가 서명한 가이드도 아니다.
-
-### 영상 안에 실제로 있는 것
-
-자막은 한 편의 2026년 신작이 아니다. 앞부분은 TreeHacks 2023 무렵의 키노트다. 오프닝에서 그는 Tesla를 떠나 OpenAI로 “일주일 전에” 돌아왔다고 한다. 2023년 1월 24일에는 직접 “hottest new programming language is English”를 올렸다. Stanford Daily도 같은 해 2월 TreeHacks에서 이 문장을 인용한다.
-
-22분쯤 호스트가 감사를 말하고, 스크래치패드 Q&A가 잠깐 나온 뒤, 강연은 트랜스포머 수업으로 점프한다. 공식 대응 영상은 Stanford Online의 [CS25 V2 Introduction to Transformers](https://www.youtube.com/watch?v=XfpMkf4rD6E)다. 강의일은 2023년 1월 10일이다.
-
-그 후반에서 그는 *Attention Is All You Need*를 이렇게 요약한다.
-
-> delete everything like what's making this work very well is just the attention by itself.
-
-바로 이어지는 말은 “keep the graph”가 아니다.
-
-> And so delete everything keep attention
-
-그가 그래프를 꺼내는 지점은 그 다음이다. attention을 번역 논문의 부품이 아니라, 방향 그래프 위 메시지 패싱으로 보라고 한다.
-
-> it's really just a data dependent message passing on directed graphs
-
-블록 크기가 8이면 노드도 8개다. 첫 노드는 자기 자신만 보고, 둘째는 첫째와 자신을 본다. RNN은 길고 가는 compute graph, transformer는 얕고 넓은 compute graph다. 여기까지가 강연의 그래프다.
-
-자막 전체에서 “Prompting is fading away”는 한 번도 나오지 않는다. Graph Engineering, LangGraph, GraphRAG, AgentHub도 나오지 않는다. 앞부분에서 그는 오히려 프롬프트를 Software 3.0의 프로그래밍 인터페이스로 올린다.
+함께 붙은 8단계 가이드와 11페이지 PDF는 2026년 글이긴 하다. 다만 전자는 Karpathy를 한 번도 인용하지 않는 실행 수칙이고, 후자는 표지에 Anthropic·Karpathy와 무관하다고 적혀 있다. 읽을 가치는 있어도 공식 강의가 아니다. `1000x`는 측정이 아니다.
 
 ## 핵심 기능
 
-네 그래프는 기능이 겹쳐 보이지, 같은 버튼을 누르지 않는다.
+2026년 원전이 실제로 주는 기능은 세 가지다.
 
-**계산 그래프**는 모델을 이해하게 한다. 왜 RNN을 지웠는지, 왜 위치가 따로 인코딩되는지, 왜 GPU에 잘 붙는지가 이 그림에서 나온다. 에이전트 조직도를 설계하는 기능은 없다.
+**검증 가능한 루프.** autoresearch는 한 파일, 한 메트릭, 한 시간 예산이다. Sequoia 대화의 말도 같다. 테스트가 돌고 실패가 보이는 일이 빨라진다. 미학, 보안 경계, 잘못된 계정 식별 같은 일은 아직 사람이 맡는다.
 
-**실행 그래프**는 일을 나눈다. @hanakoxbt의 8단계는 이 층이다. 가짜 화살표를 지우고, 노드에 입출력 계약을 주고, 체인·팬·라우터·통제 루프만 남기고, 검증 노드를 생성자와 분리한다. 본문도 그래프가 보통 더 비싸다고 적는다. Anthropic이 보고한 다중 에이전트 연구 시스템의 대략 15배 토큰 비용을 인용한다. 한 에이전트의 루프가 일을 감당하지 못할 때만 의미가 있다.
+**큰 일의 병렬 실행.** Dynamic Workflows는 서브에이전트를 팬아웃하고, 결과를 접기 전에 검사하고, 중단되면 이어서 한다. 공식 예시는 코드베이스 감사와 대규모 이관이다. Anthropic 연구 시스템은 넓은 탐색에서 이득이 있을 수 있고, 토큰은 일반 채팅의 대략 15배다.
 
-**기억 그래프**는 창이 닫혀도 남는 것을 만든다. PDF의 정의는 이쪽에 가깝다. “Graph engineering: agents share durable state through typed, queryable graphs.” 커밋 DAG는 무엇을 시도했는지 기억하고, 지식 그래프는 무엇을 아는지 기억한다. Anthropic의 Knowledge Graph Cookbook과 Karpathy의 autoresearch/AgentHub를 한 노트로 엮은 것이 이 PDF의 실제 기여다.
+**누적 기억.** LLM Wiki는 페이지와 교차 참조와 로그다. Cookbook은 엔티티와 관계와 출처다. 둘 다 “창에 붙여 넣은 글”이 아니다. 위키는 사람이 읽고 에이전트가 고친다. 지식 그래프는 같은 이름의 다른 사람을 합치지 않는 일이 핵심이다.
 
-**코드 그래프**는 저장소 지도다. Graphify 글에서 이미 확인한 대로, 기본 질의는 임베딩 이해보다 문자열과 순회에 가깝고, 그려지지 않은 엣지는 스스로 빠졌다고 말하지 않는다.
-
-내가 실무에서 쓰는 테스트는 하나다. **그 그래프가 없어도 같은 질문을 파일 하나와 검색으로 풀 수 있으면, 아직 그래프가 아니다.**
+내가 쓰는 테스트는 그대로다. **그 구조가 없어도 파일 하나와 검색으로 같은 질문을 풀 수 있으면, 아직 그래프가 아니다.**
 
 ## 좋은 점
 
-Karpathy 강연의 미덕은 유행어가 아니라 삭제 기준이다. 번역 파이프라인에서 진짜로 일을 하는 부품이 attention이면 RNN을 남겨둘 이유가 없다. 이 습관은 2026년에도 유효하다. 에이전트 스택에서 프롬프트, 메모리, 오케스트레이션, 평가를 한 덩어리로 숭배하지 않게 만든다.
+2026년 자료의 미덕은 최신 유행어가 아니라 역할 분리다. Karpathy는 바닥(vibe)과 천장(agentic engineering)을 가른다. Anthropic은 단순한 호출, workflow, agent를 가른다. 둘 다 “일단 그래프를 깔라”고 하지 않는다.
 
-Software 1.0 / 2.0 / 3.0 구분도 아직 쓸모가 있다. 알고리즘을 쓰는지, 데이터를 도는지, 프롬프트로 범용 컴퓨터를 재구성하는지. 다만 3.0을 “프롬프트는 죽었다”로 뒤집는 순간 강연과 반대 방향이 된다.
+LLM Wiki는 실무에 바로 옮길 수 있다. 원본은 불변, 위키는 에이전트가 유지, 스키마는 사람과 에이전트가 같이 고친다. 유지비가 싸져서 지식 베이스가 버려지지 않는다는 설명이 2026년 기억 논의의 핵심이다.
 
-PDF가 살리는 문장도 있다. 병목은 다음 모델 호출이 아니라 기억과 평가의 위치라는 주장이다. 루프는 현재 코드와 실험 로그를 기억하고, 스웜은 독립 컨텍스트를 많이 만들고, 그래프는 그 결과를 다시 찾을 수 있게 만든다. 이 층위 구분은 과장된 제목보다 낫다.
-
-2026년 담론의 정직한 쪽은 회의를 숨기지 않는다. LangGraph를 만든 Harrison Chase는 그해 7월 20일, 그 단어가 결국 LangGraph 아니냐고 물었다. Eugeniu Ghelbur는 48시간 만에 정의가 세 개로 갈라졌고, “Stanford와 Anthropic의 310만 달러 연구”는 존재하지 않는다고 적었다. 유행어를 믿기 전에 먼저 의심하는 태도는 가져갈 만하다.
+Dynamic Workflows는 실행 그래프를 추상 강의가 아니라 제품 기능으로 보여 준다. 언제 쓰는지, 토큰이 얼마나 더 드는지, 관리자가 끌 수 있는지가 문서에 있다. 2023년 어텐션 그림에는 이 운영 정보가 없다.
 
 ## 조심해야 할 점
 
-가장 큰 사각지대는 제목이 원문을 대체하는 것이다. 68분 영상을 끝까지 보지 않으면, 2023년 트랜스포머 수업이 2026년 에이전트 교본으로 다시 태어난다. 북마크 1400은 이해의 증거가 아니다.
+2023년 수업을 2026년 교본으로 쓰면 시간이 낭비된다. attention 내부는 여전히 맞지만, 그 지식으로 에이전트 조직도를 설계할 수는 없다. 유행 제목은 그 낭비를 유도한다.
 
-둘째, 같은 단어가 서로 반박한다. AI Builder Club은 Graph Engineering이 GraphRAG가 아니라고 못 박는다. AI Operator는 지식/기억 그래프만 벤치마크가 있다고 본다. Panaversity는 커밋 DAG와 지식 그래프를 합치지 말라고 한다. PDF는 둘 다 필요하다고 본다. “그래프만 남겨라”는 이 상태에서 실행 가능한 지시가 아니다.
+2026년 자료도 한 덩어리가 아니다. Wiki는 페이지고, Cookbook은 엔티티고, Dynamic Workflows는 실행 스크립트다. 셋에 그래프라는 말을 씌우면 디버깅할 대상이 사라진다.
 
-셋째, 숫자와 권위가 쉽게 붙는다. PDF 표지의 `1000x`는 측정이 아니다. 본문이 인용하는 대략 700실험, 20개 유지 최적화는 autoresearch 초기의 보고일 뿐 1000배 향상이 아니다. “Anthropic 시니어 2명이 썼다”는 유행 문장과 표지의 “not affiliated”는 정면으로 충돌한다.
+위키는 노트끼리만 대조하면 코드와 어긋나도 모른다. Cookbook은 잘못된 병합이 홉마다 곱해진다. 워크플로는 토큰과 상관 오류를 키운다. 공식 문서가 이미 적는 한계다.
 
-넷째, 기억 그래프의 실제 실패는 알고리즘이 아니라 같은 것의 판정이다. 한 홉이 85%만 맞아도 5홉은 44%다. 이 계산은 AI Operator가 강조한 것이고, 이 블로그의 Graphify 검토와도 맞닿는다. 예쁜 그림은 틀린 병합을 가려주지 않는다.
-
-다섯째, 강의와 가이드의 접합은 출처가 아니라 유통 형식이다. 같은 8단계 글을 @callanxai는 하루 전에도 Andrew Ng 클립에 붙였다. @hanakoxbt 본인도 Jeff Dean, Google, Anthropic 워크숍 클립 아래에 같은 가이드를 반복해서 둔다. 8단계 자체는 쓸 만한 오케스트레이션 수칙이다. Karpathy가 그걸 가르쳤다는 포장만 빼면 된다.
+독립 PDF와 X 가이드를 Karpathy·Anthropic 강의처럼 읽지 마라. 2026년에 쓰였다는 사실과 공식이라는 사실은 다르다.
 
 ## 언제 쓰면 좋은가
 
-Karpathy 강연은 모델을 내부부터 보고 싶을 때 보면 된다. attention이 왜 남았는지, 왜 위치가 따로 필요한지, 왜 프롬프트가 프로그램처럼 동작하는지. 에이전트 조직도를 배우려는 입문 강의로는 쓰지 않는 편이 낫다.
+지금 읽을 순서는 이것이다.
 
-실행 그래프는 역할이 실제로 갈라질 때다. 다른 도구, 다른 모델, 독립 검증, 병렬 팬아웃이 필요할 때. “PDF 하나 요약”에 다섯 노드를 그리면 이메일 답장에 조직도를 만드는 것과 같다.
+1. Sequoia 정리: 에이전트를 intern으로 두고 무엇을 사람이 맡을지.
+2. autoresearch: 검증 루프를 파일 세 개로 볼 때.
+3. LLM Wiki: 지식이 질문에 다시 풀리지 않게 할 때.
+4. Dynamic Workflows와 Cookbook: 일이 실제로 넓거나, 질문이 여러 문서를 이을 때.
 
-기억 그래프는 두 루프가 같은 사실을 공유해야 하거나, “왜 그렇게 바꿨는가”를 나중에 물어야 할 때다. 질문이 한 문서 안에 있고 출처가 필요 없으면 파일 하나가 맞다.
+2023년 CS25는 트랜스포머 내부를 처음 볼 때만 열어라. 에이전트 기억을 배우려는 입문으로 쓰지 마라.
 
-코드 그래프는 낯선 저장소를 빠르게 훑을 때 출발점으로 쓰면 된다. 실행 경로의 증거나 의미 검색의 최종 답으로 쓰면 안 된다. 그 한계는 Graphify 글에서 이미 적었다.
+한 에이전트와 파일 하나로 끝나는 일에 워크플로나 지식 그래프를 깔지 마라. Anthropic도, Karpathy의 위키 gist도, 필요한 만큼만 쓰라고 한다.
 
 ## 주니어 개발자가 배울 점
 
-유행어가 바뀌어도 먼저 물을 질문은 같다. 무엇이 노드인가. 화살표는 무슨 뜻인가. 그 화살표가 없으면 못 푸는 질문이 있는가. 틀렸을 때 누가 되돌리는가.
+2026년 원전에서 가져갈 습관은 세 개다. 성공을 숫자나 테스트로 적을 것. 원본과 파생 기억을 섞지 말 것. 병렬은 비용이 있으므로 넓을 때만 쓸 것.
 
-Karpathy에게서 배울 것은 “그래프 제품을 사라는 것”이 아니다. 부하를 견디는 구조를 찾고 나머지를 지우라는 것이다. 2023년에는 그 구조가 attention이었다. 2026년 에이전트 시스템에서는 검증 가능한 상태일 가능성이 크다.
+배우지 말아야 할 것은 제목의 연도를 자료의 연도로 착각하는 일이다. 2026년 썸네일이 2023년 수업일 수 있다.
 
-반대로 배우면 안 되는 것도 분명하다. 제목의 권위를 원문의 권위로 착각하는 것, 벤치마크 없는 배수에 기대는 것, 창에 넣은 글을 기억이라고 부르는 것.
-
-실습은 작게 하면 된다. 루프 하나, 검증 하나, 세션이 끝나도 남는 기록 하나. 그 기록이 개체와 관계를 요구하기 시작하면 그때 그래프 스키마를 연다.
+실습은 여전히 작다. 루프 하나, 검증 하나, 세션이 끝나도 남는 기록 하나. 그 기록이 개체와 관계를 요구하기 시작하면 Cookbook을 연다. 일이 한 창에 안 들어가기 시작하면 Dynamic Workflows를 연다.
 
 ## 내 결론
 
-나는 이 묶음을 “Karpathy가 Graph Engineering을 선언한 강의”로 읽지 않는다. 2023년 수업과 키노트를 2026년 상술이 다시 포장한 패키지로 읽는다. 강연 자체는 여전히 좋다. 다만 좋은 이유는 제목과 다르다.
+2023년 자료는 역사로서는 맞다. 2026년 실무 판단의 중심은 아니다. 그래서 이 글의 본론에서 뺐다.
 
-남길 것은 그래프라는 단어가 아니라, **사라지지 않는 구조**다. 모델 안에서는 attention의 연결이고, 에이전트 시스템에서는 검증과 출처가 붙은 상태다. 실행 순서, 사실 기억, 코드 지도를 한 제품으로 합치라는 뜻은 아니다.
+지금 남길 것은 그래프 제품이 아니라 **검증과 누적 기억**이다. Karpathy는 그것을 루프와 위키로 적었고, Anthropic은 워크플로와 지식 그래프 노트북으로 적었다. 유행어 Graph Engineering은 그 위에 씌운 포장이다.
 
-이 블로그 기준으로는 역할이 이미 갈라져 있다. Graphify는 코드 지도다. Karpathy 강연은 모델 직관이다. 2026년 Graph Engineering은 합의된 규격이 아니라 단어 싸움이다. 단어를 사기 전에 노드와 엣지와 실패 조건을 적자.
-
-공개는 하지 않는다. 영상 패키지 자체가 공식 단일 강연이 아니고, 2026년 포장은 출처가 다른 글을 한 제목 아래에 붙인 상태이기 때문이다. 더 볼 것이 있다면 공식 CS25 원본과 8단계 게시문이지, 68분 미러의 제목이 아니다.
+공개는 하지 않는다. 초안은 2026년 원전을 기준으로 다시 짠 상태다. 더 볼 것은 Sequoia 정리, LLM Wiki, autoresearch, Anthropic Cookbook과 Dynamic Workflows다.
 
 시각 정리본은 `docs/notes/karpathy-graph/delete-everything-keep-graph.html`에 두었다.
 
 ## 확인한 자료
 
-- https://www.youtube.com/watch?v=XdbpCM4yGyE
-- https://x.com/callanxai/status/2089367361337897463
-- https://video.twimg.com/amplify_video/2089363218745450496/vid/avc1/480x270/hMlkt8aObm9ecpCM.mp4
-- https://x.com/i/article/2087161603955326977
-- https://x.com/hanakoxbt/status/2087167924410658912
-- https://glean.smartcoder.ai/a/graph-engineering-from-1-prompt-to-100-agents-in-one-system-njjdnh
-- https://www.anthropic.com/engineering/multi-agent-research-system
-- https://drive.google.com/file/d/1JuefNEiXNeCc3IcQUdyFYXy0R9bAfHxn/view
-- https://www.youtube.com/watch?v=XfpMkf4rD6E
-- https://stanforddaily.com/2023/02/22/treehacks-attendance-reaches-new-heights-on-back-of-ai-excitement/
-- https://x.com/karpathy/status/1617979122625712128
-- https://www.aibuilderclub.com/blog/graph-engineering-guide-2026
-- https://theaioperator.io/p/what-is-graph-engineering-a-field
-- https://agentfactory.panaversity.org/docs/graph-engineering-crash-course
+- https://www.youtube.com/watch?v=96jN2OCOfLs
+- https://karpathy.bearblog.dev/sequoia-ascent-2026/
+- https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
 - https://github.com/karpathy/autoresearch
-- https://x.com/hanakoxbt
+- https://claude.com/blog/introducing-dynamic-workflows-in-claude-code
+- https://code.claude.com/docs/en/workflows
+- https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide
+- https://www.anthropic.com/engineering/building-effective-agents
+- https://www.anthropic.com/engineering/multi-agent-research-system
+- https://x.com/hanakoxbt/status/2087167924410658912
+- https://drive.google.com/file/d/1JuefNEiXNeCc3IcQUdyFYXy0R9bAfHxn/view
+- https://www.youtube.com/watch?v=XdbpCM4yGyE
+- https://www.youtube.com/watch?v=XfpMkf4rD6E
+- https://x.com/callanxai/status/2089367361337897463

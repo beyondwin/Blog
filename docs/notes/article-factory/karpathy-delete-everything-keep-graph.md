@@ -29,6 +29,11 @@ Visual explainer: docs/notes/karpathy-graph/delete-everything-keep-graph.html
 | [hanakoxbt publication post](https://x.com/hanakoxbt/status/2087167924410658912) | social | Full 8-step Graph Engineering essay | retrieved 2026-08-18; matches the Glean mirror |
 | [Google Drive PDF](https://drive.google.com/file/d/1JuefNEiXNeCc3IcQUdyFYXy0R9bAfHxn/view) | PDF | Frequently shared “Graph Engineering” note | downloaded; 11 pages; SHA-256 `c2143749bcec9c304071e9f8fd6c9b498aaec21459e658d1a58bd84ecb0fe26c` |
 | [Stanford CS25 official upload](https://www.youtube.com/watch?v=XfpMkf4rD6E) | video | Canonical 2023 lecture matching the second half | metadata verified; lecture date Jan 10, 2023 |
+| [Sequoia AI Ascent 2026](https://www.youtube.com/watch?v=96jN2OCOfLs) | official 2026 talk | Karpathy’s actual 2026 public lecture | retrieved; no Graph Engineering title |
+| [Karpathy’s Sequoia summary](https://karpathy.bearblog.dev/sequoia-ascent-2026/) | author-reviewed writeup | Software 3.0, agentic engineering, LLM Wiki | retrieved 2026-08-18 |
+| [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents) | Anthropic engineering | Official workflow vs agent distinction | retrieved |
+| [Knowledge graph cookbook](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide) | Anthropic cookbook | Official entity/relation graph notebook | retrieved |
+| Official Anthropic “Graph Engineering lecture” | video | Requested by user | not found |
 | [TreeHacks 2023 coverage](https://stanforddaily.com/2023/02/22/treehacks-attendance-reaches-new-heights-on-back-of-ai-excitement/) | news | Confirms the Software 3.0 / “English is the hottest language” keynote | retrieved |
 | [Karpathy tweet, Jan 24 2023](https://x.com/karpathy/status/1617979122625712128) | social | Primary “hottest new programming language is English” line | retrieved |
 | [AI Builder Club Graph Engineering guide](https://www.aibuilderclub.com/blog/graph-engineering-guide-2026) | secondary essay | 2026 orchestration-graph definition and skeptic record | retrieved |
@@ -76,6 +81,13 @@ Visual explainer: docs/notes/karpathy-graph/delete-everything-keep-graph.html
 - 2026 posters use “graph” three other ways: who runs next, what facts persist, and how loops supervise one another.
 - This blog already has a fourth graph (Graphify): symbols and files, not tokens, not agent roles.
 - The transferable lesson is reduction, not a product: delete the part that is not load-bearing, keep the structure that is.
+
+## 2026-08-18 editorial revision
+
+The public article no longer treats the 2023 CS25 lecture as the spine.
+That lecture remains a valid identity check for the viral 68-minute remix,
+but it is not a 2026 agent-system curriculum. The rewrite centers Sequoia
+2026, LLM Wiki, autoresearch, the Anthropic cookbook, and Dynamic Workflows.
 
 ## Editorial judgment (author, not source)
 
