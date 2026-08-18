@@ -78,6 +78,15 @@ describe('content view models', () => {
     expect(result).not.toHaveProperty('evidenceState');
   });
 
+  it('uses the book item title, not the review note title', () => {
+    const result = toRecordSummary(reviewEntry({
+      title: 'Example Book Review',
+      itemTitle: 'Example Book',
+    }), () => undefined);
+
+    expect(result.title).toBe('Example Book');
+  });
+
   it('leaves media undefined when a media id cannot be resolved', () => {
     const result = toRecordSummary(reviewEntry(), () => {
       throw new Error('unknown media id');

@@ -303,14 +303,15 @@ describe('site content contract', () => {
     expect(layout).not.toContain('StatusBadge');
   });
 
-  it('does not ship the memory workbench on the sentence sheet', async () => {
+  it('does not ship the retired memory workbench', async () => {
     const source = await readFile(join(root, 'src', 'pages', 'memory.astro'), 'utf8');
-    const script = await readFile(join(root, 'public', 'scripts', 'memory-workbench.js'), 'utf8');
 
     expect(source).not.toContain('memory-workbench');
     expect(source).toContain('sortMemoryReading');
-    expect(script).toContain('memory-workbench-state.mjs');
-    expect(script).toContain('applyMemorySelection');
+    expect(source).toContain('memory-detail');
+    await expect(readFile(join(root, 'public', 'scripts', 'memory-workbench.js'), 'utf8')).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
   });
 
   it('lets a thought page be read without JavaScript', async () => {
@@ -346,6 +347,12 @@ describe('site content contract', () => {
     expect(tagPage).toContain('press-sheet');
     expect(tagPage).not.toContain('전체 색인');
     expect(tagPage).not.toContain('공개 기록');
+
+    const globalCss = await readFile(join(root, 'src', 'styles', 'global.css'), 'utf8');
+    expect(globalCss).not.toContain('.home-hero');
+    expect(globalCss).not.toContain('.article-kicker');
+    expect(globalCss).not.toContain('--font-serif');
+    expect(globalCss).not.toContain('text-transform: uppercase');
   });
 
   it('ships search as a public inventory grouped by writing, books, and sentences', async () => {

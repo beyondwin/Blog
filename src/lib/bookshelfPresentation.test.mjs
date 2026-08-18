@@ -171,6 +171,7 @@ describe('bookshelf presentation', () => {
     expect(index).toContain('book-diary');
     expect(index).toContain('book-cover--set" aria-hidden="true"');
     expect(layout).toContain('SiteFooter');
+    expect(index).toContain('entry.title');
     expect(layout).toContain('itemTitle');
     expect(layout).toContain('formatReadMonth');
     expect(layout).toContain('formatBookWhisper');

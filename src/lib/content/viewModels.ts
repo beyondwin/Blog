@@ -84,7 +84,7 @@ export function toRecordSummary(
     href: getEntryHref(entry),
     collection: entry.collection,
     typeLabel: getEntryTypeLabel(entry),
-    title: entry.data.title,
+    title: entry.collection === 'reviews' ? entry.data.itemTitle : entry.data.title,
     description: entry.data.description,
     primaryDate: getEntryDate(entry),
     tags: [...entry.data.tags],

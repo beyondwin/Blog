@@ -42,7 +42,9 @@ const unpublishedQueueIds = new Set([
 const moreLimit = 6;
 
 function findPreferred<T extends { id: string }>(entries: T[], id: string): T | undefined {
-  return entries.find((entry) => entry.id === id) ?? entries[0];
+  return entries.find((entry) => entry.id === id)
+    ?? entries.find((entry) => !unpublishedQueueIds.has(entry.id))
+    ?? entries[0];
 }
 
 function takeMore<T extends { id: string }>(entries: T[], featuredId?: string): T[] {

@@ -238,7 +238,7 @@ Projection exclusion reasons:
 | Memory page payload | `src/lib/memory/pagePayload.ts` | serializable `/memory` detail drawer and client payload data. |
 | Memory compatibility | `src/lib/memoryData.ts` | temporary re-export surface for existing imports. |
 
-`/memory/` browser interaction lives in `public/scripts/memory-workbench.js`;
+`/memory/` is a static sentence sheet; thought pages live at `/memory/[slug]/`.
 the Astro page renders static markup and embeds the public memory payload.
 
 routeable source prefix:
