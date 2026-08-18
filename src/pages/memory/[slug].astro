@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import { buildMemoryThoughtPage, loadPublicMemoryData } from '../../lib/memory';
+
+export async function getStaticPaths() {
+  const memory = loadPublicMemoryData();
+  return memory.thoughts.map((thought) => ({
+    params: { slug: thought.slug },
+  }));
+}
+
+const slug = Astro.params.slug;
+const page = slug ? buildMemoryThoughtPage(loadPublicMemoryData(), slug) : null;
+if (!page) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+
+const bodyParagraphs = page.body.split(/\n+/).map((paragraph) => paragraph.trim()).filter(Boolean);
+---
+
+<BaseLayout title={`${page.claimKo} · beyondwin`} description={page.claimEn ?? page.body}>
+  <article class="press-sheet memory-thought">
+    <h1>{page.claimKo}</h1>
+    {page.claimEn && <p class="memory-thought__en">{page.claimEn}</p>}
+    {bodyParagraphs.length > 0 && (
+      <div class="press-prose memory-thought__body">
+        {bodyParagraphs.map((paragraph) => <p>{paragraph}</p>)}
+      </div>
+    )}
+    {page.sourceWritings.length > 0 && (
+      <section class="memory-thought__sources">
+        <h2>이 문장이 나온 글</h2>
+        <ul>
+          {page.sourceWritings.map((source) => (
+            <li><a href={source.href}>{source.title}</a></li>
+          ))}
+        </ul>
+      </section>
+    )}
+    {page.companionSentences.length > 0 && (
+      <section class="memory-thought__companions">
+        <h2>같이 붙는 문장</h2>
+        <ul>
+          {page.companionSentences.map((companion) => (
+            <li><a href={companion.href}>{companion.claimKo}</a></li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </article>
+  <SiteFooter />
+</BaseLayout>
