@@ -3,19 +3,8 @@ import { toRecordSummary, type RecordSummary } from './content/viewModels';
 
 type ReviewEntry = CollectionEntry<'reviews'>;
 
-const structuralReviewTags = new Set(['book', 'review', 'naver-archive']);
 const shelfSize = 8;
 const tierSize = 4;
-const approvedShelfIds = [
-  'changing-their-minds',
-  'black-swan',
-  'lord-of-the-flies',
-  'goethe-said-everything',
-  'nevertheless',
-  'art-thief',
-  'poor-charlies-almanack',
-  'siddhartha',
-] as const;
 
 function getReviewDate(entry: ReviewEntry): Date {
   return entry.data.completedAt ?? entry.data.createdAt;
@@ -39,17 +28,7 @@ export function buildBookshelfPresentation(entries: ReviewEntry[], summarize: Su
   }
 
   const summaries = orderedEntries.map((entry) => summarize(entry));
-  const coverEntries = summaries.filter(hasVerifiedCover);
-  const byId = new Map(coverEntries.map((entry) => [entry.id, entry]));
-  const preferredEntries = approvedShelfIds.flatMap((id) => {
-    const entry = byId.get(id);
-    return entry ? [entry] : [];
-  });
-  const preferredIds = new Set(preferredEntries.map((entry) => entry.id));
-  const shelfEntries = [
-    ...preferredEntries,
-    ...coverEntries.filter((entry) => !preferredIds.has(entry.id)),
-  ].slice(0, shelfSize);
+  const shelfEntries = summaries.slice(0, shelfSize);
 
   return {
     yearCounts: Array.from(counts, ([year, count]) => ({ year, count })),
@@ -75,21 +54,23 @@ export function formatLiteraryDate(date: Date): string {
   return `${year}.${month}.${day}`;
 }
 
+export function formatReadMonth(date: Date): string {
+  return `${date.getUTCFullYear()}년 ${date.getUTCMonth() + 1}월에 읽음`;
+}
+
+function reviewTargetId(target: string): string | undefined {
+  const match = /^reviews\/([a-z0-9][a-z0-9-]*)$/.exec(target);
+  return match?.[1];
+}
+
 export function findRelatedBooks(entry: ReviewEntry, candidates: ReviewEntry[]) {
-  const meaningfulTags = entry.data.tags.filter((tag) => !structuralReviewTags.has(tag));
+  const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
 
-  if (meaningfulTags.length === 0) {
-    return [];
-  }
-
-  return candidates.flatMap((candidate) => {
-    if (candidate.id === entry.id) {
-      return [];
-    }
-
-    const sharedTag = meaningfulTags.find((tag) => candidate.data.tags.includes(tag));
-    return sharedTag
-      ? [{ entry: candidate, relationshipReason: `같은 주제 · ${sharedTag}` }]
-      : [];
+  return (entry.data.relationships ?? []).flatMap((relationship) => {
+    if (!relationship.reason) return [];
+    const id = reviewTargetId(relationship.target);
+    if (!id || id === entry.id) return [];
+    const related = byId.get(id);
+    return related ? [{ entry: related, relationshipReason: relationship.reason }] : [];
   }).slice(0, 3);
 }
