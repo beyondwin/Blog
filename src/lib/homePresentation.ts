@@ -1,5 +1,6 @@
 import type { CollectionEntry } from 'astro:content';
 import { toRecordSummary, type RecordSummary } from './content/viewModels';
+import { memoryThoughtHref } from './siteChrome';
 
 type ArticleEntry = CollectionEntry<'articles'>;
 type ReviewEntry = CollectionEntry<'reviews'>;
@@ -9,101 +10,71 @@ interface HomePresentationInput {
   reviews: ReviewEntry[];
 }
 
-interface HomePresentation {
-  featuredReview?: RecordSummary;
+export interface HomeThought {
+  slug: string;
+  claimKo: string;
+  href: string;
+}
+
+export interface HomePresentation {
   featuredArticle?: RecordSummary;
-  featuredReading?: RecordSummary;
-  openRecords: RecordSummary[];
-  books: RecordSummary[];
+  featuredReview?: RecordSummary;
+  featuredThought?: HomeThought;
+  moreArticles: RecordSummary[];
+  moreBooks: RecordSummary[];
 }
 
 type SummaryMapper = (entry: ArticleEntry | ReviewEntry) => RecordSummary;
 
-const approvedLeadIds = {
-  featuredReview: 'changing-their-minds',
-  featuredArticle: 'uncle-bob-ai-code-review-evidence',
-  featuredReading: 'black-swan',
+const preferredIds = {
+  article: 'lazycodex-agent-harness-analysis',
+  review: 'changing-their-minds',
+  thought: 'personal-sites-should-show-records-first',
 } as const;
 
-const approvedOpenRecordIds = [
+const unpublishedQueueIds = new Set([
+  'uncle-bob-ai-code-review-evidence',
   'shared-ai-conversation-evidence-boundaries',
   'aws-static-frontend-serverless-bff',
-] as const;
+  'agents-md-vs-agent-skills-evidence',
+]);
 
-const approvedBookIds = [
-  'lord-of-the-flies',
-  'future-arrived-first',
-  'goethe-said-everything',
-  'art-thief',
-  'poor-charlies-almanack',
-  'how-we-crossed-winter',
-  'factfulness',
-  'habitus',
-] as const;
-
-const approvedMemorySlugs = [
-  'personal-sites-should-show-records-first',
-  'memory-needs-retrieval-not-decoration',
-  'context-quality-is-routing-problem',
-] as const;
+const moreLimit = 6;
 
 function findPreferred<T extends { id: string }>(entries: T[], id: string): T | undefined {
   return entries.find((entry) => entry.id === id) ?? entries[0];
 }
 
-function orderPreferred<T extends { id: string }>(entries: T[], ids: readonly string[]): T[] {
-  const byId = new Map(entries.map((entry) => [entry.id, entry]));
-  const preferred = ids.flatMap((id) => {
-    const entry = byId.get(id);
-    return entry ? [entry] : [];
-  });
-  const preferredIds = new Set(preferred.map((entry) => entry.id));
-
-  return [...preferred, ...entries.filter((entry) => !preferredIds.has(entry.id))];
+function takeMore<T extends { id: string }>(entries: T[], featuredId?: string): T[] {
+  return entries
+    .filter((entry) => entry.id !== featuredId && !unpublishedQueueIds.has(entry.id))
+    .slice(0, moreLimit);
 }
 
 export function buildHomePresentation({
   articles,
   reviews,
-}: HomePresentationInput, summarize: SummaryMapper = toRecordSummary): HomePresentation {
-  const featuredReview = findPreferred(reviews, approvedLeadIds.featuredReview);
-  const featuredArticle = findPreferred(articles, approvedLeadIds.featuredArticle);
-  const featuredReading = reviews.find((entry) => (
-    entry.id === approvedLeadIds.featuredReading
-    && entry.id !== featuredReview?.id
-  )) ?? reviews.find((entry) => entry.id !== featuredReview?.id);
-
-  const usedArticleIds = new Set([featuredArticle?.id].filter(Boolean));
-  const usedReviewIds = new Set([
-    featuredReview?.id,
-    featuredReading?.id,
-  ].filter(Boolean));
+}: HomePresentationInput, summarize: SummaryMapper = toRecordSummary): Omit<HomePresentation, 'featuredThought'> {
+  const featuredArticle = findPreferred(articles, preferredIds.article);
+  const featuredReview = findPreferred(reviews, preferredIds.review);
 
   return {
-    featuredReview: featuredReview ? summarize(featuredReview) : undefined,
     featuredArticle: featuredArticle ? summarize(featuredArticle) : undefined,
-    featuredReading: featuredReading ? summarize(featuredReading) : undefined,
-    openRecords: orderPreferred(
-      articles.filter((entry) => !usedArticleIds.has(entry.id)),
-      approvedOpenRecordIds,
-    ).slice(0, 2).map((entry) => summarize(entry)),
-    books: orderPreferred(
-      reviews.filter((entry) => !usedReviewIds.has(entry.id)),
-      approvedBookIds,
-    ).slice(0, 8).map((entry) => summarize(entry)),
+    featuredReview: featuredReview ? summarize(featuredReview) : undefined,
+    moreArticles: takeMore(articles, featuredArticle?.id).map((entry) => summarize(entry)),
+    moreBooks: takeMore(reviews, featuredReview?.id).map((entry) => summarize(entry)),
   };
 }
 
-export function selectHomeMemories<T extends { slug: string }>(thoughts: T[]): T[] {
-  const bySlug = new Map(thoughts.map((thought) => [thought.slug, thought]));
-  const preferred = approvedMemorySlugs.flatMap((slug) => {
-    const thought = bySlug.get(slug);
-    return thought ? [thought] : [];
-  });
-  const preferredSlugs = new Set(preferred.map((thought) => thought.slug));
+export function selectHomeThought<T extends { slug: string; claimKo: string }>(
+  thoughts: T[],
+): HomeThought | undefined {
+  const selected = thoughts.find((thought) => thought.slug === preferredIds.thought) ?? thoughts[0];
+  if (!selected) return undefined;
 
-  return [
-    ...preferred,
-    ...thoughts.filter((thought) => !preferredSlugs.has(thought.slug)),
-  ].slice(0, 3);
+  return {
+    slug: selected.slug,
+    claimKo: selected.claimKo,
+    href: memoryThoughtHref(selected.slug),
+  };
 }
