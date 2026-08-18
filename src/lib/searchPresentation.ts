@@ -1,11 +1,18 @@
 import type { ResolvedMedia } from './content/mediaRegistry';
 
-export type LiterarySearchKind = 'technical' | 'reading' | 'memory' | 'topic';
+export type SearchKind = 'writing' | 'book' | 'sentence' | 'topic';
 export type LiteraryMatchedField = 'title' | 'description' | 'topic';
 
-export interface LiterarySearchRecord {
+export const searchGroupLabel = {
+  writing: '글',
+  book: '책',
+  sentence: '문장',
+  topic: '주제',
+} as const;
+
+export interface SearchRecord {
   id: string;
-  kind: LiterarySearchKind;
+  kind: SearchKind;
   title: string;
   description: string;
   topics: string[];
@@ -15,8 +22,8 @@ export interface LiterarySearchRecord {
   coverState?: 'verified' | 'hold';
 }
 
-export interface LiterarySearchMatch {
-  record: LiterarySearchRecord;
+export interface SearchMatch {
+  record: SearchRecord;
   matchedField: LiteraryMatchedField;
   matchReason: string;
 }
@@ -26,7 +33,7 @@ function normalize(value: string): string {
 }
 
 export function matchLiterarySearchFields(
-  record: Pick<LiterarySearchRecord, 'title' | 'description' | 'topics'>,
+  record: Pick<SearchRecord, 'title' | 'description' | 'topics'>,
   query: string,
 ): LiteraryMatchedField | null {
   const normalizedQuery = normalize(query);
@@ -37,21 +44,25 @@ export function matchLiterarySearchFields(
   return null;
 }
 
-function humanField(field: LiteraryMatchedField, kind: LiterarySearchKind): string {
-  if (field === 'title' && kind === 'reading') return '책 제목';
-  if (field === 'title' && kind === 'memory') return '기억 문장';
+function humanField(field: LiteraryMatchedField, kind: SearchKind): string {
+  if (field === 'title' && kind === 'book') return '책 제목';
+  if (field === 'title' && kind === 'sentence') return '문장';
   if (field === 'title') return '제목';
   if (field === 'description') return '설명';
   return '주제';
 }
 
+export function buildSearchInventory(records: SearchRecord[]): SearchRecord[] {
+  return [...records];
+}
+
 export function buildSearchMatches(
-  records: LiterarySearchRecord[],
+  records: SearchRecord[],
   query: string,
-): LiterarySearchMatch[] {
+): SearchMatch[] {
   if (!normalize(query)) return [];
 
-  const matches: LiterarySearchMatch[] = [];
+  const matches: SearchMatch[] = [];
   for (const record of records) {
     const matchedField = matchLiterarySearchFields(record, query);
 
@@ -66,13 +77,13 @@ export function buildSearchMatches(
   return matches;
 }
 
-export function summarizeSearchMatches(matches: LiterarySearchMatch[]) {
+export function summarizeSearchMatches(matches: SearchMatch[]) {
   return matches.reduce(
     (summary, match) => {
       summary.total += 1;
       summary[match.record.kind] += 1;
       return summary;
     },
-    { total: 0, technical: 0, reading: 0, memory: 0, topic: 0 },
+    { total: 0, writing: 0, book: 0, sentence: 0, topic: 0 },
   );
 }

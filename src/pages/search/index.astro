@@ -2,11 +2,11 @@
 import { Image } from 'astro:assets';
 import LiteraryFooter from '../../components/LiteraryFooter.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { loadLiterarySearchRecords } from '../../lib/searchData';
+import { loadSearchRecords } from '../../lib/searchData';
 import { summarizeSearchMatches } from '../../lib/searchPresentation';
 import '../../styles/search-literary.css';
 
-const records = await loadLiterarySearchRecords();
+const records = await loadSearchRecords();
 const groupOrder = ['technical', 'reading', 'memory', 'topic'] as const;
 const groupLabels = {
   technical: '기술 문서',
