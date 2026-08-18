@@ -1,53 +1,32 @@
 ---
 import type { CollectionEntry } from 'astro:content';
-import ContentMemoryLinks from '../components/ContentMemoryLinks.astro';
-import SourcePanel from '../components/SourcePanel.astro';
-import TableOfContents from '../components/TableOfContents.astro';
+import SiteFooter from '../components/SiteFooter.astro';
 import BaseLayout from './BaseLayout.astro';
-import { formatDate, getEntryDate } from '../lib/content';
-import type { ContentMemoryLinks as ContentMemoryLinksModel } from '../lib/memoryData';
 
 interface Props {
   entry: CollectionEntry<'analysis'>;
-  relatedMemory?: ContentMemoryLinksModel;
 }
 
-const { entry, relatedMemory } = Astro.props;
-const date = getEntryDate(entry);
-const tocItems = [
-  { href: '#summary', label: 'Summary' },
-  { href: '#core-argument', label: 'Core argument' },
-  { href: '#counterpoints', label: 'Counterpoints' },
-  { href: '#takeaways', label: 'Takeaways' },
-];
+const { entry } = Astro.props;
 ---
 
-<BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description} pageClass="literary-page literary-article" headerVariant="literary">
-  <div class="shell article-shell article-shell--with-sidebars">
-    <TableOfContents items={tocItems} />
-    <article class="article-body">
-      <div class="article-kicker">
-        <span>{entry.data.format}</span>
-        <span>{formatDate(date)}</span>
-      </div>
+<BaseLayout title={`${entry.data.title} · beyondwin`} description={entry.data.description}>
+  <article class="press-sheet article-sheet">
+    <header class="article-masthead">
       <h1>{entry.data.title}</h1>
-      <p class="description">{entry.data.description}</p>
-      {entry.data.tags.length > 0 && (
-        <ul class="tag-list article-tag-list" aria-label="Tags">
-          {entry.data.tags.map((tag) => <li>{tag}</li>)}
-        </ul>
-      )}
-      <div class="prose">
+      {entry.data.description && <p class="article-judgment">{entry.data.description}</p>}
+    </header>
+    <div class="article-read">
+      <div class="prose article-prose">
         <slot />
       </div>
-      <ContentMemoryLinks memory={relatedMemory} />
-    </article>
-    <SourcePanel
-      sourceUrl={entry.data.sourceUrl}
-      sourceTitle={entry.data.sourceTitle}
-      comment={entry.data.comment}
-      format={entry.data.format}
-      status={entry.data.status}
-    />
-  </div>
+    </div>
+    {entry.data.sourceTitle && entry.data.sourceUrl && (
+      <section class="article-colophon">
+        <h2>확인한 자료</h2>
+        <p><a href={entry.data.sourceUrl}>{entry.data.sourceTitle}</a></p>
+      </section>
+    )}
+  </article>
+  <SiteFooter />
 </BaseLayout>

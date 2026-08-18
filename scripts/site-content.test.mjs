@@ -323,27 +323,29 @@ describe('site content contract', () => {
     expect(page).not.toContain('<script');
   });
 
-  it('lets a targeted mobile memory detail override the enhanced selected-panel hide rule', async () => {
-    const css = await readFile(join(root, 'src', 'styles', 'memory-literary.css'), 'utf8');
-    const mobileCss = css.slice(css.indexOf('@media (max-width: 720px)'));
-    const hiddenSelectedRule = mobileCss.indexOf(
-      '.memory-sheet.is-enhanced .memory-detail-panel.is-selected { display: none; }',
-    );
-    const visibleTargetRule = mobileCss.search(
-      /\.memory-sheet\.is-enhanced \.memory-detail-panel:target,\s*\.memory-detail-panel:target,\s*\.memory-relation-panel:target\s*\{[^}]*display: block;/,
-    );
+  it('retires leftover literary chrome from visitor pages', async () => {
+    const files = [
+      'src/layouts/BaseLayout.astro',
+      'src/layouts/AnalysisLayout.astro',
+      'src/pages/tags/[tag].astro',
+      'src/pages/index.astro',
+      'src/components/SiteHeader.astro',
+      'src/components/SiteFooter.astro',
+    ];
 
-    expect(hiddenSelectedRule).toBeGreaterThanOrEqual(0);
-    expect(visibleTargetRule).toBeGreaterThan(hiddenSelectedRule);
-  });
+    for (const path of files) {
+      const source = await readFile(join(root, path), 'utf8');
+      expect(source, path).not.toContain('headerVariant');
+      expect(source, path).not.toContain('LiteraryFooter');
+      expect(source, path).not.toContain('literary.css');
+      expect(source, path).not.toMatch(/-literary\.css/);
+    }
 
-  it('keeps targeted mobile memory details visible without JavaScript enhancement', async () => {
-    const css = await readFile(join(root, 'src', 'styles', 'memory-literary.css'), 'utf8');
-    const mobileCss = css.slice(css.indexOf('@media (max-width: 720px)'));
-
-    expect(mobileCss).toMatch(
-      /(?:^|\n)\s*\.memory-detail-panel:target,\s*\.memory-relation-panel:target\s*\{[^}]*display: block;/,
-    );
+    const tagPage = await readFile(join(root, 'src', 'pages', 'tags', '[tag].astro'), 'utf8');
+    expect(tagPage).toContain('SiteFooter');
+    expect(tagPage).toContain('press-sheet');
+    expect(tagPage).not.toContain('전체 색인');
+    expect(tagPage).not.toContain('공개 기록');
   });
 
   it('ships search as a public inventory grouped by writing, books, and sentences', async () => {

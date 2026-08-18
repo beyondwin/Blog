@@ -1300,14 +1300,75 @@ html {
   display: none;
 }
 
-.tag-index {
+.tag-index,
+.tag-sheet {
+  display: block;
   max-width: 36em;
+  margin-top: 0;
+  border: 0;
+}
+
+.tag-index a,
+.tag-sheet a {
+  display: inline;
+  min-height: 0;
+  align-items: unset;
+  justify-content: unset;
+  gap: 0;
+  border: 0;
+  padding: 0;
 }
 
 .tag-index__lead {
   margin: 0 0 1.4em;
   font-size: 1.05rem;
   line-height: 1.7;
+}
+
+.tag-sheet h1 {
+  margin: 0 0 0.8em;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.tag-sheet__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-sheet__list li + li {
+  margin-top: 0.85em;
+}
+
+.tag-sheet__list a {
+  display: grid;
+  grid-template-columns: 2em minmax(0, 1fr);
+  gap: 0.8em;
+  align-items: baseline;
+  text-decoration: none;
+}
+
+.tag-sheet__list a:hover .tag-sheet__title {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.tag-sheet__kind {
+  color: var(--soft);
+  font-size: 0.82rem;
+}
+
+.tag-sheet__title {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.tag-sheet__back {
+  margin: 2.2em 0 0;
 }
 
 .tag-index__words {

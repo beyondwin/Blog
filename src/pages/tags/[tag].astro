@@ -1,8 +1,7 @@
 ---
-import LiteraryFooter from '../../components/LiteraryFooter.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { formatDate, getAllContent, getAllTags, getEntryDate, getEntryHref } from '../../lib/content';
-import '../../styles/index-literary.css';
+import { getAllContent, getAllTags, getEntryHref } from '../../lib/content';
 
 export async function getStaticPaths() {
   const tags = await getAllTags();
@@ -13,29 +12,26 @@ const { tag } = Astro.props;
 const entries = (await getAllContent()).filter((entry) => entry.data.tags.includes(tag));
 ---
 
-<BaseLayout title={`${tag} · beyondwin`} description={`${tag} 태그가 붙은 공개 기록.`} pageClass="literary-page literary-index literary-index--tag" headerVariant="literary">
-  <div class="shell tag-sheet">
-    <header class="tag-intro">
-      <p>주제</p>
-      <h1>{tag}</h1>
-      <span class="literary-registration" aria-hidden="true"></span>
-      <p>이 단어로 이어진 공개 기록 {entries.length}개</p>
-      <a href="/tags/">전체 색인 <span>←</span></a>
-    </header>
-    <section class="tag-records" aria-label={`${tag} 기록`}>
-      {entries.map((entry, index) => (
-        <a href={getEntryHref(entry)}>
-          <span>{String(index + 1).padStart(2, '0')}</span>
-          <div>
-            <small>{entry.collection === 'reviews' ? '읽은 책' : '기술 문서'}</small>
-            <h2>{entry.collection === 'reviews' ? entry.data.itemTitle : entry.data.title}</h2>
-            <p>{entry.data.description}</p>
-          </div>
-          <time>{formatDate(getEntryDate(entry))}</time>
-          <b aria-hidden="true">→</b>
-        </a>
-      ))}
-    </section>
+<BaseLayout title={`${tag} · beyondwin`} description={`${tag}로 이어진 글과 책.`}>
+  <div class="press-sheet tag-sheet">
+    <h1>{tag}</h1>
+    {entries.length > 0 ? (
+      <ol class="tag-sheet__list">
+        {entries.map((entry) => (
+          <li>
+            <a href={getEntryHref(entry)}>
+              <span class="tag-sheet__kind">{entry.collection === 'reviews' ? '책' : '글'}</span>
+              <span class="tag-sheet__title">
+                {entry.collection === 'reviews' ? entry.data.itemTitle : entry.data.title}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p>이 단어로 이어진 글이 없습니다.</p>
+    )}
+    <p class="tag-sheet__back"><a href="/search/">찾기</a></p>
   </div>
-  <LiteraryFooter />
+  <SiteFooter />
 </BaseLayout>

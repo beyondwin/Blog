@@ -30,7 +30,7 @@ const records = [
     id: 'memory:one',
     kind: 'sentence',
     title: '검증 습관을 강제하는 데 있다.',
-    description: '공개 기억 문장',
+    description: '남는 문장',
     topics: ['ai-workflow'],
     href: '/memory/one/',
   },
