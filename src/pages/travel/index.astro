@@ -1,26 +1,25 @@
 ---
-import ContentCard from '../../components/ContentCard.astro';
 import EmptyLane from '../../components/EmptyLane.astro';
-import LiteraryFooter from '../../components/LiteraryFooter.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { collectionMeta, getContentByCollection } from '../../lib/content';
-import '../../styles/empty-literary.css';
+import { getContentByCollection } from '../../lib/content';
+import { getEmptyLaneCopy } from '../../lib/indexPresentation';
 
 const entries = await getContentByCollection('travel');
-const meta = collectionMeta.travel;
+const copy = getEmptyLaneCopy('travel');
 ---
 
-<BaseLayout title="장면 · beyondwin" description={meta.description} pageClass="literary-page literary-empty" headerVariant="literary">
-  <div class="shell empty-sheet">
-  <section>
+<BaseLayout title="beyondwin" description={copy.fact}>
+  <div class="press-sheet empty-sheet">
     {entries.length > 0 ? (
-      <div class="content-grid">
-        {entries.map((entry) => <ContentCard entry={entry} />)}
-      </div>
+      <ol class="empty-lane__stock">
+        {entries.map((entry) => (
+          <li><a href={`/travel/${entry.id}/`}>{entry.data.title}</a></li>
+        ))}
+      </ol>
     ) : (
       <EmptyLane lane="travel" />
     )}
-  </section>
   </div>
-  <LiteraryFooter />
+  <SiteFooter />
 </BaseLayout>

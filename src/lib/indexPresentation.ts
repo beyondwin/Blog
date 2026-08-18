@@ -13,15 +13,18 @@ export function buildTagIndex(tagGroups: string[][]): TagIndexEntry[] {
 
 export function getEmptyLaneCopy(lane: EmptyLane) {
   if (lane === 'travel') return {
-    marker: 'A.', title: '장면', fact: '아직 공개한 장면이 없습니다.',
-    condition: '사진과 장소가 함께 남을 때 이곳에 놓입니다.', href: '/tags/', linkLabel: '색인으로 돌아가기',
+    fact: '아직 공개한 장면이 없습니다. 다 쓴 글은 글에서 읽습니다.',
+    href: '/articles/',
+    linkLabel: '글',
   };
   if (lane === 'ideas') return {
-    marker: 'B.', title: '생각 노트', fact: '아직 공개한 생각 노트가 없습니다.',
-    condition: '검토를 마친 문장만 공개합니다.', href: '/memory/', linkLabel: '기억에서 문장 보기',
+    fact: '아직 공개한 아이디어가 없습니다. 다 쓴 글은 글에서 읽습니다.',
+    href: '/articles/',
+    linkLabel: '글',
   };
   return {
-    marker: 'C.', title: '분석', fact: '아직 공개한 분석 기록이 없습니다.',
-    condition: '외부 자료를 검토하고 출처를 확인한 기록만 놓입니다.', href: '/articles/', linkLabel: '기록으로 돌아가기',
+    fact: '아직 공개한 출처 분석이 없습니다. 근거를 붙인 기술 글은 글에서 읽습니다.',
+    href: '/articles/',
+    linkLabel: '글',
   };
 }
