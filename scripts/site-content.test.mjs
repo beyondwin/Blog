@@ -275,12 +275,15 @@ describe('site content contract', () => {
 
   it('keeps a defined cover column for both home reading leads when media is on HOLD', async () => {
     const home = await readFile(join(root, 'src', 'pages', 'index.astro'), 'utf8');
-    const cover = await readFile(join(root, 'src', 'components', 'ReadingLeadCover.astro'), 'utf8');
 
-    expect(home.match(/<ReadingLeadCover entry=\{featured(?:Review|Reading)\}/g)).toHaveLength(2);
-    expect(cover).toContain('lead-cover-placeholder');
-    expect(cover).toContain('표지 확인 중');
-    expect(cover).toContain('entry.media');
+    expect(home).toContain('class="home-book"');
+    expect(home).toContain('featuredReview.media');
+    expect(home).toContain('book.media');
+    expect(home).toContain('home-book__plate--set');
+    expect(home).toContain('featuredReview.title');
+    expect(home).toContain('featuredReview.authors');
+    expect(home).not.toContain('ReadingLeadCover');
+    expect(home).not.toContain('표지 확인 중');
   });
 
   it('renders Figure external provenance as a no-JavaScript link', async () => {

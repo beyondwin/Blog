@@ -52,3 +52,15 @@ describe('public route publication guard', () => {
     expect(content).not.toMatch(/!\s*data\.draft|data\.draft\s*!==\s*true/);
   });
 });
+
+describe('home route contract', () => {
+  it('home route uses public nouns and thought page hrefs', async () => {
+    const home = await readFile(join(root, 'src/pages/index.astro'), 'utf8');
+    expect(home).toContain('selectHomeThought');
+    expect(home).toContain('featuredThought');
+    expect(home).not.toContain('Editor');
+    expect(home).not.toContain('READING NOTE');
+    expect(home).not.toContain('지금 펼쳐 둔 기록');
+    expect(home).not.toContain('/memory/?thought=');
+  });
+});
