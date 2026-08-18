@@ -103,7 +103,7 @@ describe('memory data helpers', () => {
           claimEn: 'Context quality is a routing problem.',
           memoryType: 'semantic',
           nodeId: 'thought:routing-problem',
-          memoryHref: '/memory/?node=thought%3Arouting-problem',
+          memoryHref: '/memory/routing-problem/',
           topics: ['ai-workflow'],
           sourceCount: 2,
           matchCount: 0,
@@ -259,7 +259,7 @@ describe('memory data helpers', () => {
     expect(result.linked[0]).toMatchObject({
       slug: 'routing-problem',
       nodeId: 'thought:routing-problem',
-      memoryHref: '/memory/?node=thought%3Arouting-problem',
+      memoryHref: '/memory/routing-problem/',
     });
   });
 });
