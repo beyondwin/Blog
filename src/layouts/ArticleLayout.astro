@@ -109,7 +109,7 @@ const colophonBlocks = colophon ? parseColophon(colophon) : [];
   if (source) {
     let node: Element | null = source;
     while (node) {
-      const next = node.nextElementSibling;
+      const next: Element | null = node.nextElementSibling;
       node.setAttribute('hidden', '');
       node = next;
     }

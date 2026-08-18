@@ -303,21 +303,24 @@ describe('site content contract', () => {
     expect(layout).not.toContain('StatusBadge');
   });
 
-  it('loads the memory workbench script from the public scripts directory', async () => {
+  it('does not ship the memory workbench on the sentence sheet', async () => {
     const source = await readFile(join(root, 'src', 'pages', 'memory.astro'), 'utf8');
-
-    expect(source).toContain('<script is:inline src="/scripts/memory-workbench.js" defer></script>');
-  });
-
-  it('progressively enhances all public memory details instead of shipping one wrong default', async () => {
-    const page = await readFile(join(root, 'src', 'pages', 'memory.astro'), 'utf8');
     const script = await readFile(join(root, 'public', 'scripts', 'memory-workbench.js'), 'utf8');
 
-    expect(page).not.toContain('is-default');
-    expect(page).toContain('<noscript>');
-    expect(page).toContain('data-memory-detail');
+    expect(source).not.toContain('memory-workbench');
+    expect(source).toContain('sortMemoryReading');
     expect(script).toContain('memory-workbench-state.mjs');
     expect(script).toContain('applyMemorySelection');
+  });
+
+  it('lets a thought page be read without JavaScript', async () => {
+    const page = await readFile(join(root, 'src', 'pages', 'memory', '[slug].astro'), 'utf8');
+
+    expect(page).toContain('buildMemoryThoughtPage');
+    expect(page).toContain('이 문장이 나온 글');
+    expect(page).toContain('같이 붙는 문장');
+    expect(page).not.toContain('memory-workbench');
+    expect(page).not.toContain('<script');
   });
 
   it('lets a targeted mobile memory detail override the enhanced selected-panel hide rule', async () => {
@@ -343,19 +346,23 @@ describe('site content contract', () => {
     );
   });
 
-  it('ships search as a visible full public index before JavaScript filters it', async () => {
+  it('ships search as a public inventory grouped by writing, books, and sentences', async () => {
     const page = await readFile(join(root, 'src', 'pages', 'search', 'index.astro'), 'utf8');
 
-    expect(page).not.toContain('Astro.url.searchParams');
-    expect(page).not.toContain('hidden={!initialMatchIds.has(record.id)}');
-    expect(page).toContain('공개 색인');
+    expect(page).toContain('buildSearchInventory');
+    expect(page).toContain('searchGroupLabel');
     expect(page).toContain('matchLiterarySearchFields');
+    expect(page).toContain('SiteFooter');
+    expect(page).not.toContain('JavaScript 없이도');
+    expect(page).not.toContain('일치 색인');
+    expect(page).not.toContain('headerVariant');
+    expect(page).not.toContain('표지 확인 중');
   });
 
-  it('keeps a visible three-pixel keyboard focus ring on the mobile search input', async () => {
-    const css = await readFile(join(root, 'src', 'styles', 'search-literary.css'), 'utf8');
+  it('keeps a visible keyboard focus ring on the search input', async () => {
+    const css = await readFile(join(root, 'src', 'styles', 'press.css'), 'utf8');
 
-    expect(css).not.toMatch(/search-box input:focus\s*\{[^}]*outline:\s*0/);
-    expect(css).toMatch(/search-box input:focus-visible\s*\{[^}]*3px/);
+    expect(css).not.toMatch(/search-box input:focus(?:-visible)?\s*\{[^}]*outline:\s*0/);
+    expect(css).toMatch(/:where\(a, button, input, textarea, select, summary\):focus-visible\s*\{[^}]*outline:\s*2px/);
   });
 });

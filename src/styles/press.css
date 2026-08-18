@@ -1119,3 +1119,230 @@ html {
     font-size: 1.2rem;
   }
 }
+
+/* Sentences: a commonplace sheet, then a short page. Search is 찾기. */
+
+.memory-opening {
+  max-width: 28em;
+  margin: 0 0 2em;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.7;
+}
+
+.memory-reading {
+  display: flex;
+  flex-direction: column;
+  max-width: 36em;
+}
+
+.memory-sentence {
+  display: block;
+  margin: 0 0 1.35em;
+  color: color-mix(in oklch, var(--proof) 80%, var(--ink));
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.memory-sentence:hover {
+  text-decoration-color: currentColor;
+}
+
+.memory-break {
+  height: 1.35em;
+  margin: 0.2em 0 1.5em;
+}
+
+.memory-thought {
+  max-width: 42em;
+}
+
+.memory-thought__en {
+  margin: -0.35em 0 1.4em;
+  color: var(--soft);
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.memory-thought__sources,
+.memory-thought__companions {
+  margin-top: 2.4em;
+}
+
+.memory-thought__sources h2,
+.memory-thought__companions h2 {
+  margin: 0 0 0.6em;
+  color: var(--soft);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.memory-thought__sources ul,
+.memory-thought__companions ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-thought__sources li + li,
+.memory-thought__companions li + li {
+  margin-top: 0.55em;
+}
+
+.memory-thought__companions a {
+  color: color-mix(in oklch, var(--proof) 80%, var(--ink));
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);
+}
+
+.search-sheet {
+  display: flex;
+  flex-direction: column;
+  max-width: 42em;
+}
+
+.search-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-bottom: 1px solid var(--mark);
+}
+
+.search-box input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 0.55em 0;
+}
+
+.search-box button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--soft);
+  font-size: 1.15rem;
+}
+
+.search-quiet {
+  margin: 0.85em 0 0;
+  color: var(--soft);
+  font-size: 0.88rem;
+}
+
+.search-group {
+  margin-top: 1.8em;
+}
+
+.search-group h2 {
+  margin: 0 0 0.55em;
+  color: var(--soft);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.search-result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.85rem;
+  align-items: start;
+  padding: 0.8em 0;
+  border-bottom: 1px solid color-mix(in oklch, var(--mark) 55%, var(--sheet));
+  text-decoration: none;
+}
+
+.search-result:hover h3 {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
+.search-result .book-cover--small {
+  margin-top: 0.15em;
+}
+
+.search-result__copy {
+  min-width: 0;
+}
+
+.search-result h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.search-result p {
+  margin: 0.28em 0 0;
+  color: var(--soft);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.search-empty {
+  margin: 1.4em 0 0;
+}
+
+.search-result[hidden],
+.search-group[hidden],
+.search-empty[hidden] {
+  display: none;
+}
+
+.tag-index {
+  max-width: 36em;
+}
+
+.tag-index__lead {
+  margin: 0 0 1.4em;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.tag-index__words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55em 1.1em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-index__words a {
+  text-decoration: none;
+}
+
+.tag-index__words a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.tag-index__sentences {
+  margin: 2.2em 0 0;
+}
+
+@media (max-width: 720px) {
+  .memory-sentence {
+    font-size: 1.2rem;
+  }
+
+  .search-result {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .search-group--writing .search-result,
+  .search-group--sentence .search-result,
+  .search-group--topic .search-result {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

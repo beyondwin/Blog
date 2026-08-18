@@ -64,3 +64,18 @@ describe('home route contract', () => {
     expect(home).not.toContain('/memory/?thought=');
   });
 });
+
+describe('sentence and search surfaces', () => {
+  it('memory index is a reading sheet', async () => {
+    const page = await source('src/pages/memory.astro');
+    expect(page).toContain('sortMemoryReading');
+    expect(page).not.toContain('memory-workbench');
+    expect(page).not.toContain('주제 · 근거 필터');
+    expect(page).not.toContain('관계 지도');
+  });
+
+  it('map redirects home to sentences', async () => {
+    const page = await source('src/pages/memory/map.astro');
+    expect(page).toContain('Astro.redirect');
+  });
+});

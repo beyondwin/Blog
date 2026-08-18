@@ -1,137 +1,41 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import LiteraryFooter from '../components/LiteraryFooter.astro';
-import { buildMemoryPagePayload, loadPublicMemoryData, sortLiteraryMemoryThoughts } from '../lib/memory';
-import '../styles/memory-literary.css';
+import SiteFooter from '../components/SiteFooter.astro';
+import { loadPublicMemoryData, sortMemoryReading } from '../lib/memory';
+import { memoryThoughtHref } from '../lib/siteChrome';
 
-const memory = loadPublicMemoryData();
-const thoughts = sortLiteraryMemoryThoughts(memory.thoughts);
-const payload = buildMemoryPagePayload(memory);
-const fallback = thoughts.find((thought) => thought.slug === 'memory-needs-retrieval-not-decoration') ?? thoughts[0];
-const fallbackId = fallback ? `thought:${fallback.slug}` : '';
-const typeLabel = (value: string) => ({ semantic: '의미', procedural: '절차', reflective: '성찰', episodic: '경험' }[value] ?? value);
-const edgeLabel = (value: string) => ({ supports: '지지한다', extends: '확장한다', instantiates: '구체화한다', refines: '다듬는다', contradicts: '반박한다', related: '관련된다' }[value] ?? value);
+const requestedThought = Astro.url.searchParams.get('thought');
+const requestedThoughtHref = requestedThought ? memoryThoughtHref(requestedThought) : null;
+if (requestedThoughtHref) {
+  return Astro.redirect(requestedThoughtHref);
+}
+
+const entries = sortMemoryReading(loadPublicMemoryData().thoughts);
 ---
 
-<BaseLayout
-  title="기억 · beyondwin"
-  description="공개된 기억 문장을 검색하고 직접 연결된 근거와 관계를 살펴봅니다."
-  pageClass="literary-page literary-memory"
-  headerVariant="literary"
->
-  <div class="memory-sheet shell" data-memory-archive data-memory-fallback={fallbackId}>
-    <header class="memory-mobile-search">
-      <label class="memory-search">
-        <span class="sr-only">기억 검색</span>
-        <input type="search" placeholder="문장, 주제, 출처 검색" data-memory-search />
-        <i aria-hidden="true"></i>
-      </label>
-      <p class="memory-search-status" data-memory-status hidden>검색어에 일치하는 문장이 없습니다.</p>
-    </header>
-
-    <aside class="memory-rail">
-      <h1>기억</h1>
-      <label class="memory-search memory-search--desktop">
-        <span class="sr-only">기억 검색</span>
-        <input type="search" placeholder="문장, 주제, 출처 검색" data-memory-search />
-        <i aria-hidden="true"></i>
-      </label>
-      <details class="memory-filters">
-        <summary>주제 · 근거 필터</summary>
-        <div>
-          {memory.topics.map((topic) => (
-            <label><input type="checkbox" value={topic.label} data-memory-filter="topic" /> {topic.label}</label>
-          ))}
-          {Array.from(new Set(thoughts.map((thought) => thought.memoryType))).map((kind) => (
-            <label><input type="checkbox" value={kind} data-memory-filter="type" /> {typeLabel(kind)}</label>
-          ))}
-        </div>
-      </details>
-    </aside>
-
-    <main class="memory-ledger" id="memory-list">
-      <div class="memory-ledger__heading"><span>번호</span><span>기억 문장</span></div>
-      <ol class="memory-sentences" aria-label={`공개 기억 ${thoughts.length}개`}>
-        {thoughts.map((thought, index) => (
-          <li
-            data-memory-item
-            data-memory-id={`thought:${thought.slug}`}
-            data-memory-search-text={`${thought.claimKo} ${thought.claimEn} ${thought.topics.join(' ')}`.toLocaleLowerCase()}
-            data-memory-topics={thought.topics.join(' ')}
-            data-memory-type={thought.memoryType}
-          >
-            <a href={`/memory/?thought=${thought.slug}#memory-detail-${thought.slug}`} data-memory-select={`thought:${thought.slug}`}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <strong>{thought.claimKo}</strong>
-            </a>
-          </li>
+<BaseLayout title="문장 · beyondwin" description="글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.">
+  <script is:inline>
+    const thought = new URLSearchParams(location.search).get('thought');
+    if (thought && /^[a-z0-9-]+$/i.test(thought)) {
+      location.replace(`/memory/${thought}/`);
+    }
+  </script>
+  <div class="press-sheet memory-sheet">
+    <h1 class="memory-opening">글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.</h1>
+    {entries.length === 0 ? (
+      <p>아직 공개한 문장이 없습니다. <a href="/articles/">글로 돌아갑니다</a>.</p>
+    ) : (
+      <div class="memory-reading">
+        {entries.map((entry, index) => (
+          <>
+            {index > 0 && entries[index - 1].cluster !== entry.cluster && (
+              <p class="memory-break"></p>
+            )}
+            <a class="memory-sentence" href={entry.href}>{entry.claimKo}</a>
+          </>
         ))}
-      </ol>
-      <p class="memory-empty" data-memory-empty hidden>검색어에 일치하는 문장이 없습니다.</p>
-    </main>
-
-    <aside class="memory-detail-stack" aria-label="선택한 기억 상세">
-      <noscript><p class="memory-progressive-note">JavaScript 없이도 아래 공개 기억 7개의 문장, 연결, 출처를 모두 읽을 수 있습니다.</p></noscript>
-      {thoughts.map((thought) => {
-        const detail = payload.details[`thought:${thought.slug}`];
-        return (
-          <section
-            id={`memory-detail-${thought.slug}`}
-            class="memory-detail-panel"
-            data-memory-detail={`thought:${thought.slug}`}
-          >
-            <div class="memory-sheet-handle" aria-hidden="true"></div>
-            <div class="memory-detail-panel__topline">
-              <p>선택한 기억</p>
-              <a href="#memory-list" aria-label="상세 닫기">×</a>
-            </div>
-            <h2>{thought.claimKo}</h2>
-            <span class="memory-detail-rule" aria-hidden="true"></span>
-
-            <div class="memory-detail-section">
-              <h3>주제</h3>
-              <p class="memory-topic-list">{thought.topics.join('　/　')}</p>
-            </div>
-
-            <div class="memory-detail-section">
-              <h3>직접 연결된 문장</h3>
-              {detail.directConnections?.length ? (
-                <ul class="memory-connections">
-                  {detail.directConnections.map((connection) => {
-                    const connectedIndex = thoughts.findIndex((item) => `thought:${item.slug}` === connection.thought.id);
-                    const connectedSlug = connection.thought.id.replace('thought:', '');
-                    return (
-                      <li>
-                        <a href={`/memory/?thought=${connectedSlug}#memory-detail-${connectedSlug}`} data-memory-select={connection.thought.id}>
-                          <span>{String(connectedIndex + 1).padStart(2, '0')}</span>
-                          <strong>{connection.thought.title}</strong>
-                          <small>{edgeLabel(connection.type)}</small>
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : <p class="memory-quiet">직접 연결된 공개 문장이 없습니다.</p>}
-            </div>
-
-            <div class="memory-detail-section memory-provenance">
-              <h3>출처</h3>
-              <ul>
-                {detail.sources?.map((source) => (
-                  <li>
-                    {source.href ? <a href={source.href}>{source.title}</a> : <span>{source.title}</span>}
-                    <small>{source.routeable ? '공개 기록' : '공개 근거 표기'}</small>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <a class="memory-view-switch" href={`/memory/map/#map-${thought.slug}`}>관계 지도로 보기 <span aria-hidden="true">→</span></a>
-          </section>
-        );
-      })}
-    </aside>
+      </div>
+    )}
   </div>
-
-  <LiteraryFooter />
-  <script is:inline src="/scripts/memory-workbench.js" defer></script>
+  <SiteFooter />
 </BaseLayout>
