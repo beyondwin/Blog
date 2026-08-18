@@ -51,4 +51,5 @@ pnpm-debug.log*
 .idea/
 .vscode/
 output/playwright
+.playwright-mcp
 /tmp/
