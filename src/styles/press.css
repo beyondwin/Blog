@@ -1139,7 +1139,8 @@ html {
 .memory-sentence {
   display: block;
   margin: 0 0 1.35em;
-  color: color-mix(in oklch, var(--proof) 80%, var(--ink));
+  /* 70% proof / 30% ink on --sheet is 4.70:1. 80% was 3.80:1. */
+  color: color-mix(in oklch, var(--proof) 70%, var(--ink));
   font-size: 1.35rem;
   font-weight: 600;
   line-height: 1.5;

@@ -12,18 +12,22 @@ import {
 
 const inventory = buildSearchInventory(await loadSearchRecords());
 const query = Astro.url.searchParams.get('q')?.trim() ?? '';
-const groupOrder = ['writing', 'book', 'sentence', 'topic'] as const satisfies readonly SearchKind[];
+const emptyQueryKinds = ['writing', 'book', 'sentence'] as const satisfies readonly SearchKind[];
 const matches = query ? buildSearchMatches(inventory, query) : [];
 const visibleIds = query ? new Set(matches.map((match) => match.record.id)) : null;
 const matchReasonById = new Map(matches.map((match) => [match.record.id, match.matchReason]));
-const groups = groupOrder
+const groups = emptyQueryKinds
   .map((kind) => ({
     kind,
     label: searchGroupLabel[kind],
     records: inventory.filter((record) => record.kind === kind),
   }))
   .filter((group) => group.records.length > 0);
-const visibleTotal = visibleIds ? visibleIds.size : inventory.length;
+const topicRecords = inventory.filter((record) => record.kind === 'topic');
+const visibleTopicIds = new Set(
+  query ? matches.filter((match) => match.record.kind === 'topic').map((match) => match.record.id) : [],
+);
+const visibleTotal = visibleIds ? visibleIds.size : inventory.filter((record) => record.kind !== 'topic').length;
 ---
 
 <BaseLayout title="찾기 · beyondwin" description="글, 책, 문장을 찾습니다.">
@@ -94,6 +98,35 @@ const visibleTotal = visibleIds ? visibleIds.size : inventory.length;
           </section>
         );
       })}
+      {topicRecords.length > 0 && (
+        <section
+          class="search-group search-group--topic"
+          data-search-group="topic"
+          hidden={visibleTopicIds.size === 0}
+        >
+          <h2>{searchGroupLabel.topic}</h2>
+          {topicRecords.map((record) => (
+            <a
+              href={record.href}
+              class="search-result"
+              data-search-record
+              data-search-id={record.id}
+              data-search-kind={record.kind}
+              data-search-title={record.title.toLocaleLowerCase('ko')}
+              data-search-description={record.description.toLocaleLowerCase('ko')}
+              data-search-topics={record.topics.join('\n').toLocaleLowerCase('ko')}
+              hidden={!visibleTopicIds.has(record.id)}
+            >
+              <span class="search-result__copy">
+                <h3>{record.title}</h3>
+                <p data-match-reason hidden={!query}>
+                  {matchReasonById.get(record.id) ?? ''}
+                </p>
+              </span>
+            </a>
+          ))}
+        </section>
+      )}
       <p class="search-empty" data-search-empty hidden={visibleTotal !== 0}>
         일치하는 글이 없습니다.
       </p>
@@ -132,23 +165,26 @@ const visibleTotal = visibleIds ? visibleIds.size : inventory.length;
 
       records.forEach((node) => {
         if (!(node instanceof HTMLElement)) return;
-        const field = rawQuery
-          ? matchLiterarySearchFields({
-            title: node.dataset.searchTitle ?? '',
-            description: node.dataset.searchDescription ?? '',
-            topics: node.dataset.searchTopics?.split('\n') ?? [],
-          }, rawQuery)
-          : 'title';
+        const kind = node.dataset.searchKind;
+        if (!rawQuery) {
+          node.hidden = kind === 'topic';
+          const reason = node.querySelector('[data-match-reason]');
+          if (reason instanceof HTMLElement) reason.hidden = true;
+          if (kind && kind !== 'topic' && kind in counts) counts[kind] += 1;
+          return;
+        }
+        const field = matchLiterarySearchFields({
+          title: node.dataset.searchTitle ?? '',
+          description: node.dataset.searchDescription ?? '',
+          topics: node.dataset.searchTopics?.split('\n') ?? [],
+        }, rawQuery);
         node.hidden = field === null;
         const reason = node.querySelector('[data-match-reason]');
         if (reason instanceof HTMLElement) {
-          reason.hidden = !rawQuery || field === null;
-          if (field && rawQuery) reason.textContent = reasonFor(node.dataset.searchKind, field, rawQuery);
+          reason.hidden = field === null;
+          if (field) reason.textContent = reasonFor(kind, field, rawQuery);
         }
-        if (field !== null) {
-          const kind = node.dataset.searchKind;
-          if (kind && kind in counts) counts[kind] += 1;
-        }
+        if (field !== null && kind && kind in counts) counts[kind] += 1;
       });
 
       groups.forEach((group) => {
