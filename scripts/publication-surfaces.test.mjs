@@ -34,7 +34,7 @@ describe('public route publication guard', () => {
     const surfaces = {
       'src/pages/index.astro': 'loadHomePresentation',
       'src/lib/homeData.ts': 'getContentByCollection',
-      'src/pages/search/index.astro': 'loadLiterarySearchRecords',
+      'src/pages/search/index.astro': 'loadSearchRecords',
       'src/lib/searchData.ts': 'getAllContent',
       'src/pages/analysis/index.astro': 'getContentByCollection',
       'src/pages/ideas/index.astro': 'getContentByCollection',

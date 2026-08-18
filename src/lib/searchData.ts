@@ -1,21 +1,22 @@
 import { getAllContent, getAllTags } from './content';
 import { loadPublicMemoryData } from './memory';
-import type { LiterarySearchRecord } from './searchPresentation';
+import type { SearchRecord } from './searchPresentation';
 import { toRecordSummary } from './content/viewModels';
+import { memoryThoughtHref } from './siteChrome';
 
 function numericDate(date: Date): string {
   return date.toISOString().slice(0, 10).replaceAll('-', '.');
 }
 
-export async function loadLiterarySearchRecords(): Promise<LiterarySearchRecord[]> {
+export async function loadSearchRecords(): Promise<SearchRecord[]> {
   const [entries, tags] = await Promise.all([getAllContent(), getAllTags()]);
   const memory = loadPublicMemoryData();
 
-  const contentRecords: LiterarySearchRecord[] = entries.map((entry) => {
+  const contentRecords: SearchRecord[] = entries.map((entry) => {
     const summary = toRecordSummary(entry);
     return {
       id: `${entry.collection}:${entry.id}`,
-      kind: entry.collection === 'reviews' ? 'reading' : 'technical',
+      kind: entry.collection === 'reviews' ? 'book' : 'writing',
       title: summary.title,
       description: summary.description,
       topics: summary.tags,
@@ -26,20 +27,20 @@ export async function loadLiterarySearchRecords(): Promise<LiterarySearchRecord[
     };
   });
 
-  const memoryRecords: LiterarySearchRecord[] = memory.thoughts.map((thought) => ({
+  const memoryRecords: SearchRecord[] = memory.thoughts.map((thought) => ({
     id: `memory:${thought.slug}`,
-    kind: 'memory',
+    kind: 'sentence',
     title: thought.claimKo,
     description: thought.body,
     topics: thought.topics,
-    href: `/memory/?thought=${encodeURIComponent(thought.slug)}`,
+    href: memoryThoughtHref(thought.slug),
   }));
 
   const publicTopics = Array.from(new Set([
     ...tags,
     ...memory.topics.map((topic) => topic.label),
   ])).sort((a, b) => a.localeCompare(b));
-  const topicRecords: LiterarySearchRecord[] = publicTopics.map((topic) => ({
+  const topicRecords: SearchRecord[] = publicTopics.map((topic) => ({
     id: `topic:${topic}`,
     kind: 'topic',
     title: topic,
