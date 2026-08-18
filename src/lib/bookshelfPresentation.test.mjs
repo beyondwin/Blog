@@ -1,8 +1,10 @@
+import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import {
   buildBookshelfPresentation,
   findRelatedBooks,
   formatLiteraryDate,
+  formatReadMonth,
   getOneSentenceJudgment,
 } from './bookshelfPresentation';
 import { toRecordSummary } from './content/viewModels';
@@ -34,6 +36,7 @@ function review(id, date, options = {}) {
       coverState: options.coverState ?? 'hold',
       coverMedia: options.coverState === 'verified' ? 'cover' : undefined,
       tags: options.tags ?? ['book', 'review', 'naver-archive'],
+      relationships: options.relationships ?? [],
       status: 'published',
       draft: false,
     },
@@ -81,7 +84,7 @@ describe('bookshelf presentation', () => {
     expect(formatLiteraryDate(new Date('2026-06-16'))).toBe('2026.06.16');
   });
 
-  it('places available covers in the approved literary shelf order without duplication', () => {
+  it('puts the most recent books first as a finite field of objects', () => {
     const reviews = [
       review('art-thief', '2026-04-06', { coverState: 'verified' }),
       review('changing-their-minds', '2026-06-16', { coverState: 'verified' }),
@@ -97,34 +100,69 @@ describe('bookshelf presentation', () => {
     const result = buildBookshelfPresentation(reviews, summarize);
 
     expect(result.shelfTiers.flat().map((entry) => entry.id)).toEqual([
+      'another-book',
       'changing-their-minds',
-      'black-swan',
       'lord-of-the-flies',
-      'goethe-said-everything',
+      'black-swan',
       'nevertheless',
-      'art-thief',
+      'goethe-said-everything',
       'poor-charlies-almanack',
-      'siddhartha',
+      'art-thief',
     ]);
   });
 
-  it('relates at most three books only through meaningful shared tags', () => {
-    const current = review('current', '2026-06-16', { tags: ['book', 'review', 'risk'] });
-    const candidates = [
-      review('generic', '2026-06-15'),
-      review('risk-a', '2026-06-14', { tags: ['book', 'risk'] }),
-      review('risk-b', '2026-06-13', { tags: ['review', 'risk'] }),
-      review('risk-c', '2026-06-12', { tags: ['risk'] }),
-      review('risk-d', '2026-06-11', { tags: ['risk'] }),
-    ];
+  it('relates books only when a written reason exists', () => {
+    const current = review('current', '2026-06-16', {
+      relationships: [
+        { target: 'reviews/risk-a', relation: 'related', reason: '같은 위험을 다른 각도에서 본다.' },
+        { target: 'reviews/missing', relation: 'related', reason: '없는 책' },
+        { target: 'articles/not-a-book', relation: 'related', reason: '글이다.' },
+      ],
+    });
 
-    expect(findRelatedBooks(current, candidates).map((item) => ({
+    expect(findRelatedBooks(current, [
+      review('risk-a', '2026-06-14'),
+      review('risk-b', '2026-06-13'),
+    ]).map((item) => ({
       id: item.entry.id,
       reason: item.relationshipReason,
     }))).toEqual([
-      { id: 'risk-a', reason: '같은 주제 · risk' },
-      { id: 'risk-b', reason: '같은 주제 · risk' },
-      { id: 'risk-c', reason: '같은 주제 · risk' },
+      { id: 'risk-a', reason: '같은 위험을 다른 각도에서 본다.' },
     ]);
+  });
+
+  it('does not invent related books from structural tags', () => {
+    const blackSwan = review('black-swan', '2026-05-27', { tags: ['book', 'review', 'risk'] });
+    const factfulness = review('factfulness', '2025-11-17', { tags: ['book', 'review', 'risk'] });
+    expect(findRelatedBooks(blackSwan, [factfulness])).toEqual([]);
+  });
+
+  it('formats a human finished month', () => {
+    expect(formatReadMonth(new Date('2026-05-27'))).toBe('2026년 5월에 읽음');
+  });
+
+  it('keeps book pages free of the literary shelf and staff tickets', async () => {
+    const index = await readFile(new URL('../pages/reviews/index.astro', import.meta.url), 'utf8');
+    const layout = await readFile(new URL('../layouts/ReviewLayout.astro', import.meta.url), 'utf8');
+    const css = await readFile(new URL('../styles/press.css', import.meta.url), 'utf8');
+
+    for (const source of [index, layout]) {
+      expect(source).not.toContain('책장');
+      expect(source).not.toContain('표지 확인 중');
+      expect(source).not.toContain('headerVariant');
+      expect(source).not.toContain('missingCoverEntries');
+      expect(source).not.toContain('bookshelf-literary');
+      expect(source).not.toContain('모두 ');
+    }
+
+    expect(index).toContain('SiteFooter');
+    expect(index).toContain('book-objects');
+    expect(index).toContain('book-diary');
+    expect(layout).toContain('SiteFooter');
+    expect(layout).toContain('itemTitle');
+    expect(layout).toContain('formatReadMonth');
+    expect(css).not.toMatch(/\.book-verdict\s*\{[^}]*display:\s*none/);
+    expect(css).not.toMatch(/\.book-title\s*\{[^}]*display:\s*none/);
+    expect(css).not.toMatch(/\.book-author\s*\{[^}]*display:\s*none/);
   });
 });

@@ -2,138 +2,93 @@
 import { Image } from 'astro:assets';
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
 import { isPublicEntry } from '../../lib/content/publication';
 import {
   buildBookshelfPresentation,
-  formatLiteraryDate,
   getOneSentenceJudgment,
 } from '../../lib/bookshelfPresentation';
-import '../../styles/bookshelf-literary.css';
 
 const entries = await getCollection('reviews', isPublicEntry);
 const presentation = buildBookshelfPresentation(entries);
-const leadYear = presentation.yearCounts[0];
+const objects = presentation.shelfTiers.flat();
+const diary: Array<{ year: number; entries: typeof presentation.judgmentEntries }> = [];
+for (const entry of presentation.judgmentEntries) {
+  const year = entry.primaryDate.getFullYear();
+  const current = diary.at(-1);
+  if (!current || current.year !== year) {
+    diary.push({ year, entries: [entry] });
+  } else {
+    current.entries.push(entry);
+  }
+}
 ---
 
-<BaseLayout
-  title="책장 · beyondwin"
-  description="읽고 난 뒤 오래 남은 판단을 책과 함께 보관하는 서가."
-  pageClass="literary-page literary-bookshelf"
-  headerVariant="literary"
->
-  <div class="shell bookshelf-archive">
-    <aside class="bookshelf-rail" aria-labelledby="bookshelf-title">
-      <div>
-        <h1 id="bookshelf-title">읽은 책</h1>
-        <span class="bookshelf-rail__mark" aria-hidden="true"></span>
-      </div>
+<BaseLayout title="책 · beyondwin" description="읽고 남은 판단.">
+  <div class="press-sheet book-index">
+    <h1 class="visually-hidden">책</h1>
 
-      <nav aria-label="완독 연도별 기록 수">
-        <p>연도별 보기</p>
+    {objects.length > 0 && (
+      <ol class="book-objects">
+        {objects.map((entry, index) => (
+          <li>
+            <a class="book-card" href={entry.href}>
+              {entry.media ? (
+                <Image
+                  class="book-cover"
+                  src={entry.media.asset}
+                  alt={entry.media.item.alt}
+                  loading={index < 4 ? 'eager' : 'lazy'}
+                  decoding="async"
+                />
+              ) : (
+                <span class="book-cover book-cover--set">
+                  <b>{entry.title}</b>
+                  {entry.authors.length > 0 && <em>{entry.authors.join(' · ')}</em>}
+                </span>
+              )}
+              <strong class="book-title">{entry.title}</strong>
+              {entry.authors.length > 0 && (
+                <em class="book-author">{entry.authors.join(' · ')}</em>
+              )}
+              <span class="book-verdict">{getOneSentenceJudgment(entry.verdict ?? entry.description)}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    )}
+
+    {diary.map(({ year, entries: yearEntries }) => (
+      <section class="book-diary" id={`reviews-${year}`}>
+        <h2>{year}</h2>
         <ol>
-          {presentation.yearCounts.map(({ year, count }) => (
+          {yearEntries.map((entry) => (
             <li>
-              <a href={`#reviews-${year}`}>
-                <span>{year}</span>
-                <b>{count}</b>
+              <a href={entry.href}>
+                {entry.media ? (
+                  <Image
+                    class="book-cover book-cover--small"
+                    src={entry.media.asset}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <span class="book-cover book-cover--small book-cover--set">
+                    <b>{entry.title}</b>
+                    {entry.authors.length > 0 && <em>{entry.authors.join(' · ')}</em>}
+                  </span>
+                )}
+                <span class="book-diary__copy">
+                  <strong class="book-title">{entry.title}</strong>
+                  <span class="book-verdict">{getOneSentenceJudgment(entry.verdict ?? entry.description)}</span>
+                </span>
               </a>
             </li>
           ))}
         </ol>
-      </nav>
-    </aside>
-
-    <main class="bookshelf-field">
-      <header class="bookshelf-field__header">
-        <p>{leadYear ? `${leadYear.year}년 · ${leadYear.count}권` : '아직 비어 있는 책장'}</p>
-        <span>모두 {entries.length}권</span>
-      </header>
-
-      {presentation.shelfTiers.length > 0 ? (
-        <section class="bookshelf-shelves" aria-label="최근 읽은 책 표지">
-          {presentation.shelfTiers.map((tier, tierIndex) => (
-            <ol class:list={['bookshelf-tier', `bookshelf-tier--${tierIndex + 1}`]}>
-              {tier.map((entry) => (
-                <li>
-                  <a class="bookshelf-volume" href={entry.href}>
-                    <span class="bookshelf-volume__shelf">
-                      <span class="bookshelf-volume__cover">
-                        <Image
-                          src={entry.media!.asset}
-                          alt={entry.media!.item.alt}
-                          loading={tierIndex === 0 ? 'eager' : 'lazy'}
-                          decoding="async"
-                        />
-                      </span>
-                    </span>
-                    <span class="bookshelf-volume__copy">
-                      <strong>{entry.title}</strong>
-                      {entry.authors.length > 0 && <em>{entry.authors.join(' · ')}</em>}
-                      <time datetime={entry.primaryDate.toISOString()}>
-                        {formatLiteraryDate(entry.primaryDate)}
-                      </time>
-                      <small>{getOneSentenceJudgment(entry.verdict ?? entry.description)}</small>
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ol>
-          ))}
-        </section>
-      ) : (
-        <p class="bookshelf-empty">아직 표지를 확인한 읽기 기록이 없습니다.</p>
-      )}
-
-      <section class="bookshelf-judgments" aria-labelledby="judgment-title">
-        <header>
-          <h2 id="judgment-title">읽은 책의 판단</h2>
-          <span>{presentation.judgmentEntries.length}개의 기록</span>
-        </header>
-
-        <ol>
-          {presentation.judgmentEntries.map((entry, index) => {
-            const entryDate = entry.primaryDate;
-            const previousEntry = presentation.judgmentEntries[index - 1];
-            const previousDate = previousEntry?.primaryDate;
-            const beginsYear = !previousDate || previousDate.getFullYear() !== entryDate.getFullYear();
-            return (
-              <li id={beginsYear ? `reviews-${entryDate.getFullYear()}` : undefined}>
-                <a href={entry.href}>
-                  <span class="bookshelf-judgments__cover" aria-hidden="true">
-                    {entry.media ? (
-                      <Image src={entry.media.asset} alt="" loading="lazy" decoding="async" />
-                    ) : (
-                      <b>표지<br />확인 중</b>
-                    )}
-                  </span>
-                  <span class="bookshelf-judgments__copy">
-                    <strong>{entry.title}</strong>
-                    <time datetime={entryDate.toISOString()}>{formatLiteraryDate(entryDate)}</time>
-                    <span>{getOneSentenceJudgment(entry.verdict ?? entry.description)}</span>
-                  </span>
-                </a>
-              </li>
-            );
-          })}
-        </ol>
       </section>
-
-      {presentation.missingCoverEntries.length > 0 && (
-        <section class="bookshelf-awaiting" aria-labelledby="awaiting-title">
-          <h2 id="awaiting-title">표지를 확인하고 있는 책</h2>
-          <ul>
-            {presentation.missingCoverEntries.map((entry) => (
-              <li><a href={entry.href}>{entry.title}<span>표지 확인 중</span></a></li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </main>
+    ))}
   </div>
-
-  <footer class="shell literary-footer">
-    <span>© beyondwin</span>
-    <p>이 사이트는 한 사람의 느린 기록으로 만들어집니다.</p>
-    <nav aria-label="보조 메뉴"><a href="/tags/">색인</a><a href="/memory/">기억</a></nav>
-  </footer>
+  <SiteFooter />
 </BaseLayout>
