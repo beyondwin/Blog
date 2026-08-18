@@ -626,31 +626,26 @@ html {
   font-weight: 700;
 }
 
-.article-flow {
+.article-read {
   display: flex;
   flex-direction: column;
   max-width: 42em;
 }
 
-.article-prose {
-  display: contents;
-}
-
+.article-prose,
 .article-leftover,
-.article-continue {
-  order: 1;
-  max-width: 38em;
-}
-
-.article-prose :is(h2)#확인한-자료,
-.article-prose :is(h2)#확인한-자료 ~ * {
-  order: 2;
+.article-colophon {
+  max-width: 42em;
 }
 
 .article-toc {
-  order: 3;
+  order: 2;
   max-width: 18em;
-  margin-top: 2.8em;
+  margin: 2.4em 0 0;
+}
+
+.article-prose {
+  order: 1;
 }
 
 .article-toc ol {
@@ -678,6 +673,7 @@ html {
 }
 
 .article-leftover {
+  max-width: 38em;
   margin: 2.4em 0 0;
 }
 
@@ -689,50 +685,62 @@ html {
 
 .article-leftover a {
   color: color-mix(in oklch, var(--proof) 80%, var(--ink));
-  font-size: 1.15rem;
+  font-size: 1.5rem;
   font-weight: 600;
   line-height: 1.45;
   text-decoration-color: color-mix(in oklch, currentColor 48%, transparent);
 }
 
-.article-continue {
-  margin: 1.8em 0 0;
+.article-prose :is(h2)#확인한-자료,
+.article-prose :is(h2)#확인한-자료 ~ *,
+.article-prose [hidden] {
+  display: none;
 }
 
-.article-continue p {
-  margin: 0 0 0.7em;
-}
-
-.article-continue span {
-  display: block;
-  margin-top: 0.2em;
-  color: var(--soft);
-  font-size: 0.88rem;
-}
-
-.article-prose :is(h2)#확인한-자료 {
+.article-colophon {
   margin-top: 3.2em;
+  color: var(--soft);
+  font-size: 0.92rem;
+}
+
+.article-colophon h2 {
+  margin: 0 0 0.7em;
   color: var(--soft);
   font-size: 0.82rem;
   font-weight: 500;
 }
 
-.article-prose :is(h2)#확인한-자료 ~ * {
-  color: var(--soft);
-  font-size: 0.92rem;
+.article-colophon ul {
+  margin: 0 0 1em;
+  padding-left: 1.1em;
 }
 
-.article-sheet .prose > table:first-of-type {
-  width: 100%;
+.article-colophon a {
+  color: inherit;
+}
+
+.article-brief {
   max-width: 42em;
   margin: 0 0 1.6em;
+}
+
+.article-brief summary {
+  cursor: pointer;
+  color: var(--soft);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.article-brief table {
+  width: 100%;
+  margin: 0.8em 0 0;
   border-collapse: collapse;
   font-size: 0.92rem;
   line-height: 1.55;
 }
 
-.article-sheet .prose > table:first-of-type th,
-.article-sheet .prose > table:first-of-type td {
+.article-brief th,
+.article-brief td {
   padding: 0.4em 0.7em 0.4em 0;
   border-bottom: 1px solid var(--mark);
   vertical-align: top;
@@ -787,5 +795,29 @@ html {
     margin-top: 2.4em;
     padding-top: 1.2em;
     border-top: 1px solid var(--mark);
+  }
+}
+
+@media (min-width: 960px) {
+  .article-read {
+    display: grid;
+    grid-template-columns: minmax(0, 42em) minmax(10rem, 13rem);
+    column-gap: 2.4rem;
+    max-width: none;
+  }
+
+  .article-prose {
+    grid-column: 1;
+    order: unset;
+  }
+
+  .article-toc {
+    grid-column: 2;
+    grid-row: 1;
+    order: unset;
+    align-self: start;
+    margin: 80vh 0 0;
+    position: sticky;
+    top: 28px;
   }
 }

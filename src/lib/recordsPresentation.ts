@@ -101,14 +101,57 @@ export function previousImpressions(
 
 export function leftoverSentence(memory?: {
   linked: Array<{ slug: string; claimKo: string }>;
-  related: Array<{ slug: string; claimKo: string }>;
+  related?: Array<{ slug: string; claimKo: string }>;
 }): LeftoverSentence | undefined {
-  const thought = memory?.linked[0] ?? memory?.related[0];
+  const thought = memory?.linked[0];
   if (!thought) return undefined;
   return {
     href: memoryThoughtHref(thought.slug),
     claim: thought.claimKo,
   };
+}
+
+export function articleColophon(entry: RecordsArticle): string | undefined {
+  const match = articleBody(entry).match(/^## 확인한 자료\s*\n([\s\S]*)$/m);
+  const text = match?.[1]?.trim();
+  return text || undefined;
+}
+
+export type ColophonBlock =
+  | { type: 'p'; text: string }
+  | { type: 'ul'; items: Array<{ href?: string; label: string }> };
+
+export function parseColophon(markdown: string): ColophonBlock[] {
+  const blocks: ColophonBlock[] = [];
+  let list: Array<{ href?: string; label: string }> = [];
+
+  const flushList = () => {
+    if (list.length === 0) return;
+    blocks.push({ type: 'ul', items: list });
+    list = [];
+  };
+
+  for (const raw of markdown.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) {
+      flushList();
+      continue;
+    }
+
+    const item = line.match(/^[-*]\s+(?:\[([^\]]+)\]\(([^)]+)\)|(.+))$/);
+    if (item) {
+      list.push(item[1] && item[2]
+        ? { href: item[2], label: item[1] }
+        : { label: item[3] ?? line });
+      continue;
+    }
+
+    flushList();
+    blocks.push({ type: 'p', text: line });
+  }
+
+  flushList();
+  return blocks;
 }
 
 function toIndexItem(entry: RecordsArticle): ArticleIndexItem {
@@ -118,7 +161,7 @@ function toIndexItem(entry: RecordsArticle): ArticleIndexItem {
     id: entry.id,
     href: `/articles/${entry.id}/`,
     title: entry.data.title,
-    stake: articleStake(entry),
+    stake: articleJudgment(entry),
     monthLabel: monthLabel(entry.data.updatedAt),
     species,
     hasEvidence: species === '조사',

@@ -1,10 +1,12 @@
 ---
 import { getCollection, render } from 'astro:content';
+import ArticleBriefTable from '../../components/ArticleBriefTable.astro';
 import Callout from '../../components/Callout.astro';
 import Figure from '../../components/Figure.astro';
 import ArticleLayout from '../../layouts/ArticleLayout.astro';
 import { findContentMemoryLinks, loadPublicMemoryData } from '../../lib/memory';
 import {
+  articleColophon,
   buildArticlePresentation,
   leftoverSentence,
 } from '../../lib/recordsPresentation';
@@ -25,8 +27,8 @@ const presentation = buildArticlePresentation(entry, articles, headings);
 const leftover = leftoverSentence(findContentMemoryLinks(
   loadPublicMemoryData(),
   `src/content/articles/${entry.id}.mdx`,
-  entry.data.tags,
 ));
+const table = presentation.species === '조사' ? ArticleBriefTable : undefined;
 ---
 
 <ArticleLayout
@@ -34,8 +36,8 @@ const leftover = leftoverSentence(findContentMemoryLinks(
   headings={presentation.toc}
   readingMinutes={presentation.readingMinutes}
   previousImpressions={presentation.previousImpressions}
-  relatedArticles={presentation.related}
   leftoverSentence={leftover}
+  colophon={articleColophon(entry)}
 >
-  <Content components={{ Callout, Figure }} />
+  <Content components={{ Callout, Figure, ...(table ? { table } : {}) }} />
 </ArticleLayout>

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  articleColophon,
   articleJudgment,
   articleSpecies,
   buildArticleIndex,
   leftoverSentence,
+  parseColophon,
   previousImpressions,
 } from './recordsPresentation';
 
@@ -31,8 +33,11 @@ describe('article index presentation', () => {
   });
 
   it('builds a lead plus a ledger and no filter facets', () => {
+    const investigation = article('graphify-code-knowledge-graph-deep-dive', ['source-grounded']);
+    investigation.body = 'Intro. **단독 진실 공급원으로 쓰기에는 아직 위험하다.**\n\n## 실제 구조\n';
+
     const result = buildArticleIndex([
-      article('graphify-code-knowledge-graph-deep-dive', ['source-grounded']),
+      investigation,
       article('ai-era-why-i-read', ['reading']),
     ]);
 
@@ -40,7 +45,9 @@ describe('article index presentation', () => {
     expect(result.lead?.species).toBe('조사');
     expect(result.lead?.hasEvidence).toBe(true);
     expect(result.lead?.monthLabel).toBe('7월');
+    expect(result.lead?.stake).toBe('단독 진실 공급원으로 쓰기에는 아직 위험하다.');
     expect(result.entries.map((entry) => entry.id)).toEqual(['ai-era-why-i-read']);
+    expect(result.entries[0]?.stake).toBe('ai-era-why-i-read 판단.');
     expect(result).not.toHaveProperty('topics');
     expect(result).not.toHaveProperty('years');
   });
@@ -78,6 +85,22 @@ describe('article index presentation', () => {
       href: '/memory/first-thought/',
       claim: '남는 문장',
     });
+    expect(leftoverSentence({
+      linked: [],
+      related: [{ slug: 'second-thought', claimKo: '다른 문장' }],
+    })).toBeUndefined();
     expect(leftoverSentence({ linked: [], related: [] })).toBeUndefined();
+  });
+
+  it('splits 확인한 자료 out of the body as colophon copy', () => {
+    const entry = article('g', ['source-grounded']);
+    entry.body = '본문.\n\n## 확인한 자료\n\n- [소스](https://example.com)\n마지막 주석.\n';
+
+    expect(articleColophon(entry)).toBe('- [소스](https://example.com)\n마지막 주석.');
+    expect(parseColophon(articleColophon(entry))).toEqual([
+      { type: 'ul', items: [{ href: 'https://example.com', label: '소스' }] },
+      { type: 'p', text: '마지막 주석.' },
+    ]);
+    expect(articleColophon(article('e'))).toBeUndefined();
   });
 });
