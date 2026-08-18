@@ -1,7 +1,7 @@
 ---
 import SiteHeader from '../components/SiteHeader.astro';
 import '../styles/global.css';
-import '../styles/literary.css';
+import '../styles/press.css';
 
 interface Props {
   title?: string;
@@ -13,8 +13,7 @@ interface Props {
 const {
   title = 'beyondwin',
   description = '개발, 독서, 아이디어, 여행에서 오래 남길 만한 기록을 모아 둔 개인 아카이브.',
-  pageClass,
-  headerVariant = 'default',
+  pageClass = 'press-page',
 } = Astro.props;
 ---
 
@@ -25,11 +24,19 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#94938e" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   </head>
   <body class={pageClass}>
-    <SiteHeader variant={headerVariant} />
+    <!--
+    THESIS: 첫 화면은 아카이브 맵이 아니라 교정 중인 지면이다.
+    OWN-WORLD: 그레이 부스, 옵티컬 화이트 시트, 리치 블랙, 비재현 파랑 메모. 고딕 한 가족.
+    STORY: 방문자는 글 또는 책을 집고, 원하면 남은 문장으로 간다.
+    FIRST VIEWPORT: 시트 왼쪽에 객체 하나, 오른쪽에 문장 하나.
+    FORM: 인쇄소 4색 교정 부스.
+    FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+    -->
+    <SiteHeader />
     <main class="site-main">
       <slot />
     </main>
