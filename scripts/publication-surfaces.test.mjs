@@ -78,4 +78,10 @@ describe('sentence and search surfaces', () => {
     const page = await source('src/pages/memory/map.astro');
     expect(page).toContain('Astro.redirect');
   });
+
+  it('empty search inventory is writing, books, and sentences', async () => {
+    const page = await source('src/pages/search/index.astro');
+    expect(page).toContain('emptyQueryKinds');
+    expect(page).toContain("['writing', 'book', 'sentence']");
+  });
 });

@@ -21,7 +21,8 @@ const entries = sortMemoryReading(loadPublicMemoryData().thoughts);
     }
   </script>
   <div class="press-sheet memory-sheet">
-    <h1 class="memory-opening">글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.</h1>
+    <h1 class="visually-hidden">문장</h1>
+    <p class="memory-opening">글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.</p>
     {entries.length === 0 ? (
       <p>아직 공개한 문장이 없습니다. <a href="/articles/">글로 돌아갑니다</a>.</p>
     ) : (
