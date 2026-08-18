@@ -1,6 +1,6 @@
-import type { MemoryPublicData, MemoryThought } from './publicData';
-import { createMemoryNodeHref } from './filters';
+import { memoryThoughtHref } from '../siteChrome';
 import { prefixedThoughtId } from './graphModel';
+import type { MemoryPublicData, MemoryThought } from './publicData';
 
 export interface ContentMemoryLink {
   slug: string;
@@ -35,7 +35,7 @@ function toContentMemoryLink(thought: MemoryThought, matchCount: number): Conten
     claimEn: thought.claimEn,
     memoryType: thought.memoryType,
     nodeId,
-    memoryHref: createMemoryNodeHref(nodeId),
+    memoryHref: memoryThoughtHref(thought.slug),
     topics: thought.topics,
     sourceCount: thought.sources.length,
     matchCount,

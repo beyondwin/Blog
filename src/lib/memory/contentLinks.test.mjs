@@ -44,7 +44,7 @@ describe('content memory links', () => {
       expect.objectContaining({
         slug: 'reading-risk',
         nodeId: 'thought:reading-risk',
-        memoryHref: '/memory/?node=thought%3Areading-risk',
+        memoryHref: '/memory/reading-risk/',
         matchCount: 0,
       }),
     ]);
@@ -63,7 +63,7 @@ describe('content memory links', () => {
       expect.objectContaining({
         slug: 'routing-problem',
         nodeId: 'thought:routing-problem',
-        memoryHref: '/memory/?node=thought%3Arouting-problem',
+        memoryHref: '/memory/routing-problem/',
         matchCount: 0,
       }),
     ]);
