@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="2026년 Karpathy와 Anthropic 원전을 기준으로, 유행 68분은 빼고 지금 읽을 루프·위키·워크플로를 정리한다." />
+  <meta name="color-scheme" content="light dark" />
+  <title>2026년에 남길 것은 그래프 제품이 아니다</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --paper: #ffffff;
+      --paper-2: #f8fafc;
+      --ink: #172033;
+      --muted: #5d687b;
+      --faint: #8a94a6;
+      --line: #dfe5ef;
+      --line-strong: #cbd4e2;
+      --brand: #3157d5;
+      --brand-2: #6d3fd6;
+      --brand-soft: #eef2ff;
+      --good: #0b7a55;
+      --good-soft: #eaf8f2;
+      --warn: #a35a00;
+      --warn-soft: #fff6e5;
+      --bad: #b32d3b;
+      --bad-soft: #fff0f2;
+      --info: #1b6b93;
+      --info-soft: #eaf6fb;
+      --code-bg: #111827;
+      --code-ink: #e6edf7;
+      --shadow: 0 14px 40px rgba(34, 45, 76, .09);
+      --shadow-sm: 0 5px 16px rgba(34, 45, 76, .07);
+      --radius: 18px;
+      --radius-sm: 11px;
+      --max: 1120px;
+    }
+    html[data-theme="dark"] {
+      --bg: #0d1220;
+      --paper: #141b2b;
+      --paper-2: #101726;
+      --ink: #e8edf7;
+      --muted: #aab5c7;
+      --faint: #7f8ca2;
+      --line: #293349;
+      --line-strong: #39455e;
+      --brand: #8ca7ff;
+      --brand-2: #b99aff;
+      --brand-soft: #1b2749;
+      --good: #66d9ad;
+      --good-soft: #13382e;
+      --warn: #ffc36d;
+      --warn-soft: #3a2b13;
+      --bad: #ff8b98;
+      --bad-soft: #3e1d25;
+      --info: #78c8ee;
+      --info-soft: #153247;
+      --code-bg: #090d15;
+      --code-ink: #e6edf7;
+      --shadow: 0 16px 42px rgba(0, 0, 0, .26);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent 32rem),
+        radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--brand-2) 8%, transparent), transparent 34rem),
+        var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", Roboto, Arial, sans-serif;
+      line-height: 1.72;
+      letter-spacing: -.012em;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      overflow-x: hidden;
+    }
+    a { color: var(--brand); text-underline-offset: 3px; }
+    .wrap { width: min(var(--max), 100%); margin: 0 auto; padding: 0 1rem; }
+    header.hero {
+      padding: 2.4rem 0 1.4rem;
+    }
+    .kicker {
+      display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+      color: var(--muted); font-size: .86rem; font-weight: 650;
+      max-width: 100%;
+    }
+    .pill {
+      border: 1px solid var(--line); background: var(--paper);
+      border-radius: 999px; padding: .15rem .6rem; font-size: .78rem;
+      max-width: 100%;
+    }
+    h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); line-height: 1.22; margin: .55rem 0 .7rem; letter-spacing: -.03em; }
+    .lede { font-size: 1.05rem; color: var(--muted); max-width: 62ch; }
+    .toolbar { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+    button, .btn {
+      border: 1px solid var(--line-strong); background: var(--paper);
+      color: var(--ink); border-radius: 999px; padding: .42rem .8rem;
+      font: inherit; font-size: .86rem; cursor: pointer;
+    }
+    nav.toc {
+      display: flex; gap: .55rem; flex-wrap: wrap; margin: 1.1rem 0 1.6rem;
+    }
+    nav.toc a {
+      text-decoration: none; background: var(--paper); border: 1px solid var(--line);
+      border-radius: 999px; padding: .28rem .7rem; font-size: .82rem; color: var(--ink);
+    }
+    .grid-4, .grid-2 { display: grid; gap: .9rem; }
+    @media (min-width: 860px) {
+      .grid-4 { grid-template-columns: repeat(4, 1fr); }
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 1rem 1.05rem; box-shadow: var(--shadow-sm);
+    }
+    .card h3 { margin: .15rem 0 .4rem; font-size: 1rem; }
+    .card p { margin: 0; color: var(--muted); font-size: .92rem; }
+    .tag { display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-bottom: .25rem; }
+    .attn { color: var(--brand); }
+    .run { color: #8a4b00; }
+    .mem { color: var(--good); }
+    .code { color: var(--info); }
+    html[data-theme="dark"] .run { color: var(--warn); }
+    section { margin: 2rem 0; }
+    h2 { font-size: 1.38rem; letter-spacing: -.02em; margin: 0 0 .7rem; }
+    h2 .num { color: var(--brand); margin-right: .35rem; }
+    table { width: 100%; border-collapse: collapse; font-size: .92rem; background: var(--paper); border-radius: var(--radius-sm); overflow: hidden; }
+    th, td { border-bottom: 1px solid var(--line); padding: .62rem .7rem; text-align: left; vertical-align: top; }
+    th { background: var(--paper-2); font-size: .8rem; color: var(--muted); }
+    blockquote {
+      margin: 1rem 0; padding: .8rem 1rem; border-left: 4px solid var(--brand);
+      background: var(--brand-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    }
+    blockquote.bad { border-left-color: var(--bad); background: var(--bad-soft); }
+    blockquote.good { border-left-color: var(--good); background: var(--good-soft); }
+    .who { font-size: .78rem; color: var(--muted); margin-top: .35rem; }
+    .callout { padding: 1rem 1.1rem; border-radius: var(--radius); border: 1px solid var(--line); }
+    .callout.me { background: var(--brand-soft); }
+    .callout.warn { background: var(--warn-soft); }
+    .callout.bad { background: var(--bad-soft); }
+    .flow {
+      display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; margin: .8rem 0 0;
+    }
+    .node {
+      background: var(--paper); border: 1px solid var(--line-strong);
+      border-radius: 12px; padding: .45rem .7rem; font-size: .86rem; font-weight: 650;
+    }
+    .arrow { color: var(--faint); }
+    .compare { display: grid; gap: .8rem; }
+    @media (min-width: 800px) { .compare { grid-template-columns: 1fr 1fr; } }
+    .src { font-size: .9rem; }
+    .src li { margin: .28rem 0; }
+    footer { color: var(--muted); font-size: .84rem; padding: 2rem 0 3rem; }
+    .diag {
+      background: var(--paper-2); border: 1px dashed var(--line-strong);
+      border-radius: var(--radius); padding: 1rem; overflow-x: auto;
+    }
+    pre {
+      margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .82rem; line-height: 1.55; color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="kicker">
+        <span class="pill">근거 대조 · 2026-08-18</span>
+        <span class="pill">상태: review / 미공개</span>
+        <span class="pill">본론은 2026 원전</span>
+      </div>
+      <h1>2026년에 남길 것은<br />그래프 제품이 아니다</h1>
+      <p class="lede">
+        유행 68분은 2023년 수업의 재판매라 커리큘럼에서 뺀다.
+        지금 읽을 것은 Sequoia 대화, LLM Wiki, autoresearch,
+        Anthropic Cookbook과 Dynamic Workflows다.
+      </p>
+      <div class="toolbar">
+        <button type="button" id="themeBtn">다크 모드</button>
+        <a class="btn" href="../../../src/content/articles/karpathy-delete-everything-keep-graph.mdx">블로그 초안 MDX</a>
+        <a class="btn" href="../article-factory/karpathy-delete-everything-keep-graph.md">증거 패킷</a>
+      </div>
+    </header>
+
+    <nav class="toc">
+      <a href="#four">2026 세 층</a>
+      <a href="#said">공식 원전</a>
+      <a href="#wrapped">빼는 것</a>
+      <a href="#blind">사각지대</a>
+      <a href="#opinion">내 판단</a>
+      <a href="#sources">자료</a>
+    </nav>
+
+    <section>
+      <div class="callout me">
+        <strong>한 줄 판단.</strong>
+        2023년 어텐션 수업은 역사로는 맞지만 2026년 실무 커리큘럼은 아니다.
+        공식 채널에도 Graph Engineering 강의는 없다.
+        남길 것은 검증 루프, 누적 위키, 필요할 때만 켜는 워크플로다.
+      </div>
+    </section>
+
+    <section id="four">
+      <h2><span class="num">01</span>2026년의 세 층</h2>
+      <div class="grid-4">
+        <article class="card">
+          <div class="tag mem">검증 루프</div>
+          <h3>autoresearch · Sequoia</h3>
+          <p>한 일을 돌리고 메트릭이나 테스트로 남길지 정한다. 2026-03, 2026-04.</p>
+        </article>
+        <article class="card">
+          <div class="tag run">실행 오케스트레이션</div>
+          <h3>Dynamic Workflows</h3>
+          <p>큰 일을 나눠 병렬로 돌리고 접기 전에 검사한다. 토큰이 훨씬 더 든다. 2026-05.</p>
+        </article>
+        <article class="card">
+          <div class="tag attn">누적 기억</div>
+          <h3>LLM Wiki · Cookbook</h3>
+          <p>위키는 페이지, Cookbook은 엔티티. 둘 다 창이 닫혀도 남는다. 2026-03~04.</p>
+        </article>
+        <article class="card">
+          <div class="tag" style="color:var(--bad);">빼는 것</div>
+          <h3>유행 68분</h3>
+          <p>2023년 CS25 재판매. 정체 확인용. 실무 커리큘럼에서 제외.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="said">
+      <h2><span class="num">02</span>지금 읽을 공식 원전</h2>
+      <div class="compare">
+        <div class="card">
+          <div class="tag">2026-04</div>
+          <h3>Sequoia + LLM Wiki</h3>
+          <p>공식 2026 대화는 agentic engineering과 검증이다. 기억 패턴은 그래프 DB가 아니라 누적 마크다운 위키다.</p>
+          <blockquote class="good">
+            the wiki is a persistent, compounding artifact
+            <div class="who">Karpathy, llm-wiki.md gist, 2026-04-04</div>
+          </blockquote>
+        </div>
+        <div class="card">
+          <div class="tag">2026-03 · 2026-05</div>
+          <h3>Cookbook + Dynamic Workflows</h3>
+          <p>Anthropic의 지식 그래프는 엔티티 추출과 해소다. Dynamic Workflows는 큰 일의 병렬 실행이다. 둘 다 Graph Engineering 강의가 아니다.</p>
+          <blockquote class="good">
+            consume substantially more tokens than a typical session
+            <div class="who">Anthropic, Dynamic Workflows, 2026-05-28</div>
+          </blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section id="wrapped">
+      <h2><span class="num">03</span>2026년이 덮어쓴 이야기</h2>
+      <div class="grid-2">
+        <div>
+          <blockquote class="bad">
+            Prompting is fading away. Delete everything else and keep the graph.
+            <div class="who">@callanxai, 2026-08-17. 자막에는 이 문장이 없다.</div>
+          </blockquote>
+          <div class="flow">
+            <span class="node">LLM</span><span class="arrow">→</span>
+            <span class="node">Prompt</span><span class="arrow">→</span>
+            <span class="node">Agent</span><span class="arrow">→</span>
+            <span class="node">Graph</span>
+          </div>
+          <p class="lede" style="margin-top:.8rem;">조회 10만, 북마크 1400. 답글은 이미 “2023년 것”이라고 한다. 제목이 원문을 이긴 전형적인 패키지다.</p>
+        </div>
+        <div class="card">
+          <div class="tag">11페이지 PDF</div>
+          <h3>독립 노트이지 Anthropic 논문이 아니다</h3>
+          <p>표지 제목은 “The Karpathy Loop, Improved 1000x by Itself”다. 같은 표지에 소속이 없다고 적혀 있다.</p>
+          <blockquote>
+            not affiliated with Andrej Karpathy and Anthropic - and not endorsed
+          </blockquote>
+          <p style="margin-top:.7rem;color:var(--muted);font-size:.92rem;">
+            PDF가 실제로 묶는 것은 autoresearch의 루프, AgentHub의 커밋 DAG,
+            Anthropic Cookbook의 지식 그래프다. 2023년 CS25 어텐션 그래프가 아니다.
+            <code>1000x</code>는 측정이 아니라 부제다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="blind">
+      <h2><span class="num">04</span>사각지대</h2>
+      <table>
+        <thead>
+          <tr><th>함정</th><th>실제</th><th>왜 위험한가</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>새 강의로 읽기</td>
+            <td>2023년 키노트 + CS25 스티치</td>
+            <td>3년 된 모델 직관이 최신 에이전트 규격처럼 유통된다</td>
+          </tr>
+          <tr>
+            <td>프롬프트는 죽었다</td>
+            <td>같은 강연이 프롬프트를 Software 3.0으로 올린다</td>
+            <td>원문과 정반대 처방을 배우게 된다</td>
+          </tr>
+          <tr>
+            <td>그래프 = Graph Engineering</td>
+            <td>2026년 정의가 최소 3개로 갈라진다</td>
+            <td>실행, 기억, 감독을 한 제품으로 사게 된다</td>
+          </tr>
+          <tr>
+            <td>1000x / Anthropic 권위</td>
+            <td>표지가 독립 편집과 비공인을 명시</td>
+            <td>슬로건이 벤치마크처럼 인용된다</td>
+          </tr>
+          <tr>
+            <td>가이드 = Karpathy 강의</td>
+            <td>8단계 본문에 Karpathy가 없다</td>
+            <td>실행 수칙과 2023년 어텐션 수업을 한 제목으로 판다</td>
+          </tr>
+          <tr>
+            <td>예쁜 그래프 = 맞는 기억</td>
+            <td>한 홉 85%면 5홉은 44%</td>
+            <td>틀린 병합이 체인 전체로 증폭된다</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="opinion">
+      <h2><span class="num">05</span>그래서 무엇을 남길 것인가</h2>
+      <div class="callout me">
+        <p style="margin:0 0 .6rem;"><strong>내 의견.</strong> 이 묶음을 Karpathy의 Graph Engineering 선언으로 읽지 않는다. 좋은 옛 강연을 새 유행어가 재판매한 패키지로 읽는다.</p>
+        <p style="margin:0 0 .6rem;">남길 것은 단어가 아니라 사라지지 않는 구조다. 모델 안에서는 attention의 연결이고, 에이전트 밖에서는 검증과 출처가 붙은 상태다.</p>
+        <p style="margin:0;">공식 채널에는 Graph Engineering 강의가 없다. 있는 것은 2023 CS25, 2026 Sequoia 대화, Anthropic의 워크플로·지식 그래프 문서다. 이 블로그에서는 Graphify가 코드 지도다. 노드와 엣지와 실패 조건을 적기 전에는 그래프를 사지 않는 편이 낫다.</p>
+      </div>
+      <div class="grid-2" style="margin-top: .9rem;">
+        <article class="card">
+          <div class="tag mem">쓰면 좋은 때</div>
+          <h3>질문이 구조를 요구할 때</h3>
+          <p>모델을 내부부터 보고 싶을 때 이 강연. 역할·도구·검증이 갈라질 때 실행 그래프. 두 루프가 같은 사실을 공유해야 할 때 기억 그래프. 낯선 저장소를 훑을 때 코드 그래프.</p>
+        </article>
+        <article class="card">
+          <div class="tag" style="color:var(--bad);">아직 이른 때</div>
+          <h3>파일 하나와 검색으로 풀릴 때</h3>
+          <p>PDF 요약에 다섯 노드를 그리지 말 것. 창에 붙여 넣은 글을 기억이라고 부르지 말 것. 제목의 권위를 원문의 권위로 바꾸지 말 것.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="sources">
+      <h2><span class="num">06</span>확인한 자료</h2>
+      <ul class="src">
+        <li><a href="https://www.youtube.com/watch?v=XdbpCM4yGyE">YouTube 미러, 68분, philia</a></li>
+        <li><a href="https://www.youtube.com/watch?v=XfpMkf4rD6E">공식 CS25, 2023-01-10</a></li>
+        <li><a href="https://www.youtube.com/watch?v=96jN2OCOfLs">Karpathy Sequoia 2026 공식 대화</a></li>
+        <li><a href="https://karpathy.bearblog.dev/sequoia-ascent-2026/">Karpathy 본인 정리본</a></li>
+        <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Anthropic: Building effective agents</a></li>
+        <li><a href="https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide">Anthropic: Knowledge graph cookbook</a></li>
+        <li><a href="https://x.com/callanxai/status/2089367361337897463">X 원문 포스트</a></li>
+        <li><a href="https://x.com/i/article/2087161603955326977">인용된 X Article URL</a></li>
+        <li><a href="https://x.com/hanakoxbt/status/2087167924410658912">8단계 가이드 게시문</a></li>
+        <li><a href="https://drive.google.com/file/d/1JuefNEiXNeCc3IcQUdyFYXy0R9bAfHxn/view">11페이지 PDF</a></li>
+        <li><a href="https://x.com/karpathy/status/1617979122625712128">Karpathy, 2023-01-24</a></li>
+        <li><a href="https://stanforddaily.com/2023/02/22/treehacks-attendance-reaches-new-heights-on-back-of-ai-excitement/">Stanford Daily, TreeHacks 2023</a></li>
+        <li><a href="https://www.aibuilderclub.com/blog/graph-engineering-guide-2026">AI Builder Club 가이드</a></li>
+        <li><a href="https://theaioperator.io/p/what-is-graph-engineering-a-field">AI Operator 필드 가이드</a></li>
+        <li><a href="https://agentfactory.panaversity.org/docs/graph-engineering-crash-course">Panaversity 크래시 코스</a></li>
+        <li><a href="https://github.com/karpathy/autoresearch">karpathy/autoresearch</a></li>
+      </ul>
+    </section>
+
+    <footer>
+      이 페이지는 원본이 아니라 2026-08-18 대조 메모의 시각본이다.
+      공개 글 초안은 <code>src/content/articles/karpathy-delete-everything-keep-graph.mdx</code>,
+      증거 원장은 <code>docs/notes/article-factory/karpathy-delete-everything-keep-graph.md</code>.
+      게시 상태는 review / draft이며 공개 승인이 없다.
+    </footer>
+  </div>
+  <script>
+    const root = document.documentElement;
+    const btn = document.getElementById("themeBtn");
+    const stored = localStorage.getItem("kg-theme");
+    if (stored) root.setAttribute("data-theme", stored);
+    const sync = () => {
+      btn.textContent = root.getAttribute("data-theme") === "dark" ? "라이트 모드" : "다크 모드";
+    };
+    sync();
+    btn.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.setAttribute("data-theme", next);
+      localStorage.setItem("kg-theme", next);
+      sync();
+    });
+  </script>
+</body>
+</html>

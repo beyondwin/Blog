@@ -193,6 +193,26 @@
   source: src/content/articles/graphify-code-knowledge-graph-deep-dive.mdx
   updated: 2026-07-12
 
+- title: Karpathy Delete Everything Keep Graph Research Packet
+  path: docs/notes/article-factory/karpathy-delete-everything-keep-graph.md
+  topic: skills/agent-workflows
+  type: research-note
+  language: ko
+  status: organized
+  summary: Evidence packet separating Karpathy's 2023 attention/compute graph from the 2026 Graph Engineering overlay, the independent 11-page PDF, and this site's code knowledge graph.
+  source: src/content/articles/karpathy-delete-everything-keep-graph.mdx
+  updated: 2026-08-18
+
+- title: Karpathy 그래프 시각 정리
+  path: docs/notes/karpathy-graph/delete-everything-keep-graph.html
+  topic: skills/agent-workflows
+  type: reference
+  language: ko
+  status: organized
+  summary: Visual explainer that contrasts Karpathy's 2023 attention graph with 2026 Graph Engineering meanings, the viral wrapper, and the independent PDF.
+  source: src/content/articles/karpathy-delete-everything-keep-graph.mdx
+  updated: 2026-08-18
+
 - title: Hermes Agent Persistent Worker Runtime Research Packet
   path: docs/notes/article-factory/hermes-agent-persistent-worker-runtime.md
   topic: skills/agent-workflows
