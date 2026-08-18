@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="2026년 X에서 퍼진 Delete Everything, Keep Graph 패키지를 자막, 2023년 CS25 원본, Graph Engineering 가이드, 11페이지 PDF와 대조한 시각 정리." />
+  <meta name="description" content="2026년 Karpathy와 Anthropic 원전을 기준으로, 유행 68분은 빼고 지금 읽을 루프·위키·워크플로를 정리한다." />
   <meta name="color-scheme" content="light dark" />
-  <title>Delete Everything, Keep Graph — Karpathy가 말한 그래프는 무엇인가?</title>
+  <title>2026년에 남길 것은 그래프 제품이 아니다</title>
   <style>
     :root {
       --bg: #f4f6fb;
@@ -168,13 +168,13 @@
       <div class="kicker">
         <span class="pill">근거 대조 · 2026-08-18</span>
         <span class="pill">상태: review / 미공개</span>
-        <span class="pill">원문 2023 · 포장 2026</span>
+        <span class="pill">본론은 2026 원전</span>
       </div>
-      <h1>전부 지우고 남길 그래프는<br />하나가 아니다</h1>
+      <h1>2026년에 남길 것은<br />그래프 제품이 아니다</h1>
       <p class="lede">
-        2026년 X 제목은 Karpathy가 에이전트 그래프를 선언한 것처럼 읽힌다.
-        자막을 따라가면 그는 RNN을 지우고 attention을 남기라고 했고,
-        그래프는 토큰이 서로 메시지를 주고받는 계산 그림이었다.
+        유행 68분은 2023년 수업의 재판매라 커리큘럼에서 뺀다.
+        지금 읽을 것은 Sequoia 대화, LLM Wiki, autoresearch,
+        Anthropic Cookbook과 Dynamic Workflows다.
       </p>
       <div class="toolbar">
         <button type="button" id="themeBtn">다크 모드</button>
@@ -184,9 +184,9 @@
     </header>
 
     <nav class="toc">
-      <a href="#four">네 그래프</a>
-      <a href="#said">그가 말한 것</a>
-      <a href="#wrapped">덮인 것</a>
+      <a href="#four">2026 세 층</a>
+      <a href="#said">공식 원전</a>
+      <a href="#wrapped">빼는 것</a>
       <a href="#blind">사각지대</a>
       <a href="#opinion">내 판단</a>
       <a href="#sources">자료</a>
@@ -195,81 +195,58 @@
     <section>
       <div class="callout me">
         <strong>한 줄 판단.</strong>
-        이 68분 패키지는 2026년 신작 강연이 아니다.
-        2023년 Stanford 키노트와 CS25 트랜스포머 수업이 이어 붙었고,
-        그 위에 Graph Engineering이라는 다른 단어가 씌워졌다.
-        배울 것은 “그래프 제품”이 아니라, 부하를 견디는 구조를 찾고 나머지를 지우는 습관이다.
+        2023년 어텐션 수업은 역사로는 맞지만 2026년 실무 커리큘럼은 아니다.
+        공식 채널에도 Graph Engineering 강의는 없다.
+        남길 것은 검증 루프, 누적 위키, 필요할 때만 켜는 워크플로다.
       </div>
     </section>
 
     <section id="four">
-      <h2><span class="num">01</span>같은 단어, 네 기계</h2>
+      <h2><span class="num">01</span>2026년의 세 층</h2>
       <div class="grid-4">
         <article class="card">
-          <div class="tag attn">계산 그래프</div>
-          <h3>Karpathy 2023</h3>
-          <p>노드 = 토큰. 엣지 = attention 메시지. “이 토큰은 누구를 보는가?”</p>
+          <div class="tag mem">검증 루프</div>
+          <h3>autoresearch · Sequoia</h3>
+          <p>한 일을 돌리고 메트릭이나 테스트로 남길지 정한다. 2026-03, 2026-04.</p>
         </article>
         <article class="card">
-          <div class="tag run">실행 그래프</div>
-          <h3>2026 오케스트레이션</h3>
-          <p>노드 = 역할/단계. 엣지 = 다음에 누가 도나. LangGraph가 이미 하던 일.</p>
+          <div class="tag run">실행 오케스트레이션</div>
+          <h3>Dynamic Workflows</h3>
+          <p>큰 일을 나눠 병렬로 돌리고 접기 전에 검사한다. 토큰이 훨씬 더 든다. 2026-05.</p>
         </article>
         <article class="card">
-          <div class="tag mem">기억 그래프</div>
-          <h3>PDF · Cookbook</h3>
-          <p>노드 = 엔티티/주장/커밋. 엣지 = 출처와 대체. 창이 닫혀도 남는다.</p>
+          <div class="tag attn">누적 기억</div>
+          <h3>LLM Wiki · Cookbook</h3>
+          <p>위키는 페이지, Cookbook은 엔티티. 둘 다 창이 닫혀도 남는다. 2026-03~04.</p>
         </article>
         <article class="card">
-          <div class="tag code">코드 그래프</div>
-          <h3>이 블로그 Graphify</h3>
-          <p>노드 = 파일/함수. 엣지 = calls/imports. 저장소 지도이지 실행 증거가 아니다.</p>
+          <div class="tag" style="color:var(--bad);">빼는 것</div>
+          <h3>유행 68분</h3>
+          <p>2023년 CS25 재판매. 정체 확인용. 실무 커리큘럼에서 제외.</p>
         </article>
       </div>
     </section>
 
     <section id="said">
-      <h2><span class="num">02</span>자막이 보여주는 강연</h2>
+      <h2><span class="num">02</span>지금 읽을 공식 원전</h2>
       <div class="compare">
         <div class="card">
-          <div class="tag">0:00–22:19 · 키노트</div>
-          <h3>Software 3.0 = 프롬프트를 올려라</h3>
-          <p>Tesla를 떠나 OpenAI로 “일주일 전에” 돌아왔다고 한다. 공식 대응은 2023년 초 TreeHacks/복귀 직후 발언이다. 여기서 그는 영어를 새 프로그래밍 언어로 올린다.</p>
+          <div class="tag">2026-04</div>
+          <h3>Sequoia + LLM Wiki</h3>
+          <p>공식 2026 대화는 agentic engineering과 검증이다. 기억 패턴은 그래프 DB가 아니라 누적 마크다운 위키다.</p>
           <blockquote class="good">
-            the hottest new programming language is English
-            <div class="who">Karpathy, 강연 및 2023-01-24 본인 포스트</div>
+            the wiki is a persistent, compounding artifact
+            <div class="who">Karpathy, llm-wiki.md gist, 2026-04-04</div>
           </blockquote>
         </div>
         <div class="card">
-          <div class="tag">22:19 이후 · CS25</div>
-          <h3>지워라, attention만 남겨라</h3>
-          <p>호스트 감사 후 트랜스포머 수업으로 점프한다. 공식 원본은 Stanford Online CS25, 강의일 2023-01-10.</p>
+          <div class="tag">2026-03 · 2026-05</div>
+          <h3>Cookbook + Dynamic Workflows</h3>
+          <p>Anthropic의 지식 그래프는 엔티티 추출과 해소다. Dynamic Workflows는 큰 일의 병렬 실행이다. 둘 다 Graph Engineering 강의가 아니다.</p>
           <blockquote class="good">
-            delete everything keep attention
-            <div class="who">자막 ~39:20, Attention Is All You Need를 설명하며</div>
+            consume substantially more tokens than a typical session
+            <div class="who">Anthropic, Dynamic Workflows, 2026-05-28</div>
           </blockquote>
-        </div>
-      </div>
-      <div class="card" style="margin-top: .9rem;">
-        <div class="tag attn">강연의 그래프</div>
-        <h3>토큰이 노드인 방향 그래프</h3>
-        <blockquote class="good">
-          data dependent message passing on directed graphs
-          <div class="who">자막 ~44:49</div>
-        </blockquote>
-        <div class="diag" style="margin-top: .9rem;">
-<pre>block size = 8  →  노드 8개
-
-t0 ← t0
-t1 ← t0, t1
-t2 ← t0, t1, t2
-...
-t7 ← t0 … t7     (미래는 마스크)
-
-통신 = multi-head attention
-계산 = 각 노드의 MLP
-RNN  = 길고 가는 compute graph
-GPT  = 얕고 넓은 compute graph</pre>
         </div>
       </div>
     </section>
@@ -352,7 +329,7 @@ GPT  = 얕고 넓은 compute graph</pre>
       <div class="callout me">
         <p style="margin:0 0 .6rem;"><strong>내 의견.</strong> 이 묶음을 Karpathy의 Graph Engineering 선언으로 읽지 않는다. 좋은 옛 강연을 새 유행어가 재판매한 패키지로 읽는다.</p>
         <p style="margin:0 0 .6rem;">남길 것은 단어가 아니라 사라지지 않는 구조다. 모델 안에서는 attention의 연결이고, 에이전트 밖에서는 검증과 출처가 붙은 상태다.</p>
-        <p style="margin:0;">이 블로그에서는 이미 역할이 갈라져 있다. Graphify는 코드 지도. 이 강연은 모델 직관. 2026년 Graph Engineering은 합의된 규격이 아니라 단어 싸움. 노드와 엣지와 실패 조건을 적기 전에는 그래프를 사지 않는 편이 낫다.</p>
+        <p style="margin:0;">공식 채널에는 Graph Engineering 강의가 없다. 있는 것은 2023 CS25, 2026 Sequoia 대화, Anthropic의 워크플로·지식 그래프 문서다. 이 블로그에서는 Graphify가 코드 지도다. 노드와 엣지와 실패 조건을 적기 전에는 그래프를 사지 않는 편이 낫다.</p>
       </div>
       <div class="grid-2" style="margin-top: .9rem;">
         <article class="card">
@@ -373,6 +350,10 @@ GPT  = 얕고 넓은 compute graph</pre>
       <ul class="src">
         <li><a href="https://www.youtube.com/watch?v=XdbpCM4yGyE">YouTube 미러, 68분, philia</a></li>
         <li><a href="https://www.youtube.com/watch?v=XfpMkf4rD6E">공식 CS25, 2023-01-10</a></li>
+        <li><a href="https://www.youtube.com/watch?v=96jN2OCOfLs">Karpathy Sequoia 2026 공식 대화</a></li>
+        <li><a href="https://karpathy.bearblog.dev/sequoia-ascent-2026/">Karpathy 본인 정리본</a></li>
+        <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Anthropic: Building effective agents</a></li>
+        <li><a href="https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide">Anthropic: Knowledge graph cookbook</a></li>
         <li><a href="https://x.com/callanxai/status/2089367361337897463">X 원문 포스트</a></li>
         <li><a href="https://x.com/i/article/2087161603955326977">인용된 X Article URL</a></li>
         <li><a href="https://x.com/hanakoxbt/status/2087167924410658912">8단계 가이드 게시문</a></li>
