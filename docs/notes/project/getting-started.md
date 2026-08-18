@@ -88,7 +88,6 @@ MDX frontmatter
   -> src/lib/content.ts
   -> src/pages/articles/[slug].astro
   -> src/layouts/ArticleLayout.astro
-  -> src/components/ContentCard.astro
 ```
 
 각 파일의 책임:
@@ -97,7 +96,6 @@ MDX frontmatter
 - [src/lib/content.ts](../../../src/lib/content.ts): draft 제외, 날짜 선택, route href, tag 수집, 정렬을 처리한다.
 - [src/pages/articles/[slug].astro](../../../src/pages/articles/[slug].astro): `published && !draft` article detail page를 생성한다.
 - [src/layouts/ArticleLayout.astro](../../../src/layouts/ArticleLayout.astro): article body shell을 렌더링한다.
-- [src/components/ContentCard.astro](../../../src/components/ContentCard.astro): listing row preview를 렌더링한다.
 
 ## 완료 상태
 

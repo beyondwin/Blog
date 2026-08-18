@@ -72,6 +72,18 @@ describe('home presentation', () => {
     expect(result).not.toHaveProperty('featuredReading');
   });
 
+  it('does not feature a review-queue slug when the preferred id is absent', () => {
+    const result = buildHomePresentation({
+      articles: [
+        article('uncle-bob-ai-code-review-evidence', '올리면 안 되는 글', '2026-07-26'),
+        article('ai-design-references', 'AI 디자인 도구를 보는 기준', '2026-05-16'),
+      ],
+      reviews: [review('black-swan', '블랙스완', '2026-05-27')],
+    });
+
+    expect(result.featuredArticle?.id).toBe('ai-design-references');
+  });
+
   it('skips a preferred article id that is absent from the public input', () => {
     const result = buildHomePresentation({
       articles: [article('ai-design-references', 'AI 디자인 도구를 보는 기준', '2026-05-16')],

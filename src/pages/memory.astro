@@ -16,8 +16,10 @@ const entries = sortMemoryReading(loadPublicMemoryData().thoughts);
 <BaseLayout title="문장 · beyondwin" description="글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.">
   <script is:inline>
     const thought = new URLSearchParams(location.search).get('thought');
-    if (thought && /^[a-z0-9-]+$/i.test(thought)) {
-      location.replace(`/memory/${thought}/`);
+    const fromHash = location.hash.replace(/^#(?:map|relation|memory-detail)-/, '');
+    const slug = thought || fromHash;
+    if (slug && /^[a-z0-9-]+$/i.test(slug)) {
+      location.replace(`/memory/${slug}/`);
     }
   </script>
   <div class="press-sheet memory-sheet">
@@ -30,7 +32,7 @@ const entries = sortMemoryReading(loadPublicMemoryData().thoughts);
         {entries.map((entry, index) => (
           <>
             {index > 0 && entries[index - 1].cluster !== entry.cluster && (
-              <p class="memory-break"></p>
+              <p class="memory-break" aria-hidden="true"></p>
             )}
             <a class="memory-sentence" href={entry.href}>{entry.claimKo}</a>
           </>

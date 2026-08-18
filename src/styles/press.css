@@ -312,6 +312,7 @@ html {
   font-weight: 600;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .home-more-writing a:hover {
@@ -333,6 +334,7 @@ html {
 
 .home-more-books .home-book__plate {
   width: 100%;
+  box-shadow: 0 2px 5px color-mix(in oklch, var(--ink) 10%, transparent);
 }
 
 .press-prose,
