@@ -1,7 +1,7 @@
 export const publicNav = [
+  { href: '/', label: '장면' },
   { href: '/articles/', label: '글' },
   { href: '/reviews/', label: '책' },
-  { href: '/memory/', label: '문장' },
   { href: '/search/', label: '찾기' },
 ] as const;
 

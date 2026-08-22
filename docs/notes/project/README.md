@@ -11,6 +11,8 @@
 | [시작하기](getting-started.md) | Tutorial | 처음 checkout한 뒤 사이트를 실행하고 콘텐츠 한 건이 route로 이어지는 과정을 확인할 때 |
 | [콘텐츠 운영](publishing-workflows.md) | How-to | 글, 리뷰, queue item, source-grounded article, memory, archive docs를 실제로 추가하거나 고칠 때 |
 | [Agent Runbook](agent-runbook.md) | Agent task map | 에이전트가 작업 유형별 read order, 수정 표면, 위험 경계, 검증 명령을 빠르게 확인해야 할 때 |
+| [Architecture Decision Records](adr/README.md) | Decision log | 제품, 아키텍처, 데이터 경계, 공개 정책, durable UX의 현재 판단과 폐기한 대안을 확인하거나 갱신할 때 |
+| [Public Atlas Visual Storyworld 설계](visual-storyworld-public-atlas-design.md) | Product design | 승인된 Visual Storyworld 방향의 첫 public vertical slice, interaction, data contract, 검증 범위를 구현할 때 |
 | [아키텍처 레퍼런스](architecture-reference.md) | Reference | route, schema, script, test, data contract의 정확한 값이 필요할 때 |
 | [설계 이유](design-and-content-rationale.md) | Explanation | 왜 typed collection, private-first memory, docs layer, restrained design을 택했는지 이해해야 할 때 |
 
@@ -24,6 +26,7 @@
 - `/memory`는 `memory/**`를 직접 읽지 않고 [src/data/memory.public.json](../../../src/data/memory.public.json)만 읽는다.
 - `npm run validate`가 문서와 콘텐츠 변경의 기본 완료 기준이다.
 - curated docs를 추가하거나 옮기면 [docs/_index/catalog.yml](../../_index/catalog.yml), [docs/_index/topics.yml](../../_index/topics.yml), [docs/INDEX.md](../../INDEX.md)를 같이 맞춘다.
+- 중요한 제품·아키텍처·UX 판단은 [ADR index](adr/README.md)를 먼저 확인하고, 결정이 달라진 작업에서는 같은 변경으로 ADR을 갱신한다.
 
 ## 근거 파일
 
@@ -48,5 +51,6 @@
 
 - project 문서는 일반 글감이나 외부 리서치 노트와 섞지 않는다.
 - schema, route, command, validation gate가 바뀌면 reference와 how-to를 같은 변경에서 갱신한다.
+- accepted ADR과 구현이 어긋나면 구현을 완료로 간주하지 않는다. 결정이 바뀐 것이라면 기존 ADR을 조용히 덮어쓰지 말고 새 ADR에서 supersede한다.
 - 운영자가 따라 할 수 없는 표현은 삭제한다. “관리한다”, “지원한다” 대신 어느 파일을 어떻게 바꾸고 어떤 명령으로 확인하는지 쓴다.
 - 생성된 `docs/wiki/`는 navigation layer다. 중요한 판단은 `src/`, `scripts/`, `docs/notes/`, `docs/raw/`에서 다시 확인한다.

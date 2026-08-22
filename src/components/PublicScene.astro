@@ -1,0 +1,392 @@
+---
+import type { PublicSceneViewModel } from '../lib/scenes/publicScene';
+import { withFocusUrl } from '../lib/scenes/sceneState';
+import PublicSceneObject from './PublicSceneObject.astro';
+
+interface Props {
+  scene: PublicSceneViewModel;
+}
+
+const { scene } = Astro.props;
+const leadFocusHref = withFocusUrl(Astro.url, scene.lead.id);
+const leadExcerpt = scene.objects.find((object) => object.kind === 'article-excerpt');
+const judgmentEcho = scene.objects.find((object) => object.id === 'judgment-scale');
+const blackSwanEcho = scene.objects.find((object) => object.id === 'black-swan');
+const titleBreak = scene.lead.title.match(/^(.+?,)\s+(.+)$/);
+---
+
+<section
+  class="public-scene"
+  data-public-scene
+  data-scene-id={scene.id}
+  data-scene-version={scene.version}
+  data-scene-lead-id={scene.lead.id}
+  style={"--scene-atmosphere: " + scene.atmosphere}
+>
+  <header class="scene-heading">
+    <p class="visually-hidden">{scene.title}</p>
+    <h1>
+      {titleBreak ? (
+        <>{titleBreak[1]}<br data-scene-title-break />{titleBreak[2]}</>
+      ) : scene.lead.title}
+    </h1>
+    <span>{scene.lead.metadataLabel} · {scene.lead.dateLabel}</span>
+  </header>
+
+  <div class="scene-stage" aria-label={scene.title + " 장면"}>
+    <div class="scene-edge-echoes" data-scene-edge-echoes aria-hidden="true">
+      {judgmentEcho && <PublicSceneObject object={judgmentEcho} decorative />}
+      {blackSwanEcho && <PublicSceneObject object={blackSwanEcho} decorative />}
+    </div>
+    <div class="scene-stage__objects">
+      {scene.objects.map((object) => (
+        <PublicSceneObject
+          object={object}
+          eager={object.id === scene.lead.id}
+          focusDescription={object.id === scene.lead.id
+            ? leadExcerpt?.description
+            : object.description}
+        />
+      ))}
+    </div>
+  </div>
+
+  <nav class="scene-overview-actions" data-scene-overview-actions aria-label="중심 글 선택">
+    <a data-scene-overview-read href={scene.lead.href}>
+      읽기
+      <svg data-scene-action-arrow aria-hidden="true" focusable="false" viewBox="0 0 20 16">
+        <path d="M2 8h15M12 3l5 5-5 5"></path>
+      </svg>
+    </a>
+    <a data-scene-enter-focus href={leadFocusHref}>
+      전체 보기
+      <svg data-scene-action-arrow aria-hidden="true" focusable="false" viewBox="0 0 20 16">
+        <path d="M2 8h15M12 3l5 5-5 5"></path>
+      </svg>
+    </a>
+  </nav>
+
+  <aside class="scene-focus" data-scene-focus aria-live="polite" hidden>
+    <p data-focus-type></p>
+    <h2 data-focus-title></h2>
+    <blockquote data-focus-description></blockquote>
+    <a data-scene-read href={scene.lead.href}>읽기</a>
+    <button type="button" data-scene-overview>
+      <svg data-scene-action-arrow aria-hidden="true" focusable="false" viewBox="0 0 20 16">
+        <path d="M18 8H3M8 3 3 8l5 5"></path>
+      </svg>
+      전체 보기
+    </button>
+    <dl class="scene-focus__provenance">
+      <div><dt>관계</dt><dd data-focus-reason></dd></div>
+      <div><dt>출처</dt><dd data-focus-source></dd></div>
+    </dl>
+  </aside>
+
+  <p class="scene-swipe-cue">좌우로 스와이프</p>
+</section>
+
+<script>
+  import {
+    readFocusId,
+    readSceneScrollLeft,
+    shouldRequestSceneFocus,
+    withFocusUrl,
+    withoutFocusUrl,
+  } from '../lib/scenes/sceneState';
+
+  const scene = document.querySelector<HTMLElement>('[data-public-scene]');
+
+  if (scene) {
+    const objects = Array.from(
+      scene.querySelectorAll<HTMLAnchorElement>('[data-scene-object]'),
+    );
+    const byId = new Map<string, HTMLAnchorElement>(
+      objects.map((object) => [object.dataset.sceneObject || '', object]),
+    );
+    const validIds = new Set(byId.keys());
+    const stage = scene.querySelector<HTMLElement>('.scene-stage__objects');
+    const focusPanel = scene.querySelector<HTMLElement>('[data-scene-focus]');
+    const readLink = focusPanel?.querySelector<HTMLAnchorElement>('[data-scene-read]');
+    const overviewButton = focusPanel?.querySelector<HTMLButtonElement>('[data-scene-overview]');
+    const overviewFocusLink = scene.querySelector<HTMLAnchorElement>('[data-scene-enter-focus]');
+    const leadObject = byId.get(scene.dataset.sceneLeadId || '');
+
+    if (stage && focusPanel && readLink && overviewButton && overviewFocusLink && leadObject) {
+      const sceneElement = scene;
+      const stageElement = stage;
+      const focusPanelElement = focusPanel;
+      const readLinkElement = readLink;
+      let restoreFocusId: string | undefined;
+      let restoreStageScrollLeft: number | undefined;
+      let pendingFocusId: string | undefined;
+      let revealTimer: number | undefined;
+
+      function write(selector: string, value: string) {
+        const target = focusPanelElement.querySelector<HTMLElement>(selector);
+        if (target) target.textContent = value;
+      }
+
+      function centerStageOn(object: HTMLElement) {
+        const stageRect = stageElement.getBoundingClientRect();
+        const objectRect = object.getBoundingClientRect();
+        stageElement.scrollLeft += objectRect.left + objectRect.width / 2
+          - (stageRect.left + stageRect.width / 2);
+      }
+
+      function checkpointStage(object?: HTMLElement) {
+        const storedScrollLeft = readSceneScrollLeft(history.state);
+        if (storedScrollLeft !== undefined) {
+          stageElement.scrollLeft = storedScrollLeft;
+        } else if (object) {
+          centerStageOn(object);
+        }
+        restoreStageScrollLeft = stageElement.scrollLeft;
+      }
+
+      function applyFocus(
+        objectId?: string,
+        restoreKeyboard = false,
+        revealPanel = true,
+      ) {
+        if (revealTimer !== undefined) {
+          clearTimeout(revealTimer);
+          revealTimer = undefined;
+        }
+        for (const item of objects) {
+          item.removeAttribute('data-selected');
+          item.removeAttribute('tabindex');
+        }
+
+        if (!objectId) {
+          sceneElement.removeAttribute('data-mode');
+          sceneElement.removeAttribute('data-focus-revealed');
+          focusPanelElement.hidden = true;
+          if (restoreStageScrollLeft !== undefined) {
+            stageElement.scrollLeft = restoreStageScrollLeft;
+          }
+          if (restoreKeyboard && restoreFocusId) {
+            byId.get(restoreFocusId)?.focus({ preventScroll: true });
+          }
+          return;
+        }
+
+        const object = byId.get(objectId);
+        if (!object) {
+          sceneElement.removeAttribute('data-mode');
+          sceneElement.removeAttribute('data-focus-revealed');
+          focusPanelElement.hidden = true;
+          return;
+        }
+
+        restoreFocusId = objectId;
+        object.setAttribute('data-selected', 'true');
+        for (const item of objects) item.tabIndex = -1;
+        write('[data-focus-type]', object.dataset.sceneType || '자료');
+        write('[data-focus-title]', object.dataset.sceneTitle || '');
+        write('[data-focus-description]', object.dataset.sceneDescription || '');
+        write('[data-focus-reason]', object.dataset.sceneReason || '');
+        write(
+          '[data-focus-source]',
+          [object.dataset.sceneOwner, object.dataset.sceneVerified].filter(Boolean).join(' · '),
+        );
+        readLinkElement.href = object.href;
+        sceneElement.dataset.mode = 'focus';
+        focusPanelElement.hidden = false;
+        if (revealPanel) sceneElement.dataset.focusRevealed = 'true';
+        else sceneElement.removeAttribute('data-focus-revealed');
+        focusPanelElement.setAttribute(
+          'aria-label',
+          (object.dataset.sceneTitle || '자료') + ' 포커스. 읽기 또는 전체 보기.',
+        );
+      }
+
+      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+      function transitionObject(object: HTMLElement, mutate: () => void, duration: number) {
+        if (reduceMotion.matches) {
+          mutate();
+          return Promise.resolve();
+        }
+
+        if ('startViewTransition' in document) {
+          const transitionDocument = document as Document & {
+            startViewTransition: (update: () => void) => { finished: Promise<void> };
+          };
+          return transitionDocument.startViewTransition(mutate).finished;
+        }
+
+        const first = object.getBoundingClientRect();
+        mutate();
+        const last = object.getBoundingClientRect();
+        const deltaX = first.left - last.left;
+        const deltaY = first.top - last.top;
+        const scaleX = first.width / last.width;
+        const scaleY = first.height / last.height;
+        return object.animate(
+          [
+            {
+              transformOrigin: 'top left',
+              transform: 'translate(' + deltaX + 'px,' + deltaY + 'px) scale(' + scaleX + ',' + scaleY + ')',
+            },
+            { transformOrigin: 'top left', transform: 'none' },
+          ],
+          { duration, easing: 'cubic-bezier(.2,.8,.2,1)' },
+        ).finished;
+      }
+
+      function transitionToFocus(object: HTMLAnchorElement, objectId: string) {
+        const nativeTransition = !reduceMotion.matches && 'startViewTransition' in document;
+        const finished = transitionObject(
+          object,
+          () => applyFocus(objectId, false, reduceMotion.matches || nativeTransition),
+          480,
+        );
+
+        if (!reduceMotion.matches && !nativeTransition) {
+          revealTimer = window.setTimeout(() => {
+            if (sceneElement.dataset.mode === 'focus' && restoreFocusId === objectId) {
+              sceneElement.dataset.focusRevealed = 'true';
+            }
+            revealTimer = undefined;
+          }, 336);
+        }
+
+        void finished.finally(() => {
+          if (pendingFocusId === objectId) pendingFocusId = undefined;
+          if (sceneElement.dataset.mode === 'focus' && restoreFocusId === objectId) {
+            readLinkElement.focus({ preventScroll: true });
+          }
+        });
+      }
+
+      function requestFocus(event: MouseEvent, object: HTMLAnchorElement) {
+        if (
+          event.button !== 0
+          || event.metaKey
+          || event.ctrlKey
+          || event.shiftKey
+          || event.altKey
+        ) return;
+        event.preventDefault();
+        const objectId = object.dataset.sceneObject;
+        if (!objectId) return;
+        const activeFocusId = readFocusId(location.search, validIds);
+        if (!shouldRequestSceneFocus(objectId, activeFocusId, pendingFocusId)) return;
+        pendingFocusId = objectId;
+        restoreFocusId = objectId;
+        restoreStageScrollLeft = stageElement.scrollLeft;
+        history.pushState(
+          {
+            publicSceneFocus: objectId,
+            publicSceneScrollLeft: restoreStageScrollLeft,
+          },
+          '',
+          withFocusUrl(new URL(location.href), objectId),
+        );
+        transitionToFocus(object, objectId);
+      }
+
+      for (const object of objects) {
+        object.addEventListener('click', (event) => requestFocus(event, object));
+      }
+      overviewFocusLink.addEventListener('click', (event) => requestFocus(event, leadObject));
+
+      function closeFocus() {
+        const selected = restoreFocusId ? byId.get(restoreFocusId) : undefined;
+        if (!selected) return;
+        if (history.state?.publicSceneFocus) {
+          history.back();
+          return;
+        }
+        history.replaceState({}, '', withoutFocusUrl(new URL(location.href)));
+        transitionObject(selected, () => applyFocus(undefined, true), 360);
+      }
+
+      overviewButton.addEventListener('click', closeFocus);
+      const initialStageScrollLeft = stageElement.scrollLeft;
+      stageElement.addEventListener('scroll', () => {
+        if (Math.abs(stageElement.scrollLeft - initialStageScrollLeft) > 6) {
+          sceneElement.dataset.railExplored = 'true';
+        }
+      }, { passive: true });
+      addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && sceneElement.dataset.mode === 'focus') closeFocus();
+      });
+      addEventListener('popstate', () => {
+        const nextFocus = readFocusId(location.search, validIds);
+        if (nextFocus) {
+          const nextObject = byId.get(nextFocus);
+          if (nextObject) {
+            checkpointStage(nextObject);
+            pendingFocusId = nextFocus;
+            transitionToFocus(nextObject, nextFocus);
+            return;
+          }
+        }
+
+        const selected = restoreFocusId ? byId.get(restoreFocusId) : undefined;
+        if (selected && sceneElement.dataset.mode === 'focus') {
+          transitionObject(selected, () => applyFocus(undefined, true), 360);
+          return;
+        }
+
+        applyFocus(undefined, true);
+      });
+
+      const initialFocus = readFocusId(location.search, validIds);
+      if (initialFocus) {
+        restoreFocusId = initialFocus;
+        checkpointStage(byId.get(initialFocus));
+        applyFocus(initialFocus);
+      } else if (new URLSearchParams(location.search).has('focus')) {
+        history.replaceState({}, '', withoutFocusUrl(new URL(location.href)));
+        applyFocus();
+      }
+    }
+  }
+</script>
+
+<style>
+  :global(::view-transition-old(scene-focus-panel)) {
+    animation: none;
+    opacity: 0;
+  }
+
+  :global(::view-transition-new(scene-focus-panel)) {
+    animation: scene-focus-panel-in 144ms ease 336ms both;
+  }
+
+  @keyframes scene-focus-panel-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  :global(::view-transition-group(*)) {
+    animation-duration: 360ms;
+    animation-timing-function: cubic-bezier(.2, .8, .2, 1);
+  }
+
+  :global(html:has(.public-scene[data-mode='focus'])::view-transition-group(*)) {
+    animation-duration: 480ms;
+  }
+
+  .public-scene :global(.scene-object:not([data-selected='true'])) {
+    transition:
+      transform 240ms cubic-bezier(.2, .8, .2, 1),
+      opacity 240ms cubic-bezier(.2, .8, .2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global(::view-transition-old(scene-focus-panel)),
+    :global(::view-transition-new(scene-focus-panel)),
+    :global(::view-transition-group(*)) {
+      animation-duration: 0ms;
+      animation-delay: 0ms;
+    }
+
+    .public-scene :global(.scene-object:not([data-selected='true'])) {
+      transition-duration: 0ms;
+    }
+  }
+</style>

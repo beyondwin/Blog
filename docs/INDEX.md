@@ -12,6 +12,13 @@
 | beyondwin 시작하기 | project | tutorial | ko | organized | [docs/notes/project/getting-started.md](notes/project/getting-started.md) |
 | 콘텐츠 운영 | project | guide | ko | organized | [docs/notes/project/publishing-workflows.md](notes/project/publishing-workflows.md) |
 | Agent Runbook | project | workflow | ko | organized | [docs/notes/project/agent-runbook.md](notes/project/agent-runbook.md) |
+| Architecture Decision Records | project | reference | ko | organized | [docs/notes/project/adr/README.md](notes/project/adr/README.md) |
+| ADR-0000: ADR 관리 규칙 | project | decision-record | ko | organized | [docs/notes/project/adr/0000-adr-governance.md](notes/project/adr/0000-adr-governance.md) |
+| ADR-0001: Private-first knowledge product와 curated public projection | project | decision-record | ko | organized | [docs/notes/project/adr/0001-private-first-knowledge-product.md](notes/project/adr/0001-private-first-knowledge-product.md) |
+| ADR-0002: Consumer-grade visual experience를 UX 품질 기준으로 사용 | project | decision-record | ko | organized | [docs/notes/project/adr/0002-consumer-grade-visual-experience.md](notes/project/adr/0002-consumer-grade-visual-experience.md) |
+| ADR-0003: Visual Storyworld 경험 모델 | project | decision-record | ko | organized | [docs/notes/project/adr/0003-visual-storyworld-experience-model.md](notes/project/adr/0003-visual-storyworld-experience-model.md) |
+| ADR-0004: Public Atlas의 기본 구성을 Staged Aperture로 사용 | project | decision-record | ko | organized | [docs/notes/project/adr/0004-staged-aperture-public-composition.md](notes/project/adr/0004-staged-aperture-public-composition.md) |
+| Public Atlas Visual Storyworld vertical slice 설계 | project | product-design | ko | organized | [docs/notes/project/visual-storyworld-public-atlas-design.md](notes/project/visual-storyworld-public-atlas-design.md) |
 | 리뷰 verdict 검토 패킷 | project | workflow | ko | organized | [docs/notes/content-migration/review-verdicts.md](notes/content-migration/review-verdicts.md) |
 | 아키텍처 레퍼런스 | project | reference | ko | organized | [docs/notes/project/architecture-reference.md](notes/project/architecture-reference.md) |
 | beyondwin이 이렇게 구성된 이유 | project | explanation | ko | organized | [docs/notes/project/design-and-content-rationale.md](notes/project/design-and-content-rationale.md) |

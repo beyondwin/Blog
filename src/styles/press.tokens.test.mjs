@@ -11,4 +11,21 @@ describe('press tokens', () => {
     expect(css).not.toContain('AppleMyungjo');
     expect(css).not.toContain('--literary');
   });
+
+  it('does not retain the retired home composition', async () => {
+    const css = await readFile(new URL('./press.css', import.meta.url), 'utf8');
+
+    for (const selector of [
+      '.home-sheet',
+      '.home-lead',
+      '.home-writing',
+      '.home-book',
+      '.home-book__plate',
+      '.home-more-writing',
+      '.home-more-books',
+      '.home-proof',
+    ]) {
+      expect(css, selector).not.toContain(selector);
+    }
+  });
 });

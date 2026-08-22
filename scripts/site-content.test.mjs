@@ -1,5 +1,6 @@
 import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -85,6 +86,19 @@ afterEach(async () => {
 });
 
 describe('site content contract', () => {
+  it('preserves the three approved Public Atlas visual references at durable paths', async () => {
+    const references = [
+      ['public-atlas-desktop-approved.png', '216b35e3fbd55592a7ca8309aaf591e715ba6aed558387e00ea2430440bfa711'],
+      ['public-atlas-mobile-approved.png', '04ad8dafce9b57e1321c25654e5eaabbc7c4d82ad8a415ca4ef4b6a1c0b1b9ae'],
+      ['public-atlas-focus-approved.png', 'a4f7c15891ee6d6e90865354cf7782058d0354060ac3edc145a45a2bb84d4128'],
+    ];
+
+    for (const [file, checksum] of references) {
+      const asset = await readFile(join(root, 'docs', 'notes', 'project', 'assets', 'public-atlas', file));
+      expect(createHash('sha256').update(asset).digest('hex'), `${file} checksum`).toBe(checksum);
+    }
+  });
+
   it('uses beyondwin as the public brand in shell and header', async () => {
     const shell = await readFile(join(root, 'src', 'layouts', 'BaseLayout.astro'), 'utf8');
     const header = await readFile(join(root, 'src', 'components', 'SiteHeader.astro'), 'utf8');
@@ -273,17 +287,117 @@ describe('site content contract', () => {
     expect(layout).toContain('detail.authors.join');
   });
 
-  it('keeps a defined cover column for both home reading leads when media is on HOLD', async () => {
+  it('renders Public Atlas links without private data or modal chrome', async () => {
     const home = await readFile(join(root, 'src', 'pages', 'index.astro'), 'utf8');
+    const scene = await readFile(join(root, 'src', 'components', 'PublicScene.astro'), 'utf8');
+    const object = await readFile(join(root, 'src', 'components', 'PublicSceneObject.astro'), 'utf8');
+    const layout = await readFile(join(root, 'src', 'layouts', 'BaseLayout.astro'), 'utf8');
 
-    expect(home).toContain('class="home-book"');
-    expect(home).toContain('featuredReview.media');
-    expect(home).toContain('book.media');
-    expect(home).toContain('home-book__plate--set');
-    expect(home).toContain('featuredReview.title');
-    expect(home).toContain('featuredReview.authors');
-    expect(home).not.toContain('ReadingLeadCover');
-    expect(home).not.toContain('표지 확인 중');
+    expect(home).toContain('loadJudgmentScene');
+    expect(home).toContain('PublicScene');
+    expect(home).toContain('storyworld-page');
+    expect(scene).toContain('data-public-scene');
+    expect(scene).toContain('data-scene-overview');
+    expect(scene).toContain('data-scene-read');
+    expect(object).toContain('href={decorative ? undefined : object.href}');
+    expect(object).toContain('data-scene-object');
+    expect(home + scene + object).not.toContain("from '../../memory");
+    expect(home + scene + object).not.toContain('<dialog');
+    expect(home + scene + object).not.toContain('similarity');
+    expect(layout).toContain('rel="canonical"');
+  });
+
+  it('keeps overview actions as canonical no-JavaScript links with one enhanced focus path', async () => {
+    const scene = await readFile(join(root, 'src', 'components', 'PublicScene.astro'), 'utf8');
+
+    expect(scene).toContain('const leadFocusHref = withFocusUrl(Astro.url, scene.lead.id);');
+    expect(scene).toMatch(/data-scene-overview-read\s+href=\{scene\.lead\.href\}/);
+    expect(scene).toMatch(/data-scene-enter-focus\s+href=\{leadFocusHref\}/);
+    expect(scene).toContain("const overviewFocusLink = scene.querySelector<HTMLAnchorElement>('[data-scene-enter-focus]');");
+    expect(scene).toContain("overviewFocusLink.addEventListener('click', (event) => requestFocus(event, leadObject));");
+    expect(scene).toContain("object.addEventListener('click', (event) => requestFocus(event, object));");
+  });
+
+  it('renders the authored excerpt before focus actions and quiet provenance', async () => {
+    const scene = await readFile(join(root, 'src', 'components', 'PublicScene.astro'), 'utf8');
+
+    expect(scene).toContain("object.kind === 'article-excerpt'");
+    expect(scene).toContain('const leadExcerpt =');
+    expect(scene).toContain('<blockquote data-focus-description');
+    expect(scene.indexOf('<blockquote data-focus-description'))
+      .toBeLessThan(scene.indexOf('data-scene-read'));
+    expect(scene.indexOf('data-scene-read'))
+      .toBeLessThan(scene.indexOf('<dl class="scene-focus__provenance">'));
+    expect(scene).toContain('data-focus-revealed');
+  });
+
+  it('keeps mobile edge echoes inert and action arrows authored as SVG', async () => {
+    const scene = await readFile(join(root, 'src', 'components', 'PublicScene.astro'), 'utf8');
+    const object = await readFile(join(root, 'src', 'components', 'PublicSceneObject.astro'), 'utf8');
+    const css = await readFile(join(root, 'src/styles/storyworld.css'), 'utf8');
+
+    expect(scene).toMatch(/data-scene-edge-echoes\s+aria-hidden="true"/);
+    expect(scene).toContain('<PublicSceneObject object={judgmentEcho} decorative />');
+    expect(scene).toContain('<PublicSceneObject object={blackSwanEcho} decorative />');
+    expect(object).toContain('decorative?: boolean');
+    expect(object).toContain('data-scene-object={decorative ? undefined : object.id}');
+    expect(object).toContain("aria-hidden={decorative ? 'true' : undefined}");
+    expect(scene.match(/data-scene-action-arrow/g)).toHaveLength(3);
+    expect(css).not.toContain('content: "→"');
+  });
+
+  it('centers a seventy-percent mobile lead while keeping the desktop overview action text-only', async () => {
+    const css = await readFile(join(root, 'src/styles/storyworld.css'), 'utf8');
+
+    expect(css).toMatch(/\.scene-overview-actions \[data-scene-action-arrow\]\s*\{[^}]*display:\s*none/);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*\.scene-stage__objects\s*\{[^}]*padding:\s*0 15vw 26px/);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*\[data-scene-object="reading-desk-cobalt"\]\s*\{[^}]*flex-basis:\s*70vw[^}]*margin-right:\s*15vw/);
+    expect(css).toMatch(/@media \(max-width: 720px\)[\s\S]*\.scene-overview-actions \[data-scene-action-arrow\]\s*\{[^}]*display:\s*block/);
+  });
+
+  it('keeps the storyworld bounded and accessible', async () => {
+    const css = await readFile(join(root, 'src/styles/storyworld.css'), 'utf8');
+
+    expect(css).toContain('--scene-ground: #f2f4f7');
+    expect(css).toContain('--scene-selection: #2b63e8');
+    expect(css).toContain('scroll-snap-type: x mandatory');
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(css).toContain(':focus-visible');
+    expect(css).not.toContain('backdrop-filter');
+    expect(css).not.toContain('perspective(');
+    expect(css).not.toContain('animation-iteration-count: infinite');
+  });
+
+  it('preserves the cobalt lead aspect ratio in the desktop focus band', async () => {
+    const css = await readFile(join(root, 'src/styles/storyworld.css'), 'utf8');
+
+    expect(css).not.toContain('object-fit: fill');
+    expect(css).toMatch(/\[data-scene-object="reading-desk-cobalt"\]\[data-selected\]\s+img\s*\{[^}]*aspect-ratio:\s*3\s*\/\s*2[^}]*width:\s*auto[^}]*height:\s*84%[^}]*object-fit:\s*contain/);
+  });
+
+  it('turns the desktop cobalt remainder into a non-redundant public media folio', async () => {
+    const object = await readFile(join(root, 'src', 'components', 'PublicSceneObject.astro'), 'utf8');
+    const css = await readFile(join(root, 'src/styles/storyworld.css'), 'utf8');
+
+    expect(object).toContain("object.id === 'reading-desk-cobalt' && object.media");
+    expect(object).toMatch(/data-scene-folio\s+aria-hidden="true"/);
+    expect(object).toContain('{object.media.item.credit}');
+    expect(object).toContain('{object.media.item.verifiedAt.replaceAll(\'-\', \'.\')}');
+    expect(object).toContain('{object.media.asset.width} × {object.media.asset.height}');
+    expect(object).toContain('{object.media.asset.format.toUpperCase()}');
+    expect(css).toMatch(/\.scene-object__folio\s*\{[^}]*display:\s*none/);
+    expect(css).toMatch(/\[data-scene-object="reading-desk-cobalt"\]\[data-selected\]\s+\.scene-object__folio\s*\{[^}]*display:\s*grid/);
+  });
+
+  it('keeps the approved storyworld contract route-specific', async () => {
+    const home = await readFile(join(root, 'src/pages/index.astro'), 'utf8');
+    const layout = await readFile(join(root, 'src/layouts/BaseLayout.astro'), 'utf8');
+
+    expect(home).toContain('approved-staged-aperture-2026-08-22');
+    expect(home).toContain('unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance');
+    expect(home).toContain('designContract={storyworldDesignContract}');
+    expect(layout).toContain('designContract?: string');
+    expect(layout).toContain('The route supplies its public product surface inside this shared site shell.');
   });
 
   it('renders Figure external provenance as a no-JavaScript link', async () => {

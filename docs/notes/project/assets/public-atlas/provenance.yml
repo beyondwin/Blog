@@ -1,0 +1,26 @@
+version: 1
+approvedAt: 2026-08-22
+approval: User approved the recommended Staged Aperture desktop composition and its mobile and Continuity Zoom focus realization set.
+generator: built-in image_gen
+references:
+  - id: desktop
+    file: public-atlas-desktop-approved.png
+    width: 1586
+    height: 992
+    checksum: sha256:216b35e3fbd55592a7ca8309aaf591e715ba6aed558387e00ea2430440bfa711
+    intent: Remove only the upper-right hamburger from the selected Staged Aperture composition while preserving its objects, Korean labels, spacing, and cool daylight field.
+  - id: mobile
+    file: public-atlas-mobile-approved.png
+    width: 852
+    height: 1846
+    checksum: sha256:04ad8dafce9b57e1321c25654e5eaabbc7c4d82ad8a415ca4ef4b6a1c0b1b9ae
+    intent: Translate the approved scene to a 390:844 portrait composition with an approximately seventy-percent lead, simultaneous left and right edge context, mobile actions, and native-swipe affordance.
+  - id: focus
+    file: public-atlas-focus-approved.png
+    width: 1586
+    height: 992
+    checksum: sha256:a4f7c15891ee6d6e90865354cf7782058d0354060ac3edc145a45a2bb84d4128
+    intent: Show the same selected object expanding into a non-modal Continuity Zoom state with image-first hierarchy, reading actions, and quiet provenance.
+productionLead:
+  file: ../../../../../src/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png
+  checksum: sha256:aafdd214e2586dd5622aaa1c49d90d5b84dd6b5223a5500d915248a62327ca56

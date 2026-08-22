@@ -39,6 +39,7 @@ Read the smallest useful set for the task.
 | Archive docs note | `docs/README.md`, `docs/_index/README.md` | `docs/_index/catalog.yml`, `docs/_index/topics.yml`, `docs/INDEX.md` |
 | New content lane | `docs/notes/project/architecture-reference.md`, `DESIGN.md` | Existing pages, layouts, validation scripts, and navigation |
 | Route, layout, or style change | `DESIGN.md`, `docs/notes/project/architecture-reference.md` | Target `src/pages`, `src/layouts`, `src/components`, or CSS files |
+| Product, architecture, boundary, or durable UX decision | `docs/notes/project/adr/README.md`, relevant accepted ADRs | `PRODUCT.md`, `DESIGN.md`, specs, and implementation evidence |
 
 ## Task Map
 
@@ -67,6 +68,7 @@ Read the smallest useful set for the task.
 | Memory projection | `npm run memory:validate`, `npm run validate` | Preview `/memory/` when UI or projection output changes |
 | Route, layout, style, or component | `npm run validate` | Browser check on desktop and mobile-sized viewport |
 | New content lane | `npm run validate` | Listing route and detail route preview |
+| ADR addition or status change | `npm run agent:check`, `git diff --check` | Confirm ADR index, docs catalog, topics when needed, and `docs/INDEX.md` agree |
 
 ## Structured Content Handoff
 
@@ -139,6 +141,17 @@ When adding, moving, or deleting a durable curated note under `docs/notes/`:
 4. Confirm every catalog path points to an existing file.
 
 Do not catalog generated `docs/wiki/` pages as primary sources.
+
+## ADR Update Rules
+
+Use [the ADR index](adr/README.md) for decisions that future work must treat as constraints.
+
+1. Read accepted ADRs before product, architecture, data-boundary, publishing-policy, or durable UX work.
+2. Add or update an ADR in the same change when a material decision is accepted, rejected, superseded, or narrowed.
+3. Keep research directions and unapproved design options `proposed`.
+4. Preserve rejected alternatives and the evidence behind the rejection.
+5. If a new decision replaces an accepted ADR, create a new ADR and mark the old one `superseded`; do not rewrite history.
+6. Update the ADR index, docs catalog, topics when needed, and human-readable docs index.
 
 ## Common Failure Modes
 

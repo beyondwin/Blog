@@ -17,5 +17,11 @@ const isCurrent = (href: string) => href === '/' ? currentPath === href : curren
     <nav class="nav" aria-label="Primary navigation">
       {publicNav.map((item) => <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>{item.label}</a>)}
     </nav>
+    <details class="nav-drawer">
+      <summary aria-label="메뉴"><span aria-hidden="true"></span></summary>
+      <nav aria-label="모바일 주 탐색">
+        {publicNav.map((item) => <a href={item.href}>{item.label}</a>)}
+      </nav>
+    </details>
   </div>
 </header>

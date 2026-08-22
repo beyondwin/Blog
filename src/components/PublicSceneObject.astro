@@ -1,0 +1,82 @@
+---
+import { Image } from 'astro:assets';
+import type { ResolvedPublicSceneObject } from '../lib/scenes/publicScene';
+
+interface Props {
+  object: ResolvedPublicSceneObject;
+  eager?: boolean;
+  decorative?: boolean;
+  focusDescription?: string;
+}
+
+const {
+  object,
+  eager = false,
+  decorative = false,
+  focusDescription = object.description,
+} = Astro.props;
+const Tag = decorative ? 'span' : 'a';
+---
+
+<Tag
+  class={"scene-object scene-object--" + object.role + " scene-object--" + object.kind}
+  href={decorative ? undefined : object.href}
+  data-scene-object={decorative ? undefined : object.id}
+  data-scene-echo={decorative ? object.id : undefined}
+  data-scene-kind={object.kind}
+  data-scene-type={object.typeLabel}
+  data-scene-title={object.title}
+  data-scene-description={focusDescription}
+  data-scene-reason={object.relationReason}
+  data-scene-owner={object.sourceOwner}
+  data-scene-verified={object.verifiedAt}
+  aria-hidden={decorative ? 'true' : undefined}
+  style={decorative ? undefined : "view-transition-name: scene-" + object.id}
+>
+  <span class="visually-hidden">{object.typeLabel}</span>
+  {object.kind === 'review' ? (
+    <span class="scene-object__review">
+      <strong class="scene-object__title">{object.title}</strong>
+      {object.authors.length > 0 && (
+        <span class="scene-object__author">{object.authors.join(' · ')}</span>
+      )}
+      <span class="scene-object__rule" aria-hidden="true"></span>
+      <span class="scene-object__verdict">{object.description}</span>
+    </span>
+  ) : object.kind === 'article-excerpt' ? (
+    <blockquote>{object.text}</blockquote>
+  ) : object.media ? (
+    <>
+      <Image
+        src={object.media.asset}
+        alt={object.media.item.alt}
+        width={object.media.asset.width}
+        height={object.media.asset.height}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchpriority={eager ? 'high' : undefined}
+      />
+      {object.id === 'reading-desk-cobalt' && object.media && (
+        <span class="scene-object__folio" data-scene-folio aria-hidden="true">
+          <span class="scene-object__folio-scene">
+            <strong>장면 기록</strong>
+            <span>{object.media.item.caption}</span>
+          </span>
+          <span class="scene-object__folio-fact">
+            <span>제작</span>
+            <strong>{object.media.item.credit}</strong>
+          </span>
+          <span class="scene-object__folio-fact">
+            <span>검증</span>
+            <strong>{object.media.item.verifiedAt.replaceAll('-', '.')}</strong>
+          </span>
+          <span class="scene-object__folio-fact">
+            <span>원본</span>
+            <strong>
+              {object.media.asset.width} × {object.media.asset.height} · {object.media.asset.format.toUpperCase()}
+            </strong>
+          </span>
+        </span>
+      )}
+    </>
+  ) : null}
+</Tag>

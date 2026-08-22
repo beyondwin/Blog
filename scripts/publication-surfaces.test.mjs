@@ -32,8 +32,8 @@ describe('public route publication guard', () => {
 
   it('keeps home, search, collection lists, and nested tag routes behind public aggregators', async () => {
     const surfaces = {
-      'src/pages/index.astro': 'loadHomePresentation',
-      'src/lib/homeData.ts': 'getContentByCollection',
+      'src/pages/index.astro': 'loadJudgmentScene',
+      'src/lib/scenes/judgmentScene.ts': 'getContentByCollection',
       'src/pages/search/index.astro': 'loadSearchRecords',
       'src/lib/searchData.ts': 'getAllContent',
       'src/pages/analysis/index.astro': 'getContentByCollection',
@@ -54,10 +54,13 @@ describe('public route publication guard', () => {
 });
 
 describe('home route contract', () => {
-  it('home route uses public nouns and thought page hrefs', async () => {
+  it('home route renders the approved Public Atlas scene', async () => {
     const home = await readFile(join(root, 'src/pages/index.astro'), 'utf8');
-    expect(home).toContain('selectHomeThought');
-    expect(home).toContain('featuredThought');
+    expect(home).toContain('PublicScene');
+    expect(home).toContain('loadJudgmentScene');
+    expect(home).not.toContain('selectHomeThought');
+    expect(home).not.toContain('featuredReview');
+    expect(home).not.toContain('home-book');
     expect(home).not.toContain('Editor');
     expect(home).not.toContain('READING NOTE');
     expect(home).not.toContain('지금 펼쳐 둔 기록');

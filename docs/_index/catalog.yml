@@ -83,6 +83,76 @@
   source: docs/superpowers/specs/2026-07-01-blog-agent-docs-runbook-design.md
   updated: 2026-07-01
 
+- title: Architecture Decision Records
+  path: docs/notes/project/adr/README.md
+  topic: project
+  type: reference
+  language: ko
+  status: organized
+  summary: Index, status model, template, and maintenance workflow for durable beyondwin product, architecture, boundary, publishing-policy, and UX decisions.
+  source: AGENTS.md
+  updated: 2026-08-22
+
+- title: 'ADR-0000: ADR 관리 규칙'
+  path: docs/notes/project/adr/0000-adr-governance.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Requires material product and architecture decisions to be read, recorded, indexed, and superseded through durable ADRs in the same change.
+  source: user decision 2026-08-22
+  updated: 2026-08-22
+
+- title: 'ADR-0001: Private-first knowledge product와 curated public projection'
+  path: docs/notes/project/adr/0001-private-first-knowledge-product.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Establishes the private-first knowledge workspace as the primary product and human-approved public projection as the publication boundary.
+  source: user decision 2026-08-22
+  updated: 2026-08-22
+
+- title: 'ADR-0002: Consumer-grade visual experience를 UX 품질 기준으로 사용'
+  path: docs/notes/project/adr/0002-consumer-grade-visual-experience.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Records rejected analog, developer-tool, and kinetic-typography directions and sets consumer-grade visual knowledge products as the next UX quality bar.
+  source: user feedback 2026-08-22
+  updated: 2026-08-22
+
+- title: 'ADR-0003: Visual Storyworld 경험 모델'
+  path: docs/notes/project/adr/0003-visual-storyworld-experience-model.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Establishes Public Visual Storyworld, Private Material Field, Resurface, and continuity across approved canonical knowledge objects.
+  source: user decision 2026-08-22
+  updated: 2026-08-22
+
+- title: 'ADR-0004: Public Atlas의 기본 구성을 Staged Aperture로 사용'
+  path: docs/notes/project/adr/0004-staged-aperture-public-composition.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Selects Staged Aperture as the first Public Atlas desktop composition and fixes the responsive and Continuity Zoom translation rules.
+  source: user decision 2026-08-22
+  updated: 2026-08-22
+
+- title: Public Atlas Visual Storyworld vertical slice 설계
+  path: docs/notes/project/visual-storyworld-public-atlas-design.md
+  topic: project
+  type: product-design
+  language: ko
+  status: organized
+  summary: Defines the first curated public scene, Continuity Zoom journey, scene data contract, responsive behavior, fallbacks, and validation boundary.
+  source: ADR-0003
+  updated: 2026-08-22
+
 - title: 리뷰 verdict 검토 패킷
   path: docs/notes/content-migration/review-verdicts.md
   topic: project

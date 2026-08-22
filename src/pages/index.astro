@@ -1,83 +1,28 @@
 ---
-import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import PublicScene from '../components/PublicScene.astro';
 import SiteFooter from '../components/SiteFooter.astro';
-import { loadHomePresentation, selectHomeThought } from '../lib/homeData';
-import { loadPublicMemoryData } from '../lib/memoryData';
+import { loadJudgmentScene } from '../lib/homeData';
+import '../styles/storyworld.css';
 
-const {
-  featuredArticle,
-  featuredReview,
-  moreArticles,
-  moreBooks,
-} = await loadHomePresentation();
-const featuredThought = selectHomeThought(loadPublicMemoryData().thoughts);
+const { scene, issues } = await loadJudgmentScene();
+for (const issue of issues) console.warn('[public-scene] ' + issue.objectId + ': ' + issue.message);
+
+const storyworldDesignContract = `THESIS: One curated daylight scene makes the writing tangible; it refuses hero, card-grid, and dashboard arrangements.
+OWN-WORLD: Flat mineral gray, optical white, rich ink, cobalt selection, precise sans, bounded image apertures, and text-only objects.
+STORY: The visitor sees one judgment, understands its article, book, image, and excerpt relations, focuses an object, then reads or returns.
+FIRST VIEWPORT: The cobalt desk dominates center-right; the article title occupies left negative space; judgment, black-swan, excerpt, and table stay at the edges. 읽기 leads focus and 전체 보기 restores the scene.
+FORM: Staged Aperture, the approved first-ranked composition; seed approved-staged-aperture-2026-08-22.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance`;
 ---
 
-<BaseLayout description="글과 책, 그리고 남는 문장.">
-  <div class="press-sheet home-sheet">
-    <article class="home-lead">
-      {featuredArticle && (
-        <a href={featuredArticle.href} class="home-writing">
-          <h1>{featuredArticle.title}</h1>
-          <p>{featuredArticle.description}</p>
-        </a>
-      )}
-      {featuredReview && (
-        <a href={featuredReview.href} class="home-book">
-          {featuredReview.media ? (
-            <Image
-              class="home-book__plate"
-              src={featuredReview.media.asset}
-              alt={featuredReview.media.item.alt}
-              width={180}
-              height={270}
-              loading="eager"
-            />
-          ) : (
-            <span class="home-book__plate home-book__plate--set">
-              <b>{featuredReview.title}</b>
-              {featuredReview.authors.length > 0 && <em>{featuredReview.authors.join(' · ')}</em>}
-            </span>
-          )}
-        </a>
-      )}
-    </article>
-    {featuredThought && (
-      <aside class="home-proof">
-        <a href={featuredThought.href}>{featuredThought.claimKo}</a>
-      </aside>
-    )}
-    {moreArticles.length > 0 && (
-      <section class="home-more-writing" aria-label="글">
-        {moreArticles.map((article) => (
-          <a href={article.href}>{article.title}</a>
-        ))}
-      </section>
-    )}
-    {moreBooks.length > 0 && (
-      <section class="home-more-books" aria-label="책">
-        {moreBooks.map((book) => (
-          <a href={book.href} class="home-book">
-            {book.media ? (
-              <Image
-                class="home-book__plate"
-                src={book.media.asset}
-                alt={book.media.item.alt}
-                width={96}
-                height={144}
-                loading="lazy"
-              />
-            ) : (
-              <span class="home-book__plate home-book__plate--set">
-                <b>{book.title}</b>
-                {book.authors.length > 0 && <em>{book.authors.join(' · ')}</em>}
-              </span>
-            )}
-          </a>
-        ))}
-      </section>
-    )}
-  </div>
+<BaseLayout
+  title="판단 · beyondwin"
+  description="AI 시대에 무엇을 믿을지 판단하기 위해 읽고 연결한 글, 책, 문장."
+  pageClass="storyworld-page"
+  themeColor="#F2F4F7"
+  designContract={storyworldDesignContract}
+>
+  <PublicScene scene={scene} />
   <SiteFooter />
 </BaseLayout>

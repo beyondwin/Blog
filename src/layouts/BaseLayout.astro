@@ -7,13 +7,23 @@ interface Props {
   title?: string;
   description?: string;
   pageClass?: string;
+  themeColor?: string;
+  canonicalPath?: string;
+  designContract?: string;
 }
 
 const {
   title = 'beyondwin',
   description = '글과 책, 그리고 남는 문장.',
   pageClass = 'press-page',
+  themeColor = '#878680',
+  canonicalPath = Astro.url.pathname,
+  designContract,
 } = Astro.props;
+
+const bodyDesignComment = designContract
+  ? `<!--\n${designContract}\n-->`
+  : '<!-- The route supplies its public product surface inside this shared site shell. -->';
 ---
 
 <!doctype html>
@@ -23,18 +33,12 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#878680" />
+    <meta name="theme-color" content={themeColor} />
+    <link rel="canonical" href={canonicalPath} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   </head>
   <body class={pageClass}>
-    <!--
-    THESIS: 첫 화면은 아카이브 맵이 아니라 교정 중인 지면이다.
-    OWN-WORLD: 그레이 부스, 옵티컬 화이트 시트, 리치 블랙, 비재현 파랑 메모. 고딕 한 가족.
-    STORY: 방문자는 글 또는 책을 집고, 원하면 남은 문장으로 간다.
-    FIRST VIEWPORT: 시트 왼쪽에 객체 하나, 오른쪽에 문장 하나.
-    FORM: 인쇄소 4색 교정 부스.
-    FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
-    -->
+    <Fragment set:html={bodyDesignComment} />
     <SiteHeader>
       <slot name="header-mark" />
     </SiteHeader>

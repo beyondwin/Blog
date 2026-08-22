@@ -1,6 +1,6 @@
 # 아키텍처 레퍼런스
 
-`beyondwin`은 Astro 기반 정적 출판 시스템이다. 핵심은 typed MDX collection, script validation, private-first memory projection이다.
+`beyondwin`은 Astro 기반 private-first 정적 지식 제품이다. 핵심은 typed MDX collection, script validation, private-first memory projection, 그리고 그중 공개 승인된 object만 조합하는 Public Atlas projection이다.
 
 ## Runtime Stack
 
@@ -10,8 +10,12 @@
 | Content schemas | `src/content.config.ts` | collection별 frontmatter 계약. |
 | Pages | `src/pages/` | 정적 route와 collection detail route. |
 | Layouts | `src/layouts/` | base, article, analysis, review page shell. |
-| Components | `src/components/` | header, card, badge, callout, source panel, table of contents. |
+| Components | `src/components/` | header, Public Atlas scene/object, reading card, callout, source panel, table of contents. |
 | Content helpers | `src/lib/content.ts` | collection metadata, 날짜 선택, route href, tag, sorting. |
+| Public scene contract | `src/lib/scenes/publicScene.ts` | scene definition/ref type, public-only resolver, canonical object view model, issue reporting. |
+| Judgment scene | `src/lib/scenes/judgmentScene.ts` | 현재 하나뿐인 author-approved `판단` definition과 public content/media projection 조립. |
+| Scene state | `src/lib/scenes/sceneState.ts` | overview/focus reducer, focus query helper, native rail scroll checkpoint parsing. |
+| Public scene UI | `src/components/PublicScene.astro`, `src/components/PublicSceneObject.astro` | server-rendered object links, Staged Aperture, focus/read/return/history interaction. |
 | Memory public data | `src/lib/memory/publicData.ts` | public memory JSON type, empty fallback, normalize, public JSON load. |
 | Memory lookup | `src/lib/memory/lookup.ts` | source route resolution and thought/topic/source/edge lookup maps. |
 | Memory graph model | `src/lib/memory/graphModel.ts` | graph nodes, edges, facets, deterministic positions. |
@@ -20,6 +24,7 @@
 | Memory page payload | `src/lib/memory/pagePayload.ts` | serializable `/memory` detail drawer and client payload data. |
 | Memory compatibility | `src/lib/memoryData.ts` | temporary re-export surface for existing imports. |
 | Global styles | `src/styles/global.css` | token, layout, prose, component, responsive CSS. |
+| Storyworld styles | `src/styles/storyworld.css` | `/`의 desktop Staged Aperture, mobile native snap rail, Continuity Zoom, reduced motion. |
 | Content source | `src/content/` | 공개 MDX 콘텐츠. |
 | Memory source | `memory/` | public projection의 입력. private draft는 commit하지 않는다. |
 | Docs library | `docs/` | source, curated note, index, generated navigation placeholder. |
@@ -57,7 +62,13 @@ Path: `src/content/analysis/`
 
 Path: `src/content/articles/`
 
-추가 field는 없다. 단, `tags`에 `source-grounded`가 있으면 [scripts/article-quality.mjs](../../../scripts/article-quality.mjs)의 추가 gate를 통과해야 한다.
+| Field | Type | Constraint |
+| --- | --- | --- |
+| `recordKind` | enum | optional; `technical-note`, `research`, `essay` |
+| `evidenceState` | enum | optional; `personal`, `source-grounded`, `verified` |
+| `featuredMedia` | string | optional, non-empty media id |
+
+`tags`에 `source-grounded`가 있으면 [scripts/article-quality.mjs](../../../scripts/article-quality.mjs)의 추가 gate를 통과해야 한다.
 
 ### `ideas`
 
@@ -102,7 +113,7 @@ Path: `src/content/travel/`
 
 | Route | Source | Behavior |
 | --- | --- | --- |
-| `/` | `src/pages/index.astro` | 최신 article/analysis featured, lane count, tag rack, latest list, memory count. |
+| `/` | `src/pages/index.astro` | `loadJudgmentScene()`으로 하나의 `판단` Public Atlas scene을 server-render하고 `PublicScene` interaction을 progressive-enhance한다. |
 | `/articles/` | `src/pages/articles/index.astro` | article listing. |
 | `/articles/[slug]/` | `src/pages/articles/[slug].astro` | published non-draft article detail. |
 | `/analysis/` | `src/pages/analysis/index.astro` | analysis listing. |
@@ -117,6 +128,22 @@ Path: `src/content/travel/`
 | `/tags/` | `src/pages/tags/index.astro` | all public content tag index. |
 | `/tags/[tag]/` | `src/pages/tags/[tag].astro` | tag-filtered public content listing. |
 | `/memory/` | `src/pages/memory.astro` | generated public memory projection. |
+
+## Public Atlas Projection Contract
+
+현재 Public Atlas 구현은 `/`의 단일 `판단` scene이다. 여러 scene을 저장하거나 자동 생성하는 시스템은 없다.
+
+- `src/pages/index.astro`는 `src/lib/homeData.ts`가 re-export한 `loadJudgmentScene()`을 호출하고 `src/styles/storyworld.css`와 `PublicScene`을 사용한다.
+- `src/lib/scenes/judgmentScene.ts`는 published article/review selector, `src/data/memory.public.json` loader, media registry를 scene resolver에 주입한다. top-level `memory/**`를 직접 읽지 않는다.
+- `src/lib/scenes/publicScene.ts`는 author approval, relation reason, unique id와 canonical reference를 검증한다. lead가 없거나 공개될 수 없으면 실패하고, optional support/context 문제는 object id와 이유가 있는 structured issue로 남긴다. `src/pages/index.astro`가 이 issue를 순회해 `[public-scene] <object-id>: <message>` 형식의 build-time `console.warn`으로 내보내며, 별도 validation report를 생성하지 않는다.
+- object 순서는 `reading-desk-cobalt`, `judgment-scale`, text-only `black-swan`, `reading-excerpt`, `shared-reading-table`이다. 네 article object의 canonical href는 `/articles/why-i-read-in-the-ai-era/`, review href는 `/reviews/black-swan/`이다.
+- `src/components/PublicSceneObject.astro`는 모든 object를 canonical anchor로 server-render한다. JavaScript가 비활성화되어도 각 링크는 정상 route로 이동한다.
+- `src/components/PublicScene.astro`는 `?focus=<object-id>`와 history state를 동기화한다. focus entry의 자체 key는 `publicSceneFocus`와 `publicSceneScrollLeft` 두 개뿐이다. scene id는 history에 저장하지 않고, 현재 유일한 `/`의 authored definition에서 정해진다. direct focus URL, refresh, read/back, `Escape`, `전체 보기`를 지원하고 invalid focus는 overview로 정규화한다. 같은 active/pending object의 activation은 `sceneState.ts`의 pure guard로 거부해 rapid repeat가 동일 history entry를 더 만들지 않는다.
+- Mobile return state는 object id뿐 아니라 native rail의 `publicSceneScrollLeft`를 같은 history entry에 저장한다. focus/overview layout mutation 뒤 scroll offset을 복원하고 `preventScroll` focus를 적용해 정확한 scene viewport를 유지한다. 첫 viewport는 양쪽 `15vw` 여백과 lead 뒤 `15vw` 간격으로 만든 full-width initial slot 안에 `70vw` canonical lead를 중앙 배치한다. 양쪽 edge echo는 기존 public object를 다시 그린 `aria-hidden` 비상호작용 표현이며 canonical rail이 움직이면 사라진다.
+- Focus panel은 실제 article excerpt와 action을 provenance보다 먼저 렌더한다. 480ms focus 전환의 336ms 지점에 144ms reveal을 시작하며 native View Transition과 FLIP fallback을 각각 구현한다. reduced motion은 geometry와 panel을 모두 즉시 적용한다.
+- `prefers-reduced-motion: reduce`에서는 Web Animation과 View Transition을 시작하지 않는다.
+
+Public Atlas는 public projection 소비자다. private authoring workspace, retrieval backend, graph persistence, automatic scene assembly를 구현하거나 암시하지 않는다.
 
 ## Structured Content Foundation Contracts
 
@@ -154,11 +181,11 @@ route/layout 디자인 구현이 사용할 handoff 경계이며, 해당 구현�
 사용하는 public aggregator를 거친다. `getStaticPaths()`도 `published && !draft`를
 요구하므로 `review`와 `archived` entry의 detail route를 만들지 않는다.
 
-실제 article source 16개는 모두 보존되어 있다. 그중 12개만 현재 public이며,
-`agents-md-vs-agent-skills-evidence`, `aws-static-frontend-serverless-bff`,
-`shared-ai-conversation-evidence-boundaries`, `uncle-bob-ai-code-review-evidence`
-4개는 `status: review`로 publication authorization을 기다린다. migration 위험을
-해결하라는 요청은 이 4개를 publish하라는 승인으로 해석하지 않는다.
+`src/content/articles/`의 filesystem file count는 public inventory 계약이 아니다. 이
+directory에는 scaffold/example, draft, review 상태의 record가 함께 있을 수 있으며,
+공개 여부는 매 build에서 shared `published && !draft` selector와 적용 가능한 schema,
+media, quality gate로 결정한다. migration이나 문서 정리를 publication authorization으로
+해석하지 않는다.
 
 ## Content Helper Contracts
 
@@ -342,11 +369,17 @@ content media ID를 함께 검사한다.
 | `scripts/article-quality.test.mjs` | source-grounded article quality gate. |
 | `scripts/queue.test.mjs` | queue parser and metadata validation. |
 | `scripts/site-content.test.mjs` | brand shell, imported Naver review contracts, review layout constraints. |
+| `scripts/publication-surfaces.test.mjs` | public route, no private-memory import, scene composition source contracts. |
 | `scripts/memory.schema.test.mjs` | thought parsing, schema validation, exclusion reasons, edge validation. |
 | `scripts/memory.seed.test.mjs` | memory seed candidate generation. |
 | `scripts/memory.project.test.mjs` | public memory projection, exclusion counts, broken-source failure, JSON output. |
 | `src/lib/memory/*.test.mjs` | public memory data, lookup, graph model, filters, content links, article compatibility, and page payload behavior. |
 | `src/lib/memoryData.test.mjs` | compatibility re-export behavior. |
+| `src/lib/content/mediaRegistry.test.ts` | manifest-backed media resolution, dimensions, checksum/provenance contract. |
+| `src/lib/scenes/publicScene.test.ts` | authored scene validation, public eligibility, lead failure, optional issue reporting. |
+| `src/lib/scenes/sceneState.test.ts` | overview/focus URL state and valid native rail scroll checkpoint parsing. |
+| `src/lib/siteChrome.test.ts` | public navigation nouns and route contract. |
+| `src/styles/press.tokens.test.mjs` | existing press token contract remains intact outside the Storyworld surface. |
 
 ## Docs Layers
 

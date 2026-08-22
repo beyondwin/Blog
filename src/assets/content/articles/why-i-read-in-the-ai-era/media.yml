@@ -1,5 +1,17 @@
 version: 1
 items:
+  - id: reading-desk-cobalt
+    file: reading-desk-cobalt.png
+    kind: illustration
+    alt: 밝은 회백색 책상 위에 펼친 책과 은색 노트북, 책 위를 가로지르는 코발트색 책갈피
+    caption: 빠른 답의 도구 곁에서 판단을 위해 천천히 읽는 장면
+    credit: beyondwin
+    sourcePath: src/content/articles/why-i-read-in-the-ai-era.mdx
+    verifiedAt: "2026-08-22"
+    rightsNote: beyondwin Visual Storyworld lead; repository-authored asset generated for the user-approved 2026-08-22 composition
+    width: 1536
+    height: 1024
+    checksum: sha256:aafdd214e2586dd5622aaa1c49d90d5b84dd6b5223a5500d915248a62327ca56
   - id: reading-desk-light
     file: reading-desk-light.webp
     kind: illustration

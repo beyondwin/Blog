@@ -4,11 +4,11 @@ import { bannedPublicNouns, memoryThoughtHref, publicNav } from './siteChrome';
 
 describe('site chrome', () => {
   it('exposes exactly four public nouns', () => {
-    expect(publicNav.map((item) => item.label)).toEqual(['글', '책', '문장', '찾기']);
+    expect(publicNav.map((item) => item.label)).toEqual(['장면', '글', '책', '찾기']);
     expect(publicNav.map((item) => item.href)).toEqual([
+      '/',
       '/articles/',
       '/reviews/',
-      '/memory/',
       '/search/',
     ]);
   });

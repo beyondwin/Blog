@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { buildMediaRegistry } from './mediaRegistry';
+import { buildMediaRegistry, resolveContentMedia } from './mediaRegistry';
 
 const validMediaManifest = `version: 1
 items:
@@ -22,6 +22,23 @@ const assetPath = '/src/assets/content/reviews/factfulness/cover.jpg';
 const imageMetadata = { src: '/_astro/cover.hash.jpg', width: 451, height: 687, format: 'jpg' } as const;
 
 describe('media registry', () => {
+  it('resolves the approved cobalt Public Atlas lead with immutable provenance', () => {
+    const media = resolveContentMedia(
+      'articles',
+      'why-i-read-in-the-ai-era',
+      'reading-desk-cobalt',
+    );
+
+    expect(media.item).toMatchObject({
+      id: 'reading-desk-cobalt',
+      width: 1536,
+      height: 1024,
+      sourcePath: 'src/content/articles/why-i-read-in-the-ai-era.mdx',
+      verifiedAt: '2026-08-22',
+      checksum: 'sha256:aafdd214e2586dd5622aaa1c49d90d5b84dd6b5223a5500d915248a62327ca56',
+    });
+  });
+
   it('joins a manifest id to image metadata without a remote URL', () => {
     const registry = buildMediaRegistry(
       { [manifestPath]: validMediaManifest },

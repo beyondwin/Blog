@@ -13,12 +13,20 @@
   - private memory: `memory/AGENTS.md`
 - Use the matching project skill under `.agents/skills/` for repeatable research, site-change, or archive-and-memory workflows.
 
+## Decision records
+
+- Before product, architecture, data-boundary, publishing-policy, or durable UX work, read `docs/notes/project/adr/README.md` and the relevant accepted ADRs.
+- Create or update an ADR in the same change whenever work accepts, rejects, supersedes, or materially narrows one of those decisions. Routine implementation details and reversible local choices do not need an ADR.
+- Keep exploratory options marked `proposed`; do not present them as accepted until the user has explicitly approved them. Preserve rejected options and reasons when they constrain future work.
+- When an ADR is added or moved, update the ADR index, `docs/_index/catalog.yml`, `docs/_index/topics.yml` when needed, and `docs/INDEX.md`.
+
 ## Setup and completion
 
 - Use Node 24 and install committed dependencies with `npm ci`.
 - Use focused tests while iterating.
 - Run `npm run validate` before claiming completion; it includes the local agent setup check, content checks, memory validation, tests, Astro checks, and the production build.
 - Run `git diff --check` and review the final diff for unrelated files.
+- Review the relevant ADRs before closeout and confirm the implementation and documentation still match them.
 - UI or interaction changes require a real browser check on affected routes at desktop and mobile widths.
 
 ## Safety and scope
