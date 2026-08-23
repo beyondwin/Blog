@@ -1,8 +1,11 @@
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { access, cp, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 
+const execFileAsync = promisify(execFile);
 const temporaryRoots: string[] = [];
 
 async function createRoot(): Promise<string> {
@@ -19,15 +22,15 @@ describe('renderer evidence boundaries', () => {
   it('clears only declared contained output and cache roots before every build sample', async () => {
     const root = await createRoot();
     const output = join(root, 'dist');
-    const cache = join(root, '.renderer-cache');
+    const cache = join(root, 'node_modules/.astro');
     await writeFile(join(root, 'package.json'), JSON.stringify({
       private: true,
-      scripts: { 'build:test': 'node build.mjs' },
+      scripts: { 'legacy:build': 'node build.mjs' },
     }));
     await writeFile(join(root, 'build.mjs'), `
       import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
       import { join } from 'node:path';
-      const cache = join(process.cwd(), '.renderer-cache');
+      const cache = join(process.cwd(), 'node_modules/.astro');
       const output = join(process.cwd(), 'dist');
       const statePath = join(cache, 'state.txt');
       const count = existsSync(statePath) ? Number(readFileSync(statePath, 'utf8')) + 1 : 1;
@@ -49,13 +52,156 @@ describe('renderer evidence boundaries', () => {
       rendererRoot: root,
       outputDirectory: output,
       cleanDirectories: [output, cache],
-      buildScript: 'build:test',
+      renderer: 'astro',
+      buildScript: 'legacy:build',
       buildSamples: 3,
     });
 
     expect(new Set(result.samples.map((sample) => sample.artifactHash)).size).toBe(1);
     expect(result.samples.every((sample) => sample.cleanedPaths.length === 2)).toBe(true);
     expect(await readFile(join(cache, 'state.txt'), 'utf8')).toBe('1');
+  });
+
+  it('keeps an external sentinel when an allowlisted cache ancestor is a symlink', async () => {
+    const root = await createRoot();
+    const outside = await createRoot();
+    const output = join(root, 'dist');
+    const cache = join(root, 'node_modules/.astro');
+    const sentinel = join(outside, '.astro/sentinel.txt');
+    await mkdir(join(outside, '.astro'));
+    await writeFile(sentinel, 'must survive');
+    await symlink(outside, join(root, 'node_modules'));
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      private: true,
+      scripts: { 'legacy:build': 'node build.mjs' },
+    }));
+    await writeFile(join(root, 'build.mjs'), `
+      import { mkdirSync, writeFileSync } from 'node:fs';
+      import { join } from 'node:path';
+      mkdirSync(join(process.cwd(), 'dist'), { recursive: true });
+      writeFileSync(join(process.cwd(), 'dist/index.html'), '<h1>safe</h1>');
+    `);
+    const { runBuildSamples } = await import('../src/capture-renderer');
+    const options = {
+      repositoryRoot: root,
+      rendererRoot: root,
+      outputDirectory: output,
+      cleanDirectories: [output, cache],
+      renderer: 'astro' as const,
+      buildScript: 'legacy:build',
+      buildSamples: 3,
+    };
+
+    await expect(runBuildSamples(options)).rejects.toThrow(/symlink|real path|outside/iu);
+    expect(await readFile(sentinel, 'utf8')).toBe('must survive');
+  });
+
+  it('rejects missing, extra, aliased, and duplicate renderer clean roots', async () => {
+    const root = await createRoot();
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      private: true,
+      scripts: { 'legacy:build': 'node build.mjs' },
+    }));
+    await writeFile(join(root, 'build.mjs'), `
+      import { mkdirSync, writeFileSync } from 'node:fs';
+      import { join } from 'node:path';
+      mkdirSync(join(process.cwd(), 'dist'), { recursive: true });
+      writeFileSync(join(process.cwd(), 'dist/index.html'), '<h1>unsafe cache omission</h1>');
+    `);
+    const { runBuildSamples } = await import('../src/capture-renderer');
+    const options = {
+      repositoryRoot: root,
+      rendererRoot: root,
+      outputDirectory: join(root, 'dist'),
+      renderer: 'astro' as const,
+      buildScript: 'legacy:build',
+      buildSamples: 3,
+    };
+
+    for (const cleanDirectories of [
+      [join(root, 'dist')],
+      [join(root, 'dist'), join(root, 'node_modules/.astro'), join(root, '.extra-cache')],
+      [join(root, 'dist'), `${root}/node_modules/./.astro`],
+      [join(root, 'dist'), join(root, 'node_modules/.astro'), join(root, 'node_modules/.astro')],
+    ]) {
+      await expect(runBuildSamples({ ...options, cleanDirectories })).rejects.toThrow(
+        /canonical|clean roots|node_modules\/\.astro/iu,
+      );
+    }
+  });
+
+  it('publishes the exact approved clean roots for every renderer', async () => {
+    const module = await import('../src/capture-renderer');
+
+    expect(module).toHaveProperty('RENDERER_LAYOUTS');
+    expect((module as typeof module & { RENDERER_LAYOUTS: unknown }).RENDERER_LAYOUTS).toEqual({
+      astro: {
+        rendererRoot: '.',
+        rendererManifest: 'package.json',
+        buildScript: 'legacy:build',
+        outputRoot: 'dist',
+        cleanRoots: ['dist', 'node_modules/.astro'],
+      },
+      next: {
+        rendererRoot: 'spikes/site-next',
+        rendererManifest: 'spikes/site-next/package.json',
+        buildScript: 'build',
+        outputRoot: 'spikes/site-next/out',
+        cleanRoots: ['spikes/site-next/out', 'spikes/site-next/.next'],
+      },
+      'react-router': {
+        rendererRoot: 'spikes/site-react-router',
+        rendererManifest: 'spikes/site-react-router/package.json',
+        buildScript: 'build',
+        outputRoot: 'spikes/site-react-router/build/client',
+        cleanRoots: [
+          'spikes/site-react-router/build',
+          'spikes/site-react-router/node_modules/.vite',
+          'spikes/site-react-router/.react-router',
+        ],
+      },
+    });
+  });
+
+  it('refuses capture from a dirty source tree before any build runs', async () => {
+    const root = await createRoot();
+    await mkdir(join(root, 'tools/parity'), { recursive: true });
+    await cp(join(process.cwd(), 'tools/parity/src'), join(root, 'tools/parity/src'), { recursive: true });
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      private: true,
+      scripts: { 'legacy:build': 'node build.mjs' },
+    }));
+    await writeFile(join(root, 'build.mjs'), `
+      import { mkdirSync, writeFileSync } from 'node:fs';
+      import { join } from 'node:path';
+      writeFileSync(join(process.cwd(), 'build-ran.txt'), 'unsafe');
+      mkdirSync(join(process.cwd(), 'dist'), { recursive: true });
+      writeFileSync(join(process.cwd(), 'dist/index.html'), '<h1>unsafe</h1>');
+    `);
+    await execFileAsync('git', ['init'], { cwd: root });
+    await execFileAsync('git', ['add', '.'], { cwd: root });
+    await execFileAsync('git', [
+      '-c', 'user.name=Renderer Test',
+      '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'fixture',
+    ], { cwd: root });
+    await writeFile(join(root, 'dirty.txt'), 'uncommitted');
+    const { captureRenderer } = await import('../src/capture-renderer');
+
+    await expect(captureRenderer({
+      repositoryRoot: root,
+      rendererRoot: root,
+      rendererManifest: join(root, 'package.json'),
+      outputDirectory: join(root, 'dist'),
+      cleanDirectories: [join(root, 'dist'), join(root, 'node_modules/.astro')],
+      outputPath: join(root, 'capture.json'),
+      renderer: 'astro',
+      buildScript: 'legacy:build',
+      buildSamples: 3,
+      host: '127.0.0.1',
+      port: 0,
+    })).rejects.toThrow(/clean committed source tree/iu);
+    await expect(access(join(root, 'build-ran.txt'))).rejects.toThrow();
   });
 
   it('refuses a clean root that is not a renderer output or cache', async () => {
@@ -66,7 +212,7 @@ describe('renderer evidence boundaries', () => {
     await writeFile(join(unrelated, 'keep.txt'), 'must survive');
     await writeFile(join(root, 'package.json'), JSON.stringify({
       private: true,
-      scripts: { 'build:test': 'node build.mjs' },
+      scripts: { 'legacy:build': 'node build.mjs' },
     }));
     await writeFile(join(root, 'build.mjs'), `
       import { mkdirSync, writeFileSync } from 'node:fs';
@@ -81,9 +227,10 @@ describe('renderer evidence boundaries', () => {
       rendererRoot: root,
       outputDirectory: output,
       cleanDirectories: [output, unrelated],
-      buildScript: 'build:test',
+      renderer: 'astro',
+      buildScript: 'legacy:build',
       buildSamples: 3,
-    })).rejects.toThrow(/output or cache/iu);
+    })).rejects.toThrow(/exact canonical/iu);
     expect(await readFile(join(unrelated, 'keep.txt'), 'utf8')).toBe('must survive');
   });
 

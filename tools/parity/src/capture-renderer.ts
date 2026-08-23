@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
@@ -26,6 +26,9 @@ import {
   medianAbsoluteDeviation,
 } from './measure-browser.ts';
 import { startStaticServer } from './serve-static.ts';
+import { RENDERER_LAYOUTS } from './renderer-layouts.ts';
+
+export { RENDERER_LAYOUTS } from './renderer-layouts.ts';
 
 const execFileAsync = promisify(execFile);
 
@@ -59,6 +62,7 @@ interface BuildSamplingOptions {
   rendererRoot: string;
   outputDirectory: string;
   cleanDirectories: string[];
+  renderer: RendererName;
   buildScript: string;
   buildSamples: number;
 }
@@ -209,44 +213,87 @@ function containedRelativePath(root: string, candidate: string, label: string, a
   return candidateRelative.split(sep).join('/') || '.';
 }
 
+function isContainedPath(root: string, candidate: string): boolean {
+  const candidateRelative = relative(root, candidate);
+  return candidateRelative === ''
+    || (candidateRelative !== '..'
+      && !candidateRelative.startsWith(`..${sep}`)
+      && !candidateRelative.startsWith('/'));
+}
+
+async function assertCleanCommittedSourceTree(repositoryRoot: string): Promise<string> {
+  const repositoryCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], {
+    cwd: repositoryRoot,
+  })).stdout.trim();
+  const status = (await execFileAsync('git', [
+    'status', '--porcelain=v1', '--untracked-files=all',
+  ], { cwd: repositoryRoot })).stdout.trim();
+  if (status) {
+    throw new Error(`Renderer capture requires a clean committed source tree; dirty paths:\n${status}`);
+  }
+  return repositoryCommit;
+}
+
+async function removeCanonicalRendererPath(repositoryRoot: string, target: string): Promise<void> {
+  const rootState = await lstat(repositoryRoot);
+  if (rootState.isSymbolicLink() || !rootState.isDirectory()) {
+    throw new Error(`Renderer repository root must be a real directory: ${repositoryRoot}`);
+  }
+  const realRoot = await realpath(repositoryRoot);
+  const targetRelative = relative(resolve(repositoryRoot), target);
+  if (!isContainedPath(resolve(repositoryRoot), target) || targetRelative === '') {
+    throw new Error(`Renderer clean path is outside the real repository root: ${target}`);
+  }
+  const realTarget = resolve(realRoot, targetRelative);
+
+  let componentPath = realRoot;
+  for (const component of targetRelative.split(sep)) {
+    componentPath = join(componentPath, component);
+    const state = await lstat(componentPath).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (!state) break;
+    if (state.isSymbolicLink()) {
+      throw new Error(`Renderer clean path may not traverse a symlink: ${componentPath}`);
+    }
+    const realComponent = await realpath(componentPath);
+    if (!isContainedPath(realRoot, realComponent)) {
+      throw new Error(`Renderer clean path resolves outside the real repository root: ${componentPath}`);
+    }
+  }
+
+  // Keep the component validation adjacent to the destructive operation. A fully
+  // malicious local process can still race filesystem calls; the evidence gate's
+  // trust boundary is a cooperative, single-operator local checkout.
+  await rm(realTarget, { recursive: true, force: true });
+}
+
 export async function runBuildSamples(options: BuildSamplingOptions) {
   if (!/^[a-z0-9:-]+$/u.test(options.buildScript)) {
     throw new Error(`Unsafe npm build script name: ${options.buildScript}`);
   }
   if (options.buildSamples !== 3) throw new Error('Renderer comparison requires exactly three clean build samples');
-  const rendererRoot = resolve(options.rendererRoot);
-  containedRelativePath(options.repositoryRoot, rendererRoot, 'Renderer root', true);
-  const cleanDirectories = [...new Set(options.cleanDirectories.map((directory) => resolve(directory)))];
-  if (cleanDirectories.length === 0) throw new Error('At least one clean output/cache directory is required');
-  const cleanedPaths = cleanDirectories.map((directory) => (
-    containedRelativePath(options.repositoryRoot, directory, 'Clean directory')
-  ));
-  const outputRoot = resolve(options.outputDirectory);
-  const outputRelative = containedRelativePath(options.repositoryRoot, outputRoot, 'Output directory');
-  const isContainedBy = (parent: string, child: string): boolean => {
-    const childRelative = relative(parent, child);
-    return childRelative === ''
-      || (childRelative !== '..' && !childRelative.startsWith(`..${sep}`) && !childRelative.startsWith('/'));
-  };
-  if (!cleanDirectories.some((directory) => isContainedBy(directory, outputRoot))) {
-    throw new Error(`Clean directories must include or contain output directory: ${outputRelative}`);
+  const repositoryRoot = resolve(options.repositoryRoot);
+  const layout = RENDERER_LAYOUTS[options.renderer];
+  const rendererRoot = resolve(repositoryRoot, layout.rendererRoot);
+  const outputRoot = resolve(repositoryRoot, layout.outputRoot);
+  const cleanDirectories = layout.cleanRoots.map((path) => resolve(repositoryRoot, path));
+  if (options.rendererRoot !== rendererRoot
+    || options.outputDirectory !== outputRoot
+    || options.buildScript !== layout.buildScript
+    || JSON.stringify(options.cleanDirectories) !== JSON.stringify(cleanDirectories)) {
+    throw new Error(
+      `Renderer ${options.renderer} requires exact canonical root/build/output/clean roots: ${layout.cleanRoots.join(',')}`,
+    );
   }
-  for (let index = 0; index < cleanDirectories.length; index += 1) {
-    const directory = cleanDirectories[index];
-    const cacheName = cleanedPaths[index].split('/').at(-1) ?? '';
-    const coversOutput = isContainedBy(directory, outputRoot);
-    const recognizedCache = /^\.(?:[a-z0-9_-]*cache|astro|next)$/u.test(cacheName);
-    if (!coversOutput && !recognizedCache) {
-      throw new Error(`Clean directory must be a renderer output or cache: ${cleanedPaths[index]}`);
-    }
-  }
+  containedRelativePath(repositoryRoot, rendererRoot, 'Renderer root', true);
+  const cleanedPaths = [...layout.cleanRoots];
 
   const samples: Array<{ durationMs: number; artifactHash: string; cleanedPaths: string[] }> = [];
   for (let index = 0; index < options.buildSamples; index += 1) {
     for (const directory of cleanDirectories) {
-      const stats = await lstat(directory).catch(() => null);
-      if (stats?.isSymbolicLink()) throw new Error(`Clean directory may not be a symlink: ${directory}`);
-      await rm(directory, { recursive: true, force: true });
+      await removeCanonicalRendererPath(repositoryRoot, directory);
     }
     const startedAt = performance.now();
     await execFileAsync('npm', ['run', options.buildScript], {
@@ -267,7 +314,7 @@ export async function runBuildSamples(options: BuildSamplingOptions) {
     madDurationMs: medianAbsoluteDeviation(durations),
     reproducible: new Set(samples.map((sample) => sample.artifactHash)).size === 1,
     command: `npm run ${options.buildScript}`,
-    workingDirectory: containedRelativePath(options.repositoryRoot, rendererRoot, 'Renderer root', true),
+    workingDirectory: layout.rendererRoot,
     clean: {
       strategy: 'remove-recreate' as const,
       paths: cleanedPaths,
@@ -301,6 +348,7 @@ const RENDERER_HARNESS_PATHS = [
   'tools/parity/src/capture-renderer.ts',
   'tools/parity/src/compare-contracts.ts',
   'tools/parity/src/measure-browser.ts',
+  'tools/parity/src/renderer-layouts.ts',
   'tools/parity/src/select-renderer.ts',
   'tools/parity/src/serve-static.ts',
 ] as const;
@@ -315,6 +363,19 @@ async function rendererHarnessHash(repositoryRoot: string): Promise<string> {
   return `sha256:${hash.digest('hex')}`;
 }
 
+async function rendererHarnessHashAtCommit(repositoryRoot: string, commit: string): Promise<string> {
+  const hash = createHash('sha256');
+  for (const path of RENDERER_HARNESS_PATHS) {
+    const bytes = Buffer.from((await execFileAsync('git', ['show', `${commit}:${path}`], {
+      cwd: repositoryRoot,
+      maxBuffer: 20 * 1024 * 1024,
+    })).stdout);
+    hash.update(`${Buffer.byteLength(path)}:${path}:${bytes.byteLength}:`);
+    hash.update(bytes);
+  }
+  return `sha256:${hash.digest('hex')}`;
+}
+
 async function captureProvenance(options: CaptureRendererOptions) {
   const rendererRoot = containedRelativePath(options.repositoryRoot, options.rendererRoot, 'Renderer root', true);
   const rendererManifest = containedRelativePath(
@@ -323,46 +384,51 @@ async function captureProvenance(options: CaptureRendererOptions) {
     'Renderer manifest',
   );
   const outputRoot = containedRelativePath(options.repositoryRoot, options.outputDirectory, 'Output directory');
-  const expected = {
-    astro: {
-      rendererRoot: '.',
-      rendererManifest: 'package.json',
-      buildScript: 'legacy:build',
-      outputRoot: 'dist',
-    },
-    next: {
-      rendererRoot: 'spikes/site-next',
-      rendererManifest: 'spikes/site-next/package.json',
-      buildScript: 'build',
-      outputRoot: 'spikes/site-next/out',
-    },
-    'react-router': {
-      rendererRoot: 'spikes/site-react-router',
-      rendererManifest: 'spikes/site-react-router/package.json',
-      buildScript: 'build',
-      outputRoot: 'spikes/site-react-router/build/client',
-    },
-  }[options.renderer];
+  const expected = RENDERER_LAYOUTS[options.renderer];
   if (rendererRoot !== expected.rendererRoot
     || rendererManifest !== expected.rendererManifest
     || options.buildScript !== expected.buildScript
-    || outputRoot !== expected.outputRoot) {
+    || outputRoot !== expected.outputRoot
+    || JSON.stringify(options.cleanDirectories) !== JSON.stringify(
+      expected.cleanRoots.map((path) => resolve(options.repositoryRoot, path)),
+    )) {
     throw new Error(
       `Renderer evidence mismatch for ${options.renderer}: root=${rendererRoot} manifest=${rendererManifest} build=${options.buildScript} output=${outputRoot}`,
     );
   }
-  const repositoryCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], {
+  const repositoryCommit = await assertCleanCommittedSourceTree(options.repositoryRoot);
+  await execFileAsync('git', ['ls-files', '--error-unmatch', '--', rendererManifest], {
     cwd: options.repositoryRoot,
-  })).stdout.trim();
+  }).catch(() => {
+    throw new Error(`Renderer manifest must be committed source: ${rendererManifest}`);
+  });
+  if (rendererRoot !== '.') {
+    const trackedRendererSource = (await execFileAsync('git', ['ls-files', '--', rendererRoot], {
+      cwd: options.repositoryRoot,
+    })).stdout.trim();
+    if (!trackedRendererSource) throw new Error(`Renderer root has no committed source: ${rendererRoot}`);
+  }
+  const rendererManifestHash = await sha256File(options.rendererManifest);
+  const manifestAtCommit = Buffer.from((await execFileAsync('git', [
+    'show', `${repositoryCommit}:${rendererManifest}`,
+  ], { cwd: options.repositoryRoot, maxBuffer: 20 * 1024 * 1024 })).stdout);
+  const committedManifestHash = `sha256:${createHash('sha256').update(manifestAtCommit).digest('hex')}`;
+  if (committedManifestHash !== rendererManifestHash) {
+    throw new Error('Renderer manifest bytes do not match the recorded source commit');
+  }
+  const captureToolHash = await rendererHarnessHash(options.repositoryRoot);
+  if (await rendererHarnessHashAtCommit(options.repositoryRoot, repositoryCommit) !== captureToolHash) {
+    throw new Error('Renderer harness bytes do not match the recorded source commit');
+  }
   return {
     synthetic: false,
     repositoryCommit,
     rendererRoot,
     rendererManifest,
-    rendererManifestHash: await sha256File(options.rendererManifest),
+    rendererManifestHash,
     buildCommand: `npm run ${options.buildScript}`,
     outputRoot,
-    captureToolHash: await rendererHarnessHash(options.repositoryRoot),
+    captureToolHash,
   } as const;
 }
 
@@ -402,7 +468,7 @@ export async function captureRenderer(options: CaptureRendererOptions): Promise<
       routes.push({ path: route.path, contract: route.contract, measurements });
     }
 
-    return {
+    const report: RendererCaptureReport = {
       version: 2,
       renderer: options.renderer,
       provenance,
@@ -419,6 +485,11 @@ export async function captureRenderer(options: CaptureRendererOptions): Promise<
       build,
       routes,
     };
+    const finalCommit = await assertCleanCommittedSourceTree(options.repositoryRoot);
+    if (finalCommit !== provenance.repositoryCommit) {
+      throw new Error('Renderer source commit changed during capture');
+    }
+    return report;
   } finally {
     try {
       await browser?.close();
@@ -446,12 +517,25 @@ function parseArguments(argv: string[]): CaptureRendererOptions {
     if (!value) throw new Error(`--${name} is required`);
     return value;
   };
+  const layout = RENDERER_LAYOUTS[renderer];
+  const rawRendererRoot = values.get('renderer-root') ?? '.';
+  const rawManifest = required('renderer-manifest');
+  const rawOutputRoot = required('root');
+  const rawCleanRoots = required('clean-paths').split(',').map((path) => path.trim());
+  if (rawRendererRoot !== layout.rendererRoot
+    || rawManifest !== layout.rendererManifest
+    || rawOutputRoot !== layout.outputRoot
+    || JSON.stringify(rawCleanRoots) !== JSON.stringify(layout.cleanRoots)) {
+    throw new Error(
+      `Renderer ${renderer} CLI paths must be exact canonical paths; clean roots=${layout.cleanRoots.join(',')}`,
+    );
+  }
   return {
     repositoryRoot,
-    rendererRoot: resolve(repositoryRoot, values.get('renderer-root') ?? '.'),
-    rendererManifest: resolve(repositoryRoot, required('renderer-manifest')),
-    outputDirectory: resolve(repositoryRoot, required('root')),
-    cleanDirectories: required('clean-paths').split(',').map((path) => resolve(repositoryRoot, path.trim())),
+    rendererRoot: resolve(repositoryRoot, rawRendererRoot),
+    rendererManifest: resolve(repositoryRoot, rawManifest),
+    outputDirectory: resolve(repositoryRoot, rawOutputRoot),
+    cleanDirectories: rawCleanRoots.map((path) => resolve(repositoryRoot, path)),
     outputPath: resolve(repositoryRoot, required('output')),
     renderer,
     buildScript: required('build-script'),

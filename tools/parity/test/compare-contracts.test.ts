@@ -150,7 +150,11 @@ function strictSyntheticReport(renderer: RendererName): RendererCaptureReport {
       rendererManifest: 'spikes/site-react-router/package.json',
       buildCommand: 'npm run build',
       outputRoot: 'spikes/site-react-router/build/client',
-      cleanPaths: ['spikes/site-react-router/build'],
+      cleanPaths: [
+        'spikes/site-react-router/build',
+        'spikes/site-react-router/node_modules/.vite',
+        'spikes/site-react-router/.react-router',
+      ],
     },
   }[renderer];
   const { cleanPaths, ...provenanceEvidence } = evidence;

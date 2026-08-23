@@ -98,6 +98,18 @@ describe('renderer capture harness', () => {
     expect(await scriptResponse.text()).toContain('compressed');
   });
 
+  it('serves a live request over a bracketed IPv6 loopback URL', async () => {
+    const root = await createRoot();
+    await writeFile(join(root, 'index.html'), '<h1>IPv6 loopback</h1>');
+    const server = await startStaticServer({ root, host: '::1', port: 0 });
+    servers.push(server);
+
+    expect(server.baseUrl).toMatch(/^http:\/\/\[::1\]:\d+$/u);
+    const response = await fetch(server.baseUrl);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('IPv6 loopback');
+  });
+
   it('derives literal medians and median absolute deviation', () => {
     expect(median([1, 4, 7, 10, 13])).toBe(7);
     expect(medianAbsoluteDeviation([1, 4, 7, 10, 13])).toBe(3);
@@ -196,6 +208,7 @@ describe('renderer capture harness', () => {
     }).join('');
     const externalScript = 'globalThis.externalLoaded = true;';
     const inlineScript = `globalThis.inlinePayload=${JSON.stringify(payload)};`;
+    const textEcmaScript = `globalThis.textEcmaPayload=${JSON.stringify(payload)};`;
     const flightBootstrap = `self.__next_f=self.__next_f||[];self.__next_f.push(${JSON.stringify(payload.slice(0, 4096))});`;
     const flightPayload = `1:${JSON.stringify({ buildId: 'test', payload: payload.slice(0, 8192) })}`;
     const flightLoader = "fetch('/flight.rsc').then((response)=>response.text()).then((value)=>globalThis.flight=value);";
@@ -204,6 +217,11 @@ describe('renderer capture harness', () => {
     await writeFile(join(root, 'index.html'), `<!doctype html><html lang="ko"><head>
       <title>JavaScript bytes</title><meta name="viewport" content="width=device-width">
       <script src="/external.js"></script><script>${inlineScript}</script>
+      <script type="text/ecmascript">${textEcmaScript}</script>
+      <script type="application/json">${payload}</script>
+      <script type="importmap">{"imports":{}}</script>
+      <script type="speculationrules">{"prefetch":[]}</script>
+      <script type="text/template">${payload}</script>
       <script>${flightBootstrap}</script><script>${flightLoader}</script>
       </head><body><main><h1>JavaScript bytes</h1></main></body></html>`);
     const server = await startStaticServer({ root, host: '127.0.0.1', port: 0 });
@@ -217,9 +235,19 @@ describe('renderer capture harness', () => {
       });
 
       expect(Buffer.byteLength(inlineScript)).toBeGreaterThan(150 * 1024);
+      expect(Buffer.byteLength(textEcmaScript)).toBeGreaterThan(150 * 1024);
+      expect(await browser.newPage().then(async (page) => {
+        await page.goto(server.baseUrl, { waitUntil: 'networkidle' });
+        const executed = await page.evaluate(() => typeof (globalThis as typeof globalThis & {
+          textEcmaPayload?: string;
+        }).textEcmaPayload === 'string');
+        await page.close();
+        return executed;
+      })).toBe(true);
       expect(result.samples[0].jsGzipBytes).toBe([
         externalScript,
         inlineScript,
+        textEcmaScript,
         flightBootstrap,
         flightLoader,
         flightPayload,

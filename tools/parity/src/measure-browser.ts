@@ -74,10 +74,25 @@ async function responseBodySize(page: Page): Promise<{
     .filter((script) => !script.src)
     .filter((script) => {
       const type = script.type.trim().toLowerCase();
-      return type === ''
-        || type === 'module'
-        || type === 'text/javascript'
-        || type === 'application/javascript';
+      const classicJavaScriptMimeTypes = new Set([
+        'application/ecmascript',
+        'application/javascript',
+        'application/x-ecmascript',
+        'application/x-javascript',
+        'text/ecmascript',
+        'text/javascript',
+        'text/javascript1.0',
+        'text/javascript1.1',
+        'text/javascript1.2',
+        'text/javascript1.3',
+        'text/javascript1.4',
+        'text/javascript1.5',
+        'text/jscript',
+        'text/livescript',
+        'text/x-ecmascript',
+        'text/x-javascript',
+      ]);
+      return type === '' || type === 'module' || classicJavaScriptMimeTypes.has(type);
     })
     .map((script) => script.textContent ?? '')
     .filter((source) => source.length > 0));

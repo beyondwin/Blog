@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -9,6 +9,7 @@ import type {
   RendererSelectionCandidate,
   RendererSelectionReport,
 } from './select-renderer.ts';
+import { RENDERER_LAYOUTS } from './renderer-layouts.ts';
 
 const execFileAsync = promisify(execFile);
 
@@ -924,33 +925,18 @@ export function parseRendererCapture(
   });
 
   const report = root as unknown as RendererCaptureReport;
-  const expectedEvidence = {
-    astro: { root: '.', manifest: 'package.json', command: 'npm run legacy:build', output: 'dist' },
-    next: {
-      root: 'spikes/site-next',
-      manifest: 'spikes/site-next/package.json',
-      command: 'npm run build',
-      output: 'spikes/site-next/out',
-    },
-    'react-router': {
-      root: 'spikes/site-react-router',
-      manifest: 'spikes/site-react-router/package.json',
-      command: 'npm run build',
-      output: 'spikes/site-react-router/build/client',
-    },
-  }[report.renderer];
-  if (report.provenance.rendererRoot !== expectedEvidence.root
-    || report.provenance.rendererManifest !== expectedEvidence.manifest
-    || report.provenance.buildCommand !== expectedEvidence.command
-    || report.provenance.outputRoot !== expectedEvidence.output
-    || report.build.command !== expectedEvidence.command
-    || report.build.workingDirectory !== expectedEvidence.root) {
+  const expectedEvidence = RENDERER_LAYOUTS[report.renderer];
+  const expectedCommand = `npm run ${expectedEvidence.buildScript}`;
+  if (report.provenance.rendererRoot !== expectedEvidence.rendererRoot
+    || report.provenance.rendererManifest !== expectedEvidence.rendererManifest
+    || report.provenance.buildCommand !== expectedCommand
+    || report.provenance.outputRoot !== expectedEvidence.outputRoot
+    || report.build.command !== expectedCommand
+    || report.build.workingDirectory !== expectedEvidence.rendererRoot) {
     throw new Error(`capture.provenance is not renderer-specific for ${report.renderer}`);
   }
-  if (!report.build.clean.paths.some((path) => (
-    report.provenance.outputRoot === path || report.provenance.outputRoot.startsWith(`${path}/`)
-  ))) {
-    throw new Error('capture.build.clean.paths does not include or contain the output root');
+  if (JSON.stringify(report.build.clean.paths) !== JSON.stringify(expectedEvidence.cleanRoots)) {
+    throw new Error(`capture.build.clean.paths must equal canonical ${report.renderer} clean roots`);
   }
   if (report.build.samples.length !== 3) throw new Error('capture.build must contain exactly three clean samples');
   for (const sample of report.build.samples) {
@@ -989,12 +975,48 @@ export function parseRendererCapture(
   return report;
 }
 
-async function readCapture(
+export async function readCaptureEvidence(
   path: string,
   expectedRenderer: RendererName,
+  options: { repositoryRoot?: string; requireCommittedCleanEvidence?: boolean } = {},
 ): Promise<RendererCaptureReport> {
-  const report = parseRendererCapture(JSON.parse(await readFile(path, 'utf8')), { expectedRenderer });
-  const repositoryRoot = process.cwd();
+  const repositoryRoot = resolve(options.repositoryRoot ?? process.cwd());
+  const capturePath = resolve(repositoryRoot, path);
+  const captureRelative = relative(repositoryRoot, capturePath);
+  if (captureRelative === '' || captureRelative === '..'
+    || captureRelative.startsWith(`..${sep}`) || isAbsolute(captureRelative)) {
+    throw new Error(`${expectedRenderer} capture file is outside the repository evidence root`);
+  }
+  const repositoryState = await lstat(repositoryRoot);
+  const captureState = await lstat(capturePath);
+  if (repositoryState.isSymbolicLink() || !repositoryState.isDirectory()
+    || captureState.isSymbolicLink() || !captureState.isFile()) {
+    throw new Error(`${expectedRenderer} capture evidence must be a real repository-contained file`);
+  }
+  const realRepositoryRoot = await realpath(repositoryRoot);
+  const realCapturePath = await realpath(capturePath);
+  const isWithinEvidenceRoot = (root: string, candidate: string): boolean => {
+    const fromRoot = relative(root, candidate);
+    return fromRoot === ''
+      || (fromRoot !== '..' && !fromRoot.startsWith(`..${sep}`) && !isAbsolute(fromRoot));
+  };
+  const realCaptureRelative = relative(realRepositoryRoot, realCapturePath);
+  if (realCaptureRelative === '' || realCaptureRelative === '..'
+    || realCaptureRelative.startsWith(`..${sep}`) || isAbsolute(realCaptureRelative)) {
+    throw new Error(`${expectedRenderer} capture file resolves outside the repository evidence root`);
+  }
+  const report = parseRendererCapture(JSON.parse(await readFile(capturePath, 'utf8')), { expectedRenderer });
+  if (options.requireCommittedCleanEvidence) {
+    const status = (await execFileAsync('git', [
+      'status', '--porcelain=v1', '--untracked-files=all',
+    ], { cwd: repositoryRoot })).stdout.trim();
+    if (status) throw new Error(`Renderer selection requires a clean committed evidence tree; dirty paths:\n${status}`);
+    await execFileAsync('git', ['ls-files', '--error-unmatch', '--', captureRelative], {
+      cwd: repositoryRoot,
+    }).catch(() => {
+      throw new Error(`${expectedRenderer} capture file is not committed evidence: ${captureRelative}`);
+    });
+  }
   const contained = (artifactPath: string, label: string): string => {
     const resolved = resolve(repositoryRoot, artifactPath);
     const fromRoot = relative(repositoryRoot, resolved);
@@ -1012,10 +1034,34 @@ async function readCapture(
       'tools/parity/src/capture-renderer.ts',
       'tools/parity/src/compare-contracts.ts',
       'tools/parity/src/measure-browser.ts',
+      'tools/parity/src/renderer-layouts.ts',
       'tools/parity/src/select-renderer.ts',
       'tools/parity/src/serve-static.ts',
     ]) {
-      const bytes = await readFile(contained(harnessPath, 'Renderer harness file'));
+      const harnessFile = contained(harnessPath, 'Renderer harness file');
+      const state = await lstat(harnessFile);
+      if (state.isSymbolicLink() || !state.isFile()) {
+        throw new Error(`Renderer harness file must be a real file: ${harnessPath}`);
+      }
+      const bytes = await readFile(harnessFile);
+      hash.update(`${Buffer.byteLength(harnessPath)}:${harnessPath}:${bytes.byteLength}:`);
+      hash.update(bytes);
+    }
+    return `sha256:${hash.digest('hex')}`;
+  };
+  const rendererHarnessHashAtCommit = async (commit: string): Promise<string> => {
+    const hash = createHash('sha256');
+    for (const harnessPath of [
+      'tools/parity/src/capture-renderer.ts',
+      'tools/parity/src/compare-contracts.ts',
+      'tools/parity/src/measure-browser.ts',
+      'tools/parity/src/renderer-layouts.ts',
+      'tools/parity/src/select-renderer.ts',
+      'tools/parity/src/serve-static.ts',
+    ]) {
+      const bytes = Buffer.from((await execFileAsync('git', [
+        'show', `${commit}:${harnessPath}`,
+      ], { cwd: repositoryRoot, maxBuffer: 20 * 1024 * 1024 })).stdout);
       hash.update(`${Buffer.byteLength(harnessPath)}:${harnessPath}:${bytes.byteLength}:`);
       hash.update(bytes);
     }
@@ -1046,6 +1092,16 @@ async function readCapture(
   };
   const manifest = contained(report.provenance.rendererManifest, 'Renderer manifest');
   const output = contained(report.provenance.outputRoot, 'Renderer output');
+  const manifestState = await lstat(manifest);
+  if (manifestState.isSymbolicLink() || !manifestState.isFile()) {
+    throw new Error(`${expectedRenderer} renderer manifest must be a real file`);
+  }
+  const realManifest = await realpath(manifest);
+  const realOutput = await realpath(output);
+  if (!isWithinEvidenceRoot(realRepositoryRoot, realManifest)
+    || !isWithinEvidenceRoot(realRepositoryRoot, realOutput)) {
+    throw new Error(`${expectedRenderer} current evidence resolves outside the repository root`);
+  }
   if (await fileHash(manifest) !== report.provenance.rendererManifestHash) {
     throw new Error(`${expectedRenderer} renderer manifest hash no longer matches capture evidence`);
   }
@@ -1058,15 +1114,46 @@ async function readCapture(
   await execFileAsync('git', ['cat-file', '-e', `${report.provenance.repositoryCommit}^{commit}`], {
     cwd: repositoryRoot,
   });
+  await execFileAsync('git', [
+    'merge-base', '--is-ancestor', report.provenance.repositoryCommit, 'HEAD',
+  ], { cwd: repositoryRoot }).catch(() => {
+    throw new Error(`${expectedRenderer} capture commit is not an ancestor of the current evidence tree`);
+  });
+  const layout = RENDERER_LAYOUTS[expectedRenderer];
+  if (layout.rendererRoot !== '.') {
+    await execFileAsync('git', [
+      'diff', '--quiet', report.provenance.repositoryCommit, 'HEAD', '--', layout.rendererRoot,
+    ], { cwd: repositoryRoot }).catch(() => {
+      throw new Error(`${expectedRenderer} renderer source changed after capture; evidence is stale`);
+    });
+  }
+  const manifestAtCommit = Buffer.from((await execFileAsync('git', [
+    'show', `${report.provenance.repositoryCommit}:${report.provenance.rendererManifest}`,
+  ], { cwd: repositoryRoot, maxBuffer: 20 * 1024 * 1024 })).stdout);
+  const manifestCommitHash = `sha256:${createHash('sha256').update(manifestAtCommit).digest('hex')}`;
+  if (manifestCommitHash !== report.provenance.rendererManifestHash) {
+    throw new Error(`${expectedRenderer} renderer manifest was not captured from its recorded commit`);
+  }
+  if (await rendererHarnessHashAtCommit(report.provenance.repositoryCommit)
+    !== report.provenance.captureToolHash) {
+    throw new Error(`${expectedRenderer} renderer harness was not captured from its recorded commit`);
+  }
+  await execFileAsync('git', [
+    'cat-file', '-e', layout.rendererRoot === '.'
+      ? `${report.provenance.repositoryCommit}^{tree}`
+      : `${report.provenance.repositoryCommit}:${layout.rendererRoot}`,
+  ], { cwd: repositoryRoot }).catch(() => {
+    throw new Error(`${expectedRenderer} renderer source root is absent from its recorded commit`);
+  });
   return report;
 }
 
 export async function runComparisonCli(argv: string[]): Promise<string> {
   const paths = cliArguments(argv);
   const report = buildRendererSelectionReport(
-    await readCapture(paths.baseline, 'astro'),
-    await readCapture(paths.next, 'next'),
-    await readCapture(paths.reactRouter, 'react-router'),
+    await readCaptureEvidence(paths.baseline, 'astro'),
+    await readCaptureEvidence(paths.next, 'next'),
+    await readCaptureEvidence(paths.reactRouter, 'react-router'),
   );
   await mkdir(dirname(paths.output), { recursive: true });
   await writeFile(paths.output, `${JSON.stringify(report, null, 2)}\n`);

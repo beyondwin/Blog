@@ -92,6 +92,7 @@ async function resolveRequestFile(root: string, requestPath: string): Promise<st
 
 export async function startStaticServer(options: StaticServerOptions): Promise<StaticServer> {
   validateLoopbackHost(options.host);
+  const authorityHost = options.host.includes(':') ? `[${options.host}]` : options.host;
   const root = await realpath(options.root);
   const rootStats = await lstat(root);
   if (!rootStats.isDirectory()) throw new Error(`Static root is not a directory: ${options.root}`);
@@ -103,7 +104,7 @@ export async function startStaticServer(options: StaticServerOptions): Promise<S
         return;
       }
 
-      const requestUrl = new URL(request.url ?? '/', `http://${options.host}`);
+      const requestUrl = new URL(request.url ?? '/', `http://${authorityHost}`);
       const file = await resolveRequestFile(root, requestUrl.pathname);
       if (!file) {
         send(response, 404, 'Not found');
@@ -145,7 +146,7 @@ export async function startStaticServer(options: StaticServerOptions): Promise<S
 
   let closed = false;
   return {
-    baseUrl: `http://${options.host}:${address.port}`,
+    baseUrl: `http://${authorityHost}:${address.port}`,
     host: options.host,
     port: address.port,
     close: async () => {

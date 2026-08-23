@@ -1,10 +1,14 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { RendererCaptureReport } from '../src/compare-contracts';
+import { hashOutputArtifact } from '../src/capture-renderer';
+import { RENDERER_LAYOUTS } from '../src/renderer-layouts';
+import { selectRendererFromCaptures } from '../src/select-renderer';
 import type { RendererSelectionReport } from '../src/select-renderer';
 
 const execFileAsync = promisify(execFile);
@@ -18,6 +22,37 @@ async function createRoot(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'beyondwin-renderer-cli-test-'));
   temporaryRoots.push(root);
   return root;
+}
+
+async function gitCommit(root: string, message: string): Promise<string> {
+  await execFileAsync('git', ['add', '.'], { cwd: root });
+  await execFileAsync('git', [
+    '-c', 'user.name=Renderer Test',
+    '-c', 'user.email=renderer@example.invalid',
+    'commit', '-m', message,
+  ], { cwd: root });
+  return (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+}
+
+async function fileHash(path: string): Promise<string> {
+  return `sha256:${createHash('sha256').update(await readFile(path)).digest('hex')}`;
+}
+
+async function harnessHash(root: string): Promise<string> {
+  const hash = createHash('sha256');
+  for (const path of [
+    'tools/parity/src/capture-renderer.ts',
+    'tools/parity/src/compare-contracts.ts',
+    'tools/parity/src/measure-browser.ts',
+    'tools/parity/src/renderer-layouts.ts',
+    'tools/parity/src/select-renderer.ts',
+    'tools/parity/src/serve-static.ts',
+  ]) {
+    const bytes = await readFile(join(root, path));
+    hash.update(`${Buffer.byteLength(path)}:${path}:${bytes.byteLength}:`);
+    hash.update(bytes);
+  }
+  return `sha256:${hash.digest('hex')}`;
 }
 
 describe('renderer harness CLIs', () => {
@@ -42,50 +77,22 @@ describe('renderer harness CLIs', () => {
     await writeFile(nextPath, JSON.stringify(next));
     await writeFile(reactRouterPath, JSON.stringify(reactRouter));
 
-    await expect(execFileAsync('npx', [
+    await execFileAsync('npx', [
       'tsx',
       'tools/parity/src/compare-contracts.ts',
       '--baseline', baselinePath,
       '--next', nextPath,
       '--react-router', reactRouterPath,
       '--output', outputPath,
-    ], { cwd: process.cwd() })).rejects.toMatchObject({
-      stderr: expect.stringContaining('provenance'),
-    });
+    ], { cwd: process.cwd() }).then(
+      () => { throw new Error('Comparison unexpectedly accepted unproven captures'); },
+      (error: { stderr?: string }) => {
+        expect(error.stderr).toMatch(/renderer manifest hash|outside the repository evidence root/iu);
+      },
+    );
   });
 
-  it('refuses to select a renderer from clearly synthetic fixtures', async () => {
-    const reportPath = join(process.cwd(), 'tests/fixtures/parity/renderer-report-pass.json');
-
-    await expect(execFileAsync('npx', [
-      'tsx',
-      'tools/parity/src/select-renderer.ts',
-      '--report', reportPath,
-    ], { cwd: process.cwd() })).rejects.toMatchObject({
-      stderr: expect.stringContaining('Synthetic renderer reports cannot select a renderer'),
-    });
-  });
-
-  it('requires an explicit comparison-generated real-report marker', async () => {
-    const root = await createRoot();
-    const fixture = JSON.parse(await readFile(
-      join(process.cwd(), 'tests/fixtures/parity/renderer-report-pass.json'),
-      'utf8',
-    )) as RendererSelectionReport;
-    delete fixture.synthetic;
-    const reportPath = join(root, 'unmarked.json');
-    await writeFile(reportPath, JSON.stringify(fixture));
-
-    await expect(execFileAsync('npx', [
-      'tsx',
-      'tools/parity/src/select-renderer.ts',
-      '--report', reportPath,
-    ], { cwd: process.cwd() })).rejects.toMatchObject({
-      stderr: expect.stringContaining('Only comparison-generated real renderer reports can select a renderer'),
-    });
-  });
-
-  it('refuses a real-marked report with no three-build artifact evidence', async () => {
+  it('refuses a forged real-marked summary and requires all three strict raw captures', async () => {
     const root = await createRoot();
     const fixture = JSON.parse(await readFile(
       join(process.cwd(), 'tests/fixtures/parity/renderer-report-pass.json'),
@@ -94,9 +101,7 @@ describe('renderer harness CLIs', () => {
     fixture.synthetic = false;
     fixture.candidates.next.captureEvidence.provenance.synthetic = false;
     fixture.candidates.reactRouter.captureEvidence.provenance.synthetic = false;
-    fixture.candidates.next.buildArtifactHashes = [];
-    fixture.candidates.reactRouter.buildArtifactHashes = [];
-    const reportPath = join(root, 'missing-build-evidence.json');
+    const reportPath = join(root, 'forged-real-summary.json');
     await writeFile(reportPath, JSON.stringify(fixture));
 
     await expect(execFileAsync('npx', [
@@ -104,7 +109,95 @@ describe('renderer harness CLIs', () => {
       'tools/parity/src/select-renderer.ts',
       '--report', reportPath,
     ], { cwd: process.cwd() })).rejects.toMatchObject({
-      stderr: expect.stringContaining('three clean builds'),
+      stderr: expect.stringContaining(
+        'Usage: select-renderer.ts --baseline <astro-capture.json> --next <next-capture.json> --react-router <react-router-capture.json>',
+      ),
     });
   });
+
+  it('recomputes from committed raw captures and rejects dirty or stale current evidence', async () => {
+    const root = await createRoot();
+    await mkdir(join(root, 'tools/parity'), { recursive: true });
+    await cp(join(process.cwd(), 'tools/parity/src'), join(root, 'tools/parity/src'), { recursive: true });
+    for (const renderer of ['astro', 'next', 'react-router'] as const) {
+      const layout = RENDERER_LAYOUTS[renderer];
+      await mkdir(join(root, layout.rendererRoot), { recursive: true });
+      await writeFile(join(root, layout.rendererManifest), JSON.stringify({
+        private: true,
+        scripts: { [layout.buildScript]: 'node build.mjs' },
+      }));
+      await mkdir(join(root, layout.outputRoot), { recursive: true });
+      await writeFile(join(root, layout.outputRoot, 'index.html'), `<h1>${renderer}</h1>`);
+    }
+    await writeFile(join(root, '.gitignore'), [
+      '/dist/',
+      '/spikes/site-next/out/',
+      '/spikes/site-next/.next/',
+      '/spikes/site-react-router/build/',
+      '/spikes/site-react-router/node_modules/.vite/',
+      '/spikes/site-react-router/.react-router/',
+      '',
+    ].join('\n'));
+    await execFileAsync('git', ['init'], { cwd: root });
+    const sourceCommit = await gitCommit(root, 'source');
+    const captureToolHash = await harnessHash(root);
+    const baseline = JSON.parse(await readFile(
+      join(process.cwd(), 'tests/fixtures/parity/astro-renderer-baseline.json'),
+      'utf8',
+    )) as RendererCaptureReport;
+    const paths = {
+      baseline: join(root, 'evidence/astro.json'),
+      next: join(root, 'evidence/next.json'),
+      reactRouter: join(root, 'evidence/react-router.json'),
+    };
+    await mkdir(join(root, 'evidence'));
+    for (const [renderer, path] of [
+      ['astro', paths.baseline],
+      ['next', paths.next],
+      ['react-router', paths.reactRouter],
+    ] as const) {
+      const layout = RENDERER_LAYOUTS[renderer];
+      const report = structuredClone(baseline);
+      const artifactHash = await hashOutputArtifact(join(root, layout.outputRoot));
+      report.renderer = renderer;
+      report.artifactHash = artifactHash;
+      report.provenance = {
+        synthetic: false,
+        repositoryCommit: sourceCommit,
+        rendererRoot: layout.rendererRoot,
+        rendererManifest: layout.rendererManifest,
+        rendererManifestHash: await fileHash(join(root, layout.rendererManifest)),
+        buildCommand: `npm run ${layout.buildScript}`,
+        outputRoot: layout.outputRoot,
+        captureToolHash,
+      };
+      report.build.command = `npm run ${layout.buildScript}`;
+      report.build.workingDirectory = layout.rendererRoot;
+      report.build.clean.paths = [...layout.cleanRoots];
+      report.build.samples = report.build.samples.map((sample) => ({
+        ...sample,
+        artifactHash,
+        cleanedPaths: [...layout.cleanRoots],
+      }));
+      await writeFile(path, `${JSON.stringify(report, null, 2)}\n`);
+    }
+    await gitCommit(root, 'evidence');
+
+    await expect(selectRendererFromCaptures(paths, root)).resolves.toMatchObject({ blocked: true });
+
+    await writeFile(join(root, 'dirty.txt'), 'uncommitted');
+    await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(/clean committed evidence tree/iu);
+    await rm(join(root, 'dirty.txt'));
+
+    const changedSource = join(root, RENDERER_LAYOUTS.next.rendererRoot, 'source.ts');
+    await writeFile(changedSource, 'export const changedAfterCapture = true;\n');
+    await gitCommit(root, 'change candidate source');
+    await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(/source.*changed|stale.*source/iu);
+    await rm(changedSource);
+    await gitCommit(root, 'restore candidate source');
+
+    await writeFile(join(root, RENDERER_LAYOUTS.next.outputRoot, 'index.html'), '<h1>stale Next output</h1>');
+    await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(/artifact hash no longer matches/iu);
+  }, 30_000);
+
 });
