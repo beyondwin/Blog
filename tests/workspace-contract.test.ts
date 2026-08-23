@@ -1,0 +1,81 @@
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+const root = process.cwd();
+const manifestPaths = [
+  'package.json',
+  'packages/contracts/package.json',
+  'packages/content/package.json',
+  'tools/parity/package.json',
+];
+const approvedToolVersions = {
+  typescript: '6.0.3',
+  vitest: '4.1.11',
+  '@playwright/test': '1.62.1',
+  '@axe-core/playwright': '4.13.0',
+  parse5: '8.0.1',
+  tsx: '4.23.12',
+  '@types/node': '24.13.3',
+};
+
+type PackageManifest = {
+  private?: boolean;
+  engines?: { node?: string };
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  workspaces?: string[];
+};
+
+async function readManifest(path: string): Promise<PackageManifest> {
+  return JSON.parse(await readFile(resolve(root, path), 'utf8'));
+}
+
+function declaredDependencies(manifest: PackageManifest): Record<string, string> {
+  return {
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+    ...manifest.optionalDependencies,
+    ...manifest.peerDependencies,
+  };
+}
+
+describe('Node 24 workspace contract', () => {
+  it('declares the approved workspace roots and private Node 24 manifests', async () => {
+    const manifests = await Promise.all(manifestPaths.map(readManifest));
+
+    expect(manifests[0]?.workspaces).toEqual([
+      'apps/*',
+      'packages/*',
+      'spikes/*',
+      'tools/*',
+    ]);
+
+    for (const manifest of manifests) {
+      expect(manifest.private).toBe(true);
+      expect(manifest.engines?.node).toBe('>=24 <25');
+    }
+  });
+
+  it('pins migration tooling exactly and keeps public packages Astro-free', async () => {
+    const [rootManifest, ...publicManifests] = await Promise.all(
+      manifestPaths.map(readManifest),
+    );
+    const rootDependencies = declaredDependencies(rootManifest);
+
+    expect(rootDependencies).toMatchObject(approvedToolVersions);
+    for (const version of Object.values(approvedToolVersions)) {
+      expect(version).not.toMatch(/^[~^]/);
+    }
+
+    for (const manifest of publicManifests) {
+      const dependencies = declaredDependencies(manifest);
+      expect(Object.values(dependencies)).not.toContain('latest');
+      expect(Object.values(dependencies).every((version) => !/^[~^]/.test(version))).toBe(true);
+      expect(Object.keys(dependencies)).not.toContain('astro');
+      expect(Object.keys(dependencies).some((name) => name.startsWith('@astrojs/'))).toBe(false);
+    }
+  });
+});
