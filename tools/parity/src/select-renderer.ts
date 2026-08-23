@@ -28,6 +28,9 @@ export interface RendererSelectionCandidate {
       buildCommand: string;
       outputRoot: string;
       captureToolHash: string;
+      buildEnvironmentVersion: 1;
+      sourceClosureVersion: 1;
+      sourceClosureHash: string;
     };
     artifactHash: string;
     browser: {

@@ -74,6 +74,9 @@ function report(renderer: RendererName): RendererCaptureReport {
       buildCommand: 'npm run test:synthetic',
       outputRoot: 'dist',
       captureToolHash: `sha256:${'c'.repeat(64)}`,
+      buildEnvironmentVersion: 1,
+      sourceClosureVersion: 1,
+      sourceClosureHash: `sha256:${'d'.repeat(64)}`,
     },
     measuredAt: '2026-08-24T00:00:00.000Z',
     captureProtocol: {
@@ -136,7 +139,7 @@ function strictSyntheticReport(renderer: RendererName): RendererCaptureReport {
       rendererManifest: 'package.json',
       buildCommand: 'npm run legacy:build',
       outputRoot: 'dist',
-      cleanPaths: ['dist', 'node_modules/.astro'],
+      cleanPaths: ['dist', '.astro', 'node_modules/.astro'],
     },
     next: {
       rendererRoot: 'spikes/site-next',

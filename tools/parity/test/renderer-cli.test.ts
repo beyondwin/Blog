@@ -7,7 +7,7 @@ import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { RendererCaptureReport } from '../src/compare-contracts';
 import { hashOutputArtifact } from '../src/capture-renderer';
-import { RENDERER_LAYOUTS } from '../src/renderer-layouts';
+import { RENDERER_LAYOUTS, rendererSourceClosureHashAtCommit } from '../src/renderer-layouts';
 import { selectRendererFromCaptures } from '../src/select-renderer';
 import type { RendererSelectionReport } from '../src/select-renderer';
 
@@ -87,7 +87,7 @@ describe('renderer harness CLIs', () => {
     ], { cwd: process.cwd() }).then(
       () => { throw new Error('Comparison unexpectedly accepted unproven captures'); },
       (error: { stderr?: string }) => {
-        expect(error.stderr).toMatch(/renderer manifest hash|outside the repository evidence root/iu);
+        expect(error.stderr).toMatch(/provenance is missing|renderer manifest hash|outside the repository evidence root/iu);
       },
     );
   });
@@ -129,6 +129,13 @@ describe('renderer harness CLIs', () => {
       await mkdir(join(root, layout.outputRoot), { recursive: true });
       await writeFile(join(root, layout.outputRoot, 'index.html'), `<h1>${renderer}</h1>`);
     }
+    await mkdir(join(root, 'src'), { recursive: true });
+    await writeFile(join(root, 'src/page.astro'), '<h1>captured Astro source</h1>');
+    await writeFile(join(root, 'astro.config.mjs'), 'export default {};\n');
+    await writeFile(join(root, 'package-lock.json'), '{}\n');
+    await mkdir(join(root, 'packages/content/src'), { recursive: true });
+    await writeFile(join(root, 'packages/content/package.json'), '{"private":true}\n');
+    await writeFile(join(root, 'packages/content/src/shared.ts'), 'export const shared = 1;\n');
     await writeFile(join(root, '.gitignore'), [
       '/dist/',
       '/spikes/site-next/out/',
@@ -170,6 +177,9 @@ describe('renderer harness CLIs', () => {
         buildCommand: `npm run ${layout.buildScript}`,
         outputRoot: layout.outputRoot,
         captureToolHash,
+        buildEnvironmentVersion: 1,
+        sourceClosureVersion: layout.sourceClosureVersion,
+        sourceClosureHash: await rendererSourceClosureHashAtCommit(root, renderer, sourceCommit),
       };
       report.build.command = `npm run ${layout.buildScript}`;
       report.build.workingDirectory = layout.rendererRoot;
@@ -184,6 +194,26 @@ describe('renderer harness CLIs', () => {
     await gitCommit(root, 'evidence');
 
     await expect(selectRendererFromCaptures(paths, root)).resolves.toMatchObject({ blocked: true });
+
+    for (const [relativePath, changed] of [
+      ['src/page.astro', '<h1>changed after capture</h1>'],
+      ['package-lock.json', '{"changed":true}\n'],
+      ['astro.config.mjs', 'export default { changed: true };\n'],
+      ['packages/content/src/shared.ts', 'export const shared = 2;\n'],
+    ] as const) {
+      const original = await readFile(join(root, relativePath), 'utf8');
+      await writeFile(join(root, relativePath), changed);
+      await gitCommit(root, `change ${relativePath}`);
+      await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(/source closure|stale.*source/iu);
+      await writeFile(join(root, relativePath), original);
+      await gitCommit(root, `restore ${relativePath}`);
+    }
+
+    await writeFile(join(root, 'spikes/site-next/candidate-only.ts'), 'export const candidate = true;\n');
+    await gitCommit(root, 'candidate-only follow-up');
+    await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(/next.*source.*changed|stale.*source/iu);
+    await rm(join(root, 'spikes/site-next/candidate-only.ts'));
+    await gitCommit(root, 'restore candidate-only follow-up');
 
     await writeFile(join(root, 'dirty.txt'), 'uncommitted');
     await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(/clean committed evidence tree/iu);

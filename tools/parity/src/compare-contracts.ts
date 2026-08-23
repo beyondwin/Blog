@@ -9,7 +9,12 @@ import type {
   RendererSelectionCandidate,
   RendererSelectionReport,
 } from './select-renderer.ts';
-import { RENDERER_LAYOUTS } from './renderer-layouts.ts';
+import {
+  BUILD_ENVIRONMENT_VERSION,
+  RENDERER_LAYOUTS,
+  assertRendererRepositoryState,
+  rendererSourceClosureHashAtCommit,
+} from './renderer-layouts.ts';
 
 const execFileAsync = promisify(execFile);
 
@@ -124,6 +129,9 @@ export interface RendererCaptureReport {
     buildCommand: string;
     outputRoot: string;
     captureToolHash: string;
+    buildEnvironmentVersion: 1;
+    sourceClosureVersion: 1;
+    sourceClosureHash: string;
   };
   measuredAt: string;
   captureProtocol: {
@@ -822,7 +830,8 @@ export function parseRendererCapture(
   strictString(root.measuredAt, 'capture.measuredAt', /^\d{4}-\d{2}-\d{2}T/u);
   const provenance = strictObject(root.provenance, 'capture.provenance', [
     'synthetic', 'repositoryCommit', 'rendererRoot', 'rendererManifest', 'rendererManifestHash',
-    'buildCommand', 'outputRoot', 'captureToolHash',
+    'buildCommand', 'outputRoot', 'captureToolHash', 'buildEnvironmentVersion',
+    'sourceClosureVersion', 'sourceClosureHash',
   ]);
   const synthetic = strictBoolean(provenance.synthetic, 'capture.provenance.synthetic');
   if (synthetic && !options.allowSynthetic) throw new Error('capture.provenance synthetic reports are not real evidence');
@@ -830,8 +839,14 @@ export function parseRendererCapture(
   for (const key of ['rendererRoot', 'rendererManifest', 'buildCommand', 'outputRoot']) {
     strictString(provenance[key], `capture.provenance.${key}`);
   }
-  for (const key of ['rendererManifestHash', 'captureToolHash']) {
+  for (const key of ['rendererManifestHash', 'captureToolHash', 'sourceClosureHash']) {
     strictString(provenance[key], `capture.provenance.${key}`, /^sha256:[a-f0-9]{64}$/u);
+  }
+  if (provenance.buildEnvironmentVersion !== BUILD_ENVIRONMENT_VERSION) {
+    throw new Error('capture.provenance.buildEnvironmentVersion is invalid');
+  }
+  if (provenance.sourceClosureVersion !== RENDERER_LAYOUTS[renderer as RendererName].sourceClosureVersion) {
+    throw new Error('capture.provenance.sourceClosureVersion is invalid');
   }
   const protocol = strictObject(root.captureProtocol, 'capture.captureProtocol', [
     'decisionRoutes', 'viewports', 'warmups', 'samplesPerRouteViewport',
@@ -1007,10 +1022,7 @@ export async function readCaptureEvidence(
   }
   const report = parseRendererCapture(JSON.parse(await readFile(capturePath, 'utf8')), { expectedRenderer });
   if (options.requireCommittedCleanEvidence) {
-    const status = (await execFileAsync('git', [
-      'status', '--porcelain=v1', '--untracked-files=all',
-    ], { cwd: repositoryRoot })).stdout.trim();
-    if (status) throw new Error(`Renderer selection requires a clean committed evidence tree; dirty paths:\n${status}`);
+    await assertRendererRepositoryState(repositoryRoot, 'selection');
     await execFileAsync('git', ['ls-files', '--error-unmatch', '--', captureRelative], {
       cwd: repositoryRoot,
     }).catch(() => {
@@ -1120,12 +1132,21 @@ export async function readCaptureEvidence(
     throw new Error(`${expectedRenderer} capture commit is not an ancestor of the current evidence tree`);
   });
   const layout = RENDERER_LAYOUTS[expectedRenderer];
-  if (layout.rendererRoot !== '.') {
-    await execFileAsync('git', [
-      'diff', '--quiet', report.provenance.repositoryCommit, 'HEAD', '--', layout.rendererRoot,
-    ], { cwd: repositoryRoot }).catch(() => {
-      throw new Error(`${expectedRenderer} renderer source changed after capture; evidence is stale`);
-    });
+  const recordedSourceClosureHash = await rendererSourceClosureHashAtCommit(
+    repositoryRoot,
+    expectedRenderer,
+    report.provenance.repositoryCommit,
+  );
+  if (recordedSourceClosureHash !== report.provenance.sourceClosureHash) {
+    throw new Error(`${expectedRenderer} source closure was not captured from its recorded commit`);
+  }
+  const currentSourceClosureHash = await rendererSourceClosureHashAtCommit(
+    repositoryRoot,
+    expectedRenderer,
+    'HEAD',
+  );
+  if (currentSourceClosureHash !== report.provenance.sourceClosureHash) {
+    throw new Error(`${expectedRenderer} renderer source closure changed after capture; evidence is stale`);
   }
   const manifestAtCommit = Buffer.from((await execFileAsync('git', [
     'show', `${report.provenance.repositoryCommit}:${report.provenance.rendererManifest}`,

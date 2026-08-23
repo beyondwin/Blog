@@ -26,7 +26,12 @@ import {
   medianAbsoluteDeviation,
 } from './measure-browser.ts';
 import { startStaticServer } from './serve-static.ts';
-import { RENDERER_LAYOUTS } from './renderer-layouts.ts';
+import {
+  BUILD_ENVIRONMENT_VERSION,
+  RENDERER_LAYOUTS,
+  assertRendererRepositoryState,
+  rendererSourceClosureHashAtCommit,
+} from './renderer-layouts.ts';
 
 export { RENDERER_LAYOUTS } from './renderer-layouts.ts';
 
@@ -221,19 +226,6 @@ function isContainedPath(root: string, candidate: string): boolean {
       && !candidateRelative.startsWith('/'));
 }
 
-async function assertCleanCommittedSourceTree(repositoryRoot: string): Promise<string> {
-  const repositoryCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], {
-    cwd: repositoryRoot,
-  })).stdout.trim();
-  const status = (await execFileAsync('git', [
-    'status', '--porcelain=v1', '--untracked-files=all',
-  ], { cwd: repositoryRoot })).stdout.trim();
-  if (status) {
-    throw new Error(`Renderer capture requires a clean committed source tree; dirty paths:\n${status}`);
-  }
-  return repositoryCommit;
-}
-
 async function removeCanonicalRendererPath(repositoryRoot: string, target: string): Promise<void> {
   const rootState = await lstat(repositoryRoot);
   if (rootState.isSymbolicLink() || !rootState.isDirectory()) {
@@ -298,7 +290,15 @@ export async function runBuildSamples(options: BuildSamplingOptions) {
     const startedAt = performance.now();
     await execFileAsync('npm', ['run', options.buildScript], {
       cwd: rendererRoot,
-      env: { ...process.env, NODE_ENV: 'production' },
+      env: {
+        PATH: `${dirname(process.execPath)}:/usr/bin:/bin:/usr/sbin:/sbin`,
+        NODE_ENV: 'production',
+        CI: '1',
+        NO_COLOR: '1',
+        ASTRO_TELEMETRY_DISABLED: '1',
+        TZ: 'UTC',
+        npm_config_update_notifier: 'false',
+      },
       maxBuffer: 20 * 1024 * 1024,
     });
     samples.push({
@@ -396,7 +396,7 @@ async function captureProvenance(options: CaptureRendererOptions) {
       `Renderer evidence mismatch for ${options.renderer}: root=${rendererRoot} manifest=${rendererManifest} build=${options.buildScript} output=${outputRoot}`,
     );
   }
-  const repositoryCommit = await assertCleanCommittedSourceTree(options.repositoryRoot);
+  const repositoryCommit = await assertRendererRepositoryState(options.repositoryRoot, 'capture');
   await execFileAsync('git', ['ls-files', '--error-unmatch', '--', rendererManifest], {
     cwd: options.repositoryRoot,
   }).catch(() => {
@@ -429,6 +429,13 @@ async function captureProvenance(options: CaptureRendererOptions) {
     buildCommand: `npm run ${options.buildScript}`,
     outputRoot,
     captureToolHash,
+    buildEnvironmentVersion: BUILD_ENVIRONMENT_VERSION,
+    sourceClosureVersion: expected.sourceClosureVersion,
+    sourceClosureHash: await rendererSourceClosureHashAtCommit(
+      options.repositoryRoot,
+      options.renderer,
+      repositoryCommit,
+    ),
   } as const;
 }
 
@@ -485,7 +492,7 @@ export async function captureRenderer(options: CaptureRendererOptions): Promise<
       build,
       routes,
     };
-    const finalCommit = await assertCleanCommittedSourceTree(options.repositoryRoot);
+    const finalCommit = await assertRendererRepositoryState(options.repositoryRoot, 'capture');
     if (finalCommit !== provenance.repositoryCommit) {
       throw new Error('Renderer source commit changed during capture');
     }
