@@ -2,11 +2,11 @@
 
 ## 적용 범위
 
-`/`는 Public Atlas의 첫 Visual Storyworld인 `판단` 장면이다. 차갑고 밝은 mineral daylight field, 실제 media, text-only object, cobalt selection으로 하나의 authored spatial composition을 만든다.
+`/`는 공개 사이트의 첫 `판단` 탐색 화면이다. 차갑고 밝은 mineral daylight field, 실제 media, text-only object, cobalt selection으로 하나의 authored spatial composition을 만든다.
 
-기존 `/articles/`, `/reviews/`, `/memory/`, `/search/`와 detail route는 아직 회색 교정 부스와 흰 proof sheet 계열을 사용한다. 이 reading route들은 동작하는 기존 시스템이며 Public Atlas와 같은 visual world로 재설계된 범위가 아니다.
+기존 `/articles/`, `/reviews/`, `/memory/`, `/search/`와 detail route는 아직 회색 교정 부스와 흰 proof sheet 계열을 사용한다. 이 reading route들은 동작하는 기존 시스템이며 공개 탐색 화면과 같은 visual world로 재설계된 범위가 아니다.
 
-두 범위를 섞어 built truth를 흐리지 않는다. Public Atlas에는 `src/styles/storyworld.css`, 기존 reading route에는 `src/styles/press.css`와 관련 layout이 적용된다.
+두 범위를 섞어 built truth를 흐리지 않는다. 공개 탐색 화면에는 `src/styles/storyworld.css`, 기존 reading route에는 `src/styles/press.css`와 관련 layout이 적용된다.
 
 ## 공개 명사
 
@@ -27,7 +27,7 @@
 
 `/analysis/`, `/ideas/`, `/travel/`, `/tags/`, `/memory/`은 canonical route를 유지하되 주요 navigation에 올리지 않는다. 공개 재고가 없으면 빈 방을 만들지 않는다.
 
-## Public Atlas: Staged Aperture
+## 공개 탐색 화면: Staged Aperture
 
 현재 구현은 `/`의 author-approved `판단` scene 하나다. lead `reading-desk-cobalt`와 `judgment-scale`, text-only `블랙스완`, article excerpt, `shared-reading-table`을 하나의 유한한 장면으로 구성한다. warm `reading-desk-light`는 lead로 사용하지 않는다.
 
@@ -51,7 +51,7 @@
 
 ## 색
 
-Public Atlas는 `src/styles/storyworld.css`의 daylight field를 사용한다.
+공개 탐색 화면은 `src/styles/storyworld.css`의 daylight field를 사용한다.
 
 - base light `#F2F4F7`, reading white `#FFFFFF`, ink `#151619`.
 - selection과 visible focus는 cobalt `#2B63E8`.
@@ -114,13 +114,13 @@ Public Atlas는 `src/styles/storyworld.css`의 daylight field를 사용한다.
 
 ## Motion
 
-Public Atlas의 signature motion은 Continuity Zoom이다. object focus는 480ms, scene return은 360ms 범위의 shared-geometry 전환을 사용하며 bounce, idle animation, autoplay camera, scroll-jacking은 금지한다. reduced motion에서는 geometry animation을 생략한다.
+공개 탐색 화면의 signature motion은 Continuity Zoom이다. object focus는 480ms, scene return은 360ms 범위의 shared-geometry 전환을 사용하며 bounce, idle animation, autoplay camera, scroll-jacking은 금지한다. reduced motion에서는 geometry animation을 생략한다.
 
 기존 reading route는 호버와 포커스에 필요한 짧은 transition만 사용한다. 모든 범위에서 포커스는 보이는 cobalt 또는 잉크 outline이다.
 
 ## Content Model
 
-공개 writing lane은 route와 collection이 1:1로 대응한다. Public Atlas scene은 새 content lane이 아니라 published entry와 public projection을 참조하는 authored view model이다. 방문객에게 내부 collection을 광고하지 않는다.
+공개 writing lane은 route와 collection이 1:1로 대응한다. 공개 탐색 scene은 새 content lane이 아니라 published entry와 public projection을 참조하는 authored view model이다. 방문객에게 내부 collection을 광고하지 않는다.
 
 - `articles`: 개발 글과 기술 에세이. 공개 명사는 글.
 - `reviews`: 표지가 있는 책. 공개 명사는 책.

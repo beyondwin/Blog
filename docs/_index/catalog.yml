@@ -49,9 +49,9 @@
   type: reference
   language: ko
   status: organized
-  summary: 프로젝트 문서 허브. local setup, publishing workflow, architecture reference, design rationale로 이어지는 진입점.
+  summary: 현재 Astro built truth와 승인된 Node/React 목표 구조, local setup, publishing workflow, architecture reference로 이어지는 프로젝트 문서 허브.
   source: README.md
-  updated: 2026-06-30
+  updated: 2026-08-23
 
 - title: beyondwin 시작하기
   path: docs/notes/project/getting-started.md
@@ -91,7 +91,7 @@
   status: organized
   summary: Index, status model, template, and maintenance workflow for durable beyondwin product, architecture, boundary, publishing-policy, and UX decisions.
   source: AGENTS.md
-  updated: 2026-08-22
+  updated: 2026-08-23
 
 - title: 'ADR-0000: ADR 관리 규칙'
   path: docs/notes/project/adr/0000-adr-governance.md
@@ -143,6 +143,56 @@
   source: user decision 2026-08-22
   updated: 2026-08-22
 
+- title: 'ADR-0005: Node/React 모듈러 모놀리스와 분리된 공개 projection'
+  path: docs/notes/project/adr/0005-node-react-modular-monolith.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Fixes the Node/React app boundaries, Fastify modular monolith, PostgreSQL-backed jobs, immutable public release, and intentionally deferred infrastructure.
+  source: user decision 2026-08-23
+  updated: 2026-08-23
+
+- title: 'ADR-0006: 하나의 public visual world 안에서 탐색과 독서 모드를 분리'
+  path: docs/notes/project/adr/0006-unified-public-reading-continuity.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Unifies the public visual material, chrome, contextual return, and continued-reading grammar while preserving distinct scene and reading modes.
+  source: user decision 2026-08-23
+  updated: 2026-08-23
+
+- title: Node/React 모듈러 모놀리스 상세 설계
+  path: docs/notes/project/node-react-modular-monolith-design.md
+  topic: project
+  type: architecture-design
+  language: ko
+  status: organized
+  summary: Defines the approved but not implemented Node/React target structure, public/private boundary, data and job model, migration phases, risks, and acceptance gates.
+  source: ADR-0005
+  updated: 2026-08-23
+
+- title: Public reading continuity 상세 설계
+  path: docs/notes/project/public-reading-continuity-design.md
+  topic: project
+  type: product-design
+  language: ko
+  status: organized
+  summary: Defines the shared visual system, journey grammar, contextual return transport, continued discovery, fallbacks, accessibility, and browser acceptance matrix across public routes.
+  source: ADR-0006
+  updated: 2026-08-23
+
+- title: Public reading continuity React migration 구현 계획
+  path: docs/notes/project/public-reading-continuity-implementation-plan.md
+  topic: project
+  type: implementation-plan
+  language: ko
+  status: organized
+  summary: Executes Astro parity capture, React renderer comparison, one-time continuity redesign, full public route migration, cutover evidence, and gated Astro removal in TDD-sized tasks.
+  source: ADR-0005 and ADR-0006
+  updated: 2026-08-23
+
 - title: Public Atlas Visual Storyworld vertical slice 설계
   path: docs/notes/project/visual-storyworld-public-atlas-design.md
   topic: project
@@ -169,9 +219,9 @@
   type: reference
   language: ko
   status: organized
-  summary: Astro route, content schema, helper contract, memory projection, script, validation gate, test, docs graph layer를 정리한 기술 레퍼런스.
+  summary: 현재 Astro built truth와 승인된 Node/React 목표 구조를 구분하고 route, content schema, memory projection, validation gate를 정리한 기술 레퍼런스.
   source: src/content.config.ts
-  updated: 2026-06-30
+  updated: 2026-08-23
 
 - title: beyondwin이 이렇게 구성된 이유
   path: docs/notes/project/design-and-content-rationale.md

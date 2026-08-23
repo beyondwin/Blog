@@ -1,6 +1,22 @@
 # 아키텍처 레퍼런스
 
-`beyondwin`은 Astro 기반 private-first 정적 지식 제품이다. 핵심은 typed MDX collection, script validation, private-first memory projection, 그리고 그중 공개 승인된 object만 조합하는 Public Atlas projection이다.
+`beyondwin`의 현재 built truth는 Astro 기반 private-first 정적 지식 제품이다. 핵심은 typed MDX collection, script validation, private-first memory projection, 그리고 그중 공개 승인된 object만 조합하는 공개 탐색 화면이다.
+
+2026-08-23 승인된 목표 구조는 [ADR-0005](adr/0005-node-react-modular-monolith.md)와 [상세 설계](node-react-modular-monolith-design.md)에 기록돼 있다. Node/React, PostgreSQL, Fastify, worker는 아직 구현된 현재 상태가 아니다. 구현과 검증이 끝나기 전까지 아래 Astro reference를 current truth로 사용한다.
+
+## Approved Target Architecture — Not Implemented
+
+| Layer | Target | Boundary |
+| --- | --- | --- |
+| 공개 사이트 | Next.js App Router 후보, React/TypeScript | 동일 slice 비교 게이트를 통과할 때 채택한다. Immutable public release만 소비하며 private DB credential을 갖지 않는다. |
+| 내 작업실 | Vite, React Router Data Mode | Same-origin `/api`를 통해 private workflow를 수행한다. |
+| API | Fastify on Node.js | Auth, request/response schema, domain transaction boundary. |
+| Worker | Node.js + Graphile Worker | Ingestion, parsing, embedding, AI suggestion, public release build. |
+| Data | PostgreSQL, `pg_trgm`, pgvector | Canonical private data, session, search, durable jobs. |
+| Deployment | Docker Compose + reverse proxy | 한 host에서 시작하고 process를 독립적으로 분리할 수 있다. |
+
+Astro 제거는 migration 시작 조건이 아니라 route/content/media/browser parity와 rollback evidence를 모두 통과한 뒤 수행하는 마지막 단계다.
+Next.js가 동일한 React Router Framework Mode slice보다 최소 두 품질 항목에서 측정 가능한 이점을 보이지 않으면 공개 사이트도 React Router로 통일한다.
 
 ## Runtime Stack
 
@@ -10,7 +26,7 @@
 | Content schemas | `src/content.config.ts` | collection별 frontmatter 계약. |
 | Pages | `src/pages/` | 정적 route와 collection detail route. |
 | Layouts | `src/layouts/` | base, article, analysis, review page shell. |
-| Components | `src/components/` | header, Public Atlas scene/object, reading card, callout, source panel, table of contents. |
+| Components | `src/components/` | header, 공개 탐색 scene/object, reading card, callout, source panel, table of contents. |
 | Content helpers | `src/lib/content.ts` | collection metadata, 날짜 선택, route href, tag, sorting. |
 | Public scene contract | `src/lib/scenes/publicScene.ts` | scene definition/ref type, public-only resolver, canonical object view model, issue reporting. |
 | Judgment scene | `src/lib/scenes/judgmentScene.ts` | 현재 하나뿐인 author-approved `판단` definition과 public content/media projection 조립. |
@@ -113,7 +129,7 @@ Path: `src/content/travel/`
 
 | Route | Source | Behavior |
 | --- | --- | --- |
-| `/` | `src/pages/index.astro` | `loadJudgmentScene()`으로 하나의 `판단` Public Atlas scene을 server-render하고 `PublicScene` interaction을 progressive-enhance한다. |
+| `/` | `src/pages/index.astro` | `loadJudgmentScene()`으로 하나의 `판단` 공개 탐색 scene을 server-render하고 `PublicScene` interaction을 progressive-enhance한다. |
 | `/articles/` | `src/pages/articles/index.astro` | article listing. |
 | `/articles/[slug]/` | `src/pages/articles/[slug].astro` | published non-draft article detail. |
 | `/analysis/` | `src/pages/analysis/index.astro` | analysis listing. |
@@ -129,9 +145,9 @@ Path: `src/content/travel/`
 | `/tags/[tag]/` | `src/pages/tags/[tag].astro` | tag-filtered public content listing. |
 | `/memory/` | `src/pages/memory.astro` | generated public memory projection. |
 
-## Public Atlas Projection Contract
+## 공개 탐색 화면 Projection Contract
 
-현재 Public Atlas 구현은 `/`의 단일 `판단` scene이다. 여러 scene을 저장하거나 자동 생성하는 시스템은 없다.
+현재 공개 탐색 화면 구현은 `/`의 단일 `판단` scene이다. 여러 scene을 저장하거나 자동 생성하는 시스템은 없다.
 
 - `src/pages/index.astro`는 `src/lib/homeData.ts`가 re-export한 `loadJudgmentScene()`을 호출하고 `src/styles/storyworld.css`와 `PublicScene`을 사용한다.
 - `src/lib/scenes/judgmentScene.ts`는 published article/review selector, `src/data/memory.public.json` loader, media registry를 scene resolver에 주입한다. top-level `memory/**`를 직접 읽지 않는다.
@@ -143,7 +159,7 @@ Path: `src/content/travel/`
 - Focus panel은 실제 article excerpt와 action을 provenance보다 먼저 렌더한다. 480ms focus 전환의 336ms 지점에 144ms reveal을 시작하며 native View Transition과 FLIP fallback을 각각 구현한다. reduced motion은 geometry와 panel을 모두 즉시 적용한다.
 - `prefers-reduced-motion: reduce`에서는 Web Animation과 View Transition을 시작하지 않는다.
 
-Public Atlas는 public projection 소비자다. private authoring workspace, retrieval backend, graph persistence, automatic scene assembly를 구현하거나 암시하지 않는다.
+공개 탐색 화면은 public projection 소비자다. private authoring workspace, retrieval backend, graph persistence, automatic scene assembly를 구현하거나 암시하지 않는다.
 
 ## Structured Content Foundation Contracts
 

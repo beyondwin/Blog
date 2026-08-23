@@ -18,6 +18,11 @@
 | ADR-0002: Consumer-grade visual experience를 UX 품질 기준으로 사용 | project | decision-record | ko | organized | [docs/notes/project/adr/0002-consumer-grade-visual-experience.md](notes/project/adr/0002-consumer-grade-visual-experience.md) |
 | ADR-0003: Visual Storyworld 경험 모델 | project | decision-record | ko | organized | [docs/notes/project/adr/0003-visual-storyworld-experience-model.md](notes/project/adr/0003-visual-storyworld-experience-model.md) |
 | ADR-0004: Public Atlas의 기본 구성을 Staged Aperture로 사용 | project | decision-record | ko | organized | [docs/notes/project/adr/0004-staged-aperture-public-composition.md](notes/project/adr/0004-staged-aperture-public-composition.md) |
+| ADR-0005: Node/React 모듈러 모놀리스와 분리된 공개 projection | project | decision-record | ko | organized | [docs/notes/project/adr/0005-node-react-modular-monolith.md](notes/project/adr/0005-node-react-modular-monolith.md) |
+| ADR-0006: 하나의 public visual world 안에서 탐색과 독서 모드를 분리 | project | decision-record | ko | organized | [docs/notes/project/adr/0006-unified-public-reading-continuity.md](notes/project/adr/0006-unified-public-reading-continuity.md) |
+| Node/React 모듈러 모놀리스 상세 설계 | project | architecture-design | ko | organized | [docs/notes/project/node-react-modular-monolith-design.md](notes/project/node-react-modular-monolith-design.md) |
+| Public reading continuity 상세 설계 | project | product-design | ko | organized | [docs/notes/project/public-reading-continuity-design.md](notes/project/public-reading-continuity-design.md) |
+| Public reading continuity React migration 구현 계획 | project | implementation-plan | ko | organized | [docs/notes/project/public-reading-continuity-implementation-plan.md](notes/project/public-reading-continuity-implementation-plan.md) |
 | Public Atlas Visual Storyworld vertical slice 설계 | project | product-design | ko | organized | [docs/notes/project/visual-storyworld-public-atlas-design.md](notes/project/visual-storyworld-public-atlas-design.md) |
 | 리뷰 verdict 검토 패킷 | project | workflow | ko | organized | [docs/notes/content-migration/review-verdicts.md](notes/content-migration/review-verdicts.md) |
 | 아키텍처 레퍼런스 | project | reference | ko | organized | [docs/notes/project/architecture-reference.md](notes/project/architecture-reference.md) |

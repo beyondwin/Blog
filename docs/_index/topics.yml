@@ -19,7 +19,7 @@
 
 - id: project
   name: Project
-  description: beyondwin Astro site, content model, publishing workflow, validation gate, memory projection, architecture decision records, design rationale, agent task routing을 다루는 프로젝트 문서.
+  description: beyondwin의 현재 Astro site, 승인된 Node/React 목표 구조, content model, publishing workflow, validation gate, memory projection, architecture decision records, design rationale, agent task routing을 다루는 프로젝트 문서.
   folder: docs/notes/project
 
 - id: skills/agent-workflows

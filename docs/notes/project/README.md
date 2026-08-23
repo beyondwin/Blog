@@ -1,6 +1,6 @@
 # beyondwin 프로젝트 문서
 
-이 폴더는 `beyondwin` 코드베이스 자체를 설명한다. Astro 사이트, content collection, publishing workflow, public memory projection, validation gate, archive docs 규칙을 다룬다.
+이 폴더는 `beyondwin` 코드베이스 자체를 설명한다. 현재 Astro 사이트와 승인된 Node/React 목표 구조, content collection, publishing workflow, public memory projection, validation gate, archive docs 규칙을 다룬다.
 
 빠르게 작업하려면 아래 순서로 읽는다.
 
@@ -12,7 +12,10 @@
 | [콘텐츠 운영](publishing-workflows.md) | How-to | 글, 리뷰, queue item, source-grounded article, memory, archive docs를 실제로 추가하거나 고칠 때 |
 | [Agent Runbook](agent-runbook.md) | Agent task map | 에이전트가 작업 유형별 read order, 수정 표면, 위험 경계, 검증 명령을 빠르게 확인해야 할 때 |
 | [Architecture Decision Records](adr/README.md) | Decision log | 제품, 아키텍처, 데이터 경계, 공개 정책, durable UX의 현재 판단과 폐기한 대안을 확인하거나 갱신할 때 |
-| [Public Atlas Visual Storyworld 설계](visual-storyworld-public-atlas-design.md) | Product design | 승인된 Visual Storyworld 방향의 첫 public vertical slice, interaction, data contract, 검증 범위를 구현할 때 |
+| [Node/React 모듈러 모놀리스 설계](node-react-modular-monolith-design.md) | Target architecture | 승인됐지만 아직 구현되지 않은 Node/React 앱 경계, PostgreSQL·worker, public release와 단계적 Astro 제거 계획을 확인할 때 |
+| [`판단` 공개 탐색 화면 설계](visual-storyworld-public-atlas-design.md) | Product design | 승인된 첫 public vertical slice, interaction, data contract, 검증 범위를 구현할 때 |
+| [Public reading continuity 설계](public-reading-continuity-design.md) | Product design | 장면에서 list·search·detail로 이어지는 공통 visual world, contextual return, continued discovery를 구현할 때 |
+| [Public reading continuity 구현 계획](public-reading-continuity-implementation-plan.md) | Implementation plan | React renderer 비교, 선택된 renderer의 UX 구현, 전체 route 이관, cutover evidence와 Astro 제거를 순서대로 실행할 때 |
 | [아키텍처 레퍼런스](architecture-reference.md) | Reference | route, schema, script, test, data contract의 정확한 값이 필요할 때 |
 | [설계 이유](design-and-content-rationale.md) | Explanation | 왜 typed collection, private-first memory, docs layer, restrained design을 택했는지 이해해야 할 때 |
 
