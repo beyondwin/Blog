@@ -11,7 +11,12 @@ export const fixtureChecksum = `sha256:${createHash('sha256').update(transparent
 
 export async function writeReleaseFixture(
   root: string,
-  options: { title?: string; privateFrontmatter?: string } = {},
+  options: {
+    title?: string;
+    privateFrontmatter?: string;
+    featuredMedia?: boolean;
+    figureMarkup?: string;
+  } = {},
 ): Promise<void> {
   const title = options.title ?? 'Public fixture';
   const contentRoot = join(root, 'src', 'content');
@@ -35,7 +40,7 @@ export async function writeReleaseFixture(
     'status: "published"',
     'draft: false',
     'recordKind: "essay"',
-    'featuredMedia: "hero"',
+    ...(options.featuredMedia === false ? [] : ['featuredMedia: "hero"']),
     ...(options.privateFrontmatter ? [options.privateFrontmatter] : []),
     '---',
     '',
@@ -45,7 +50,7 @@ export async function writeReleaseFixture(
     '| --- | --- |',
     '| Public | Ready |',
     '',
-    '<Figure media="hero" />',
+    options.figureMarkup ?? '<Figure media="hero" />',
     '',
     '<Callout title="Decision">Only allowlisted output is released.</Callout>',
     '',

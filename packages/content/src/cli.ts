@@ -27,7 +27,7 @@ if (command === 'build') {
     path: active.releasePath,
     records: Object.keys(active.manifest.records).length,
     assets: Object.keys(active.manifest.assets).length,
-    privateBoundaryHits: 0,
+    privateBoundaryHits: active.boundaryHits.length,
   })}\n`);
 } else if (command === 'clean-test') {
   const owned = await createOwnedTemporaryRoot(tmpdir());

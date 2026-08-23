@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import {
   activateRelease,
@@ -8,11 +10,63 @@ import {
   createOwnedTemporaryRoot,
   prepareActiveRelease,
 } from '../src/release/build-release';
-import { readActiveRelease } from '../src/release/read-release';
+import { findPublicBoundaryHits, readActiveRelease } from '../src/release/read-release';
 import { writeReleaseFixture } from './helpers/release-fixture';
 import { buildPublicRelease } from '../src/release/build-release';
 
+interface TestCandidate {
+  src: string;
+  width: number;
+  height: number;
+  checksum: string;
+}
+
+interface TestManifest {
+  assets: Record<string, {
+    sources: Array<{ type: string; candidates: TestCandidate[] }>;
+    fallback: { candidates: TestCandidate[] };
+  }>;
+}
+
+function sha256(bytes: Buffer): string {
+  return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+}
+
 describe('active public release boundary', () => {
+  it.each([
+    ['private source locator', 'file:///Users/example/private/Blog/memory/thoughts/secret.md'],
+    ['serialized raw prompt', '{"rawPrompt":"do not publish","jobPayload":{"id":"private"}}'],
+    ['serialized embedding payload', '{"embedding":[0.1,-0.2,0.3]}'],
+  ])('measures a %s embedded inside an allowlisted string', (_case, leakedValue) => {
+    const hits = findPublicBoundaryHits({ bodyHtml: `<p>${leakedValue}</p>` });
+
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits.every((hit) => hit.path === 'manifest.bodyHtml')).toBe(true);
+  });
+
+  it('does not treat truthful public prose about embeddings as an embedding payload', () => {
+    expect(findPublicBoundaryHits({
+      bodyHtml: '<p>Embedding systems map public text into useful semantic representations.</p>',
+    })).toEqual([]);
+  });
+
+  it('rejects a measured private payload marker embedded in an allowlisted record string', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-private-string-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
+      records: Record<string, { bodyHtml: string }>;
+    };
+    manifest.records['articles/public-fixture']!.bodyHtml += '<p>{"rawPrompt":"private instruction"}</p>';
+    expect(findPublicBoundaryHits(manifest)).toHaveLength(1);
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/private boundary hit.*serialized-private-field/i);
+  });
+
   it.each([
     ['partial JSON', '{"releaseId":'],
     ['absolute path', JSON.stringify({ releaseId: 'a'.repeat(64), path: '/tmp/release' })],
@@ -37,6 +91,40 @@ describe('active public release boundary', () => {
     await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
 
     await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/release ID/i);
+  });
+
+  it('rejects a release directory symlink that escapes the owned releases root', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-directory-link-'));
+    const sourceRoot = join(sandbox, 'source');
+    const externalRoot = join(sandbox, 'external-releases');
+    const releasesRoot = join(sandbox, 'owned-releases');
+    await writeReleaseFixture(sourceRoot);
+    const external = await buildPublicRelease({ root: sourceRoot, releasesRoot: externalRoot });
+    await mkdir(releasesRoot, { recursive: true });
+    await symlink(external.releasePath, join(releasesRoot, external.releaseId), 'dir');
+    await writeFile(join(releasesRoot, 'active.json'), `${JSON.stringify({
+      releaseId: external.releaseId,
+      path: external.releaseId,
+    })}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/symbolic link|containment/i);
+  });
+
+  it('rejects an active pointer symlink that escapes the owned releases root', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-active-link-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    const externalPointer = join(sandbox, 'external-active.json');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    await writeFile(externalPointer, `${JSON.stringify({
+      releaseId: built.releaseId,
+      path: built.releaseId,
+    })}\n`);
+    await rm(join(releasesRoot, 'active.json'));
+    await symlink(externalPointer, join(releasesRoot, 'active.json'));
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/symbolic link|containment/i);
   });
 
   it('rejects a manifest whose responsive asset no longer matches its public media allowlist', async () => {
@@ -82,6 +170,101 @@ describe('active public release boundary', () => {
     await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/AVIF.*WebP|WebP.*AVIF/i);
   });
 
+  it('rejects a candidate whose actual bytes do not match its declared media type', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-format-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as TestManifest;
+    const asset = manifest.assets['articles/public-fixture/hero']!;
+    const avif = asset.sources.find((source) => source.type === 'image/avif')!.candidates[0]!;
+    const webp = asset.sources.find((source) => source.type === 'image/webp')!.candidates[0]!;
+    const webpBytes = await readFile(join(built.releasePath, webp.src.slice(1)));
+    await writeFile(join(built.releasePath, avif.src.slice(1)), webpBytes);
+    avif.checksum = sha256(webpBytes);
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/actual media format|AVIF/i);
+  });
+
+  it('rejects candidate dimensions forged in the manifest', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-dimensions-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as TestManifest;
+    const asset = manifest.assets['articles/public-fixture/hero']!;
+    for (const source of asset.sources) source.candidates[0]!.width = 2;
+    asset.fallback.candidates[0]!.width = 2;
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/actual media dimensions/i);
+  });
+
+  it('rejects a candidate path whose extension does not match its source type', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-extension-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as TestManifest;
+    const avif = manifest.assets['articles/public-fixture/hero']!.sources
+      .find((source) => source.type === 'image/avif')!.candidates[0]!;
+    const forgedHref = '/assets/content/articles/public-fixture/hero-forged.webp';
+    await rename(
+      join(built.releasePath, avif.src.slice(1)),
+      join(built.releasePath, forgedHref.slice(1)),
+    );
+    avif.src = forgedHref;
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/path extension.*source type/i);
+  });
+
+  it('rejects a candidate path reused across modern source sets', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-duplicate-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as TestManifest;
+    const asset = manifest.assets['articles/public-fixture/hero']!;
+    const avif = asset.sources.find((source) => source.type === 'image/avif')!.candidates[0]!;
+    const webp = asset.sources.find((source) => source.type === 'image/webp')!.candidates[0]!;
+    await rm(join(built.releasePath, webp.src.slice(1)));
+    Object.assign(webp, avif);
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/duplicate candidate path/i);
+  });
+
+  it('rejects dimension sets that are not identical across AVIF, WebP, and fallback candidates', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-parity-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as TestManifest;
+    const asset = manifest.assets['articles/public-fixture/hero']!;
+    const webp = asset.sources.find((source) => source.type === 'image/webp')!;
+    const extraHref = '/assets/content/articles/public-fixture/hero-2w.webp';
+    const extraBytes = await sharp({
+      create: { width: 2, height: 1, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    }).webp().toBuffer();
+    await writeFile(join(built.releasePath, extraHref.slice(1)), extraBytes);
+    webp.candidates.push({ src: extraHref, width: 2, height: 1, checksum: sha256(extraBytes) });
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/source-set dimension parity/i);
+  });
+
   it('keeps the previous pointer readable before rename and exposes only the complete release after rename', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-crash-'));
     const oldSource = join(sandbox, 'old-source');
@@ -121,6 +304,25 @@ describe('active public release boundary', () => {
       path: built.releaseId,
     })).rejects.toThrow(/symbolic link/i);
     await expect(readFile(sentinel, 'utf8')).resolves.toBe('must remain unchanged');
+  });
+
+  it('refuses a symbolic-link swap after an active pointer has been prepared', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-pointer-swap-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    const externalPointer = join(sandbox, 'external-pointer.json');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const prepared = await prepareActiveRelease(releasesRoot, {
+      releaseId: built.releaseId,
+      path: built.releaseId,
+    });
+    const temporaryPath = join(releasesRoot, 'active.json.tmp');
+    await writeFile(externalPointer, await readFile(temporaryPath));
+    await rm(temporaryPath);
+    await symlink(externalPointer, temporaryPath);
+
+    await expect(activateRelease(prepared)).rejects.toThrow(/symbolic link|regular owned file/i);
   });
 });
 

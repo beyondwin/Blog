@@ -2,13 +2,12 @@ import { createHash } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
 import {
   mkdir,
+  lstat,
   mkdtemp,
   open,
-  readFile,
   readdir,
   rename,
   rm,
-  stat,
 } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { isPublicRecord, parsePublicRecord, type PublicMedia, type PublicRecord } from '@beyondwin/contracts';
@@ -19,13 +18,14 @@ import {
   type ReleaseMediaAsset,
   type SourceMediaBuildInput,
 } from '../media/build-responsive-media';
-import { renderTrustedMdx } from '../mdx/render';
+import { analyzeTrustedMdx, renderTrustedMdx } from '../mdx/render';
 import type { SourceRecord } from '../schemas';
 import { loadPublicMemoryRecords, loadSourceRecords } from '../source-records';
 import {
   activeReleasePointerSchema,
   canonicalJson,
   parseReleaseManifest,
+  resolveOwnedReleasesRoot,
   verifyReleaseDirectory,
   type ActiveReleasePointer,
   type PublicReleaseManifest,
@@ -76,6 +76,27 @@ async function fsyncDirectory(path: string): Promise<void> {
   }
 }
 
+async function readPreparedPointer(path: string): Promise<string> {
+  let file;
+  try {
+    file = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ELOOP') {
+      throw new Error('prepared active pointer must not be a symbolic link');
+    }
+    throw error;
+  }
+  try {
+    const state = await file.stat();
+    if (!state.isFile() || state.nlink !== 1) {
+      throw new Error('prepared active pointer must be one regular owned file');
+    }
+    return await file.readFile('utf8');
+  } finally {
+    await file.close();
+  }
+}
+
 async function fsyncTree(root: string): Promise<void> {
   for (const entry of await readdir(root, { withFileTypes: true })) {
     const path = join(root, entry.name);
@@ -97,7 +118,8 @@ async function fsyncTree(root: string): Promise<void> {
 export async function createOwnedTemporaryRoot(parent: string): Promise<OwnedTemporaryRoot> {
   const resolvedParent = resolve(parent);
   await mkdir(resolvedParent, { recursive: true });
-  const path = await mkdtemp(join(resolvedParent, '.tmp-public-release-'));
+  const ownedParent = await resolveOwnedReleasesRoot(resolvedParent);
+  const path = await mkdtemp(join(ownedParent, '.tmp-public-release-'));
   const handle = Object.freeze({ path });
   ownedTemporaryRoots.set(handle, path);
   return handle;
@@ -110,26 +132,23 @@ export async function cleanupOwnedTemporaryRoot(handle: OwnedTemporaryRoot): Pro
   await rm(path, { recursive: true, force: true });
 }
 
-function figureMediaIds(body: string): Set<string> {
-  const ids = new Set<string>();
-  for (const match of body.matchAll(/<Figure\b[^>]*\bmedia\s*=\s*"([a-z0-9][a-z0-9-]*)"[^>]*\/>/g)) {
-    if (match[1]) ids.add(match[1]);
-  }
-  return ids;
-}
-
-function referencedMedia(record: SourceRecord): Map<string, 'figure' | 'intrinsic'> {
+function referencedMedia(
+  record: SourceRecord,
+  figureMediaIds: Iterable<string>,
+): Map<string, 'figure' | 'intrinsic'> {
   const references = new Map<string, 'figure' | 'intrinsic'>();
   if (record.collection === 'articles' && record.featuredMedia) references.set(record.featuredMedia, 'intrinsic');
   if (record.collection === 'reviews' && record.coverMedia) references.set(record.coverMedia, 'intrinsic');
   if (record.collection === 'travel' && record.leadMedia) references.set(record.leadMedia, 'intrinsic');
-  for (const mediaId of figureMediaIds(record.body)) references.set(mediaId, 'figure');
+  for (const mediaId of figureMediaIds) references.set(mediaId, 'figure');
   return references;
 }
 
 async function loadRecordMedia(root: string, record: SourceRecord): Promise<SourceMediaBuildInput[]> {
   const inputs: SourceMediaBuildInput[] = [];
-  for (const [mediaId, role] of [...referencedMedia(record)].sort(([left], [right]) => left.localeCompare(right))) {
+  const analysis = await analyzeTrustedMdx(record.body);
+  for (const [mediaId, role] of [...referencedMedia(record, analysis.figureMediaIds)]
+    .sort(([left], [right]) => left.localeCompare(right))) {
     inputs.push(await loadSourceMediaBuildInput(
       root,
       record.collection as SourceCollection,
@@ -217,18 +236,20 @@ async function installImmutableRelease(
   const releasePath = join(releasesRoot, releaseId);
   let releaseExists = true;
   try {
-    await stat(releasePath);
+    const state = await lstat(releasePath);
+    if (state.isSymbolicLink()) throw new Error(`${releaseId}: immutable release path must not be a symbolic link`);
+    if (!state.isDirectory()) throw new Error(`${releaseId}: immutable release path must be a directory`);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') releaseExists = false;
     else throw error;
   }
 
   if (releaseExists) {
-    const currentManifest = await readFile(join(releasePath, 'manifest.json'), 'utf8');
+    const installed = await verifyReleaseDirectory(releasesRoot, { releaseId, path: releaseId });
+    const currentManifest = `${canonicalJson(installed.manifest)}\n`;
     if (currentManifest !== expectedManifestBytes) {
       throw new Error(`${releaseId}: immutable release directory already exists with different content`);
     }
-    await verifyReleaseDirectory(releasesRoot, { releaseId, path: releaseId });
     return releasePath;
   }
 
@@ -286,7 +307,7 @@ export async function prepareActiveRelease(
 export async function activateRelease(prepared: PreparedActiveRelease): Promise<void> {
   const state = prepared && typeof prepared === 'object' ? preparedActiveReleases.get(prepared) : undefined;
   if (!state) throw new Error('activation is not an owned prepared release');
-  const currentBytes = await readFile(state.temporaryPath, 'utf8');
+  const currentBytes = await readPreparedPointer(state.temporaryPath);
   if (currentBytes !== state.bytes) throw new Error('prepared active pointer changed before rename');
   preparedActiveReleases.delete(prepared);
   await rename(state.temporaryPath, state.activePath);

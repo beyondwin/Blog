@@ -26,7 +26,15 @@ function trustedMdxError(message: string): Error {
   return new Error(`trusted MDX rejected: ${message}`);
 }
 
-function validateNode(node: MdxNode): void {
+interface TrustedMdxAnalysisState {
+  figureMediaIds: Set<string>;
+}
+
+export interface TrustedMdxAnalysis {
+  figureMediaIds: string[];
+}
+
+function validateNode(node: MdxNode, analysis: TrustedMdxAnalysisState): void {
   if (node.type === 'mdxjsEsm') throw trustedMdxError('imports and exports are forbidden');
   if (node.type === 'mdxFlowExpression' || node.type === 'mdxTextExpression') {
     throw trustedMdxError('JavaScript expressions are forbidden');
@@ -38,6 +46,7 @@ function validateNode(node: MdxNode): void {
     }
     const attributes = node.attributes ?? [];
     const seen = new Set<string>();
+    let figureMediaId: string | undefined;
     for (const attribute of attributes) {
       if (attribute.type !== 'mdxJsxAttribute' || !attribute.name) {
         throw trustedMdxError(`${node.name} attribute spreads are forbidden`);
@@ -50,30 +59,48 @@ function validateNode(node: MdxNode): void {
       }
       if (seen.has(attribute.name)) throw trustedMdxError(`${node.name}.${attribute.name} is duplicated`);
       seen.add(attribute.name);
+      if (node.name === 'Figure' && attribute.name === 'media') figureMediaId = attribute.value;
     }
     if (node.name === 'Figure') {
       if (!seen.has('media')) throw trustedMdxError('Figure.media is required');
       if ((node.children ?? []).length > 0) throw trustedMdxError('Figure cannot contain children');
+      if (figureMediaId) analysis.figureMediaIds.add(figureMediaId);
     }
   }
 
-  for (const child of node.children ?? []) validateNode(child);
+  for (const child of node.children ?? []) validateNode(child, analysis);
 }
 
-function validateTrustedMdx() {
-  return (tree: MdxNode) => validateNode(tree);
+function validateTrustedMdx(analysis: TrustedMdxAnalysisState) {
+  return (tree: MdxNode) => validateNode(tree, analysis);
+}
+
+async function compileTrustedMdx(source: string): Promise<{
+  code: string;
+  analysis: TrustedMdxAnalysis;
+}> {
+  const state: TrustedMdxAnalysisState = { figureMediaIds: new Set() };
+  const compiled = await compile(source, {
+    outputFormat: 'function-body',
+    remarkPlugins: [remarkGfm, () => validateTrustedMdx(state)],
+    rehypePlugins: [rehypeSlug],
+  });
+  return {
+    code: String(compiled),
+    analysis: { figureMediaIds: [...state.figureMediaIds].sort() },
+  };
+}
+
+export async function analyzeTrustedMdx(source: string): Promise<TrustedMdxAnalysis> {
+  return (await compileTrustedMdx(source)).analysis;
 }
 
 export async function renderTrustedMdx(
   source: string,
   options: TrustedMdxComponentOptions,
 ): Promise<string> {
-  const compiled = await compile(source, {
-    outputFormat: 'function-body',
-    remarkPlugins: [remarkGfm, validateTrustedMdx],
-    rehypePlugins: [rehypeSlug],
-  });
-  const module = await run(String(compiled), {
+  const compiled = await compileTrustedMdx(source);
+  const module = await run(compiled.code, {
     ...jsxRuntime,
     baseUrl: import.meta.url,
   });

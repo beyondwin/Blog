@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -90,6 +90,21 @@ describe('immutable public release building', () => {
     expect(first.releaseId).toBe(second.releaseId);
   });
 
+  it.each([
+    ['single-quoted Figure', "<Figure media='hero' />"],
+    ['paired empty Figure', '<Figure media="hero"></Figure>'],
+  ])('discovers and builds media referenced by a %s through the trusted MDX grammar', async (_case, figureMarkup) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-figure-grammar-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot, { featuredMedia: false, figureMarkup });
+
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+
+    expect(built.manifest.assets['articles/public-fixture/hero']).toBeDefined();
+    expect(built.manifest.records['articles/public-fixture']?.bodyHtml).toContain('<figure');
+  });
+
   it('refuses to repair a damaged existing release directory in place', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-immutable-'));
     const sourceRoot = join(sandbox, 'source');
@@ -103,5 +118,18 @@ describe('immutable public release building', () => {
 
     await expect(buildPublicRelease({ root: sourceRoot, releasesRoot })).rejects.toThrow(/ENOENT|no such file|missing/i);
     await expect(readFile(missingPath)).rejects.toThrow();
+  });
+
+  it('refuses to install through an existing release-ID symlink', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-install-link-'));
+    const sourceRoot = join(sandbox, 'source');
+    const externalRoot = join(sandbox, 'external-releases');
+    const releasesRoot = join(sandbox, 'owned-releases');
+    await writeReleaseFixture(sourceRoot);
+    const external = await buildPublicRelease({ root: sourceRoot, releasesRoot: externalRoot });
+    await mkdir(releasesRoot, { recursive: true });
+    await symlink(external.releasePath, join(releasesRoot, external.releaseId), 'dir');
+
+    await expect(buildPublicRelease({ root: sourceRoot, releasesRoot })).rejects.toThrow(/symbolic link|containment/i);
   });
 });

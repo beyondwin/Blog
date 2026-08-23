@@ -1,11 +1,13 @@
 import { createHash } from 'node:crypto';
-import { readFile, readdir, stat } from 'node:fs/promises';
-import { join, relative, resolve, sep } from 'node:path';
+import { constants as fsConstants } from 'node:fs';
+import { lstat, open, readdir, realpath } from 'node:fs/promises';
+import { extname, join, relative, resolve, sep } from 'node:path';
 import {
   parsePublicRecord,
   type PublicRecord,
 } from '@beyondwin/contracts';
 import { z } from 'zod';
+import sharp from 'sharp';
 import type { ReleaseMediaAsset } from '../media/build-responsive-media';
 
 const releaseIdSchema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -96,6 +98,44 @@ export interface ActivePublicRelease {
   pointer: ActiveReleasePointer;
   releasePath: string;
   manifest: PublicReleaseManifest;
+  boundaryHits: PublicBoundaryHit[];
+}
+
+export interface PublicBoundaryHit {
+  path: string;
+  kind: 'forbidden-key' | 'private-locator' | 'serialized-private-field' | 'embedding-payload';
+  marker: string;
+}
+
+export async function resolveOwnedReleasesRoot(releasesRoot: string): Promise<string> {
+  const root = resolve(releasesRoot);
+  const state = await lstat(root);
+  if (state.isSymbolicLink() || !state.isDirectory()) {
+    throw new Error('public-releases root must be a real directory, not a symbolic link');
+  }
+  await realpath(root);
+  return root;
+}
+
+async function readOwnedRegularFile(path: string, label: string): Promise<Buffer> {
+  let file;
+  try {
+    file = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ELOOP') {
+      throw new Error(`${label} must not be a symbolic link`);
+    }
+    throw error;
+  }
+  try {
+    const state = await file.stat();
+    if (!state.isFile() || state.nlink !== 1) {
+      throw new Error(`${label} must be one regular owned file`);
+    }
+    return await file.readFile();
+  } finally {
+    await file.close();
+  }
 }
 
 function canonicalize(value: unknown): unknown {
@@ -120,22 +160,51 @@ function exactPublicRecord(input: unknown, key: string): PublicRecord {
   return parsed;
 }
 
-function assertBoundarySafe(value: unknown, path = 'manifest'): void {
-  if (Array.isArray(value)) {
-    value.forEach((child, index) => assertBoundarySafe(child, `${path}[${index}]`));
-    return;
-  }
-  if (!value || typeof value !== 'object') {
-    if (typeof value === 'string' && /\/Users\/|memory\/thoughts\/|\\memory\\thoughts\\/i.test(value)) {
-      throw new Error(`${path}: private path in public release`);
+// Match precise locators and serialized payload shapes, not ordinary technical
+// prose such as "embedding systems".
+const forbiddenPrivateKey = /^(?:embedding|embeddings|jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)$/i;
+const serializedPrivateField = /["'](?:jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)["']\s*:/i;
+const serializedEmbeddingPayload = /["']embeddings?["']\s*:\s*\[\s*[+\-.\d]/i;
+const assignedPrivateField = /\b(?:jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)\s*=/i;
+const privateLocator = /\/Users\/|[A-Za-z]:\\Users\\|memory[\\/]thoughts[\\/]/i;
+
+export function findPublicBoundaryHits(value: unknown, path = 'manifest'): PublicBoundaryHit[] {
+  const hits: PublicBoundaryHit[] = [];
+  function visit(child: unknown, childPath: string): void {
+    if (Array.isArray(child)) {
+      child.forEach((item, index) => visit(item, `${childPath}[${index}]`));
+      return;
     }
-    return;
-  }
-  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    if (/^(?:embedding|embeddings|jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)$/i.test(key)) {
-      throw new Error(`${path}.${key}: private field in public release`);
+    if (typeof child === 'string') {
+      if (privateLocator.test(child)) {
+        hits.push({ path: childPath, kind: 'private-locator', marker: 'private filesystem locator' });
+      }
+      if (serializedPrivateField.test(child) || assignedPrivateField.test(child)) {
+        hits.push({ path: childPath, kind: 'serialized-private-field', marker: 'serialized private payload field' });
+      }
+      if (serializedEmbeddingPayload.test(child)) {
+        hits.push({ path: childPath, kind: 'embedding-payload', marker: 'serialized embedding vector' });
+      }
+      return;
     }
-    assertBoundarySafe(child, `${path}.${key}`);
+    if (!child || typeof child !== 'object') return;
+    for (const [key, item] of Object.entries(child as Record<string, unknown>)) {
+      const itemPath = `${childPath}.${key}`;
+      if (forbiddenPrivateKey.test(key)) {
+        hits.push({ path: itemPath, kind: 'forbidden-key', marker: key });
+      }
+      visit(item, itemPath);
+    }
+  }
+  visit(value, path);
+  return hits;
+}
+
+function assertBoundarySafe(value: unknown): void {
+  const hits = findPublicBoundaryHits(value);
+  if (hits.length > 0) {
+    const first = hits[0]!;
+    throw new Error(`${first.path}: private boundary hit (${first.kind}: ${first.marker}); total=${hits.length}`);
   }
 }
 
@@ -216,10 +285,92 @@ function releaseFilePath(releasePath: string, href: string): string {
   return resolved;
 }
 
-async function verifyCandidate(releasePath: string, candidate: { src: string; checksum: string }): Promise<void> {
-  const bytes = await readFile(releaseFilePath(releasePath, candidate.src));
+type PublicImageFormat = 'avif' | 'webp' | 'png' | 'jpg' | 'jpeg';
+
+function sameImageFormat(actual: string, expected: PublicImageFormat): boolean {
+  const normalize = (format: string) => format === 'jpg' ? 'jpeg' : format;
+  return normalize(actual) === normalize(expected);
+}
+
+function candidateDimensions(candidates: Array<{ width: number; height: number }>): string {
+  return candidates
+    .map(({ width, height }) => `${width}x${height}`)
+    .sort()
+    .join(',');
+}
+
+function assertMediaCandidateInvariants(assetKey: string, asset: ReleaseMediaAsset): void {
+  const expectedPrefix = `/assets/content/${asset.collection}/${asset.recordId}/`;
+  const candidateGroups = [
+    ...asset.sources.map((source) => source.candidates),
+    asset.fallback.candidates,
+  ];
+  for (const candidates of candidateGroups) {
+    const dimensions = candidates.map(({ width, height }) => `${width}x${height}`);
+    if (new Set(dimensions).size !== dimensions.length) {
+      throw new Error(`${assetKey}: duplicate dimensions in responsive media source set`);
+    }
+    for (const candidate of candidates) {
+      if (!candidate.src.startsWith(expectedPrefix)) {
+        throw new Error(`${assetKey}: candidate path escapes its public media record directory`);
+      }
+    }
+  }
+  if (!asset.fallback.src.startsWith(expectedPrefix)) {
+    throw new Error(`${assetKey}: fallback path escapes its public media record directory`);
+  }
+  const modernPaths = new Set<string>();
+  for (const source of asset.sources) {
+    for (const candidate of source.candidates) {
+      if (modernPaths.has(candidate.src)) {
+        throw new Error(`${assetKey}: duplicate candidate path across modern source sets: ${candidate.src}`);
+      }
+      modernPaths.add(candidate.src);
+    }
+  }
+  const fallbackPaths = new Set<string>();
+  for (const candidate of asset.fallback.candidates) {
+    if (fallbackPaths.has(candidate.src)) {
+      throw new Error(`${assetKey}: duplicate candidate path in fallback source set: ${candidate.src}`);
+    }
+    if (modernPaths.has(candidate.src)) {
+      throw new Error(`${assetKey}: duplicate candidate path across modern and fallback source sets: ${candidate.src}`);
+    }
+    fallbackPaths.add(candidate.src);
+  }
+  const dimensionSets = [
+    ...asset.sources.map((source) => candidateDimensions(source.candidates)),
+    candidateDimensions(asset.fallback.candidates),
+  ];
+  if (new Set(dimensionSets).size !== 1) {
+    throw new Error(`${assetKey}: responsive media source-set dimension parity mismatch`);
+  }
+}
+
+async function verifyCandidate(
+  releasePath: string,
+  candidate: { src: string; checksum: string; width: number; height: number },
+  expectedFormat: PublicImageFormat,
+): Promise<void> {
+  const pathFormat = extname(candidate.src).slice(1).toLowerCase();
+  if (!sameImageFormat(pathFormat, expectedFormat)) {
+    throw new Error(`${candidate.src}: path extension does not match ${expectedFormat} source type`);
+  }
+  const bytes = await readOwnedRegularFile(releaseFilePath(releasePath, candidate.src), candidate.src);
   const actual = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
   if (actual !== candidate.checksum) throw new Error(`${candidate.src}: release asset checksum mismatch`);
+  const metadata = await sharp(bytes).metadata();
+  const actualFormat = metadata.format === 'heif' && metadata.compression === 'av1'
+    ? 'avif'
+    : metadata.format;
+  if (!actualFormat || !sameImageFormat(actualFormat, expectedFormat)) {
+    throw new Error(`${candidate.src}: actual media format ${actualFormat ?? 'unknown'} does not match ${expectedFormat}`);
+  }
+  if (metadata.width !== candidate.width || metadata.height !== candidate.height) {
+    throw new Error(
+      `${candidate.src}: actual media dimensions ${metadata.width ?? '?'}x${metadata.height ?? '?'} do not match ${candidate.width}x${candidate.height}`,
+    );
+  }
 }
 
 async function releaseFiles(releasePath: string, directory = releasePath): Promise<Set<string>> {
@@ -242,24 +393,45 @@ export async function verifyReleaseDirectory(
   pointer: ActiveReleasePointer,
 ): Promise<ActivePublicRelease> {
   const parsedPointer = activeReleasePointerSchema.parse(pointer);
-  const root = resolve(releasesRoot);
+  const root = await resolveOwnedReleasesRoot(releasesRoot);
+  const realRoot = await realpath(root);
   const releasePath = resolve(root, parsedPointer.path);
   if (!releasePath.startsWith(`${root}${sep}`)) throw new Error('active release path escapes public-releases');
-  if (!(await stat(releasePath)).isDirectory()) throw new Error('active release path is not a directory');
+  const releaseState = await lstat(releasePath);
+  if (releaseState.isSymbolicLink()) throw new Error('active release path must not be a symbolic link');
+  if (!releaseState.isDirectory()) throw new Error('active release path is not a directory');
+  const realReleasePath = await realpath(releasePath);
+  if (!realReleasePath.startsWith(`${realRoot}${sep}`)) throw new Error('active release real path escapes public-releases containment');
 
-  const manifest = parseReleaseManifest(JSON.parse(await readFile(join(releasePath, 'manifest.json'), 'utf8')));
+  const manifest = parseReleaseManifest(JSON.parse(
+    (await readOwnedRegularFile(join(realReleasePath, 'manifest.json'), 'release manifest')).toString('utf8'),
+  ));
+  const boundaryHits = findPublicBoundaryHits(manifest);
   if (manifest.releaseId !== parsedPointer.releaseId) {
     throw new Error('release ID mismatch between active pointer and manifest');
   }
   const expectedFiles = new Set(['manifest.json']);
-  for (const asset of Object.values(manifest.assets)) {
+  const assetPathOwners = new Map<string, string>();
+  for (const [assetKey, asset] of Object.entries(manifest.assets)) {
+    assertMediaCandidateInvariants(assetKey, asset);
     expectedFiles.add(asset.fallback.src.slice(1));
+    for (const path of [
+      asset.fallback.src,
+      ...asset.fallback.candidates.map((candidate) => candidate.src),
+      ...asset.sources.flatMap((source) => source.candidates.map((candidate) => candidate.src)),
+    ]) {
+      const owner = assetPathOwners.get(path);
+      if (owner && owner !== assetKey) {
+        throw new Error(`${path}: duplicate candidate path shared by ${owner} and ${assetKey}`);
+      }
+      assetPathOwners.set(path, assetKey);
+    }
     for (const candidate of asset.fallback.candidates) expectedFiles.add(candidate.src.slice(1));
     for (const source of asset.sources) {
       for (const candidate of source.candidates) expectedFiles.add(candidate.src.slice(1));
     }
   }
-  const actualFiles = await releaseFiles(releasePath);
+  const actualFiles = await releaseFiles(realReleasePath);
   const unexpectedFiles = [...actualFiles].filter((path) => !expectedFiles.has(path));
   const missingFiles = [...expectedFiles].filter((path) => !actualFiles.has(path));
   if (unexpectedFiles.length > 0 || missingFiles.length > 0) {
@@ -267,18 +439,29 @@ export async function verifyReleaseDirectory(
   }
 
   for (const asset of Object.values(manifest.assets)) {
-    await verifyCandidate(releasePath, { src: asset.fallback.src, checksum: asset.fallback.checksum });
-    for (const candidate of asset.fallback.candidates) await verifyCandidate(releasePath, candidate);
+    await verifyCandidate(realReleasePath, {
+      src: asset.fallback.src,
+      checksum: asset.fallback.checksum,
+      width: asset.width,
+      height: asset.height,
+    }, asset.fallback.format);
+    for (const candidate of asset.fallback.candidates) {
+      await verifyCandidate(realReleasePath, candidate, asset.fallback.format);
+    }
     for (const source of asset.sources) {
-      for (const candidate of source.candidates) await verifyCandidate(releasePath, candidate);
+      const expectedFormat = source.type === 'image/avif' ? 'avif' : 'webp';
+      for (const candidate of source.candidates) {
+        await verifyCandidate(realReleasePath, candidate, expectedFormat);
+      }
     }
   }
-  return { pointer: parsedPointer, releasePath, manifest };
+  return { pointer: parsedPointer, releasePath, manifest, boundaryHits };
 }
 
 export async function readActiveRelease(releasesRoot: string): Promise<ActivePublicRelease> {
+  const root = await resolveOwnedReleasesRoot(releasesRoot);
   const pointer = activeReleasePointerSchema.parse(JSON.parse(
-    await readFile(join(releasesRoot, 'active.json'), 'utf8'),
+    (await readOwnedRegularFile(join(root, 'active.json'), 'active release pointer')).toString('utf8'),
   ));
-  return verifyReleaseDirectory(releasesRoot, pointer);
+  return verifyReleaseDirectory(root, pointer);
 }
