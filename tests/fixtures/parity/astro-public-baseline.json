@@ -1,0 +1,4286 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "path": "/",
+      "canonical": "/",
+      "title": "판단 · beyondwin",
+      "description": "AI 시대에 무엇을 믿을지 판단하기 위해 읽고 연결한 글, 책, 문장.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AI 시대에,나는 왜 책을 읽는가"
+        },
+        {
+          "level": 2,
+          "text": ""
+        }
+      ],
+      "bodyTextHash": "58fab12b79c2f119bc09a82f79bde830da8ae99aa874964d66ad9df9730dffaf",
+      "internalHrefs": [
+        "/",
+        "/?focus=reading-desk-cobalt",
+        "/articles/",
+        "/articles/why-i-read-in-the-ai-era/",
+        "/reviews/",
+        "/reviews/black-swan/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "한쪽에는 쌓인 서류, 다른 쪽에는 펼쳐진 노트가 놓인 저울",
+          "decoding": "async",
+          "height": "1024",
+          "loading": "lazy",
+          "src": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+          "width": "1536"
+        },
+        {
+          "alt": "밝은 회백색 책상 위에 펼친 책과 은색 노트북, 책 위를 가로지르는 코발트색 책갈피",
+          "decoding": "async",
+          "fetchpriority": "high",
+          "height": "1024",
+          "loading": "eager",
+          "src": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
+          "width": "1536"
+        },
+        {
+          "alt": "한쪽에는 쌓인 서류, 다른 쪽에는 펼쳐진 노트가 놓인 저울",
+          "decoding": "async",
+          "height": "1024",
+          "loading": "lazy",
+          "src": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+          "width": "1536"
+        },
+        {
+          "alt": "둥근 탁자 위에 서로 다른 책갈피가 꽂힌 책 세 권이 펼쳐져 있는 모습",
+          "decoding": "async",
+          "height": "1024",
+          "loading": "lazy",
+          "src": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+          "width": "1536"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/PublicScene.astro_astro_type_script_index_0_lang.DCQUBQBx.js",
+        "/_astro/index.BInT3q1S.css",
+        "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+        "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
+        "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/analysis/",
+      "canonical": "/analysis/",
+      "title": "beyondwin",
+      "description": "아직 공개한 출처 분석이 없습니다. 근거를 붙인 기술 글은 글에서 읽습니다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "아직 공개한 출처 분석이 없습니다. 근거를 붙인 기술 글은 글에서 읽습니다."
+        }
+      ],
+      "bodyTextHash": "5732bbbe5639ee25e6053321ab5e0eabc6574d5dba9f92e96135f77a0cccae60",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/",
+      "canonical": "/articles/",
+      "title": "글 · beyondwin",
+      "description": "다 쓴 에세이와 조사.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Graphify는 코드 이해를 정말 더 빠르게 만드는가?"
+        }
+      ],
+      "bodyTextHash": "54a1b34e3f3763b6d20e354fdb9ff77270dd9d6558c4593c20cbd9203af83058",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/ai-design-references/",
+        "/articles/andrej-karpathy-skills-analysis/",
+        "/articles/codex-ui-mockup-workflow/",
+        "/articles/context-refinement-system-design/",
+        "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/lazycodex-agent-harness-analysis/",
+        "/articles/oh-my-pi-deep-review/",
+        "/articles/open-design-repo-analysis/",
+        "/articles/pgvector-hybrid-search/",
+        "/articles/ponytail-agent-minimalism-analysis/",
+        "/articles/postgresql-bm25-pg-search/",
+        "/articles/why-i-read-in-the-ai-era/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/ai-design-references/",
+      "canonical": "/articles/ai-design-references/",
+      "title": "AI 디자인 도구를 보는 기준 · beyondwin",
+      "description": "AI 디자인 레퍼런스와 도구들을 단순 목록이 아니라 아이디어, 디자인 시스템, 모션, 레퍼런스 탐색의 작업 흐름으로 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AI 디자인 도구를 보는 기준"
+        },
+        {
+          "level": 2,
+          "text": "아이디어를 코드로 연결하는 도구",
+          "id": "아이디어를-코드로-연결하는-도구"
+        },
+        {
+          "level": 2,
+          "text": "컴포넌트와 시스템을 참고하는 도구",
+          "id": "컴포넌트와-시스템을-참고하는-도구"
+        },
+        {
+          "level": 2,
+          "text": "모션과 인터랙션을 개선하는 도구",
+          "id": "모션과-인터랙션을-개선하는-도구"
+        },
+        {
+          "level": 2,
+          "text": "레퍼런스를 탐색하는 도구",
+          "id": "레퍼런스를-탐색하는-도구"
+        },
+        {
+          "level": 2,
+          "text": "정리",
+          "id": "정리"
+        }
+      ],
+      "bodyTextHash": "ea7c9c5d28a75be42cc3872cbe5cb090bcfed5184446a3129e36d4f8c1118edf",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/ai-design-tools-need-judgment-loops/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/andrej-karpathy-skills-analysis/",
+      "canonical": "/articles/andrej-karpathy-skills-analysis/",
+      "title": "코딩 에이전트에게 필요한 네 가지 규율 · beyondwin",
+      "description": "forrestchang/andrej-karpathy-skills 분석을 바탕으로 AI 코딩 에이전트의 실패를 줄이는 행동 규칙을 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "코딩 에이전트에게 필요한 네 가지 규율"
+        },
+        {
+          "level": 2,
+          "text": "첫째, 코딩 전에 생각하기",
+          "id": "첫째-코딩-전에-생각하기"
+        },
+        {
+          "level": 2,
+          "text": "둘째, 단순함을 우선하기",
+          "id": "둘째-단순함을-우선하기"
+        },
+        {
+          "level": 2,
+          "text": "셋째, 필요한 곳만 바꾸기",
+          "id": "셋째-필요한-곳만-바꾸기"
+        },
+        {
+          "level": 2,
+          "text": "넷째, 성공 기준으로 실행하기",
+          "id": "넷째-성공-기준으로-실행하기"
+        },
+        {
+          "level": 2,
+          "text": "실무에 도입하는 방식",
+          "id": "실무에-도입하는-방식"
+        },
+        {
+          "level": 2,
+          "text": "정리",
+          "id": "정리"
+        }
+      ],
+      "bodyTextHash": "0452bfe4d2ba7b08d9daa333e59d675e4032f897c3f5ef95fa69aedd94ec712b",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/codex-ui-mockup-workflow/",
+      "canonical": "/articles/codex-ui-mockup-workflow/",
+      "title": "이미지 목업을 제대로 된 UI로 구현하는 순서 · beyondwin",
+      "description": "AI 이미지 목업을 바로 구현하지 않고 디자인 시스템, 토큰, 컴포넌트, 화면 조립 순서로 나누는 워크플로우를 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "이미지 목업을 제대로 된 UI로 구현하는 순서"
+        },
+        {
+          "level": 2,
+          "text": "실패하는 방식",
+          "id": "실패하는-방식"
+        },
+        {
+          "level": 2,
+          "text": "올바른 순서",
+          "id": "올바른-순서"
+        },
+        {
+          "level": 2,
+          "text": "단계별 리뷰가 중요한 이유",
+          "id": "단계별-리뷰가-중요한-이유"
+        },
+        {
+          "level": 2,
+          "text": "프로젝트 메모리에 남길 규칙",
+          "id": "프로젝트-메모리에-남길-규칙"
+        },
+        {
+          "level": 2,
+          "text": "정리",
+          "id": "정리"
+        }
+      ],
+      "bodyTextHash": "5bfd71582b288676e6d7b5696afbe78e0fd99570d0383075e2ecbd4c26deccec",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/context-refinement-system-design/",
+      "canonical": "/articles/context-refinement-system-design/",
+      "title": "Context Refinement System 설계 요약 · beyondwin",
+      "description": "거친 사용자 입력을 실행 가능한 작업 요청으로 바꾸고, 필요한 스킬로 라우팅하며, 답변 이탈을 막는 시스템 설계를 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Context Refinement System 설계 요약"
+        },
+        {
+          "level": 2,
+          "text": "문제: 컨텍스트 오염",
+          "id": "문제-컨텍스트-오염"
+        },
+        {
+          "level": 2,
+          "text": "핵심 설계",
+          "id": "핵심-설계"
+        },
+        {
+          "level": 2,
+          "text": "하지 말아야 할 것",
+          "id": "하지-말아야-할-것"
+        },
+        {
+          "level": 2,
+          "text": "구현 관점",
+          "id": "구현-관점"
+        },
+        {
+          "level": 2,
+          "text": "정리",
+          "id": "정리"
+        }
+      ],
+      "bodyTextHash": "8752359826a4db84b69d39e7de41dd5fc3c7d5a32954e1039d90e08fe4d287b8",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/context-quality-is-routing-problem/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/graphify-code-knowledge-graph-deep-dive/",
+      "canonical": "/articles/graphify-code-knowledge-graph-deep-dive/",
+      "title": "Graphify는 코드 이해를 정말 더 빠르게 만드는가? · beyondwin",
+      "description": "Graphify의 코드 지식 그래프 원리와 질의 방식, 통제 실험, 벤치마크 한계, 보안·운영 사각지대와 현실적인 도입법을 코드와 근거로 검토한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Graphify는 코드 이해를 정말 더 빠르게 만드는가?"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        },
+        {
+          "level": 3,
+          "text": "1. 파일을 고른다",
+          "id": "1-파일을-고른다"
+        },
+        {
+          "level": 3,
+          "text": "2. 코드는 tree-sitter로 구조를 뽑는다",
+          "id": "2-코드는-tree-sitter로-구조를-뽑는다"
+        },
+        {
+          "level": 3,
+          "text": "3. 문서와 미디어는 다른 신뢰 경계를 가진다",
+          "id": "3-문서와-미디어는-다른-신뢰-경계를-가진다"
+        },
+        {
+          "level": 3,
+          "text": "4. 기본 그래프는 단순 무방향 그래프다",
+          "id": "4-기본-그래프는-단순-무방향-그래프다"
+        },
+        {
+          "level": 3,
+          "text": "5. clustering과 보고서를 만든다",
+          "id": "5-clustering과-보고서를-만든다"
+        },
+        {
+          "level": 3,
+          "text": "query는 자연어처럼 보이는 lexical graph search다",
+          "id": "query는-자연어처럼-보이는-lexical-graph-search다"
+        },
+        {
+          "level": 3,
+          "text": "path는 방향을 무시하고 가장 짧은 연결을 찾는다",
+          "id": "path는-방향을-무시하고-가장-짧은-연결을-찾는다"
+        },
+        {
+          "level": 3,
+          "text": "작은 통제 실험에서 무엇을 잡고 놓쳤나",
+          "id": "작은-통제-실험에서-무엇을-잡고-놓쳤나"
+        },
+        {
+          "level": 3,
+          "text": "check-update라는 이름이 주는 오해",
+          "id": "check-update라는-이름이-주는-오해"
+        },
+        {
+          "level": 3,
+          "text": "닫힌 이슈도 실행 경로별로 다시 봐야 한다",
+          "id": "닫힌-이슈도-실행-경로별로-다시-봐야-한다"
+        },
+        {
+          "level": 3,
+          "text": "소스 위치와 관계 성격을 설명할 수 있다",
+          "id": "소스-위치와-관계-성격을-설명할-수-있다"
+        },
+        {
+          "level": 3,
+          "text": "코드 전용 경로가 싸고 빠르다",
+          "id": "코드-전용-경로가-싸고-빠르다"
+        },
+        {
+          "level": 3,
+          "text": "낯선 저장소의 지도를 빨리 만든다",
+          "id": "낯선-저장소의-지도를-빨리-만든다"
+        },
+        {
+          "level": 3,
+          "text": "최근 구현은 실패를 조용히 삼키지 않으려 한다",
+          "id": "최근-구현은-실패를-조용히-삼키지-않으려-한다"
+        },
+        {
+          "level": 3,
+          "text": "1. graph.json만으로는 재현 조건이 부족하다",
+          "id": "1-graphjson만으로는-재현-조건이-부족하다"
+        },
+        {
+          "level": 3,
+          "text": "2. semantic cache는 비용과 freshness를 교환한다",
+          "id": "2-semantic-cache는-비용과-freshness를-교환한다"
+        },
+        {
+          "level": 3,
+          "text": "3. 기본 그래프는 typed multigraph가 아니다",
+          "id": "3-기본-그래프는-typed-multigraph가-아니다"
+        },
+        {
+          "level": 3,
+          "text": "4. merge는 정보가 풍부한 쪽이 항상 정확한 쪽이라는 가정을 포함한다",
+          "id": "4-merge는-정보가-풍부한-쪽이-항상-정확한-쪽이라는-가정을-포함한다"
+        },
+        {
+          "level": 3,
+          "text": "5. 산출물은 소스가 없어도 민감하다",
+          "id": "5-산출물은-소스가-없어도-민감하다"
+        },
+        {
+          "level": 3,
+          "text": "6. HTTP로 공유하는 순간 local tool이 아니다",
+          "id": "6-http로-공유하는-순간-local-tool이-아니다"
+        },
+        {
+          "level": 3,
+          "text": "7. submodule, vendored code, generated code의 소유권은 자동으로 정해지지 않는다",
+          "id": "7-submodule-vendored-code-generated-code의-소유권은-자동으로-정해지지-않는다"
+        },
+        {
+          "level": 3,
+          "text": "8. 모든 출력 경로가 하나의 atomic transaction은 아니다",
+          "id": "8-모든-출력-경로가-하나의-atomic-transaction은-아니다"
+        },
+        {
+          "level": 3,
+          "text": "9. 설치 명령은 에이전트의 행동을 바꾼다",
+          "id": "9-설치-명령은-에이전트의-행동을-바꾼다"
+        },
+        {
+          "level": 3,
+          "text": "10. 테스트가 많다는 것과 누구나 같은 조건으로 재현된다는 것은 다르다",
+          "id": "10-테스트가-많다는-것과-누구나-같은-조건으로-재현된다는-것은-다르다"
+        },
+        {
+          "level": 3,
+          "text": "11. 벤치마크는 세 종류를 분리해서 읽어야 한다",
+          "id": "11-벤치마크는-세-종류를-분리해서-읽어야-한다"
+        }
+      ],
+      "bodyTextHash": "7a401fd08a12e5188c0051f74cd59ed5a3e47f99e3fa96870299180b29f9da24",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/hermes-agent-persistent-worker-runtime/",
+      "canonical": "/articles/hermes-agent-persistent-worker-runtime/",
+      "title": "Hermes Agent는 어떻게 개인 AI 워커 런타임을 만들고 있나 · beyondwin",
+      "description": "NousResearch/hermes-agent 저장소와 공식 문서, 핵심 Python 소스, 실제 GitHub 이슈를 대조해 Hermes Agent의 구조, 장점, 리스크, 도입 기준을 기술 블로그 형식으로 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Hermes Agent는 어떻게 개인 AI 워커 런타임을 만들고 있나"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        }
+      ],
+      "bodyTextHash": "851484c0c4b26f9da8a1f9911ef967a0f4c0d37d79bd152e158b4f219444a598",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/lazycodex-agent-harness-analysis/",
+      "canonical": "/articles/lazycodex-agent-harness-analysis/",
+      "title": "LazyCodex는 Codex를 어떻게 제품형 개발 하네스로 바꾸는가 · beyondwin",
+      "description": "LazyCodex의 공식 문서, GitHub 저장소, OmO 소스, Threads 논의까지 검토해 Codex 위에 올라가는 에이전트 하네스의 구조와 실무 도입 기준을 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "LazyCodex는 Codex를 어떻게 제품형 개발 하네스로 바꾸는가"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "Hephaestus라는 작업자 모델",
+          "id": "hephaestus라는-작업자-모델"
+        },
+        {
+          "level": 2,
+          "text": "Ultraresearch와 최근 논의",
+          "id": "ultraresearch와-최근-논의"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        }
+      ],
+      "bodyTextHash": "c92a1aa506e02bb987c1ea18d6eb50a86344e99e0e563dba64b4ff2d91683b25",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/agent-harnesses-are-operating-systems/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/oh-my-pi-deep-review/",
+      "canonical": "/articles/oh-my-pi-deep-review/",
+      "title": "oh-my-pi는 진짜 쓸 만한가: 강력한 에이전트 하네스의 구조와 위험 · beyondwin",
+      "description": "oh-my-pi의 코드 구조, 개발 도구 통합, 승인·확장·MCP 신뢰 경계, 문서 밖 운영 사각지대와 안전한 도입 순서를 2026년 7월 공개 소스를 기준으로 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "oh-my-pi는 진짜 쓸 만한가: 강력한 에이전트 하네스의 구조와 위험"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        },
+        {
+          "level": 3,
+          "text": "1. task 한 번의 승인이 생각보다 큰 실행권이다",
+          "id": "1-task-한-번의-승인이-생각보다-큰-실행권이다"
+        },
+        {
+          "level": 3,
+          "text": "2. write라는 이름이 원격 작업의 위험도를 설명하지 못한다",
+          "id": "2-write라는-이름이-원격-작업의-위험도를-설명하지-못한다"
+        },
+        {
+          "level": 3,
+          "text": "3. 확장의 exit guard는 샌드박스가 아니다",
+          "id": "3-확장의-exit-guard는-샌드박스가-아니다"
+        },
+        {
+          "level": 3,
+          "text": "4. secret obfuscation은 DLP가 아니다",
+          "id": "4-secret-obfuscation은-dlp가-아니다"
+        },
+        {
+          "level": 3,
+          "text": "5. 브라우저 연결은 데이터뿐 아니라 사용자 세션의 가용성도 건드린다",
+          "id": "5-브라우저-연결은-데이터뿐-아니라-사용자-세션의-가용성도-건드린다"
+        },
+        {
+          "level": 3,
+          "text": "6. 로컬 저장은 강하지만 보존 정책은 따로 설계해야 한다",
+          "id": "6-로컬-저장은-강하지만-보존-정책은-따로-설계해야-한다"
+        },
+        {
+          "level": 3,
+          "text": "7. 릴리스 검증과 기본 설치 경로 사이에 틈이 있다",
+          "id": "7-릴리스-검증과-기본-설치-경로-사이에-틈이-있다"
+        },
+        {
+          "level": 3,
+          "text": "8. 자동화 모드에서는 프로세스 복구도 제품의 일부다",
+          "id": "8-자동화-모드에서는-프로세스-복구도-제품의-일부다"
+        }
+      ],
+      "bodyTextHash": "dba819cfb4de1d6848ffa680290a947483a5161ba836ad077857c70bbf1a3356",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/open-design-repo-analysis/",
+      "canonical": "/articles/open-design-repo-analysis/",
+      "title": "Open Design 분석 · beyondwin",
+      "description": "nexu-io/open-design을 로컬 우선 디자인 에이전트 런타임으로 보고, 구조와 강점, 리스크를 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Open Design 분석"
+        },
+        {
+          "level": 2,
+          "text": "제품 정체성",
+          "id": "제품-정체성"
+        },
+        {
+          "level": 2,
+          "text": "전체 아키텍처",
+          "id": "전체-아키텍처"
+        },
+        {
+          "level": 2,
+          "text": "강점",
+          "id": "강점"
+        },
+        {
+          "level": 2,
+          "text": "리스크",
+          "id": "리스크"
+        },
+        {
+          "level": 2,
+          "text": "도입 방식",
+          "id": "도입-방식"
+        },
+        {
+          "level": 2,
+          "text": "정리",
+          "id": "정리"
+        }
+      ],
+      "bodyTextHash": "4f67db75a6ed32e1a44575f1d03886955b504bd7777b92fd9dcc9645bf52d082",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/local-agent-products-are-work-shells/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/pgvector-hybrid-search/",
+      "canonical": "/articles/pgvector-hybrid-search/",
+      "title": "pgvector로 벡터 검색 이해하기: 임베딩, SQL, HNSW, RRF까지 · beyondwin",
+      "description": "PostgreSQL과 pgvector로 의미 기반 검색을 만드는 과정을 임베딩 기초, 거리 연산자, JSONB/JOIN, HNSW/IVFFLAT, FTS와 RRF 하이브리드 검색까지 한 흐름으로 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "pgvector로 벡터 검색 이해하기: 임베딩, SQL, HNSW, RRF까지"
+        },
+        {
+          "level": 2,
+          "text": "먼저 큰 그림부터 보기",
+          "id": "먼저-큰-그림부터-보기"
+        },
+        {
+          "level": 2,
+          "text": "pgvector가 PostgreSQL에 더하는 것",
+          "id": "pgvector가-postgresql에-더하는-것"
+        },
+        {
+          "level": 2,
+          "text": "교육용 샘플 데이터",
+          "id": "교육용-샘플-데이터"
+        },
+        {
+          "level": 2,
+          "text": "거리 연산자 이해하기",
+          "id": "거리-연산자-이해하기"
+        },
+        {
+          "level": 2,
+          "text": "CTE로 query vector 분리하기",
+          "id": "cte로-query-vector-분리하기"
+        },
+        {
+          "level": 2,
+          "text": "기존 문자열 검색과 다른 점",
+          "id": "기존-문자열-검색과-다른-점"
+        },
+        {
+          "level": 2,
+          "text": "실무 테이블에 붙이면 무엇이 좋아지나",
+          "id": "실무-테이블에-붙이면-무엇이-좋아지나"
+        },
+        {
+          "level": 2,
+          "text": "임베딩 컬럼은 어디에 둘까",
+          "id": "임베딩-컬럼은-어디에-둘까"
+        },
+        {
+          "level": 2,
+          "text": "임베딩 생성은 비동기로 빼는 편이 안전하다",
+          "id": "임베딩-생성은-비동기로-빼는-편이-안전하다"
+        },
+        {
+          "level": 2,
+          "text": "인덱스가 없으면 어떻게 동작할까",
+          "id": "인덱스가-없으면-어떻게-동작할까"
+        },
+        {
+          "level": 2,
+          "text": "HNSW: 그래프를 타고 가까운 벡터 찾기",
+          "id": "hnsw-그래프를-타고-가까운-벡터-찾기"
+        },
+        {
+          "level": 2,
+          "text": "IVFFLAT: 가까운 클러스터만 들어가서 찾기",
+          "id": "ivfflat-가까운-클러스터만-들어가서-찾기"
+        },
+        {
+          "level": 2,
+          "text": "HNSW와 IVFFLAT 비교",
+          "id": "hnsw와-ivfflat-비교"
+        },
+        {
+          "level": 2,
+          "text": "인덱스와 연산자는 반드시 맞춰야 한다",
+          "id": "인덱스와-연산자는-반드시-맞춰야-한다"
+        },
+        {
+          "level": 2,
+          "text": "JSONB 조건에도 인덱스가 필요하다",
+          "id": "jsonb-조건에도-인덱스가-필요하다"
+        },
+        {
+          "level": 2,
+          "text": "FTS와 벡터 검색은 경쟁 관계가 아니다",
+          "id": "fts와-벡터-검색은-경쟁-관계가-아니다"
+        },
+        {
+          "level": 2,
+          "text": "RRF로 하이브리드 검색 결과 합치기",
+          "id": "rrf로-하이브리드-검색-결과-합치기"
+        },
+        {
+          "level": 2,
+          "text": "RRF 기반 SQL 예시",
+          "id": "rrf-기반-sql-예시"
+        },
+        {
+          "level": 2,
+          "text": "Spring Boot에서는 어디에 둘까",
+          "id": "spring-boot에서는-어디에-둘까"
+        },
+        {
+          "level": 2,
+          "text": "운영 체크리스트",
+          "id": "운영-체크리스트"
+        },
+        {
+          "level": 2,
+          "text": "주니어가 자주 하는 실수",
+          "id": "주니어가-자주-하는-실수"
+        },
+        {
+          "level": 2,
+          "text": "직접 해볼 실습 과제",
+          "id": "직접-해볼-실습-과제"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        }
+      ],
+      "bodyTextHash": "4181b7ddf46c9a1f2d97e82c3636c1a7035a9ee0fbc04a9f3cdba452b69cddb7",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "텍스트가 임베딩 모델을 거쳐 벡터로 바뀌는 흐름",
+          "data-astro-cid-khyig4bw": "true",
+          "decoding": "async",
+          "height": "1054",
+          "loading": "lazy",
+          "sizes": "(max-width: 760px) calc(100vw - 40px), min(42em, 100vw - 80px)",
+          "src": "/_astro/embedding-flow.MURskJSx_1KPlav.webp",
+          "srcset": "/_astro/embedding-flow.MURskJSx_fUwCo.webp 720w, /_astro/embedding-flow.MURskJSx_2qKssz.webp 1080w, /_astro/embedding-flow.MURskJSx_Z1X3mvB.webp 1600w",
+          "width": "1941"
+        },
+        {
+          "alt": "PostgreSQL 안에서 일반 거래 데이터와 description 벡터를 함께 관리하는 구조",
+          "data-astro-cid-khyig4bw": "true",
+          "decoding": "async",
+          "height": "685",
+          "loading": "lazy",
+          "sizes": "(max-width: 760px) calc(100vw - 40px), min(42em, 100vw - 80px)",
+          "src": "/_astro/architecture.BM4EvVqw_1zoUdR.webp",
+          "srcset": "/_astro/architecture.BM4EvVqw_10zWaj.webp 720w, /_astro/architecture.BM4EvVqw_bEGlM.webp 1080w, /_astro/architecture.BM4EvVqw_Z2e9ytH.webp 1600w",
+          "width": "2048"
+        },
+        {
+          "alt": "IVFFLAT 클러스터 검색 흐름",
+          "data-astro-cid-khyig4bw": "true",
+          "decoding": "async",
+          "height": "1038",
+          "loading": "lazy",
+          "sizes": "(max-width: 760px) calc(100vw - 40px), min(42em, 100vw - 80px)",
+          "src": "/_astro/ivfflat-cluster.CpJOFPKy_Z237K71.webp",
+          "srcset": "/_astro/ivfflat-cluster.CpJOFPKy_2jmOpf.webp 720w, /_astro/ivfflat-cluster.CpJOFPKy_yFjCn.webp 1080w, /_astro/ivfflat-cluster.CpJOFPKy_6z7o1.webp 1600w",
+          "width": "2048"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/architecture.BM4EvVqw_10zWaj.webp",
+        "/_astro/architecture.BM4EvVqw_1zoUdR.webp",
+        "/_astro/architecture.BM4EvVqw_Z2e9ytH.webp",
+        "/_astro/architecture.BM4EvVqw_bEGlM.webp",
+        "/_astro/embedding-flow.MURskJSx_1KPlav.webp",
+        "/_astro/embedding-flow.MURskJSx_2qKssz.webp",
+        "/_astro/embedding-flow.MURskJSx_Z1X3mvB.webp",
+        "/_astro/embedding-flow.MURskJSx_fUwCo.webp",
+        "/_astro/ivfflat-cluster.CpJOFPKy_2jmOpf.webp",
+        "/_astro/ivfflat-cluster.CpJOFPKy_6z7o1.webp",
+        "/_astro/ivfflat-cluster.CpJOFPKy_Z237K71.webp",
+        "/_astro/ivfflat-cluster.CpJOFPKy_yFjCn.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/ponytail-agent-minimalism-analysis/",
+      "canonical": "/articles/ponytail-agent-minimalism-analysis/",
+      "title": "Ponytail은 AI 코딩 에이전트를 어떻게 덜 과하게 만드는가 · beyondwin",
+      "description": "DietrichGebert/ponytail 저장소를 직접 클론해 규칙, 훅, 스킬, 어댑터, 벤치마크를 확인하고 AI 코딩 에이전트 미니멀리즘의 실무 가치를 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Ponytail은 AI 코딩 에이전트를 어떻게 덜 과하게 만드는가"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "벤치마크를 어떻게 읽어야 하나",
+          "id": "벤치마크를-어떻게-읽어야-하나"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        }
+      ],
+      "bodyTextHash": "2f83631298e8b115df70421bc5511ef7aa9ef5c8c3291ac50ef568701785de28",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/postgresql-bm25-pg-search/",
+      "canonical": "/articles/postgresql-bm25-pg-search/",
+      "title": "PostgreSQL 안에서 BM25 검색 만들기: FTS부터 pg_search와 n-gram까지 · beyondwin",
+      "description": "PostgreSQL 기본 FTS, BM25 랭킹, ParadeDB pg_search, 한글 n-gram 검색을 금융 거래 검색 예제로 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "PostgreSQL 안에서 BM25 검색 만들기: FTS부터 pg_search와 n-gram까지"
+        },
+        {
+          "level": 2,
+          "text": "검색 문제를 먼저 나누기",
+          "id": "검색-문제를-먼저-나누기"
+        },
+        {
+          "level": 2,
+          "text": "PostgreSQL 기본 FTS",
+          "id": "postgresql-기본-fts"
+        },
+        {
+          "level": 2,
+          "text": "기본 FTS의 한계",
+          "id": "기본-fts의-한계"
+        },
+        {
+          "level": 2,
+          "text": "BM25를 어떻게 이해하면 좋을까",
+          "id": "bm25를-어떻게-이해하면-좋을까"
+        },
+        {
+          "level": 2,
+          "text": "ParadeDB pg_search의 위치",
+          "id": "paradedb-pg_search의-위치"
+        },
+        {
+          "level": 2,
+          "text": "예제 테이블",
+          "id": "예제-테이블"
+        },
+        {
+          "level": 2,
+          "text": "BM25 인덱스 만들기",
+          "id": "bm25-인덱스-만들기"
+        },
+        {
+          "level": 2,
+          "text": "현재 문법으로 검색하기",
+          "id": "현재-문법으로-검색하기"
+        },
+        {
+          "level": 2,
+          "text": "한글 검색과 n-gram",
+          "id": "한글-검색과-n-gram"
+        },
+        {
+          "level": 2,
+          "text": "한국어 검색 전략 선택",
+          "id": "한국어-검색-전략-선택"
+        },
+        {
+          "level": 2,
+          "text": "Elasticsearch와 비교하기",
+          "id": "elasticsearch와-비교하기"
+        },
+        {
+          "level": 2,
+          "text": "Spring Boot에서 붙이면 어떤 구조인가",
+          "id": "spring-boot에서-붙이면-어떤-구조인가"
+        },
+        {
+          "level": 2,
+          "text": "운영 체크리스트",
+          "id": "운영-체크리스트"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 꼭 가져가야 할 문장",
+          "id": "주니어-개발자가-꼭-가져가야-할-문장"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        },
+        {
+          "level": 3,
+          "text": "인덱스를 실제로 타는가",
+          "id": "인덱스를-실제로-타는가"
+        },
+        {
+          "level": 3,
+          "text": "인덱스 생성 시간을 볼 수 있는가",
+          "id": "인덱스-생성-시간을-볼-수-있는가"
+        },
+        {
+          "level": 3,
+          "text": "n-gram 인덱스 크기를 감당할 수 있는가",
+          "id": "n-gram-인덱스-크기를-감당할-수-있는가"
+        },
+        {
+          "level": 3,
+          "text": "VACUUM과 업데이트 패턴을 알고 있는가",
+          "id": "vacuum과-업데이트-패턴을-알고-있는가"
+        }
+      ],
+      "bodyTextHash": "3df1c720a25d93323db1aed8c50efb2e5b763cc1206b5fb419b5b3d668ff2f67",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/why-i-read-in-the-ai-era/",
+      "canonical": "/articles/why-i-read-in-the-ai-era/",
+      "title": "AI 시대에, 나는 왜 책을 읽는가 · beyondwin",
+      "description": "지식에 도달하는 비용이 싸진 시대에, 더 많은 답을 모으기보다 답을 쉽게 믿지 않기 위해 책을 읽고 함께 읽는다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AI 시대에, 나는 왜 책을 읽는가"
+        },
+        {
+          "level": 2,
+          "text": "싸진 지식, 남은 질문",
+          "id": "싸진-지식-남은-질문"
+        },
+        {
+          "level": 2,
+          "text": "요약과 독서의 차이",
+          "id": "요약과-독서의-차이"
+        },
+        {
+          "level": 2,
+          "text": "혼자 읽은 책에는 나가 많다",
+          "id": "혼자-읽은-책에는-나가-많다"
+        },
+        {
+          "level": 2,
+          "text": "답을 쉽게 믿지 않기 위해",
+          "id": "답을-쉽게-믿지-않기-위해"
+        }
+      ],
+      "bodyTextHash": "9989a32612b8a12e08c74f71401805f40b2514f29c3fc07bb68af4f103419568",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "한쪽에는 쌓인 서류, 다른 쪽에는 펼쳐진 노트가 놓인 저울",
+          "data-astro-cid-khyig4bw": "true",
+          "decoding": "async",
+          "height": "1024",
+          "loading": "lazy",
+          "sizes": "(max-width: 760px) calc(100vw - 40px), min(42em, 100vw - 80px)",
+          "src": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+          "srcset": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp 720w, /_astro/judgment-scale.C_t5D8VM_NhtPo.webp 1080w, /_astro/judgment-scale.C_t5D8VM_1YWu7G.webp 1536w",
+          "width": "1536"
+        },
+        {
+          "alt": "책상 위에 펼쳐진 책과 은은한 조명, 가장자리에 희미하게 보이는 노트북",
+          "data-astro-cid-khyig4bw": "true",
+          "decoding": "async",
+          "height": "1024",
+          "loading": "lazy",
+          "sizes": "(max-width: 760px) calc(100vw - 40px), min(42em, 100vw - 80px)",
+          "src": "/_astro/reading-desk-light.CFbUBIfw_zDT1o.webp",
+          "srcset": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp 720w, /_astro/reading-desk-light.CFbUBIfw_Ztvp3q.webp 1080w, /_astro/reading-desk-light.CFbUBIfw_zDT1o.webp 1536w",
+          "width": "1536"
+        },
+        {
+          "alt": "둥근 탁자 위에 서로 다른 책갈피가 꽂힌 책 세 권이 펼쳐져 있는 모습",
+          "data-astro-cid-khyig4bw": "true",
+          "decoding": "async",
+          "height": "1024",
+          "loading": "lazy",
+          "sizes": "(max-width: 760px) calc(100vw - 40px), min(42em, 100vw - 80px)",
+          "src": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+          "srcset": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp 720w, /_astro/shared-reading-table.Bg8uTvGd_qBWTv.webp 1080w, /_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp 1536w",
+          "width": "1536"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+        "/_astro/judgment-scale.C_t5D8VM_NhtPo.webp",
+        "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
+        "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
+        "/_astro/reading-desk-light.CFbUBIfw_Ztvp3q.webp",
+        "/_astro/reading-desk-light.CFbUBIfw_zDT1o.webp",
+        "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
+        "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+        "/_astro/shared-reading-table.Bg8uTvGd_qBWTv.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/ideas/",
+      "canonical": "/ideas/",
+      "title": "beyondwin",
+      "description": "아직 공개한 아이디어가 없습니다. 다 쓴 글은 글에서 읽습니다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "아직 공개한 아이디어가 없습니다. 다 쓴 글은 글에서 읽습니다."
+        }
+      ],
+      "bodyTextHash": "48c19cfe39929e7a9d51c5c387e6837498954cc6693337116a44d5d8957dbc4d",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/memory/",
+      "canonical": "/memory/",
+      "title": "문장 · beyondwin",
+      "description": "글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "문장"
+        }
+      ],
+      "bodyTextHash": "12c879db907ea3e353b553c814014652b2daf3fc6fb7b4fe4cdd2838d1843bdc",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/agent-harnesses-are-operating-systems/",
+        "/memory/agent-workflows-need-review-gates/",
+        "/memory/ai-design-tools-need-judgment-loops/",
+        "/memory/context-quality-is-routing-problem/",
+        "/memory/local-agent-products-are-work-shells/",
+        "/memory/memory-needs-retrieval-not-decoration/",
+        "/memory/personal-sites-should-show-records-first/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/memory/agent-harnesses-are-operating-systems/",
+      "canonical": "/memory/agent-harnesses-are-operating-systems/",
+      "title": "코딩 에이전트 하네스의 가치는 모델 성능보다 작업 순서와 검증 습관을 강제하는 데 있다. · beyondwin",
+      "description": "The value of a coding-agent harness is less about model intelligence and more about enforcing work order and verification habits.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "코딩 에이전트 하네스의 가치는 모델 성능보다 작업 순서와 검증 습관을 강제하는 데 있다."
+        },
+        {
+          "level": 2,
+          "text": "이 문장이 나온 글"
+        },
+        {
+          "level": 2,
+          "text": "같이 붙는 문장"
+        }
+      ],
+      "bodyTextHash": "a979e4410e808107043d92fc2b94ce3ac4afb6b40f091d97da714dcf6ec87cbe",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/lazycodex-agent-harness-analysis/",
+        "/memory/agent-workflows-need-review-gates/",
+        "/memory/context-quality-is-routing-problem/",
+        "/memory/local-agent-products-are-work-shells/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/memory/agent-workflows-need-review-gates/",
+      "canonical": "/memory/agent-workflows-need-review-gates/",
+      "title": "에이전트 워크플로우는 실행보다 먼저 검토 게이트와 명확한 handoff를 가져야 한다. · beyondwin",
+      "description": "Agent workflows need review gates and explicit handoffs before execution.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "에이전트 워크플로우는 실행보다 먼저 검토 게이트와 명확한 handoff를 가져야 한다."
+        },
+        {
+          "level": 2,
+          "text": "같이 붙는 문장"
+        }
+      ],
+      "bodyTextHash": "d5f209f22a63b5ffd07d2be70e32ed7ba016f8dc5515a432f1737f64edae7f3e",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/agent-harnesses-are-operating-systems/",
+        "/memory/context-quality-is-routing-problem/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/memory/ai-design-tools-need-judgment-loops/",
+      "canonical": "/memory/ai-design-tools-need-judgment-loops/",
+      "title": "AI 디자인 도구의 핵심 가치는 자동 제작보다 더 많은 시안을 빠르게 판단 가능한 형태로 만드는 데 있다. · beyondwin",
+      "description": "The core value of AI design tools is not automatic production but turning more options into forms that can be judged quickly.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AI 디자인 도구의 핵심 가치는 자동 제작보다 더 많은 시안을 빠르게 판단 가능한 형태로 만드는 데 있다."
+        },
+        {
+          "level": 2,
+          "text": "이 문장이 나온 글"
+        },
+        {
+          "level": 2,
+          "text": "같이 붙는 문장"
+        }
+      ],
+      "bodyTextHash": "cbcad8ae99403fae57fbac0591e162db7c723d6971bd5bec5948c934438888ee",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/ai-design-references/",
+        "/memory/personal-sites-should-show-records-first/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/memory/context-quality-is-routing-problem/",
+      "canonical": "/memory/context-quality-is-routing-problem/",
+      "title": "컨텍스트 품질은 프롬프트 문장력이 아니라 라우팅과 검증 구조의 문제다. · beyondwin",
+      "description": "Context quality is a routing and verification problem, not just prompt wording.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "컨텍스트 품질은 프롬프트 문장력이 아니라 라우팅과 검증 구조의 문제다."
+        },
+        {
+          "level": 2,
+          "text": "이 문장이 나온 글"
+        },
+        {
+          "level": 2,
+          "text": "같이 붙는 문장"
+        }
+      ],
+      "bodyTextHash": "6c57d34f5f7174d2b98bccd0f968ac4483f3579cae5e228e371725fa90d7339d",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/context-refinement-system-design/",
+        "/memory/agent-harnesses-are-operating-systems/",
+        "/memory/agent-workflows-need-review-gates/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/memory/local-agent-products-are-work-shells/",
+      "canonical": "/memory/local-agent-products-are-work-shells/",
+      "title": "로컬 AI 제품의 차별점은 모델 호출이 아니라 사용자의 도구와 파일을 어떤 작업 셸로 묶는지에서 생긴다. · beyondwin",
+      "description": "The differentiation of local AI products comes from the work shell around a user's tools and files, not from model calls alone.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "로컬 AI 제품의 차별점은 모델 호출이 아니라 사용자의 도구와 파일을 어떤 작업 셸로 묶는지에서 생긴다."
+        },
+        {
+          "level": 2,
+          "text": "이 문장이 나온 글"
+        },
+        {
+          "level": 2,
+          "text": "같이 붙는 문장"
+        }
+      ],
+      "bodyTextHash": "2dafa6a5cf81dcc6c0c84011100b187244350d9bc9af20023935dfd46202c182",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/open-design-repo-analysis/",
+        "/memory/agent-harnesses-are-operating-systems/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/memory/map/",
+      "canonical": "/memory/",
+      "title": "Redirecting to: /memory/",
+      "description": "",
+      "headings": [],
+      "bodyTextHash": "fbff12a0127221624cc492d8743cde8f7ad9e91ced1a3c20eda4713d7b5f338e",
+      "internalHrefs": [
+        "/memory/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": []
+    },
+    {
+      "path": "/memory/memory-needs-retrieval-not-decoration/",
+      "canonical": "/memory/memory-needs-retrieval-not-decoration/",
+      "title": "Second brain 화면은 장식용 그래프보다 검색, 주제, 근거 연결처럼 다시 찾는 동작을 먼저 제공해야 한다. · beyondwin",
+      "description": "A second-brain screen should prioritize retrieval actions like search, topics, and source links over decorative graphs.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Second brain 화면은 장식용 그래프보다 검색, 주제, 근거 연결처럼 다시 찾는 동작을 먼저 제공해야 한다."
+        },
+        {
+          "level": 2,
+          "text": "같이 붙는 문장"
+        }
+      ],
+      "bodyTextHash": "c3a52aba349c8fde21dd93aa6a41feeee4366d8498758454402e099fc2f60864",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/personal-sites-should-show-records-first/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/memory/personal-sites-should-show-records-first/",
+      "canonical": "/memory/personal-sites-should-show-records-first/",
+      "title": "개인 블로그 첫 화면은 추상적인 가치 제안보다 실제 글과 분류가 먼저 보여야 신뢰가 생긴다. · beyondwin",
+      "description": "A personal blog earns trust when the first screen shows actual writing and categories before abstract value propositions.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "개인 블로그 첫 화면은 추상적인 가치 제안보다 실제 글과 분류가 먼저 보여야 신뢰가 생긴다."
+        },
+        {
+          "level": 2,
+          "text": "같이 붙는 문장"
+        }
+      ],
+      "bodyTextHash": "d5f27f72ae3530e764bb6e79961497c06a257afd961581edf4da9483e67c6761",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/ai-design-tools-need-judgment-loops/",
+        "/memory/memory-needs-retrieval-not-decoration/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/",
+      "canonical": "/reviews/",
+      "title": "책 · beyondwin",
+      "description": "읽고 남은 판단.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "책"
+        },
+        {
+          "level": 2,
+          "text": "2026"
+        },
+        {
+          "level": 2,
+          "text": "2025"
+        }
+      ],
+      "bodyTextHash": "827a853ec5920c527e826ec1967f4c914ae6a6073bfea980f515f206f5d4c04a",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/reviews/art-thief/",
+        "/reviews/black-swan/",
+        "/reviews/changing-their-minds/",
+        "/reviews/convenience-store-woman/",
+        "/reviews/devotion-of-suspect-x/",
+        "/reviews/doing-good-better/",
+        "/reviews/factfulness/",
+        "/reviews/future-arrived-first/",
+        "/reviews/goethe-said-everything/",
+        "/reviews/habitus/",
+        "/reviews/how-adam-smith-can-change-your-life/",
+        "/reviews/how-we-crossed-winter/",
+        "/reviews/lolita/",
+        "/reviews/lord-of-the-flies/",
+        "/reviews/miracles-of-namiya-general-store/",
+        "/reviews/nevertheless/",
+        "/reviews/poor-charlies-almanack/",
+        "/reviews/siddhartha/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "그들의 생각을 바꾸는 방법 웅진지식하우스 2023 종이책 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.BKpSimz9_Z2kdpAP.webp",
+          "width": "802"
+        },
+        {
+          "alt": "파리대왕 민음사 세계문학전집 19 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "842",
+          "loading": "eager",
+          "src": "/_astro/cover.BHPuYvZz_1JQsmY.webp",
+          "width": "500"
+        },
+        {
+          "alt": "블랙 스완 동녘사이언스 2018 개정증보판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "671",
+          "loading": "eager",
+          "src": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+          "width": "458"
+        },
+        {
+          "alt": "그럼에도 불구하고 위즈덤하우스 2020 일반판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.CMjzJm20_Z1ahLFv.webp",
+          "width": "808"
+        },
+        {
+          "alt": "괴테는 모든 것을 말했다 리프 2025 한국어 초판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.C7zndTul_2tYMbV.webp",
+          "width": "850"
+        },
+        {
+          "alt": "가난한 찰리의 연감 김영사 2024 공식 번역 양장 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "866",
+          "loading": "lazy",
+          "src": "/_astro/cover.CO0oSGne_ZDAyCx.webp",
+          "width": "600"
+        },
+        {
+          "alt": "예술 도둑 생각의힘 2024 초판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CeQ7WcvG_N4OmI.webp",
+          "width": "771"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.BKpSimz9_Z2kdpAP.webp",
+          "width": "802"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "842",
+          "loading": "lazy",
+          "src": "/_astro/cover.BHPuYvZz_1JQsmY.webp",
+          "width": "500"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "671",
+          "loading": "lazy",
+          "src": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+          "width": "458"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CMjzJm20_Z1ahLFv.webp",
+          "width": "808"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.C7zndTul_2tYMbV.webp",
+          "width": "850"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "866",
+          "loading": "lazy",
+          "src": "/_astro/cover.CO0oSGne_ZDAyCx.webp",
+          "width": "600"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CeQ7WcvG_N4OmI.webp",
+          "width": "771"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.DD6P6jFO_ZIhEkQ.webp",
+          "width": "801"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.BUB-FSRq_29yMI5.webp",
+          "width": "857"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CPRPHded_pR3ba.webp",
+          "width": "848"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "750",
+          "loading": "lazy",
+          "src": "/_astro/cover.B8vu-lWt_rCUAe.webp",
+          "width": "500"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "703",
+          "loading": "lazy",
+          "src": "/_astro/cover.s4eLLRt3_1U5lPP.webp",
+          "width": "458"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.D9o0YR9o_ZUMruu.webp",
+          "width": "809"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CntUoPrT_8aRzv.webp",
+          "width": "826"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "456",
+          "loading": "lazy",
+          "src": "/_astro/cover.DAty7eNU_1Tjy73.webp",
+          "width": "311"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1417",
+          "loading": "lazy",
+          "src": "/_astro/cover.BjHBL4Ty_1r1WTN.webp",
+          "width": "1000"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.fB4ip9du_R6Bds.webp",
+          "width": "787"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.B8vu-lWt_rCUAe.webp",
+        "/_astro/cover.BHPuYvZz_1JQsmY.webp",
+        "/_astro/cover.BKpSimz9_Z2kdpAP.webp",
+        "/_astro/cover.BUB-FSRq_29yMI5.webp",
+        "/_astro/cover.BjHBL4Ty_1r1WTN.webp",
+        "/_astro/cover.C7zndTul_2tYMbV.webp",
+        "/_astro/cover.CMjzJm20_Z1ahLFv.webp",
+        "/_astro/cover.CO0oSGne_ZDAyCx.webp",
+        "/_astro/cover.CPRPHded_pR3ba.webp",
+        "/_astro/cover.CeQ7WcvG_N4OmI.webp",
+        "/_astro/cover.CntUoPrT_8aRzv.webp",
+        "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+        "/_astro/cover.D9o0YR9o_ZUMruu.webp",
+        "/_astro/cover.DAty7eNU_1Tjy73.webp",
+        "/_astro/cover.DD6P6jFO_ZIhEkQ.webp",
+        "/_astro/cover.fB4ip9du_R6Bds.webp",
+        "/_astro/cover.s4eLLRt3_1U5lPP.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/art-thief/",
+      "canonical": "/reviews/art-thief/",
+      "title": "예술 도둑 · beyondwin",
+      "description": "예술 도둑은 중독에 관한 기록이다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "예술 도둑"
+        }
+      ],
+      "bodyTextHash": "5d72c921a13610773408a8fc41f194f36b5931a786b5c951787e02ecc667467b",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.CeQ7WcvG_N4OmI.webp",
+          "width": "771"
+        },
+        {
+          "alt": "예술 도둑 생각의힘 2024 초판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.CeQ7WcvG_N4OmI.webp",
+          "width": "771"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.CeQ7WcvG_N4OmI.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/black-swan/",
+      "canonical": "/reviews/black-swan/",
+      "title": "블랙스완 · beyondwin",
+      "description": "우리는 현실을 보는가, 현실에 대해 만든 이야기를 보는가.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "블랙스완"
+        }
+      ],
+      "bodyTextHash": "10fc39dca5e1e81a57987429fb3d12b8a0f640c9dbaf9fd3d3edd015ee00ef6f",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "671",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+          "width": "458"
+        },
+        {
+          "alt": "블랙 스완 동녘사이언스 2018 개정증보판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "671",
+          "loading": "eager",
+          "src": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+          "width": "458"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/changing-their-minds/",
+      "canonical": "/reviews/changing-their-minds/",
+      "title": "그들의 생각을 바꾸는 방법 · beyondwin",
+      "description": "생각은 바뀌는 것이 아니라 바뀔 수밖에 없는 순간을 맞이한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "그들의 생각을 바꾸는 방법"
+        }
+      ],
+      "bodyTextHash": "115bbaa9fb2239aa3b714bd34771b40172afd5394c8ef32f303989def9fdb7f4",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.BKpSimz9_Z2kdpAP.webp",
+          "width": "802"
+        },
+        {
+          "alt": "그들의 생각을 바꾸는 방법 웅진지식하우스 2023 종이책 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.BKpSimz9_Z2kdpAP.webp",
+          "width": "802"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.BKpSimz9_Z2kdpAP.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/convenience-store-woman/",
+      "canonical": "/reviews/convenience-store-woman/",
+      "title": "편의점 인간 · beyondwin",
+      "description": "편의점 인간은 흔히 말하는 주류의 삶에 속하지 못한 채 나이가 들어서도 편의점 아르바이트로 살아가는 한 여성의 이야기다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "편의점 인간"
+        }
+      ],
+      "bodyTextHash": "d011a9c065dba4f33cef3cc356f35ebb672df901ca9e89588bc9fddb391443f7",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.CntUoPrT_8aRzv.webp",
+          "width": "826"
+        },
+        {
+          "alt": "편의점 인간 살림출판사 2016 양장 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.CntUoPrT_8aRzv.webp",
+          "width": "826"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.CntUoPrT_8aRzv.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/devotion-of-suspect-x/",
+      "canonical": "/reviews/devotion-of-suspect-x/",
+      "title": "용의자 X의 헌신 · beyondwin",
+      "description": "마지막 장에 다다라서야 이 책의 제목이 이해되었다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "용의자 X의 헌신"
+        }
+      ],
+      "bodyTextHash": "e1396552cf0d7c4f974cfb7cb8352b3e66e80e1f185e47f8f21a48bf50826935",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/doing-good-better/",
+      "canonical": "/reviews/doing-good-better/",
+      "title": "냉정한 이타주의자 · beyondwin",
+      "description": "지난달 읽은 팩트풀니스와 마찬가지로, 이 책 역시 우리가 가진 비이성적 판단을 걷어내고 세계를 더 정확하게 바라보도록 돕는다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "냉정한 이타주의자"
+        }
+      ],
+      "bodyTextHash": "b47681d7bcd00d461790ae697ed7206d55687ddbc8a1e1d0355e0535bb012df2",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1417",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.BjHBL4Ty_1r1WTN.webp",
+          "width": "1000"
+        },
+        {
+          "alt": "냉정한 이타주의자 부키 2017 한국어 초판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1417",
+          "loading": "eager",
+          "src": "/_astro/cover.BjHBL4Ty_1r1WTN.webp",
+          "width": "1000"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.BjHBL4Ty_1r1WTN.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/factfulness/",
+      "canonical": "/reviews/factfulness/",
+      "title": "팩트풀니스 · beyondwin",
+      "description": "팩트풀니스는 우리의 직관이 얼마나 쉽게 현실을 왜곡하는지 적나라하게 보여준다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "팩트풀니스"
+        }
+      ],
+      "bodyTextHash": "3930b67b7dabb34eb016628f0aff5eb4cc48c25b1fceccb9b6ff30130a23f944",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.fB4ip9du_R6Bds.webp",
+          "width": "787"
+        },
+        {
+          "alt": "팩트풀니스 김영사 2019판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.fB4ip9du_R6Bds.webp",
+          "width": "787"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.fB4ip9du_R6Bds.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/future-arrived-first/",
+      "canonical": "/reviews/future-arrived-first/",
+      "title": "먼저 온 미래 · beyondwin",
+      "description": "먼저 온 미래는 AI로 인해 이미 특이점 이후의 국면에 진입했다는 문제의식에서 출발한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "먼저 온 미래"
+        }
+      ],
+      "bodyTextHash": "9716c457d2ff0ab2f0ceda428fa7ae50fa0346f77c448d861c222dee9edaac87",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "703",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.s4eLLRt3_1U5lPP.webp",
+          "width": "458"
+        },
+        {
+          "alt": "먼저 온 미래 동아시아 2025 초판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "703",
+          "loading": "eager",
+          "src": "/_astro/cover.s4eLLRt3_1U5lPP.webp",
+          "width": "458"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.s4eLLRt3_1U5lPP.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/goethe-said-everything/",
+      "canonical": "/reviews/goethe-said-everything/",
+      "title": "괴테는 모든 것을 말했다 · beyondwin",
+      "description": "괴테는 모든 것을 말했다는 제목부터 흥미롭다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "괴테는 모든 것을 말했다"
+        }
+      ],
+      "bodyTextHash": "f5acde50d6bef385d671989ad8e7ebd7e1aa27532b77256c9eaa08f2c95d6c0c",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.C7zndTul_2tYMbV.webp",
+          "width": "850"
+        },
+        {
+          "alt": "괴테는 모든 것을 말했다 리프 2025 한국어 초판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.C7zndTul_2tYMbV.webp",
+          "width": "850"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.C7zndTul_2tYMbV.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/habitus/",
+      "canonical": "/reviews/habitus/",
+      "title": "아비투스 · beyondwin",
+      "description": "\"아비투스\"라는 단어를 접한 것은 영화 평론가 이동진의 이야기를 통해서였다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "아비투스"
+        }
+      ],
+      "bodyTextHash": "bb77bc394bacaf2d0e992b123fe82cef5632730a6b5dd0744d3567caddf50d7e",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.BUB-FSRq_29yMI5.webp",
+          "width": "857"
+        },
+        {
+          "alt": "아비투스 다산초당 2023 양장특별판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.BUB-FSRq_29yMI5.webp",
+          "width": "857"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.BUB-FSRq_29yMI5.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/how-adam-smith-can-change-your-life/",
+      "canonical": "/reviews/how-adam-smith-can-change-your-life/",
+      "title": "내 안에서 나를 만드는 것들 · beyondwin",
+      "description": "애덤 스미스의 도덕감정론을 현대적으로 풀어낸 이 책의 원제는 \"How Adam Smith Can Change Your Life\"이다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "내 안에서 나를 만드는 것들"
+        }
+      ],
+      "bodyTextHash": "8be8dd3739543a9a1c13c76e49a59f4c6c8ba8f2af0fd6ec0c647a87a8ede894",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.CPRPHded_pR3ba.webp",
+          "width": "848"
+        },
+        {
+          "alt": "내 안에서 나를 만드는 것들 세계사 2015 초판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.CPRPHded_pR3ba.webp",
+          "width": "848"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.CPRPHded_pR3ba.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/how-we-crossed-winter/",
+      "canonical": "/reviews/how-we-crossed-winter/",
+      "title": "우리가 겨울을 지나온 방식 · beyondwin",
+      "description": "이 소설은 같은 아파트에 사는 두 사람 명주와 준성의 이야기를 통해 한국 사회의 돌봄 현실을 적나라하게 보여준다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "우리가 겨울을 지나온 방식"
+        }
+      ],
+      "bodyTextHash": "db042b89f8b4af449736dc7b63aca8978b6dc3c40694d41862a1786396e3703b",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.D9o0YR9o_ZUMruu.webp",
+          "width": "809"
+        },
+        {
+          "alt": "우리가 겨울을 지나온 방식 나무옆의자 2023 일반판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.D9o0YR9o_ZUMruu.webp",
+          "width": "809"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.D9o0YR9o_ZUMruu.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/lolita/",
+      "canonical": "/reviews/lolita/",
+      "title": "롤리타 · beyondwin",
+      "description": "롤리타는 쉽게 읽히는 소설이 아니었다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "롤리타"
+        }
+      ],
+      "bodyTextHash": "30e9ec94b56fee62655319295b558e0fa6e11855e954a5cbbf96cb559a57a8b6",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "750",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.B8vu-lWt_rCUAe.webp",
+          "width": "500"
+        },
+        {
+          "alt": "롤리타 문학동네 세계문학전집 105 2013 무선판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "750",
+          "loading": "eager",
+          "src": "/_astro/cover.B8vu-lWt_rCUAe.webp",
+          "width": "500"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.B8vu-lWt_rCUAe.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/lord-of-the-flies/",
+      "canonical": "/reviews/lord-of-the-flies/",
+      "title": "파리대왕 · beyondwin",
+      "description": "파리대왕에서 가장 인상 깊었던 장면은 아이들이 얼굴에 칠을 하기 시작하는 순간이었다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "파리대왕"
+        }
+      ],
+      "bodyTextHash": "cc489250400b666d80fe9cd6a4a669cfc81106441843e4808a6c0fa22155c8dd",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "842",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.BHPuYvZz_1JQsmY.webp",
+          "width": "500"
+        },
+        {
+          "alt": "파리대왕 민음사 세계문학전집 19 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "842",
+          "loading": "eager",
+          "src": "/_astro/cover.BHPuYvZz_1JQsmY.webp",
+          "width": "500"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.BHPuYvZz_1JQsmY.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/miracles-of-namiya-general-store/",
+      "canonical": "/reviews/miracles-of-namiya-general-store/",
+      "title": "나미야 잡화점의 기적 · beyondwin",
+      "description": "여러 시간선에서 등장하는 인물들이 \"상담 편지\"라는 매개를 통해 짜임새 있게 연결되는 구성이 인상적이었다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "나미야 잡화점의 기적"
+        }
+      ],
+      "bodyTextHash": "66860997b60566cca99c3156a4edf6179c5c98f58315a412dac3e1e0cfa502f9",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "456",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.DAty7eNU_1Tjy73.webp",
+          "width": "311"
+        },
+        {
+          "alt": "나미야 잡화점의 기적 현대문학 2012 원판 양장 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "456",
+          "loading": "eager",
+          "src": "/_astro/cover.DAty7eNU_1Tjy73.webp",
+          "width": "311"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.DAty7eNU_1Tjy73.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/nevertheless/",
+      "canonical": "/reviews/nevertheless/",
+      "title": "그럼에도 불구하고 · beyondwin",
+      "description": "그럼에도 불구하고를 읽으며 가장 많이 생각한 것은 행복이었다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "그럼에도 불구하고"
+        }
+      ],
+      "bodyTextHash": "a8fed225dff7c4cd5839dc85ce9bcab51eedbb86e2e60df4e382c0787ad66e9c",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.CMjzJm20_Z1ahLFv.webp",
+          "width": "808"
+        },
+        {
+          "alt": "그럼에도 불구하고 위즈덤하우스 2020 일반판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.CMjzJm20_Z1ahLFv.webp",
+          "width": "808"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.CMjzJm20_Z1ahLFv.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/poor-charlies-almanack/",
+      "canonical": "/reviews/poor-charlies-almanack/",
+      "title": "가난한 찰리의 연감 · beyondwin",
+      "description": "왜 제목이 하필 가난한 찰리의 연감일까 싶었다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "가난한 찰리의 연감"
+        }
+      ],
+      "bodyTextHash": "81ab1c398d173a22d45d7706fa3da2cc87a3cfda6834375a9aa17de105f24a38",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "866",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.CO0oSGne_ZDAyCx.webp",
+          "width": "600"
+        },
+        {
+          "alt": "가난한 찰리의 연감 김영사 2024 공식 번역 양장 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "866",
+          "loading": "eager",
+          "src": "/_astro/cover.CO0oSGne_ZDAyCx.webp",
+          "width": "600"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.CO0oSGne_ZDAyCx.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/siddhartha/",
+      "canonical": "/reviews/siddhartha/",
+      "title": "싯다르타 · beyondwin",
+      "description": "싯다르타는 금방 읽었는데, 금방 정리되지는 않았다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "싯다르타"
+        }
+      ],
+      "bodyTextHash": "0af2d98be130dde4c3fdf489bc598f59cf733a87598d5b28c21a52e6545918da",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--remnant",
+          "data-book-remnant": "true",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "slot": "header-mark",
+          "src": "/_astro/cover.DD6P6jFO_ZIhEkQ.webp",
+          "width": "801"
+        },
+        {
+          "alt": "싯다르타 문학동네 세계문학전집 173 2018 원판 표지",
+          "class": "book-cover",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "eager",
+          "src": "/_astro/cover.DD6P6jFO_ZIhEkQ.webp",
+          "width": "801"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.DD6P6jFO_ZIhEkQ.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/reviews/the-life-you-can-save/",
+      "canonical": "/reviews/doing-good-better/",
+      "title": "Redirecting to: /reviews/doing-good-better/",
+      "description": "",
+      "headings": [],
+      "bodyTextHash": "ea31f2cde1a209ac66982077b6883d87f29e19270aef9035db6b6f5e2ced933a",
+      "internalHrefs": [
+        "/reviews/doing-good-better/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": []
+    },
+    {
+      "path": "/search/",
+      "canonical": "/search/",
+      "title": "찾기 · beyondwin",
+      "description": "글, 책, 문장을 찾습니다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "찾기"
+        },
+        {
+          "level": 2,
+          "text": "글"
+        },
+        {
+          "level": 2,
+          "text": "책"
+        },
+        {
+          "level": 2,
+          "text": "문장"
+        },
+        {
+          "level": 2,
+          "text": "주제"
+        },
+        {
+          "level": 3,
+          "text": "AI 시대에, 나는 왜 책을 읽는가"
+        },
+        {
+          "level": 3,
+          "text": "Graphify는 코드 이해를 정말 더 빠르게 만드는가?"
+        },
+        {
+          "level": 3,
+          "text": "oh-my-pi는 진짜 쓸 만한가: 강력한 에이전트 하네스의 구조와 위험"
+        },
+        {
+          "level": 3,
+          "text": "pgvector로 벡터 검색 이해하기: 임베딩, SQL, HNSW, RRF까지"
+        },
+        {
+          "level": 3,
+          "text": "PostgreSQL 안에서 BM25 검색 만들기: FTS부터 pg_search와 n-gram까지"
+        },
+        {
+          "level": 3,
+          "text": "Hermes Agent는 어떻게 개인 AI 워커 런타임을 만들고 있나"
+        },
+        {
+          "level": 3,
+          "text": "Ponytail은 AI 코딩 에이전트를 어떻게 덜 과하게 만드는가"
+        },
+        {
+          "level": 3,
+          "text": "LazyCodex는 Codex를 어떻게 제품형 개발 하네스로 바꾸는가"
+        },
+        {
+          "level": 3,
+          "text": "AI 디자인 도구를 보는 기준"
+        },
+        {
+          "level": 3,
+          "text": "코딩 에이전트에게 필요한 네 가지 규율"
+        },
+        {
+          "level": 3,
+          "text": "이미지 목업을 제대로 된 UI로 구현하는 순서"
+        },
+        {
+          "level": 3,
+          "text": "Context Refinement System 설계 요약"
+        },
+        {
+          "level": 3,
+          "text": "Open Design 분석"
+        },
+        {
+          "level": 3,
+          "text": "그들의 생각을 바꾸는 방법"
+        },
+        {
+          "level": 3,
+          "text": "파리대왕"
+        },
+        {
+          "level": 3,
+          "text": "블랙스완"
+        },
+        {
+          "level": 3,
+          "text": "그럼에도 불구하고"
+        },
+        {
+          "level": 3,
+          "text": "괴테는 모든 것을 말했다"
+        },
+        {
+          "level": 3,
+          "text": "용의자 X의 헌신"
+        },
+        {
+          "level": 3,
+          "text": "가난한 찰리의 연감"
+        },
+        {
+          "level": 3,
+          "text": "예술 도둑"
+        },
+        {
+          "level": 3,
+          "text": "싯다르타"
+        },
+        {
+          "level": 3,
+          "text": "아비투스"
+        },
+        {
+          "level": 3,
+          "text": "내 안에서 나를 만드는 것들"
+        },
+        {
+          "level": 3,
+          "text": "롤리타"
+        },
+        {
+          "level": 3,
+          "text": "먼저 온 미래"
+        },
+        {
+          "level": 3,
+          "text": "우리가 겨울을 지나온 방식"
+        },
+        {
+          "level": 3,
+          "text": "편의점 인간"
+        },
+        {
+          "level": 3,
+          "text": "나미야 잡화점의 기적"
+        },
+        {
+          "level": 3,
+          "text": "냉정한 이타주의자"
+        },
+        {
+          "level": 3,
+          "text": "팩트풀니스"
+        },
+        {
+          "level": 3,
+          "text": "코딩 에이전트 하네스의 가치는 모델 성능보다 작업 순서와 검증 습관을 강제하는 데 있다."
+        },
+        {
+          "level": 3,
+          "text": "에이전트 워크플로우는 실행보다 먼저 검토 게이트와 명확한 handoff를 가져야 한다."
+        },
+        {
+          "level": 3,
+          "text": "AI 디자인 도구의 핵심 가치는 자동 제작보다 더 많은 시안을 빠르게 판단 가능한 형태로 만드는 데 있다."
+        },
+        {
+          "level": 3,
+          "text": "컨텍스트 품질은 프롬프트 문장력이 아니라 라우팅과 검증 구조의 문제다."
+        },
+        {
+          "level": 3,
+          "text": "로컬 AI 제품의 차별점은 모델 호출이 아니라 사용자의 도구와 파일을 어떤 작업 셸로 묶는지에서 생긴다."
+        },
+        {
+          "level": 3,
+          "text": "Second brain 화면은 장식용 그래프보다 검색, 주제, 근거 연결처럼 다시 찾는 동작을 먼저 제공해야 한다."
+        },
+        {
+          "level": 3,
+          "text": "개인 블로그 첫 화면은 추상적인 가치 제안보다 실제 글과 분류가 먼저 보여야 신뢰가 생긴다."
+        },
+        {
+          "level": 3,
+          "text": "agent"
+        },
+        {
+          "level": 3,
+          "text": "agent-workflows"
+        },
+        {
+          "level": 3,
+          "text": "AI"
+        },
+        {
+          "level": 3,
+          "text": "AI-agent"
+        },
+        {
+          "level": 3,
+          "text": "ai-design"
+        },
+        {
+          "level": 3,
+          "text": "ai-workflow"
+        },
+        {
+          "level": 3,
+          "text": "architecture"
+        },
+        {
+          "level": 3,
+          "text": "automation"
+        },
+        {
+          "level": 3,
+          "text": "BM25"
+        },
+        {
+          "level": 3,
+          "text": "book"
+        },
+        {
+          "level": 3,
+          "text": "code-search"
+        },
+        {
+          "level": 3,
+          "text": "codex"
+        },
+        {
+          "level": 3,
+          "text": "Codex"
+        },
+        {
+          "level": 3,
+          "text": "coding"
+        },
+        {
+          "level": 3,
+          "text": "context-engineering"
+        },
+        {
+          "level": 3,
+          "text": "database"
+        },
+        {
+          "level": 3,
+          "text": "design"
+        },
+        {
+          "level": 3,
+          "text": "design-systems"
+        },
+        {
+          "level": 3,
+          "text": "developer-tools"
+        },
+        {
+          "level": 3,
+          "text": "essay"
+        },
+        {
+          "level": 3,
+          "text": "frontend"
+        },
+        {
+          "level": 3,
+          "text": "Graphify"
+        },
+        {
+          "level": 3,
+          "text": "judgment"
+        },
+        {
+          "level": 3,
+          "text": "knowledge-graph"
+        },
+        {
+          "level": 3,
+          "text": "local-first"
+        },
+        {
+          "level": 3,
+          "text": "memory-system"
+        },
+        {
+          "level": 3,
+          "text": "naver-archive"
+        },
+        {
+          "level": 3,
+          "text": "ParadeDB"
+        },
+        {
+          "level": 3,
+          "text": "pgvector"
+        },
+        {
+          "level": 3,
+          "text": "PostgreSQL"
+        },
+        {
+          "level": 3,
+          "text": "RAG"
+        },
+        {
+          "level": 3,
+          "text": "readability"
+        },
+        {
+          "level": 3,
+          "text": "reading"
+        },
+        {
+          "level": 3,
+          "text": "reference"
+        },
+        {
+          "level": 3,
+          "text": "review"
+        },
+        {
+          "level": 3,
+          "text": "search"
+        },
+        {
+          "level": 3,
+          "text": "security"
+        },
+        {
+          "level": 3,
+          "text": "site-design"
+        },
+        {
+          "level": 3,
+          "text": "source-grounded"
+        },
+        {
+          "level": 3,
+          "text": "system-design"
+        },
+        {
+          "level": 3,
+          "text": "workflow"
+        },
+        {
+          "level": 3,
+          "text": "writing-system"
+        }
+      ],
+      "bodyTextHash": "f61d87c3410faff70e92b3898641294f6e1d6eb266de68bff3529ea0a373f051",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/ai-design-references/",
+        "/articles/andrej-karpathy-skills-analysis/",
+        "/articles/codex-ui-mockup-workflow/",
+        "/articles/context-refinement-system-design/",
+        "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/lazycodex-agent-harness-analysis/",
+        "/articles/oh-my-pi-deep-review/",
+        "/articles/open-design-repo-analysis/",
+        "/articles/pgvector-hybrid-search/",
+        "/articles/ponytail-agent-minimalism-analysis/",
+        "/articles/postgresql-bm25-pg-search/",
+        "/articles/why-i-read-in-the-ai-era/",
+        "/memory/agent-harnesses-are-operating-systems/",
+        "/memory/agent-workflows-need-review-gates/",
+        "/memory/ai-design-tools-need-judgment-loops/",
+        "/memory/context-quality-is-routing-problem/",
+        "/memory/local-agent-products-are-work-shells/",
+        "/memory/memory-needs-retrieval-not-decoration/",
+        "/memory/personal-sites-should-show-records-first/",
+        "/reviews/",
+        "/reviews/art-thief/",
+        "/reviews/black-swan/",
+        "/reviews/changing-their-minds/",
+        "/reviews/convenience-store-woman/",
+        "/reviews/devotion-of-suspect-x/",
+        "/reviews/doing-good-better/",
+        "/reviews/factfulness/",
+        "/reviews/future-arrived-first/",
+        "/reviews/goethe-said-everything/",
+        "/reviews/habitus/",
+        "/reviews/how-adam-smith-can-change-your-life/",
+        "/reviews/how-we-crossed-winter/",
+        "/reviews/lolita/",
+        "/reviews/lord-of-the-flies/",
+        "/reviews/miracles-of-namiya-general-store/",
+        "/reviews/nevertheless/",
+        "/reviews/poor-charlies-almanack/",
+        "/reviews/siddhartha/",
+        "/search/",
+        "/search/?q=agent-workflows",
+        "/search/?q=ai-design",
+        "/search/?q=ai-workflow",
+        "/search/?q=codex",
+        "/search/?q=context-engineering",
+        "/search/?q=design-systems",
+        "/search/?q=local-first",
+        "/search/?q=memory-system",
+        "/search/?q=readability",
+        "/search/?q=site-design",
+        "/search/?q=writing-system",
+        "/tags/AI-agent/",
+        "/tags/AI/",
+        "/tags/BM25/",
+        "/tags/Codex/",
+        "/tags/Graphify/",
+        "/tags/ParadeDB/",
+        "/tags/PostgreSQL/",
+        "/tags/RAG/",
+        "/tags/agent/",
+        "/tags/architecture/",
+        "/tags/automation/",
+        "/tags/book/",
+        "/tags/code-search/",
+        "/tags/coding/",
+        "/tags/database/",
+        "/tags/design/",
+        "/tags/developer-tools/",
+        "/tags/essay/",
+        "/tags/frontend/",
+        "/tags/judgment/",
+        "/tags/knowledge-graph/",
+        "/tags/naver-archive/",
+        "/tags/pgvector/",
+        "/tags/reading/",
+        "/tags/reference/",
+        "/tags/review/",
+        "/tags/search/",
+        "/tags/security/",
+        "/tags/source-grounded/",
+        "/tags/system-design/",
+        "/tags/workflow/"
+      ],
+      "imageAttributes": [
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.BKpSimz9_Z2kdpAP.webp",
+          "width": "802"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "842",
+          "loading": "lazy",
+          "src": "/_astro/cover.BHPuYvZz_1JQsmY.webp",
+          "width": "500"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "671",
+          "loading": "lazy",
+          "src": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+          "width": "458"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CMjzJm20_Z1ahLFv.webp",
+          "width": "808"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.C7zndTul_2tYMbV.webp",
+          "width": "850"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "866",
+          "loading": "lazy",
+          "src": "/_astro/cover.CO0oSGne_ZDAyCx.webp",
+          "width": "600"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CeQ7WcvG_N4OmI.webp",
+          "width": "771"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.DD6P6jFO_ZIhEkQ.webp",
+          "width": "801"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.BUB-FSRq_29yMI5.webp",
+          "width": "857"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CPRPHded_pR3ba.webp",
+          "width": "848"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "750",
+          "loading": "lazy",
+          "src": "/_astro/cover.B8vu-lWt_rCUAe.webp",
+          "width": "500"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "703",
+          "loading": "lazy",
+          "src": "/_astro/cover.s4eLLRt3_1U5lPP.webp",
+          "width": "458"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.D9o0YR9o_ZUMruu.webp",
+          "width": "809"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.CntUoPrT_8aRzv.webp",
+          "width": "826"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "456",
+          "loading": "lazy",
+          "src": "/_astro/cover.DAty7eNU_1Tjy73.webp",
+          "width": "311"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1417",
+          "loading": "lazy",
+          "src": "/_astro/cover.BjHBL4Ty_1r1WTN.webp",
+          "width": "1000"
+        },
+        {
+          "alt": "",
+          "class": "book-cover book-cover--small",
+          "decoding": "async",
+          "height": "1200",
+          "loading": "lazy",
+          "src": "/_astro/cover.fB4ip9du_R6Bds.webp",
+          "width": "787"
+        }
+      ],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/_astro/cover.B8vu-lWt_rCUAe.webp",
+        "/_astro/cover.BHPuYvZz_1JQsmY.webp",
+        "/_astro/cover.BKpSimz9_Z2kdpAP.webp",
+        "/_astro/cover.BUB-FSRq_29yMI5.webp",
+        "/_astro/cover.BjHBL4Ty_1r1WTN.webp",
+        "/_astro/cover.C7zndTul_2tYMbV.webp",
+        "/_astro/cover.CMjzJm20_Z1ahLFv.webp",
+        "/_astro/cover.CO0oSGne_ZDAyCx.webp",
+        "/_astro/cover.CPRPHded_pR3ba.webp",
+        "/_astro/cover.CeQ7WcvG_N4OmI.webp",
+        "/_astro/cover.CntUoPrT_8aRzv.webp",
+        "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+        "/_astro/cover.D9o0YR9o_ZUMruu.webp",
+        "/_astro/cover.DAty7eNU_1Tjy73.webp",
+        "/_astro/cover.DD6P6jFO_ZIhEkQ.webp",
+        "/_astro/cover.fB4ip9du_R6Bds.webp",
+        "/_astro/cover.s4eLLRt3_1U5lPP.webp",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/",
+      "canonical": "/tags/",
+      "title": "beyondwin",
+      "description": "찾기로 이어진 단어들.",
+      "headings": [],
+      "bodyTextHash": "f93e15641ffad9ccd2cccb43463e10aa65e4bf3e4fb7e05458813eaa368f8668",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/memory/",
+        "/reviews/",
+        "/search/",
+        "/tags/AI-agent/",
+        "/tags/AI/",
+        "/tags/BM25/",
+        "/tags/Codex/",
+        "/tags/Graphify/",
+        "/tags/ParadeDB/",
+        "/tags/PostgreSQL/",
+        "/tags/RAG/",
+        "/tags/agent/",
+        "/tags/architecture/",
+        "/tags/automation/",
+        "/tags/book/",
+        "/tags/code-search/",
+        "/tags/coding/",
+        "/tags/database/",
+        "/tags/design/",
+        "/tags/developer-tools/",
+        "/tags/essay/",
+        "/tags/frontend/",
+        "/tags/judgment/",
+        "/tags/knowledge-graph/",
+        "/tags/naver-archive/",
+        "/tags/pgvector/",
+        "/tags/reading/",
+        "/tags/reference/",
+        "/tags/review/",
+        "/tags/search/",
+        "/tags/security/",
+        "/tags/source-grounded/",
+        "/tags/system-design/",
+        "/tags/workflow/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/agent/",
+      "canonical": "/tags/agent/",
+      "title": "agent · beyondwin",
+      "description": "agent로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "agent"
+        }
+      ],
+      "bodyTextHash": "f554062a741279f6fa0752ce42c5bc013f19fb6e2fc5ac39aa64b2bd54425fe2",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/lazycodex-agent-harness-analysis/",
+        "/articles/oh-my-pi-deep-review/",
+        "/articles/ponytail-agent-minimalism-analysis/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/AI-agent/",
+      "canonical": "/tags/AI-agent/",
+      "title": "AI-agent · beyondwin",
+      "description": "AI-agent로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AI-agent"
+        }
+      ],
+      "bodyTextHash": "f512133e6e5f2c13cc501449745074596634b4163b40cf4dcd9a91481513e85e",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/AI/",
+      "canonical": "/tags/AI/",
+      "title": "AI · beyondwin",
+      "description": "AI로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AI"
+        }
+      ],
+      "bodyTextHash": "421b5523cfec26ce9080310dd66066ac466741192bbf6420f01b93046b5665ed",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/ai-design-references/",
+        "/articles/andrej-karpathy-skills-analysis/",
+        "/articles/codex-ui-mockup-workflow/",
+        "/articles/context-refinement-system-design/",
+        "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/lazycodex-agent-harness-analysis/",
+        "/articles/oh-my-pi-deep-review/",
+        "/articles/open-design-repo-analysis/",
+        "/articles/ponytail-agent-minimalism-analysis/",
+        "/articles/why-i-read-in-the-ai-era/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/architecture/",
+      "canonical": "/tags/architecture/",
+      "title": "architecture · beyondwin",
+      "description": "architecture로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "architecture"
+        }
+      ],
+      "bodyTextHash": "34df22e2cef4eeee25fddbc8a146b2a87d2f235f1b3ff0ad6fec83ea72770608",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/open-design-repo-analysis/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/automation/",
+      "canonical": "/tags/automation/",
+      "title": "automation · beyondwin",
+      "description": "automation로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "automation"
+        }
+      ],
+      "bodyTextHash": "fc08f6a68ba7b36244839ec1fc337218d47baf5cd12ef0592a822a5ce9b9baa4",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/hermes-agent-persistent-worker-runtime/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/BM25/",
+      "canonical": "/tags/BM25/",
+      "title": "BM25 · beyondwin",
+      "description": "BM25로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "BM25"
+        }
+      ],
+      "bodyTextHash": "4bf68c85e524ba25bd8d81140a674d606bacf5814a67f327deea2965fd3b0995",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/postgresql-bm25-pg-search/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/book/",
+      "canonical": "/tags/book/",
+      "title": "book · beyondwin",
+      "description": "book로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "book"
+        }
+      ],
+      "bodyTextHash": "230781b43f008e0ceb49aa676e5b3c8e615d6c1014a3da39b911fbda517084c9",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/reviews/art-thief/",
+        "/reviews/black-swan/",
+        "/reviews/changing-their-minds/",
+        "/reviews/convenience-store-woman/",
+        "/reviews/devotion-of-suspect-x/",
+        "/reviews/doing-good-better/",
+        "/reviews/factfulness/",
+        "/reviews/future-arrived-first/",
+        "/reviews/goethe-said-everything/",
+        "/reviews/habitus/",
+        "/reviews/how-adam-smith-can-change-your-life/",
+        "/reviews/how-we-crossed-winter/",
+        "/reviews/lolita/",
+        "/reviews/lord-of-the-flies/",
+        "/reviews/miracles-of-namiya-general-store/",
+        "/reviews/nevertheless/",
+        "/reviews/poor-charlies-almanack/",
+        "/reviews/siddhartha/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/code-search/",
+      "canonical": "/tags/code-search/",
+      "title": "code-search · beyondwin",
+      "description": "code-search로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "code-search"
+        }
+      ],
+      "bodyTextHash": "387f0c85ce08a0d667eae9e6ce6897ebe60158e0a4e22d6062f906b60b632ed2",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/Codex/",
+      "canonical": "/tags/Codex/",
+      "title": "Codex · beyondwin",
+      "description": "Codex로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Codex"
+        }
+      ],
+      "bodyTextHash": "29444a93ec1c2690fab7d48572c55cf9c7d0533bfca68a6b99f88a71fc65136f",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/lazycodex-agent-harness-analysis/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/coding/",
+      "canonical": "/tags/coding/",
+      "title": "coding · beyondwin",
+      "description": "coding로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "coding"
+        }
+      ],
+      "bodyTextHash": "e770005b91307f69caf81621e115d6e99bf232d101f89878a48c23e983a71128",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/andrej-karpathy-skills-analysis/",
+        "/articles/ponytail-agent-minimalism-analysis/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/database/",
+      "canonical": "/tags/database/",
+      "title": "database · beyondwin",
+      "description": "database로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "database"
+        }
+      ],
+      "bodyTextHash": "e2f886f31bcc88c4d65599e6188e0a2d80f39207adf851b4b8f2d3977bf70354",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/pgvector-hybrid-search/",
+        "/articles/postgresql-bm25-pg-search/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/design/",
+      "canonical": "/tags/design/",
+      "title": "design · beyondwin",
+      "description": "design로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "design"
+        }
+      ],
+      "bodyTextHash": "b033af3750de0fa93d1861d6b94c2e34913ddb38795aa64558835931a617fdaa",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/ai-design-references/",
+        "/articles/codex-ui-mockup-workflow/",
+        "/articles/open-design-repo-analysis/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/developer-tools/",
+      "canonical": "/tags/developer-tools/",
+      "title": "developer-tools · beyondwin",
+      "description": "developer-tools로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "developer-tools"
+        }
+      ],
+      "bodyTextHash": "ed283839ef33bd6fa45583a648e0879b73289361ff4d32c5e98822fbb9bf31a3",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/oh-my-pi-deep-review/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/essay/",
+      "canonical": "/tags/essay/",
+      "title": "essay · beyondwin",
+      "description": "essay로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "essay"
+        }
+      ],
+      "bodyTextHash": "ddc8cf5294f4a221f5d20eb21f120e4b91eaca576a52def34a4792ce4a1db58b",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/why-i-read-in-the-ai-era/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/frontend/",
+      "canonical": "/tags/frontend/",
+      "title": "frontend · beyondwin",
+      "description": "frontend로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "frontend"
+        }
+      ],
+      "bodyTextHash": "62b049ba458018bfc2a14ce33743b9fb46eaac1df81995d9df215d3ebfdea6f5",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/codex-ui-mockup-workflow/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/Graphify/",
+      "canonical": "/tags/Graphify/",
+      "title": "Graphify · beyondwin",
+      "description": "Graphify로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Graphify"
+        }
+      ],
+      "bodyTextHash": "d86a9cb97185bef9eeaf6f4bd966f984eafb4f3d4ace1a48b5aa289484a17a3c",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/judgment/",
+      "canonical": "/tags/judgment/",
+      "title": "judgment · beyondwin",
+      "description": "judgment로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "judgment"
+        }
+      ],
+      "bodyTextHash": "247033fe713de4819428da07db6bf19ae51259c44c529b64894ad876b52ebe2b",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/why-i-read-in-the-ai-era/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/knowledge-graph/",
+      "canonical": "/tags/knowledge-graph/",
+      "title": "knowledge-graph · beyondwin",
+      "description": "knowledge-graph로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "knowledge-graph"
+        }
+      ],
+      "bodyTextHash": "6701bb776d06770865cbf904711abb238395675e0554ba5819e6c8a9fdfe0beb",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/naver-archive/",
+      "canonical": "/tags/naver-archive/",
+      "title": "naver-archive · beyondwin",
+      "description": "naver-archive로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "naver-archive"
+        }
+      ],
+      "bodyTextHash": "2589bda1ec90686659f8a9b713b6054542420985b64b93b7dbfaf19c97e4922c",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/reviews/art-thief/",
+        "/reviews/black-swan/",
+        "/reviews/changing-their-minds/",
+        "/reviews/convenience-store-woman/",
+        "/reviews/devotion-of-suspect-x/",
+        "/reviews/doing-good-better/",
+        "/reviews/factfulness/",
+        "/reviews/future-arrived-first/",
+        "/reviews/goethe-said-everything/",
+        "/reviews/habitus/",
+        "/reviews/how-adam-smith-can-change-your-life/",
+        "/reviews/how-we-crossed-winter/",
+        "/reviews/lolita/",
+        "/reviews/lord-of-the-flies/",
+        "/reviews/miracles-of-namiya-general-store/",
+        "/reviews/nevertheless/",
+        "/reviews/poor-charlies-almanack/",
+        "/reviews/siddhartha/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/ParadeDB/",
+      "canonical": "/tags/ParadeDB/",
+      "title": "ParadeDB · beyondwin",
+      "description": "ParadeDB로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "ParadeDB"
+        }
+      ],
+      "bodyTextHash": "4608a981c704c32f12d70dc3538e2473582bb43a540499b08b7e3b2292ca3efc",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/postgresql-bm25-pg-search/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/pgvector/",
+      "canonical": "/tags/pgvector/",
+      "title": "pgvector · beyondwin",
+      "description": "pgvector로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "pgvector"
+        }
+      ],
+      "bodyTextHash": "0df58fc9dbab47f9b13b044943a5439decebac498599faa631cc0b1f6ca28b7d",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/pgvector-hybrid-search/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/PostgreSQL/",
+      "canonical": "/tags/PostgreSQL/",
+      "title": "PostgreSQL · beyondwin",
+      "description": "PostgreSQL로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "PostgreSQL"
+        }
+      ],
+      "bodyTextHash": "f7f46bb6901e00f19da580d46387afb89606778639bb1943637bcaeeb8706108",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/pgvector-hybrid-search/",
+        "/articles/postgresql-bm25-pg-search/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/RAG/",
+      "canonical": "/tags/RAG/",
+      "title": "RAG · beyondwin",
+      "description": "RAG로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "RAG"
+        }
+      ],
+      "bodyTextHash": "b8629bff8fe60946fcf9e6e359da557e995d6d7ffd265c63a9036259f5d97ef5",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/pgvector-hybrid-search/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/reading/",
+      "canonical": "/tags/reading/",
+      "title": "reading · beyondwin",
+      "description": "reading로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "reading"
+        }
+      ],
+      "bodyTextHash": "49225e4a6dae13b63036ebb7d4f23217b6ac2ee79c2afb09f895e9d95050af99",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/why-i-read-in-the-ai-era/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/reference/",
+      "canonical": "/tags/reference/",
+      "title": "reference · beyondwin",
+      "description": "reference로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "reference"
+        }
+      ],
+      "bodyTextHash": "535449bf54c457836757a4ce3ab65b3475b2cb04f43b18116d97241a40ae20a9",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/ai-design-references/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/review/",
+      "canonical": "/tags/review/",
+      "title": "review · beyondwin",
+      "description": "review로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "review"
+        }
+      ],
+      "bodyTextHash": "c34e6bc09a3bec7fe433b7511e00920e7490573ae63e79c7b6de937fd468f1a2",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/reviews/art-thief/",
+        "/reviews/black-swan/",
+        "/reviews/changing-their-minds/",
+        "/reviews/convenience-store-woman/",
+        "/reviews/devotion-of-suspect-x/",
+        "/reviews/doing-good-better/",
+        "/reviews/factfulness/",
+        "/reviews/future-arrived-first/",
+        "/reviews/goethe-said-everything/",
+        "/reviews/habitus/",
+        "/reviews/how-adam-smith-can-change-your-life/",
+        "/reviews/how-we-crossed-winter/",
+        "/reviews/lolita/",
+        "/reviews/lord-of-the-flies/",
+        "/reviews/miracles-of-namiya-general-store/",
+        "/reviews/nevertheless/",
+        "/reviews/poor-charlies-almanack/",
+        "/reviews/siddhartha/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/search/",
+      "canonical": "/tags/search/",
+      "title": "search · beyondwin",
+      "description": "search로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "search"
+        }
+      ],
+      "bodyTextHash": "b2b79948bef6a476ad9fa43ea0e51975c178b97b1b1e9c92378ddf0df156e385",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/pgvector-hybrid-search/",
+        "/articles/postgresql-bm25-pg-search/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/security/",
+      "canonical": "/tags/security/",
+      "title": "security · beyondwin",
+      "description": "security로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "security"
+        }
+      ],
+      "bodyTextHash": "6a43efa1efa8577e0283b800b8efc8299cf0646d0165589df9284442375ccbd6",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/oh-my-pi-deep-review/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/source-grounded/",
+      "canonical": "/tags/source-grounded/",
+      "title": "source-grounded · beyondwin",
+      "description": "source-grounded로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "source-grounded"
+        }
+      ],
+      "bodyTextHash": "e3837ef7deaa7cd11cc22b58f5dbe3001cbfe8593a36a147cec119db35fc9214",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/lazycodex-agent-harness-analysis/",
+        "/articles/oh-my-pi-deep-review/",
+        "/articles/ponytail-agent-minimalism-analysis/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/system-design/",
+      "canonical": "/tags/system-design/",
+      "title": "system-design · beyondwin",
+      "description": "system-design로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "system-design"
+        }
+      ],
+      "bodyTextHash": "b768f2785cc2e38ffb274354a2a38e456852cf3953dc483120e8a5b3714e87cb",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/context-refinement-system-design/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/workflow/",
+      "canonical": "/tags/workflow/",
+      "title": "workflow · beyondwin",
+      "description": "workflow로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "workflow"
+        }
+      ],
+      "bodyTextHash": "7ab2d99a3e0319a571d1acdafaf3216624d06f05f93d43101da692b2e3c59ccc",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/andrej-karpathy-skills-analysis/",
+        "/articles/context-refinement-system-design/",
+        "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/lazycodex-agent-harness-analysis/",
+        "/articles/ponytail-agent-minimalism-analysis/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/travel/",
+      "canonical": "/travel/",
+      "title": "beyondwin",
+      "description": "아직 공개한 장면이 없습니다. 다 쓴 글은 글에서 읽습니다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "아직 공개한 장면이 없습니다. 다 쓴 글은 글에서 읽습니다."
+        }
+      ],
+      "bodyTextHash": "554b30e7c747ccbcc135fe80c2077128f986d339593e71ae0327667438394b15",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    }
+  ]
+}
