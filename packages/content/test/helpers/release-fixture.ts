@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import sharp from 'sharp';
 
 const transparentPng = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -16,9 +17,24 @@ export async function writeReleaseFixture(
     privateFrontmatter?: string;
     featuredMedia?: boolean;
     figureMarkup?: string;
+    mediaWidth?: number;
+    mediaHeight?: number;
   } = {},
 ): Promise<void> {
   const title = options.title ?? 'Public fixture';
+  const mediaWidth = options.mediaWidth ?? 1;
+  const mediaHeight = options.mediaHeight ?? 1;
+  const mediaBytes = mediaWidth === 1 && mediaHeight === 1
+    ? transparentPng
+    : await sharp({
+      create: {
+        width: mediaWidth,
+        height: mediaHeight,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    }).png().toBuffer();
+  const mediaChecksum = `sha256:${createHash('sha256').update(mediaBytes).digest('hex')}`;
   const contentRoot = join(root, 'src', 'content');
   const mediaRoot = join(root, 'src', 'assets', 'content', 'articles', 'public-fixture');
 
@@ -56,7 +72,7 @@ export async function writeReleaseFixture(
     '',
   ].join('\n'));
 
-  await writeFile(join(mediaRoot, 'hero.png'), transparentPng);
+  await writeFile(join(mediaRoot, 'hero.png'), mediaBytes);
   await writeFile(join(mediaRoot, 'media.yml'), [
     'version: 1',
     'items:',
@@ -69,9 +85,9 @@ export async function writeReleaseFixture(
     '    sourceUrl: https://example.com/public-fixture',
     '    verifiedAt: "2026-08-23"',
     '    rightsNote: Generated test fixture',
-    '    width: 1',
-    '    height: 1',
-    `    checksum: ${fixtureChecksum}`,
+    `    width: ${mediaWidth}`,
+    `    height: ${mediaHeight}`,
+    `    checksum: ${mediaChecksum}`,
     '',
   ].join('\n'));
 

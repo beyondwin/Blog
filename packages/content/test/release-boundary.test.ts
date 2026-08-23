@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import sharp from 'sharp';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   activateRelease,
   cleanupOwnedTemporaryRoot,
@@ -11,8 +11,35 @@ import {
   prepareActiveRelease,
 } from '../src/release/build-release';
 import { findPublicBoundaryHits, readActiveRelease } from '../src/release/read-release';
+import { renderTrustedMdx } from '../src/mdx/render';
 import { writeReleaseFixture } from './helpers/release-fixture';
 import { buildPublicRelease } from '../src/release/build-release';
+
+const renameRace = vi.hoisted(() => ({
+  beforeRename: undefined as undefined | ((from: string, to: string) => Promise<boolean>),
+  beforeOpen: undefined as undefined | ((path: string) => Promise<boolean>),
+}));
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    open: async (...args: Parameters<typeof actual.open>) => {
+      const hook = renameRace.beforeOpen;
+      if (hook && await hook(String(args[0]))) {
+        renameRace.beforeOpen = undefined;
+      }
+      return actual.open(...args);
+    },
+    rename: async (from: string, to: string) => {
+      const hook = renameRace.beforeRename;
+      if (hook && await hook(String(from), String(to))) {
+        renameRace.beforeRename = undefined;
+      }
+      return actual.rename(from, to);
+    },
+  };
+});
 
 interface TestCandidate {
   src: string;
@@ -32,9 +59,29 @@ function sha256(bytes: Buffer): string {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
+async function writeForgedCandidate(
+  releasePath: string,
+  href: string,
+  format: 'avif' | 'webp' | 'png',
+  width: number,
+  height: number,
+): Promise<TestCandidate> {
+  let pipeline = sharp({
+    create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  });
+  if (format === 'avif') pipeline = pipeline.avif();
+  else if (format === 'webp') pipeline = pipeline.webp();
+  else pipeline = pipeline.png();
+  const bytes = await pipeline.toBuffer();
+  await writeFile(join(releasePath, href.slice(1)), bytes);
+  return { src: href, width, height, checksum: sha256(bytes) };
+}
+
 describe('active public release boundary', () => {
   it.each([
     ['private source locator', 'file:///Users/example/private/Blog/memory/thoughts/secret.md'],
+    ['private memory edge locator', 'memory/edges.jsonl'],
+    ['private memory source locator', 'memory\\sources.jsonl'],
     ['serialized raw prompt', '{"rawPrompt":"do not publish","jobPayload":{"id":"private"}}'],
     ['serialized embedding payload', '{"embedding":[0.1,-0.2,0.3]}'],
   ])('measures a %s embedded inside an allowlisted string', (_case, leakedValue) => {
@@ -42,6 +89,21 @@ describe('active public release boundary', () => {
 
     expect(hits.length).toBeGreaterThan(0);
     expect(hits.every((hit) => hit.path === 'manifest.bodyHtml')).toBe(true);
+  });
+
+  it('measures serialized private fields and vectors after the real renderer escapes their quotes', async () => {
+    const bodyHtml = await renderTrustedMdx([
+      '`{"rawPrompt":"private instruction"}`',
+      '',
+      '`{"embedding":[0.1,-0.2,0.3]}`',
+    ].join('\n'), { media: new Map() });
+    expect(bodyHtml).toContain('&quot;rawPrompt&quot;');
+    expect(bodyHtml).toContain('&quot;embedding&quot;');
+
+    expect(findPublicBoundaryHits({ bodyHtml })).toEqual([
+      expect.objectContaining({ kind: 'serialized-private-field', path: 'manifest.bodyHtml' }),
+      expect.objectContaining({ kind: 'embedding-payload', path: 'manifest.bodyHtml' }),
+    ]);
   });
 
   it('does not treat truthful public prose about embeddings as an embedding payload', () => {
@@ -108,6 +170,31 @@ describe('active public release boundary', () => {
     })}\n`);
 
     await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/symbolic link|containment/i);
+  });
+
+  it('detects a release-directory replacement after containment resolution but before manifest open', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-directory-in-call-race-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'owned-releases');
+    const externalRoot = join(sandbox, 'external-releases');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const external = await buildPublicRelease({ root: sourceRoot, releasesRoot: externalRoot });
+    const displacedPath = join(sandbox, 'displaced-release');
+    const manifestPath = join(await realpath(built.releasePath), 'manifest.json');
+    renameRace.beforeOpen = async (path) => {
+      if (path !== manifestPath) return false;
+      await rename(built.releasePath, displacedPath);
+      await symlink(external.releasePath, built.releasePath, 'dir');
+      return true;
+    };
+
+    try {
+      await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/changed during verification|inode/i);
+      expect(renameRace.beforeOpen).toBeUndefined();
+    } finally {
+      renameRace.beforeOpen = undefined;
+    }
   });
 
   it('rejects an active pointer symlink that escapes the owned releases root', async () => {
@@ -265,6 +352,73 @@ describe('active public release boundary', () => {
     await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/source-set dimension parity/i);
   });
 
+  it('rejects duplicate rendered width descriptors even when candidate heights differ', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-duplicate-width-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot, {
+      featuredMedia: false,
+      mediaWidth: 1600,
+      mediaHeight: 900,
+    });
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as TestManifest;
+    const asset = manifest.assets['articles/public-fixture/hero']!;
+    const avif = asset.sources.find((source) => source.type === 'image/avif')!;
+    const webp = asset.sources.find((source) => source.type === 'image/webp')!;
+    avif.candidates.push(await writeForgedCandidate(
+      built.releasePath,
+      '/assets/content/articles/public-fixture/hero-720w-forged.avif',
+      'avif',
+      720,
+      400,
+    ));
+    webp.candidates.push(await writeForgedCandidate(
+      built.releasePath,
+      '/assets/content/articles/public-fixture/hero-720w-forged.webp',
+      'webp',
+      720,
+      400,
+    ));
+    asset.fallback.candidates.push(await writeForgedCandidate(
+      built.releasePath,
+      '/assets/content/articles/public-fixture/hero-720w-forged.png',
+      'png',
+      720,
+      400,
+    ));
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/duplicate responsive width descriptor/i);
+  });
+
+  it('rejects identical source sets that all omit an approved generated width', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-missing-width-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot, {
+      featuredMedia: false,
+      mediaWidth: 1600,
+      mediaHeight: 900,
+    });
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as TestManifest;
+    const asset = manifest.assets['articles/public-fixture/hero']!;
+    for (const candidates of [
+      ...asset.sources.map((source) => source.candidates),
+      asset.fallback.candidates,
+    ]) {
+      const missing = candidates.find((candidate) => candidate.width === 1080)!;
+      await rm(join(built.releasePath, missing.src.slice(1)));
+      candidates.splice(candidates.indexOf(missing), 1);
+    }
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/approved responsive widths/i);
+  });
+
   it('keeps the previous pointer readable before rename and exposes only the complete release after rename', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-crash-'));
     const oldSource = join(sandbox, 'old-source');
@@ -323,6 +477,40 @@ describe('active public release boundary', () => {
     await symlink(externalPointer, temporaryPath);
 
     await expect(activateRelease(prepared)).rejects.toThrow(/symbolic link|regular owned file/i);
+  });
+
+  it('detects and recovers an active pointer replacement inside the rename operation', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-pointer-in-call-race-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    const externalPointer = join(sandbox, 'external-pointer.json');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const prepared = await prepareActiveRelease(releasesRoot, {
+      releaseId: built.releaseId,
+      path: built.releaseId,
+    });
+    const temporaryPath = join(releasesRoot, 'active.json.tmp');
+    const activePath = join(releasesRoot, 'active.json');
+    await writeFile(externalPointer, `${JSON.stringify({
+      releaseId: 'b'.repeat(64),
+      path: 'b'.repeat(64),
+    })}\n`);
+    renameRace.beforeRename = async (from, to) => {
+      if (from !== temporaryPath || to !== activePath) return false;
+      await rm(temporaryPath);
+      await symlink(externalPointer, temporaryPath);
+      return true;
+    };
+
+    try {
+      await expect(activateRelease(prepared)).rejects.toThrow(/changed during activation|inode/i);
+      await expect(readActiveRelease(releasesRoot)).resolves.toMatchObject({
+        pointer: { releaseId: built.releaseId, path: built.releaseId },
+      });
+    } finally {
+      renameRace.beforeRename = undefined;
+    }
   });
 });
 

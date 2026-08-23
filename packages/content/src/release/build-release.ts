@@ -8,6 +8,7 @@ import {
   readdir,
   rename,
   rm,
+  type FileHandle,
 } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { isPublicRecord, parsePublicRecord, type PublicMedia, type PublicRecord } from '@beyondwin/contracts';
@@ -62,39 +63,177 @@ const preparedActiveReleases = new WeakMap<object, {
   activePath: string;
   bytes: string;
 }>();
+const activeActivationRoots = new Set<string>();
 
 function sortedRecord<T>(entries: Iterable<readonly [string, T]>): Record<string, T> {
   return Object.fromEntries([...entries].sort(([left], [right]) => left.localeCompare(right)));
 }
 
 async function fsyncDirectory(path: string): Promise<void> {
-  const handle = await open(path, 'r');
+  const handle = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
   try {
+    if (!(await handle.stat()).isDirectory()) throw new Error(`${path}: fsync target must be a directory`);
     await handle.sync();
   } finally {
     await handle.close();
   }
 }
 
-async function readPreparedPointer(path: string): Promise<string> {
+interface OwnedPointerFile {
+  handle: FileHandle;
+  bytes: string;
+  dev: number;
+  ino: number;
+}
+
+interface OwnedDirectory {
+  handle: FileHandle;
+  path: string;
+  dev: number;
+  ino: number;
+}
+
+async function openOwnedDirectory(path: string): Promise<OwnedDirectory> {
+  const handle = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    const state = await handle.stat();
+    const pathState = await lstat(path);
+    if (
+      !state.isDirectory()
+      || pathState.isSymbolicLink()
+      || !pathState.isDirectory()
+      || state.dev !== pathState.dev
+      || state.ino !== pathState.ino
+      || (typeof process.getuid === 'function' && state.uid !== process.getuid())
+    ) {
+      throw new Error('public-releases root must be one real directory owned by the current user');
+    }
+    return { handle, path, dev: state.dev, ino: state.ino };
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+}
+
+async function assertOwnedDirectory(directory: OwnedDirectory): Promise<void> {
+  const pathState = await lstat(directory.path);
+  const handleState = await directory.handle.stat();
+  if (
+    pathState.isSymbolicLink()
+    || !pathState.isDirectory()
+    || pathState.dev !== directory.dev
+    || pathState.ino !== directory.ino
+    || handleState.dev !== directory.dev
+    || handleState.ino !== directory.ino
+  ) {
+    throw new Error('public-releases root changed during active pointer operation');
+  }
+}
+
+async function openOwnedPointerFile(path: string, label: string): Promise<OwnedPointerFile> {
   let file;
   try {
     file = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ELOOP') {
-      throw new Error('prepared active pointer must not be a symbolic link');
+      throw new Error(`${label} must not be a symbolic link`);
     }
     throw error;
   }
   try {
     const state = await file.stat();
-    if (!state.isFile() || state.nlink !== 1) {
-      throw new Error('prepared active pointer must be one regular owned file');
+    if (
+      !state.isFile()
+      || state.nlink !== 1
+      || (typeof process.getuid === 'function' && state.uid !== process.getuid())
+    ) {
+      throw new Error(`${label} must be one regular owned file`);
     }
-    return await file.readFile('utf8');
-  } finally {
+    return {
+      handle: file,
+      bytes: await file.readFile('utf8'),
+      dev: state.dev,
+      ino: state.ino,
+    };
+  } catch (error) {
     await file.close();
+    throw error;
   }
+}
+
+async function assertPointerPathMatches(
+  path: string,
+  owned: OwnedPointerFile,
+  label: string,
+): Promise<void> {
+  let state;
+  try {
+    state = await lstat(path);
+  } catch {
+    throw new Error(`${label} changed during activation`);
+  }
+  const handleState = await owned.handle.stat();
+  if (
+    state.isSymbolicLink()
+    || !state.isFile()
+    || state.nlink !== 1
+    || state.dev !== owned.dev
+    || state.ino !== owned.ino
+    || handleState.dev !== owned.dev
+    || handleState.ino !== owned.ino
+  ) {
+    throw new Error(`${label} inode changed during activation`);
+  }
+}
+
+async function previousActiveBytes(path: string, directory: OwnedDirectory): Promise<string | undefined> {
+  let previous: OwnedPointerFile | undefined;
+  try {
+    await assertOwnedDirectory(directory);
+    previous = await openOwnedPointerFile(path, 'existing active pointer');
+    activeReleasePointerSchema.parse(JSON.parse(previous.bytes));
+    await assertPointerPathMatches(path, previous, 'existing active pointer');
+    await assertOwnedDirectory(directory);
+    return previous.bytes;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  } finally {
+    if (previous) await previous.handle.close();
+  }
+}
+
+async function restorePreviousActivePointer(
+  directory: OwnedDirectory,
+  temporaryPath: string,
+  activePath: string,
+  previousBytes: string | undefined,
+): Promise<void> {
+  await assertOwnedDirectory(directory);
+  if (previousBytes === undefined) {
+    await rm(activePath, { force: true });
+    await assertOwnedDirectory(directory);
+    await directory.handle.sync();
+    return;
+  }
+  const rollback = await open(
+    temporaryPath,
+    fsConstants.O_WRONLY
+      | fsConstants.O_CREAT
+      | fsConstants.O_EXCL
+      | fsConstants.O_NOFOLLOW,
+    0o600,
+  );
+  try {
+    await rollback.writeFile(previousBytes, 'utf8');
+    await rollback.sync();
+  } finally {
+    await rollback.close();
+  }
+  await assertOwnedDirectory(directory);
+  await rename(temporaryPath, activePath);
+  await assertOwnedDirectory(directory);
+  await directory.handle.sync();
 }
 
 async function fsyncTree(root: string): Promise<void> {
@@ -307,11 +446,40 @@ export async function prepareActiveRelease(
 export async function activateRelease(prepared: PreparedActiveRelease): Promise<void> {
   const state = prepared && typeof prepared === 'object' ? preparedActiveReleases.get(prepared) : undefined;
   if (!state) throw new Error('activation is not an owned prepared release');
-  const currentBytes = await readPreparedPointer(state.temporaryPath);
-  if (currentBytes !== state.bytes) throw new Error('prepared active pointer changed before rename');
-  preparedActiveReleases.delete(prepared);
-  await rename(state.temporaryPath, state.activePath);
-  await fsyncDirectory(state.releasesRoot);
+  if (activeActivationRoots.has(state.releasesRoot)) {
+    throw new Error('an active pointer operation is already in progress for this releases root');
+  }
+  activeActivationRoots.add(state.releasesRoot);
+  let pointerFile: OwnedPointerFile | undefined;
+  let releasesDirectory: OwnedDirectory | undefined;
+  try {
+    releasesDirectory = await openOwnedDirectory(state.releasesRoot);
+    pointerFile = await openOwnedPointerFile(state.temporaryPath, 'prepared active pointer');
+    if (pointerFile.bytes !== state.bytes) throw new Error('prepared active pointer changed before rename');
+    await assertPointerPathMatches(state.temporaryPath, pointerFile, 'prepared active pointer');
+    const previousBytes = await previousActiveBytes(state.activePath, releasesDirectory);
+    await assertOwnedDirectory(releasesDirectory);
+    await assertPointerPathMatches(state.temporaryPath, pointerFile, 'prepared active pointer');
+    preparedActiveReleases.delete(prepared);
+    await rename(state.temporaryPath, state.activePath);
+    try {
+      await assertPointerPathMatches(state.activePath, pointerFile, 'active pointer');
+    } catch (error) {
+      await restorePreviousActivePointer(
+        releasesDirectory,
+        state.temporaryPath,
+        state.activePath,
+        previousBytes,
+      );
+      throw error;
+    }
+    await assertOwnedDirectory(releasesDirectory);
+    await releasesDirectory.handle.sync();
+  } finally {
+    if (pointerFile) await pointerFile.handle.close();
+    if (releasesDirectory) await releasesDirectory.handle.close();
+    activeActivationRoots.delete(state.releasesRoot);
+  }
 }
 
 export async function buildPublicRelease(

@@ -8,7 +8,7 @@ import { sourceMediaManifestSchema, type VerifiableSourceInputFormat } from '../
 import { resolveSourceMedia } from '../source-records';
 
 type SourceCollection = 'analysis' | 'articles' | 'ideas' | 'reviews' | 'travel';
-type ResponsiveMediaRole = 'figure' | 'intrinsic';
+export type ResponsiveMediaRole = 'figure' | 'intrinsic';
 
 export interface ReleaseMediaCandidate {
   src: string;
@@ -68,10 +68,10 @@ function variantHref(sourceHref: string, suffix: string, format: string): string
   return `${sourceHref.slice(0, -extension.length)}-${suffix}.${format}`;
 }
 
-function responsiveWidths(input: SourceMediaBuildInput): number[] {
-  if (input.role === 'intrinsic') return [input.publicMedia.width];
-  return [...new Set([720, 1080, 1600, input.publicMedia.width]
-    .filter((width) => width <= input.publicMedia.width))]
+export function responsiveWidths(role: ResponsiveMediaRole, intrinsicWidth: number): number[] {
+  if (role === 'intrinsic') return [intrinsicWidth];
+  return [...new Set([720, 1080, 1600, intrinsicWidth]
+    .filter((width) => width <= intrinsicWidth))]
     .sort((left, right) => left - right);
 }
 
@@ -146,7 +146,7 @@ export async function buildResponsiveMedia(
   await mkdir(dirname(fallbackPath), { recursive: true });
   await writeFile(fallbackPath, sourceBytes);
 
-  const widths = responsiveWidths(input);
+  const widths = responsiveWidths(input.role, input.publicMedia.width);
   const modernSources: ReleaseMediaSource[] = [];
   for (const format of ['avif', 'webp'] as const) {
     const candidates: ReleaseMediaCandidate[] = [];

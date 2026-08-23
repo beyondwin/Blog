@@ -1,14 +1,18 @@
 import { createHash } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
-import { lstat, open, readdir, realpath } from 'node:fs/promises';
-import { extname, join, relative, resolve, sep } from 'node:path';
+import { lstat, open, readdir, realpath, type FileHandle } from 'node:fs/promises';
+import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import {
   parsePublicRecord,
   type PublicRecord,
 } from '@beyondwin/contracts';
 import { z } from 'zod';
 import sharp from 'sharp';
-import type { ReleaseMediaAsset } from '../media/build-responsive-media';
+import {
+  responsiveWidths,
+  type ReleaseMediaAsset,
+  type ResponsiveMediaRole,
+} from '../media/build-responsive-media';
 
 const releaseIdSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const canonicalAssetHrefSchema = z.string().regex(
@@ -117,7 +121,73 @@ export async function resolveOwnedReleasesRoot(releasesRoot: string): Promise<st
   return root;
 }
 
-async function readOwnedRegularFile(path: string, label: string): Promise<Buffer> {
+interface DirectoryGuard {
+  handle: FileHandle;
+  path: string;
+  label: string;
+  dev: number;
+  ino: number;
+}
+
+async function openDirectoryGuard(path: string, label: string): Promise<DirectoryGuard> {
+  let handle;
+  try {
+    handle = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ELOOP') {
+      throw new Error(`${label} must not be a symbolic link`);
+    }
+    throw error;
+  }
+  try {
+    const state = await handle.stat();
+    const pathState = await lstat(path);
+    if (!state.isDirectory() || pathState.isSymbolicLink() || !pathState.isDirectory()) {
+      throw new Error(`${label} must be a real directory`);
+    }
+    if (state.dev !== pathState.dev || state.ino !== pathState.ino) {
+      throw new Error(`${label} changed while its directory handle was opened`);
+    }
+    if (typeof process.getuid === 'function' && state.uid !== process.getuid()) {
+      throw new Error(`${label} must be owned by the current user`);
+    }
+    return { handle, path, label, dev: state.dev, ino: state.ino };
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+}
+
+async function assertDirectoryGuard(guard: DirectoryGuard): Promise<void> {
+  let pathState;
+  try {
+    pathState = await lstat(guard.path);
+  } catch {
+    throw new Error(`${guard.label} changed during verification`);
+  }
+  const handleState = await guard.handle.stat();
+  if (
+    pathState.isSymbolicLink()
+    || !pathState.isDirectory()
+    || pathState.dev !== guard.dev
+    || pathState.ino !== guard.ino
+    || handleState.dev !== guard.dev
+    || handleState.ino !== guard.ino
+  ) {
+    throw new Error(`${guard.label} changed during verification`);
+  }
+}
+
+async function assertDirectoryGuards(guards: readonly DirectoryGuard[]): Promise<void> {
+  for (const guard of guards) await assertDirectoryGuard(guard);
+}
+
+async function readOwnedRegularFile(
+  path: string,
+  label: string,
+  guards: readonly DirectoryGuard[] = [],
+): Promise<Buffer> {
+  await assertDirectoryGuards(guards);
   let file;
   try {
     file = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
@@ -129,10 +199,16 @@ async function readOwnedRegularFile(path: string, label: string): Promise<Buffer
   }
   try {
     const state = await file.stat();
-    if (!state.isFile() || state.nlink !== 1) {
+    if (
+      !state.isFile()
+      || state.nlink !== 1
+      || (typeof process.getuid === 'function' && state.uid !== process.getuid())
+    ) {
       throw new Error(`${label} must be one regular owned file`);
     }
-    return await file.readFile();
+    const bytes = await file.readFile();
+    await assertDirectoryGuards(guards);
+    return bytes;
   } finally {
     await file.close();
   }
@@ -166,7 +242,18 @@ const forbiddenPrivateKey = /^(?:embedding|embeddings|jobPrompt|rawPrompt|jobPay
 const serializedPrivateField = /["'](?:jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)["']\s*:/i;
 const serializedEmbeddingPayload = /["']embeddings?["']\s*:\s*\[\s*[+\-.\d]/i;
 const assignedPrivateField = /\b(?:jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)\s*=/i;
-const privateLocator = /\/Users\/|[A-Za-z]:\\Users\\|memory[\\/]thoughts[\\/]/i;
+const privateLocator = /\/Users\/|[A-Za-z]:\\Users\\|memory[\\/](?:thoughts[\\/]|edges\.jsonl|sources\.jsonl)/i;
+
+function normalizeBoundaryString(value: string): string {
+  let normalized = value;
+  for (let pass = 0; pass < 2; pass += 1) {
+    normalized = normalized
+      .replaceAll(/&amp;/gi, '&')
+      .replaceAll(/&(?:quot|#0*34|#x0*22);/gi, '"')
+      .replaceAll(/&(?:apos|#0*39|#x0*27);/gi, "'");
+  }
+  return normalized;
+}
 
 export function findPublicBoundaryHits(value: unknown, path = 'manifest'): PublicBoundaryHit[] {
   const hits: PublicBoundaryHit[] = [];
@@ -176,13 +263,14 @@ export function findPublicBoundaryHits(value: unknown, path = 'manifest'): Publi
       return;
     }
     if (typeof child === 'string') {
-      if (privateLocator.test(child)) {
+      const normalized = normalizeBoundaryString(child);
+      if (privateLocator.test(normalized)) {
         hits.push({ path: childPath, kind: 'private-locator', marker: 'private filesystem locator' });
       }
-      if (serializedPrivateField.test(child) || assignedPrivateField.test(child)) {
+      if (serializedPrivateField.test(normalized) || assignedPrivateField.test(normalized)) {
         hits.push({ path: childPath, kind: 'serialized-private-field', marker: 'serialized private payload field' });
       }
-      if (serializedEmbeddingPayload.test(child)) {
+      if (serializedEmbeddingPayload.test(normalized)) {
         hits.push({ path: childPath, kind: 'embedding-payload', marker: 'serialized embedding vector' });
       }
       return;
@@ -299,13 +387,20 @@ function candidateDimensions(candidates: Array<{ width: number; height: number }
     .join(',');
 }
 
-function assertMediaCandidateInvariants(assetKey: string, asset: ReleaseMediaAsset): void {
+function assertMediaCandidateInvariants(
+  assetKey: string,
+  asset: ReleaseMediaAsset,
+): void {
   const expectedPrefix = `/assets/content/${asset.collection}/${asset.recordId}/`;
   const candidateGroups = [
     ...asset.sources.map((source) => source.candidates),
     asset.fallback.candidates,
   ];
   for (const candidates of candidateGroups) {
+    const widths = candidates.map(({ width }) => width);
+    if (new Set(widths).size !== widths.length) {
+      throw new Error(`${assetKey}: duplicate responsive width descriptor`);
+    }
     const dimensions = candidates.map(({ width, height }) => `${width}x${height}`);
     if (new Set(dimensions).size !== dimensions.length) {
       throw new Error(`${assetKey}: duplicate dimensions in responsive media source set`);
@@ -347,45 +442,108 @@ function assertMediaCandidateInvariants(assetKey: string, asset: ReleaseMediaAss
   }
 }
 
+function assertResponsiveWidthPolicy(
+  assetKey: string,
+  asset: ReleaseMediaAsset,
+  role: ResponsiveMediaRole,
+): void {
+  const approvedWidths = responsiveWidths(role, asset.width);
+  for (const candidates of [
+    ...asset.sources.map((source) => source.candidates),
+    asset.fallback.candidates,
+  ]) {
+    const sortedWidths = candidates.map(({ width }) => width).sort((left, right) => left - right);
+    if (canonicalJson(sortedWidths) !== canonicalJson(approvedWidths)) {
+      throw new Error(
+        `${assetKey}: candidates do not match approved responsive widths ${approvedWidths.join(',')}`,
+      );
+    }
+  }
+}
+
+function responsiveRoleForAsset(
+  manifest: PublicReleaseManifest,
+  assetKey: string,
+  asset: ReleaseMediaAsset,
+): ResponsiveMediaRole {
+  const record = manifest.records[`${asset.collection}/${asset.recordId}`];
+  if (!record) throw new Error(`${assetKey}: responsive asset has no public record`);
+  const figureMarker = `<figure class="content-figure" data-source-checksum="${asset.sourceChecksum}">`;
+  const fallbackMarker = `<img src="${asset.fallback.src}"`;
+  let figureStart = record.bodyHtml.indexOf(figureMarker);
+  while (figureStart !== -1) {
+    const figureEnd = record.bodyHtml.indexOf('</figure>', figureStart + figureMarker.length);
+    if (figureEnd === -1) break;
+    if (record.bodyHtml.slice(figureStart, figureEnd).includes(fallbackMarker)) return 'figure';
+    figureStart = record.bodyHtml.indexOf(figureMarker, figureEnd + '</figure>'.length);
+  }
+  return 'intrinsic';
+}
+
 async function verifyCandidate(
   releasePath: string,
   candidate: { src: string; checksum: string; width: number; height: number },
   expectedFormat: PublicImageFormat,
+  guards: readonly DirectoryGuard[],
 ): Promise<void> {
   const pathFormat = extname(candidate.src).slice(1).toLowerCase();
   if (!sameImageFormat(pathFormat, expectedFormat)) {
     throw new Error(`${candidate.src}: path extension does not match ${expectedFormat} source type`);
   }
-  const bytes = await readOwnedRegularFile(releaseFilePath(releasePath, candidate.src), candidate.src);
-  const actual = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
-  if (actual !== candidate.checksum) throw new Error(`${candidate.src}: release asset checksum mismatch`);
-  const metadata = await sharp(bytes).metadata();
-  const actualFormat = metadata.format === 'heif' && metadata.compression === 'av1'
-    ? 'avif'
-    : metadata.format;
-  if (!actualFormat || !sameImageFormat(actualFormat, expectedFormat)) {
-    throw new Error(`${candidate.src}: actual media format ${actualFormat ?? 'unknown'} does not match ${expectedFormat}`);
-  }
-  if (metadata.width !== candidate.width || metadata.height !== candidate.height) {
-    throw new Error(
-      `${candidate.src}: actual media dimensions ${metadata.width ?? '?'}x${metadata.height ?? '?'} do not match ${candidate.width}x${candidate.height}`,
-    );
+  const path = releaseFilePath(releasePath, candidate.src);
+  const parentGuard = await openDirectoryGuard(dirname(path), `${candidate.src} parent directory`);
+  try {
+    const realParent = await realpath(dirname(path));
+    if (realParent !== releasePath && !realParent.startsWith(`${releasePath}${sep}`)) {
+      throw new Error(`${candidate.src}: real parent directory escapes release containment`);
+    }
+    const bytes = await readOwnedRegularFile(path, candidate.src, [...guards, parentGuard]);
+    const actual = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+    if (actual !== candidate.checksum) throw new Error(`${candidate.src}: release asset checksum mismatch`);
+    const metadata = await sharp(bytes).metadata();
+    const actualFormat = metadata.format === 'heif' && metadata.compression === 'av1'
+      ? 'avif'
+      : metadata.format;
+    if (!actualFormat || !sameImageFormat(actualFormat, expectedFormat)) {
+      throw new Error(`${candidate.src}: actual media format ${actualFormat ?? 'unknown'} does not match ${expectedFormat}`);
+    }
+    if (metadata.width !== candidate.width || metadata.height !== candidate.height) {
+      throw new Error(
+        `${candidate.src}: actual media dimensions ${metadata.width ?? '?'}x${metadata.height ?? '?'} do not match ${candidate.width}x${candidate.height}`,
+      );
+    }
+  } finally {
+    await parentGuard.handle.close();
   }
 }
 
-async function releaseFiles(releasePath: string, directory = releasePath): Promise<Set<string>> {
-  const files = new Set<string>();
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) {
-      for (const child of await releaseFiles(releasePath, path)) files.add(child);
-    } else if (entry.isFile()) {
-      files.add(relative(releasePath, path).split(sep).join('/'));
-    } else {
-      throw new Error(`${path}: unexpected symlink or special release file`);
+async function releaseFiles(
+  releasePath: string,
+  directory = releasePath,
+  parentGuards: readonly DirectoryGuard[] = [],
+): Promise<Set<string>> {
+  const localGuard = directory === releasePath
+    ? undefined
+    : await openDirectoryGuard(directory, `${relative(releasePath, directory)} release directory`);
+  const guards = localGuard ? [...parentGuards, localGuard] : parentGuards;
+  try {
+    await assertDirectoryGuards(guards);
+    const files = new Set<string>();
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        for (const child of await releaseFiles(releasePath, path, guards)) files.add(child);
+      } else if (entry.isFile()) {
+        files.add(relative(releasePath, path).split(sep).join('/'));
+      } else {
+        throw new Error(`${path}: unexpected symlink or special release file`);
+      }
     }
+    await assertDirectoryGuards(guards);
+    return files;
+  } finally {
+    if (localGuard) await localGuard.handle.close();
   }
-  return files;
 }
 
 export async function verifyReleaseDirectory(
@@ -394,74 +552,101 @@ export async function verifyReleaseDirectory(
 ): Promise<ActivePublicRelease> {
   const parsedPointer = activeReleasePointerSchema.parse(pointer);
   const root = await resolveOwnedReleasesRoot(releasesRoot);
-  const realRoot = await realpath(root);
   const releasePath = resolve(root, parsedPointer.path);
   if (!releasePath.startsWith(`${root}${sep}`)) throw new Error('active release path escapes public-releases');
-  const releaseState = await lstat(releasePath);
-  if (releaseState.isSymbolicLink()) throw new Error('active release path must not be a symbolic link');
-  if (!releaseState.isDirectory()) throw new Error('active release path is not a directory');
-  const realReleasePath = await realpath(releasePath);
-  if (!realReleasePath.startsWith(`${realRoot}${sep}`)) throw new Error('active release real path escapes public-releases containment');
+  const rootGuard = await openDirectoryGuard(root, 'public-releases root');
+  let releaseGuard: DirectoryGuard | undefined;
+  try {
+    const realRoot = await realpath(root);
+    await assertDirectoryGuard(rootGuard);
+    releaseGuard = await openDirectoryGuard(releasePath, 'active release path');
+    const guards = [rootGuard, releaseGuard];
+    const realReleasePath = await realpath(releasePath);
+    await assertDirectoryGuards(guards);
+    if (!realReleasePath.startsWith(`${realRoot}${sep}`)) {
+      throw new Error('active release real path escapes public-releases containment');
+    }
 
-  const manifest = parseReleaseManifest(JSON.parse(
-    (await readOwnedRegularFile(join(realReleasePath, 'manifest.json'), 'release manifest')).toString('utf8'),
-  ));
-  const boundaryHits = findPublicBoundaryHits(manifest);
-  if (manifest.releaseId !== parsedPointer.releaseId) {
-    throw new Error('release ID mismatch between active pointer and manifest');
-  }
-  const expectedFiles = new Set(['manifest.json']);
-  const assetPathOwners = new Map<string, string>();
-  for (const [assetKey, asset] of Object.entries(manifest.assets)) {
-    assertMediaCandidateInvariants(assetKey, asset);
-    expectedFiles.add(asset.fallback.src.slice(1));
-    for (const path of [
-      asset.fallback.src,
-      ...asset.fallback.candidates.map((candidate) => candidate.src),
-      ...asset.sources.flatMap((source) => source.candidates.map((candidate) => candidate.src)),
-    ]) {
-      const owner = assetPathOwners.get(path);
-      if (owner && owner !== assetKey) {
-        throw new Error(`${path}: duplicate candidate path shared by ${owner} and ${assetKey}`);
+    const manifest = parseReleaseManifest(JSON.parse(
+      (await readOwnedRegularFile(join(realReleasePath, 'manifest.json'), 'release manifest', guards)).toString('utf8'),
+    ));
+    const boundaryHits = findPublicBoundaryHits(manifest);
+    if (manifest.releaseId !== parsedPointer.releaseId) {
+      throw new Error('release ID mismatch between active pointer and manifest');
+    }
+    const expectedFiles = new Set(['manifest.json']);
+    const assetPathOwners = new Map<string, string>();
+    for (const [assetKey, asset] of Object.entries(manifest.assets)) {
+      assertMediaCandidateInvariants(assetKey, asset);
+      expectedFiles.add(asset.fallback.src.slice(1));
+      for (const path of [
+        asset.fallback.src,
+        ...asset.fallback.candidates.map((candidate) => candidate.src),
+        ...asset.sources.flatMap((source) => source.candidates.map((candidate) => candidate.src)),
+      ]) {
+        const owner = assetPathOwners.get(path);
+        if (owner && owner !== assetKey) {
+          throw new Error(`${path}: duplicate candidate path shared by ${owner} and ${assetKey}`);
+        }
+        assetPathOwners.set(path, assetKey);
       }
-      assetPathOwners.set(path, assetKey);
-    }
-    for (const candidate of asset.fallback.candidates) expectedFiles.add(candidate.src.slice(1));
-    for (const source of asset.sources) {
-      for (const candidate of source.candidates) expectedFiles.add(candidate.src.slice(1));
-    }
-  }
-  const actualFiles = await releaseFiles(realReleasePath);
-  const unexpectedFiles = [...actualFiles].filter((path) => !expectedFiles.has(path));
-  const missingFiles = [...expectedFiles].filter((path) => !actualFiles.has(path));
-  if (unexpectedFiles.length > 0 || missingFiles.length > 0) {
-    throw new Error(`unmanifested or missing release files: unexpected=${unexpectedFiles.join(',')} missing=${missingFiles.join(',')}`);
-  }
-
-  for (const asset of Object.values(manifest.assets)) {
-    await verifyCandidate(realReleasePath, {
-      src: asset.fallback.src,
-      checksum: asset.fallback.checksum,
-      width: asset.width,
-      height: asset.height,
-    }, asset.fallback.format);
-    for (const candidate of asset.fallback.candidates) {
-      await verifyCandidate(realReleasePath, candidate, asset.fallback.format);
-    }
-    for (const source of asset.sources) {
-      const expectedFormat = source.type === 'image/avif' ? 'avif' : 'webp';
-      for (const candidate of source.candidates) {
-        await verifyCandidate(realReleasePath, candidate, expectedFormat);
+      for (const candidate of asset.fallback.candidates) expectedFiles.add(candidate.src.slice(1));
+      for (const source of asset.sources) {
+        for (const candidate of source.candidates) expectedFiles.add(candidate.src.slice(1));
       }
     }
+    const actualFiles = await releaseFiles(realReleasePath, realReleasePath, guards);
+    const unexpectedFiles = [...actualFiles].filter((path) => !expectedFiles.has(path));
+    const missingFiles = [...expectedFiles].filter((path) => !actualFiles.has(path));
+    if (unexpectedFiles.length > 0 || missingFiles.length > 0) {
+      throw new Error(`unmanifested or missing release files: unexpected=${unexpectedFiles.join(',')} missing=${missingFiles.join(',')}`);
+    }
+
+    for (const [assetKey, asset] of Object.entries(manifest.assets)) {
+      await verifyCandidate(realReleasePath, {
+        src: asset.fallback.src,
+        checksum: asset.fallback.checksum,
+        width: asset.width,
+        height: asset.height,
+      }, asset.fallback.format, guards);
+      for (const candidate of asset.fallback.candidates) {
+        await verifyCandidate(realReleasePath, candidate, asset.fallback.format, guards);
+      }
+      for (const source of asset.sources) {
+        const expectedFormat = source.type === 'image/avif' ? 'avif' : 'webp';
+        for (const candidate of source.candidates) {
+          await verifyCandidate(realReleasePath, candidate, expectedFormat, guards);
+        }
+      }
+      assertResponsiveWidthPolicy(
+        assetKey,
+        asset,
+        responsiveRoleForAsset(manifest, assetKey, asset),
+      );
+    }
+    await assertDirectoryGuards(guards);
+    return { pointer: parsedPointer, releasePath, manifest, boundaryHits };
+  } finally {
+    if (releaseGuard) await releaseGuard.handle.close();
+    await rootGuard.handle.close();
   }
-  return { pointer: parsedPointer, releasePath, manifest, boundaryHits };
 }
 
 export async function readActiveRelease(releasesRoot: string): Promise<ActivePublicRelease> {
   const root = await resolveOwnedReleasesRoot(releasesRoot);
-  const pointer = activeReleasePointerSchema.parse(JSON.parse(
-    (await readOwnedRegularFile(join(root, 'active.json'), 'active release pointer')).toString('utf8'),
-  ));
-  return verifyReleaseDirectory(root, pointer);
+  const rootGuard = await openDirectoryGuard(root, 'public-releases root');
+  try {
+    const pointer = activeReleasePointerSchema.parse(JSON.parse(
+      (await readOwnedRegularFile(
+        join(root, 'active.json'),
+        'active release pointer',
+        [rootGuard],
+      )).toString('utf8'),
+    ));
+    const active = await verifyReleaseDirectory(root, pointer);
+    await assertDirectoryGuard(rootGuard);
+    return active;
+  } finally {
+    await rootGuard.handle.close();
+  }
 }
