@@ -3,10 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/source-records.ts",
+    "./schemas": "./src/schemas.ts"
+  },
   "engines": {
     "node": ">=24 <25"
   },
   "scripts": {
     "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "dependencies": {
+    "@beyondwin/contracts": "0.0.0",
+    "gray-matter": "2.0.1",
+    "yaml": "2.9.0",
+    "zod": "4.4.3"
   }
 }
