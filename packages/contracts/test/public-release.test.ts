@@ -85,4 +85,38 @@ describe('public release selection', () => {
       companions: [],
     })).toThrow();
   });
+
+  it('accepts AVIF only as a canonical public asset generated downstream', () => {
+    const parsed = parsePublicRecord({
+      collection: 'articles',
+      id: 'generated-avif-output',
+      href: '/articles/generated-avif-output/',
+      title: 'Generated AVIF',
+      description: 'A downstream-generated public asset',
+      createdAt: '2026-08-21T00:00:00.000Z',
+      updatedAt: '2026-08-23T00:00:00.000Z',
+      tags: [],
+      media: [{
+        id: 'lead',
+        kind: 'illustration',
+        src: '/assets/content/articles/generated-avif-output/lead.avif',
+        alt: 'Generated AVIF output',
+        credit: 'Generated downstream',
+        verifiedAt: '2026-08-23',
+        rightsNote: 'Generated public derivative',
+        width: 1280,
+        height: 720,
+        format: 'avif',
+        checksum: `sha256:${'b'.repeat(64)}`,
+      }],
+      relationships: [],
+      memoryLinks: [],
+      bodyHtml: '<p>Public body.</p>',
+    });
+
+    expect(parsed.media[0]).toMatchObject({
+      src: '/assets/content/articles/generated-avif-output/lead.avif',
+      format: 'avif',
+    });
+  });
 });

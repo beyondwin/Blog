@@ -110,16 +110,19 @@ function safeRelativePath(field: string) {
   ), `${field} must be a canonical relative path`);
 }
 
-const mediaFileSchema = safeRelativePath('file').refine(
-  (value) => /\.(?:jpg|jpeg|png|webp|avif)$/.test(value),
-  'media file must use a supported lowercase extension',
+export const verifiableSourceInputFormatSchema = z.enum(['jpg', 'jpeg', 'png', 'webp']);
+export type VerifiableSourceInputFormat = z.infer<typeof verifiableSourceInputFormatSchema>;
+
+const sourceMediaInputFileSchema = safeRelativePath('source media file').refine(
+  (value) => verifiableSourceInputFormatSchema.options.some((format) => value.endsWith(`.${format}`)),
+  'source media input must use a verifiable PNG, JPEG, or WebP file',
 );
 
 export const sourceMediaManifestSchema = z.object({
   version: z.literal(1),
   items: z.array(z.object({
     id: idSchema,
-    file: mediaFileSchema,
+    file: sourceMediaInputFileSchema,
     kind: z.enum(['book-cover', 'photo', 'diagram', 'screenshot', 'illustration']),
     alt: z.string().trim().min(1),
     caption: z.string().trim().min(1).optional(),

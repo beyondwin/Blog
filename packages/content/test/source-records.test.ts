@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, expectTypeOf, it } from 'vitest';
 import { isPublicRecord } from '../../contracts/src/public-release';
 import {
   loadPublicMemoryRecords,
@@ -73,21 +73,24 @@ function isoBox(type: string, ...payloads: Buffer[]): Buffer {
   return Buffer.concat([header, ...payloads]);
 }
 
-function avifWithDimensions(width: number, height: number): Buffer {
+function ambiguousAvifFixture(...dimensions: Array<{ width: number; height: number }>): Buffer {
   const fileType = Buffer.alloc(12);
   fileType.write('avif', 0, 4, 'ascii');
   fileType.writeUInt32BE(0, 4);
   fileType.write('avif', 8, 4, 'ascii');
 
-  const imageSpatialExtents = Buffer.alloc(12);
-  imageSpatialExtents.writeUInt32BE(0, 0);
-  imageSpatialExtents.writeUInt32BE(width, 4);
-  imageSpatialExtents.writeUInt32BE(height, 8);
+  const imageSpatialExtents = dimensions.map(({ width, height }) => {
+    const payload = Buffer.alloc(12);
+    payload.writeUInt32BE(0, 0);
+    payload.writeUInt32BE(width, 4);
+    payload.writeUInt32BE(height, 8);
+    return isoBox('ispe', payload);
+  });
 
   const metaHeader = Buffer.alloc(4);
   return Buffer.concat([
     isoBox('ftyp', fileType),
-    isoBox('meta', metaHeader, isoBox('iprp', isoBox('ipco', isoBox('ispe', imageSpatialExtents)))),
+    isoBox('meta', metaHeader, isoBox('iprp', isoBox('ipco', ...imageSpatialExtents))),
   ]);
 }
 
@@ -378,13 +381,17 @@ describe('framework-neutral corpus loading', () => {
       format: 'jpg',
       checksum: 'sha256:2b59925c7925d38b5460450f070be24a22ee34a69dfb7ded04d269998b7d0ebd',
     });
+    expectTypeOf(lead.format).toEqualTypeOf<'jpg' | 'jpeg' | 'png' | 'webp'>();
     expect(JSON.stringify([lead, cover])).not.toMatch(/sourcePath|privatePath|\/Users\/user/);
   });
 
-  it('verifies AVIF dimensions from the public source asset before using manifest metadata', async () => {
+  it('rejects ambiguous AVIF source input before dimension resolution', async () => {
     const fixtureRoot = await mkdtemp(join(tmpdir(), 'beyondwin-avif-source-'));
     const directory = join(fixtureRoot, 'src', 'assets', 'content', 'articles', 'avif-source');
-    const asset = avifWithDimensions(640, 480);
+    const asset = ambiguousAvifFixture(
+      { width: 160, height: 90 },
+      { width: 640, height: 480 },
+    );
     const checksum = `sha256:${createHash('sha256').update(asset).digest('hex')}`;
 
     try {
@@ -401,23 +408,15 @@ describe('framework-neutral corpus loading', () => {
         '    sourcePath: src/content/articles/avif-source.mdx',
         '    verifiedAt: 2026-08-23',
         '    rightsNote: Generated in the test',
-        '    width: 640',
-        '    height: 480',
+        '    width: 160',
+        '    height: 90',
         `    checksum: ${checksum}`,
         '',
       ].join('\n');
       await writeFile(join(directory, 'media.yml'), manifest);
 
-      await expect(resolveSourceMedia(fixtureRoot, 'articles', 'avif-source', 'lead')).resolves.toMatchObject({
-        src: '/assets/content/articles/avif-source/lead.avif',
-        width: 640,
-        height: 480,
-        format: 'avif',
-        checksum,
-      });
-      await writeFile(join(directory, 'media.yml'), manifest.replace('    width: 640', '    width: 641'));
       await expect(resolveSourceMedia(fixtureRoot, 'articles', 'avif-source', 'lead')).rejects.toThrow(
-        'dimensions do not match the asset',
+        'source media input must use a verifiable PNG, JPEG, or WebP file',
       );
     } finally {
       await rm(fixtureRoot, { recursive: true, force: true });
