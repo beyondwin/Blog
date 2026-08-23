@@ -1,0 +1,107 @@
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { buildPublicRelease } from '../src/release/build-release';
+import { readActiveRelease } from '../src/release/read-release';
+import { writeReleaseFixture } from './helpers/release-fixture';
+
+describe('immutable public release building', () => {
+  it('derives a deterministic ID from public inputs and changes it when a public field changes', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-build-'));
+    const firstRoot = join(sandbox, 'first-source');
+    const secondRoot = join(sandbox, 'second-source');
+    const changedRoot = join(sandbox, 'changed-source');
+    await Promise.all([
+      writeReleaseFixture(firstRoot),
+      writeReleaseFixture(secondRoot),
+      writeReleaseFixture(changedRoot, { title: 'Changed public title' }),
+    ]);
+
+    const first = await buildPublicRelease({
+      root: firstRoot,
+      releasesRoot: join(sandbox, 'first-releases'),
+    });
+    const second = await buildPublicRelease({
+      root: secondRoot,
+      releasesRoot: join(sandbox, 'second-releases'),
+    });
+    const changed = await buildPublicRelease({
+      root: changedRoot,
+      releasesRoot: join(sandbox, 'changed-releases'),
+    });
+
+    expect(first.releaseId).toBe(second.releaseId);
+    expect(first.releaseId).not.toBe(changed.releaseId);
+    expect(first.manifest).toEqual(second.manifest);
+  });
+
+  it('emits an immutable manifest, responsive media files, and a validated active pointer', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-output-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'public-releases');
+    await writeReleaseFixture(sourceRoot);
+    await mkdir(releasesRoot, { recursive: true });
+
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const active = await readActiveRelease(releasesRoot);
+    const manifestJson = await readFile(join(built.releasePath, 'manifest.json'), 'utf8');
+    const record = built.manifest.records['articles/public-fixture'];
+    const asset = built.manifest.assets['articles/public-fixture/hero'];
+
+    expect(active.pointer).toEqual({ releaseId: built.releaseId, path: built.releaseId });
+    expect(active.releasePath).toBe(built.releasePath);
+    expect(record?.bodyHtml).toContain('<figure');
+    expect(record?.bodyHtml).toContain('srcset=');
+    expect(record?.media[0]).toMatchObject({
+      src: '/assets/content/articles/public-fixture/hero.png',
+      width: 1,
+      height: 1,
+      alt: 'A one-pixel public fixture',
+      caption: 'Deterministic fixture media',
+      credit: 'beyondwin test',
+    });
+    expect(asset).toMatchObject({
+      provenanceUrl: 'https://example.com/public-fixture',
+      sourceChecksum: 'sha256:431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460',
+    });
+    expect(asset?.sources.map((source) => source.type)).toEqual(['image/avif', 'image/webp']);
+    for (const candidate of [
+      ...(asset?.sources.flatMap((source) => source.candidates) ?? []),
+      ...(asset?.fallback.candidates ?? []),
+    ]) {
+      await expect(readFile(join(built.releasePath, candidate.src.slice(1)))).resolves.toBeInstanceOf(Buffer);
+    }
+    expect(manifestJson).not.toMatch(/\/Users\/|memory\/thoughts|embedding|jobPrompt|rawPrompt|sourcePath/i);
+  });
+
+  it('does not let stripped private frontmatter influence the public release ID', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-private-field-'));
+    const firstRoot = join(sandbox, 'first');
+    const secondRoot = join(sandbox, 'second');
+    await Promise.all([
+      writeReleaseFixture(firstRoot, { privateFrontmatter: 'jobPrompt: "first private value"' }),
+      writeReleaseFixture(secondRoot, { privateFrontmatter: 'jobPrompt: "second private value"' }),
+    ]);
+
+    const first = await buildPublicRelease({ root: firstRoot, releasesRoot: join(sandbox, 'first-out') });
+    const second = await buildPublicRelease({ root: secondRoot, releasesRoot: join(sandbox, 'second-out') });
+
+    expect(first.releaseId).toBe(second.releaseId);
+  });
+
+  it('refuses to repair a damaged existing release directory in place', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-immutable-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const asset = built.manifest.assets['articles/public-fixture/hero'];
+    if (!asset) throw new Error('fixture asset missing');
+    const missingPath = join(built.releasePath, asset.sources[0]!.candidates[0]!.src.slice(1));
+    await rm(missingPath);
+
+    await expect(buildPublicRelease({ root: sourceRoot, releasesRoot })).rejects.toThrow(/ENOENT|no such file|missing/i);
+    await expect(readFile(missingPath)).rejects.toThrow();
+  });
+});

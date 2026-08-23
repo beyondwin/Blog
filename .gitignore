@@ -12,6 +12,7 @@ node_modules/
 .astro/
 .vercel/
 dist/
+build/public-releases/
 
 # Test and coverage output
 coverage/
