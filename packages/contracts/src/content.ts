@@ -6,16 +6,11 @@ export const publicCollections = ['analysis', 'articles', 'ideas', 'reviews', 't
 const idSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*$/);
 const isoDateSchema = z.iso.datetime({ offset: true });
 const externalUrlSchema = z.url().refine((value) => ['http:', 'https:'].includes(new URL(value).protocol));
-const safePublicHrefSchema = z.string().refine((value) => {
-  if (value.startsWith('/') && !value.startsWith('//') && !value.includes('..') && !value.includes('\\')) {
-    return true;
-  }
-  try {
-    return ['http:', 'https:'].includes(new URL(value).protocol);
-  } catch {
-    return false;
-  }
-}, 'href must be a canonical public path or external http(s) URL');
+const publicContentRouteSchema = z.string().regex(
+  /^\/(?:analysis|articles|ideas|reviews|travel)\/[a-z0-9][a-z0-9-]*\/$/,
+  'href must be an approved public content route',
+);
+const publicContentSourceHrefSchema = z.union([publicContentRouteSchema, externalUrlSchema]);
 
 export const publicRelationshipSchema = z.object({
   target: z.string().regex(/^(analysis|articles|ideas|reviews|travel|memory)\/[a-z0-9][a-z0-9-]*$/),
@@ -94,7 +89,7 @@ const travelPublicRecordSchema = z.object({
 
 const memoryPublicSourceSchema = z.object({
   title: z.string().trim().min(1),
-  href: safePublicHrefSchema,
+  href: publicContentSourceHrefSchema,
 });
 
 const memoryCompanionSchema = z.object({

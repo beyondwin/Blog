@@ -37,4 +37,52 @@ describe('public release selection', () => {
     expect(serialized).not.toContain('/Users/user');
     expect(serialized).not.toContain('memory/');
   });
+
+  it('rejects private paths placed directly in allowlisted nested href fields', () => {
+    const common = {
+      id: 'allowlisted-path-bypass',
+      title: 'Safe',
+      description: 'Safe',
+      createdAt: '2026-08-21T00:00:00.000Z',
+      updatedAt: '2026-08-23T00:00:00.000Z',
+      tags: [],
+      relationships: [],
+      memoryLinks: [],
+      bodyHtml: '<p>Safe body.</p>',
+    };
+    const maliciousMedia = {
+      id: 'cover',
+      kind: 'illustration',
+      src: '/Users/user/private/cover.png',
+      alt: 'Safe alt',
+      credit: 'Safe credit',
+      verifiedAt: '2026-08-22',
+      rightsNote: 'Safe rights',
+      width: 1,
+      height: 1,
+      format: 'png',
+      checksum: `sha256:${'a'.repeat(64)}`,
+    };
+
+    expect(() => parsePublicRecord({
+      ...common,
+      collection: 'articles',
+      href: '/articles/allowlisted-path-bypass/',
+      media: [maliciousMedia],
+    })).toThrow();
+    expect(() => parsePublicRecord({
+      ...common,
+      collection: 'memory',
+      href: '/memory/allowlisted-path-bypass/',
+      media: [],
+      claimKo: 'Safe claim',
+      body: 'Safe body',
+      memoryType: 'semantic',
+      origin: 'author',
+      topics: [],
+      theses: [],
+      sources: [{ title: 'Private path', href: '/etc/passwd' }],
+      companions: [],
+    })).toThrow();
+  });
 });

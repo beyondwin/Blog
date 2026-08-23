@@ -219,10 +219,88 @@ function readWebpDimensions(buffer: Buffer): { width: number; height: number } {
   throw new Error(`unsupported WebP chunk ${kind}`);
 }
 
+interface IsoBox {
+  type: string;
+  payloadStart: number;
+  end: number;
+}
+
+function readIsoBox(buffer: Buffer, offset: number, limit: number): IsoBox {
+  if (offset + 8 > limit) throw new Error('invalid AVIF box header');
+  const size32 = buffer.readUInt32BE(offset);
+  let headerSize = 8;
+  let size: number;
+
+  if (size32 === 0) {
+    size = limit - offset;
+  } else if (size32 === 1) {
+    if (offset + 16 > limit) throw new Error('invalid AVIF extended box header');
+    const extendedSize = buffer.readBigUInt64BE(offset + 8);
+    if (extendedSize > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error('AVIF box is too large');
+    size = Number(extendedSize);
+    headerSize = 16;
+  } else {
+    size = size32;
+  }
+
+  if (size < headerSize || offset + size > limit) throw new Error('invalid AVIF box size');
+  return {
+    type: buffer.toString('ascii', offset + 4, offset + 8),
+    payloadStart: offset + headerSize,
+    end: offset + size,
+  };
+}
+
+function findAvifDimensions(buffer: Buffer, start: number, end: number): { width: number; height: number } | null {
+  const containers = new Set(['ipco', 'iprp']);
+  let offset = start;
+
+  while (offset < end) {
+    const box = readIsoBox(buffer, offset, end);
+    if (box.type === 'ispe') {
+      if (box.end - box.payloadStart < 12 || buffer[box.payloadStart] !== 0) {
+        throw new Error('invalid AVIF image spatial extents');
+      }
+      const width = buffer.readUInt32BE(box.payloadStart + 4);
+      const height = buffer.readUInt32BE(box.payloadStart + 8);
+      if (width === 0 || height === 0) throw new Error('invalid AVIF dimensions');
+      return { width, height };
+    }
+
+    if (box.type === 'meta') {
+      if (box.end - box.payloadStart < 4) throw new Error('invalid AVIF meta box');
+      const dimensions = findAvifDimensions(buffer, box.payloadStart + 4, box.end);
+      if (dimensions) return dimensions;
+    } else if (containers.has(box.type)) {
+      const dimensions = findAvifDimensions(buffer, box.payloadStart, box.end);
+      if (dimensions) return dimensions;
+    }
+    offset = box.end;
+  }
+
+  return null;
+}
+
+function readAvifDimensions(buffer: Buffer): { width: number; height: number } {
+  const fileType = readIsoBox(buffer, 0, buffer.length);
+  if (fileType.type !== 'ftyp' || fileType.end - fileType.payloadStart < 8) throw new Error('invalid AVIF file type');
+
+  const brands = [buffer.toString('ascii', fileType.payloadStart, fileType.payloadStart + 4)];
+  for (let offset = fileType.payloadStart + 8; offset + 4 <= fileType.end; offset += 4) {
+    brands.push(buffer.toString('ascii', offset, offset + 4));
+  }
+  if (!brands.some((brand) => brand === 'avif' || brand === 'avis')) throw new Error('invalid AVIF brand');
+
+  const dimensions = findAvifDimensions(buffer, fileType.end, buffer.length);
+  if (!dimensions) throw new Error('AVIF dimensions not found');
+  return dimensions;
+}
+
 function imageDimensions(buffer: Buffer, format: PublicMedia['format']): { width: number; height: number } {
   if (format === 'png') return readPngDimensions(buffer);
   if (format === 'jpg' || format === 'jpeg') return readJpegDimensions(buffer);
   if (format === 'webp') return readWebpDimensions(buffer);
+  if (format === 'avif') return readAvifDimensions(buffer);
   throw new Error(`${format} media requires manifest width and height`);
 }
 

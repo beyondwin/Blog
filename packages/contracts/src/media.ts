@@ -1,11 +1,9 @@
 import { z } from 'zod';
 
-const publicAssetHref = z.string().refine((value) => (
-  value.startsWith('/')
-  && !value.startsWith('//')
-  && !value.includes('..')
-  && !value.includes('\\')
-), 'media src must be a canonical public asset path');
+const publicAssetHref = z.string().regex(
+  /^\/assets\/content\/(?:analysis|articles|ideas|reviews|travel)\/[a-z0-9][a-z0-9-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)+\.(?:jpg|jpeg|png|webp|avif)$/,
+  'media src must be a canonical public content asset path',
+);
 
 export const publicMediaSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),

@@ -50,6 +50,30 @@ function commonFields(collection: string, id: string) {
   };
 }
 
+function articleWithMediaSrc(src: string) {
+  return {
+    ...commonFields('articles', 'media-path-boundary'),
+    media: [{ ...publicMediaFixture, src }],
+  };
+}
+
+function memoryWithSourceHref(href: string) {
+  return {
+    ...commonFields('memory', 'source-href-boundary'),
+    media: [],
+    relationships: [],
+    memoryLinks: [],
+    claimKo: 'Safe public claim',
+    body: 'Safe public body',
+    memoryType: 'semantic',
+    origin: 'author',
+    topics: [],
+    theses: [],
+    sources: [{ title: 'Public source', href }],
+    companions: [],
+  };
+}
+
 describe('public record allowlists', () => {
   it('keeps the common render contract and strips nested filesystem locators', () => {
     const parsed = parsePublicRecord({
@@ -99,6 +123,47 @@ describe('public record allowlists', () => {
       checksum: 'sha256:aafdd214e2586dd5622aaa1c49d90d5b84dd6b5223a5500d915248a62327ca56',
     });
     expectTypeOf(parsed).toEqualTypeOf<PublicRecord>();
+  });
+
+  it.each([
+    '/Users/user/private/cover.png',
+    '/etc/passwd',
+    '/assets/content/articles/safe/../private.png',
+    '/assets/content/articles/safe/%2e%2e/private.png',
+    '/assets/content/articles/safe/%252e%252e/private.png',
+  ])('rejects a non-canonical allowlisted media src: %s', (src) => {
+    expect(() => parsePublicRecord(articleWithMediaSrc(src))).toThrow();
+  });
+
+  it.each([
+    '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
+    '/assets/content/reviews/black-swan/cover.avif',
+  ])('accepts a canonical public media src: %s', (src) => {
+    expect(parsePublicRecord(articleWithMediaSrc(src)).media[0].src).toBe(src);
+  });
+
+  it.each([
+    '/Users/user/private/source.mdx',
+    '/etc/passwd',
+    '/articles/safe/../private/',
+    '/articles/safe/%2e%2e/private/',
+    '/articles/safe/%252e%252e/private/',
+    '/memory/private-source/',
+  ])('rejects a non-approved allowlisted memory source href: %s', (href) => {
+    expect(() => parsePublicRecord(memoryWithSourceHref(href))).toThrow();
+  });
+
+  it.each([
+    '/articles/context-refinement-system-design/',
+    '/analysis/source-review/',
+    '/ideas/public-idea/',
+    '/reviews/black-swan/',
+    '/travel/tokyo/',
+    'https://example.com/public-source',
+  ])('accepts an approved public memory source href: %s', (href) => {
+    const parsed = parsePublicRecord(memoryWithSourceHref(href));
+    expect(parsed.collection).toBe('memory');
+    if (parsed.collection === 'memory') expect(parsed.sources[0].href).toBe(href);
   });
 
   it('preserves analysis colophon fields and strips sibling collection fields', () => {
