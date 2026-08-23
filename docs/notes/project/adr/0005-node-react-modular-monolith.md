@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-08-23
+- Last amended: 2026-08-24
 - Decision owners: user / project
 - Supersedes: none
 - Superseded by: none
@@ -46,6 +47,19 @@ Node 24 LTS와 npm workspaces를 사용한다. `apps/server`의 API와 worker는
 - Route Handler, Server Action, business BFF, private DB connection, auth, ISR을 초기 범위에서 사용하지 않는다.
 - 첫 vertical slice는 같은 framework-neutral contract와 asset으로 Next.js와 React Router Framework Mode에 각각 구현하고, 기존 Astro를 parity baseline으로 삼아 route HTML, metadata, MDX, responsive media, no-JS navigation, client JavaScript, LCP, interaction을 비교한다.
 - Next.js가 React Router 구현보다 최소 두 품질 항목에서 측정 가능한 이점을 보이지 않으면 sunk cost 없이 public renderer도 React Router Framework Mode로 통일한다.
+
+### 공개 renderer 품질 게이트
+
+2026-08-24에 공개 renderer 비교의 수치 budget과 측정 protocol을 다음과 같이 accepted decision으로 고정했다.
+
+- Mandatory budget은 route/viewport별 `CLS <= 0.05`, `LCP <= 같은 Astro baseline + 10%`, 세 detail route의 initial JavaScript `<= 110 KiB gzip`이다.
+- Mandatory contract는 canonical metadata, title/description/Open Graph, heading과 본문, no-JS href, external provenance/source href, media dimensions와 responsive contract를 보존하고 console error, hydration error, serious/critical axe finding, private-path leak, viewport overflow가 각각 0이어야 한다.
+- 비교 route는 `/`, `/articles/why-i-read-in-the-ai-era/`, `/reviews/black-swan/`, `/memory/agent-harnesses-are-operating-systems/` 네 개로 제한한다.
+- viewport는 desktop `1440x960`, mobile `390x844`를 사용한다. 각 route/viewport에서 discarded warm-up 1회 뒤 production output의 cold sample 5회를 기록한다. Sample마다 새 browser context를 만들고 HTTP cache를 비운다.
+- Route/viewport metric은 median과 median absolute deviation(MAD)을 함께 기록한다. Candidate advantage는 정해진 margin뿐 아니라 두 candidate 중 큰 MAD의 2배도 초과해야 한다.
+- Next.js의 네 advantage category는 (1) LCP가 10%와 75ms를 모두 초과해 개선, (2) gzip JavaScript가 15%와 10 KiB를 모두 초과해 감소, (3) 같은 표시 dimensions/format의 responsive-image transfer가 15%를 초과해 감소, (4) 세 clean build가 같은 route/asset contract를 만들면서 median build time이 20%를 초과해 개선되는 경우다.
+- Browser pin은 committed `package-lock.json`의 `@playwright/test` `1.62.1`이 결정하는 Chromium `151.0.7922.34`, revision `1234`다. Pin과 실제 실행 version이 다르면 report를 만들지 않는다.
+- Astro 측정값은 [tracked baseline fixture](../../../../tests/fixtures/parity/astro-renderer-baseline.json)에 보존한다. Next.js와 React Router의 실제 candidate report가 모두 생기기 전에는 renderer selection을 차단하며 synthetic fixture는 selector CLI의 입력으로 허용하지 않는다.
 
 ### host와 인증 경계
 
@@ -118,6 +132,8 @@ deploy/
 - 2026-08-23 사용자 결정: 한 명의 소유자가 사용하는 개인용 시스템이며 multi-tenant SaaS는 현재 범위가 아니다.
 - 2026-08-23 사용자 결정: 한 Docker host에서 시작하되 process를 나중에 분리할 수 있어야 한다.
 - 2026-08-23 사용자 결정: 품질을 최우선으로 하되 품질에 기여하지 않는 복잡도는 도입하지 않는다.
+- 2026-08-24 사용자 결정: renderer mandatory budget, 네 advantage threshold, median/MAD protocol을 승인하고 중간 승인 checkpoint 없이 보수적인 재현성 기준으로 고정한다.
+- Astro browser baseline은 세 build 모두 동일 artifact hash `sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a`를 만들었고 build median `6,965ms`, MAD `508ms`를 기록했다. 40개 cold sample에서 console/hydration/private-path/overflow issue는 0이었으며 기존 mobile home의 serious color-contrast finding 1건은 candidate가 승계해서는 안 되는 baseline evidence로 보존했다.
 - 공식 Next.js 문서는 self-hosting, build-time params, MDX와 image optimization을 지원하지만 Route Handler를 완전한 backend replacement로 설명하지 않는다.
 - 공식 React Router 문서는 Data Mode SPA와 Framework Mode SSR/prerender를 구분한다.
 - Fastify response schema와 plugin encapsulation은 public/private DTO와 vertical module 경계에 적합하다.
@@ -176,7 +192,7 @@ Public과 작업실, API를 한 Next.js application으로 합치면 시작은 �
 ## Open questions
 
 - 단일 owner의 첫 인증 방식을 password bootstrap, external OIDC, passkey 중 무엇으로 할지.
-- 공개 vertical slice의 client JavaScript, LCP, CLS, image quality budget의 정확한 수치.
+- 공개 vertical slice에서 Next.js와 React Router 중 어느 renderer가 accepted gate를 실제로 통과하고 선택되는지. Task 6-7 candidate evidence 전에는 미정이다.
 - 허용 RPO/RTO와 PostgreSQL dump 이후 PITR 도입 시점.
 - public release build를 local worker, CI, 별도 build process 중 어디서 실행할지.
 - exact dependency version과 update cadence. `latest` range는 사용하지 않는다.

@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "candidates": {
+    "next": {
+      "renderer": "next",
+      "mandatoryFailures": [],
+      "quality": {
+        "lcpMs": { "median": 850, "mad": 10 },
+        "jsGzipBytes": { "median": 80000, "mad": 1000 },
+        "imageBytes": { "median": 90000, "mad": 1000 },
+        "buildDurationMs": { "median": 9000, "mad": 100 }
+      },
+      "buildArtifactHashes": ["next-a", "next-a", "next-a"],
+      "responsiveImageContract": ["/:desktop:image/webp:1200x800"]
+    },
+    "reactRouter": {
+      "renderer": "react-router",
+      "mandatoryFailures": [],
+      "quality": {
+        "lcpMs": { "median": 1050, "mad": 10 },
+        "jsGzipBytes": { "median": 100000, "mad": 1000 },
+        "imageBytes": { "median": 100000, "mad": 1000 },
+        "buildDurationMs": { "median": 10000, "mad": 100 }
+      },
+      "buildArtifactHashes": ["router-a", "router-a", "router-a"],
+      "responsiveImageContract": ["/:desktop:image/webp:1200x800"]
+    }
+  }
+}

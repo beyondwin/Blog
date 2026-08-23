@@ -149,9 +149,9 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Fixes the Node/React app boundaries, Fastify modular monolith, PostgreSQL-backed jobs, immutable public release, and intentionally deferred infrastructure.
-  source: user decision 2026-08-23
-  updated: 2026-08-23
+  summary: Fixes the Node/React app boundaries, Fastify modular monolith, immutable public release, and accepted numeric renderer quality gate with median/MAD evidence.
+  source: user decisions 2026-08-23 and 2026-08-24
+  updated: 2026-08-24
 
 - title: 'ADR-0006: 하나의 public visual world 안에서 탐색과 독서 모드를 분리'
   path: docs/notes/project/adr/0006-unified-public-reading-continuity.md
