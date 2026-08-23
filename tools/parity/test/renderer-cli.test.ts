@@ -21,7 +21,7 @@ async function createRoot(): Promise<string> {
 }
 
 describe('renderer harness CLIs', () => {
-  it('builds a machine-readable selection report from three real capture files', async () => {
+  it('refuses unproven capture JSON instead of laundering it into a real selection report', async () => {
     const root = await createRoot();
     const baselinePath = join(process.cwd(), 'tests/fixtures/parity/astro-renderer-baseline.json');
     const baseline = JSON.parse(await readFile(baselinePath, 'utf8')) as RendererCaptureReport;
@@ -29,29 +29,29 @@ describe('renderer harness CLIs', () => {
     const reactRouter = structuredClone(baseline);
     next.renderer = 'next';
     reactRouter.renderer = 'react-router';
+    next.artifactHash = `sha256:${'1'.repeat(64)}`;
+    reactRouter.artifactHash = `sha256:${'2'.repeat(64)}`;
+    next.build.samples = next.build.samples.map((sample) => ({ ...sample, artifactHash: next.artifactHash }));
+    reactRouter.build.samples = reactRouter.build.samples.map((sample) => ({
+      ...sample,
+      artifactHash: reactRouter.artifactHash,
+    }));
     const nextPath = join(root, 'next.json');
     const reactRouterPath = join(root, 'react-router.json');
     const outputPath = join(root, 'comparison.json');
     await writeFile(nextPath, JSON.stringify(next));
     await writeFile(reactRouterPath, JSON.stringify(reactRouter));
 
-    await execFileAsync('npx', [
+    await expect(execFileAsync('npx', [
       'tsx',
       'tools/parity/src/compare-contracts.ts',
       '--baseline', baselinePath,
       '--next', nextPath,
       '--react-router', reactRouterPath,
       '--output', outputPath,
-    ], { cwd: process.cwd() });
-
-    const report = JSON.parse(await readFile(outputPath, 'utf8')) as RendererSelectionReport;
-    expect(report.synthetic).toBe(false);
-    expect(report.candidates.next.mandatoryFailures).toContainEqual(
-      expect.stringContaining('metric=axe-serious-critical'),
-    );
-    expect(report.candidates.reactRouter.mandatoryFailures).toContainEqual(
-      expect.stringContaining('metric=axe-serious-critical'),
-    );
+    ], { cwd: process.cwd() })).rejects.toMatchObject({
+      stderr: expect.stringContaining('provenance'),
+    });
   });
 
   it('refuses to select a renderer from clearly synthetic fixtures', async () => {
@@ -82,6 +82,29 @@ describe('renderer harness CLIs', () => {
       '--report', reportPath,
     ], { cwd: process.cwd() })).rejects.toMatchObject({
       stderr: expect.stringContaining('Only comparison-generated real renderer reports can select a renderer'),
+    });
+  });
+
+  it('refuses a real-marked report with no three-build artifact evidence', async () => {
+    const root = await createRoot();
+    const fixture = JSON.parse(await readFile(
+      join(process.cwd(), 'tests/fixtures/parity/renderer-report-pass.json'),
+      'utf8',
+    )) as RendererSelectionReport;
+    fixture.synthetic = false;
+    fixture.candidates.next.captureEvidence.provenance.synthetic = false;
+    fixture.candidates.reactRouter.captureEvidence.provenance.synthetic = false;
+    fixture.candidates.next.buildArtifactHashes = [];
+    fixture.candidates.reactRouter.buildArtifactHashes = [];
+    const reportPath = join(root, 'missing-build-evidence.json');
+    await writeFile(reportPath, JSON.stringify(fixture));
+
+    await expect(execFileAsync('npx', [
+      'tsx',
+      'tools/parity/src/select-renderer.ts',
+      '--report', reportPath,
+    ], { cwd: process.cwd() })).rejects.toMatchObject({
+      stderr: expect.stringContaining('three clean builds'),
     });
   });
 });

@@ -1,11 +1,16 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import type {
   QualityMetric,
   RendererSelectionCandidate,
   RendererSelectionReport,
 } from './select-renderer.ts';
+
+const execFileAsync = promisify(execFile);
 
 export const DECISION_ROUTES = [
   '/',
@@ -23,6 +28,16 @@ export const MANDATORY_BUDGETS = {
   clsMax: 0.05,
   lcpAstroMultiplier: 1.1,
   detailInitialJsGzipBytesMax: 110 * 1024,
+} as const;
+
+export const CAPTURE_PROTOCOL = {
+  decisionRoutes: [...DECISION_ROUTES],
+  viewports: VIEWPORTS,
+  warmups: 1,
+  samplesPerRouteViewport: 5,
+  freshBrowserContextPerSample: true,
+  emptyHttpCachePerSample: true,
+  initialJavaScriptByteProtocol: 'sum-gzip-level-9-inline-and-unique-initial-executable-responses',
 } as const;
 
 export type DecisionRoute = (typeof DECISION_ROUTES)[number];
@@ -57,10 +72,16 @@ export interface OverflowEvidence {
 
 export interface BrowserSample extends BrowserMetricValues {
   renderedImages: Array<{
+    source: string;
     displayedWidth: number;
     displayedHeight: number;
+    naturalWidth: number;
+    naturalHeight: number;
+    declaredWidth: number;
+    declaredHeight: number;
     format: string;
   }>;
+  imageFailures: string[];
   consoleErrors: string[];
   hydrationErrors: string[];
   axeSeriousOrCritical: string[];
@@ -79,6 +100,7 @@ export interface BrowserMeasurement {
   consoleErrors: string[];
   hydrationErrors: string[];
   axeSeriousOrCritical: string[];
+  imageFailures: string[];
   overflow: OverflowEvidence;
   privateBoundaryHits: string[];
 }
@@ -90,16 +112,27 @@ export interface RendererRouteCapture {
 }
 
 export interface RendererCaptureReport {
-  version: 1;
+  version: 2;
   renderer: RendererName;
+  provenance: {
+    synthetic: boolean;
+    repositoryCommit: string;
+    rendererRoot: string;
+    rendererManifest: string;
+    rendererManifestHash: string;
+    buildCommand: string;
+    outputRoot: string;
+    captureToolHash: string;
+  };
   measuredAt: string;
   captureProtocol: {
-    decisionRoutes: DecisionRoute[];
+    decisionRoutes: readonly DecisionRoute[];
     viewports: typeof VIEWPORTS;
     warmups: 1;
     samplesPerRouteViewport: 5;
     freshBrowserContextPerSample: true;
     emptyHttpCachePerSample: true;
+    initialJavaScriptByteProtocol: 'sum-gzip-level-9-inline-and-unique-initial-executable-responses';
   };
   browser: {
     package: '@playwright/test';
@@ -108,11 +141,19 @@ export interface RendererCaptureReport {
     chromiumRevision: string;
   };
   artifactHash: string;
+  artifactPrivateBoundaryHits: Array<{ path: string; kind: string; marker: string }>;
   build: {
-    samples: Array<{ durationMs: number; artifactHash: string }>;
+    samples: Array<{ durationMs: number; artifactHash: string; cleanedPaths: string[] }>;
     medianDurationMs: number;
     madDurationMs: number;
     reproducible: boolean;
+    command: string;
+    workingDirectory: string;
+    clean: {
+      strategy: 'remove-recreate';
+      paths: string[];
+      beforeEachBuild: true;
+    };
   };
   routes: RendererRouteCapture[];
 }
@@ -262,31 +303,92 @@ function compareBrowserMeasurement(
     failures.push(failure(renderer, route, viewport, 'sampling-protocol', expectedProtocol, actualProtocol));
   }
 
-  if (actual.median.cls > MANDATORY_BUDGETS.clsMax) {
-    failures.push(failure(renderer, route, viewport, 'cls', `<=${MANDATORY_BUDGETS.clsMax}`, actual.median.cls));
+  const summarize = (measurement: BrowserMeasurement) => {
+    const metricKeys = ['lcpMs', 'cls', 'jsGzipBytes', 'imageBytes'] as const;
+    const summarizedMetric = (key: keyof BrowserMetricValues) => metric(
+      measurement.samples.map((sample) => sample[key]),
+    );
+    const widest = measurement.samples.reduce<OverflowEvidence | undefined>((current, sample) => (
+      !current || sample.overflow.actualScrollWidth > current.actualScrollWidth ? sample.overflow : current
+    ), undefined);
+    return {
+      median: Object.fromEntries(metricKeys.map((key) => [key, summarizedMetric(key).median])),
+      mad: Object.fromEntries(metricKeys.map((key) => [key, summarizedMetric(key).mad])),
+      consoleErrors: [...new Set(measurement.samples.flatMap((sample) => sample.consoleErrors))].sort(),
+      hydrationErrors: [...new Set(measurement.samples.flatMap((sample) => sample.hydrationErrors))].sort(),
+      axeSeriousOrCritical: [...new Set(
+        measurement.samples.flatMap((sample) => sample.axeSeriousOrCritical),
+      )].sort(),
+      imageFailures: [...new Set(measurement.samples.flatMap((sample) => sample.imageFailures))].sort(),
+      overflow: widest,
+      privateBoundaryHits: [...new Set(
+        measurement.samples.flatMap((sample) => sample.privateBoundaryHits),
+      )].sort(),
+    };
+  };
+  if (actual.samples.length === 0 || expected.samples.length === 0) return failures;
+  const actualDerived = summarize(actual);
+  const expectedDerived = summarize(expected);
+  const actualStored = {
+    median: actual.median,
+    mad: actual.mad,
+    consoleErrors: actual.consoleErrors,
+    hydrationErrors: actual.hydrationErrors,
+    axeSeriousOrCritical: actual.axeSeriousOrCritical,
+    imageFailures: actual.imageFailures,
+    overflow: actual.overflow,
+    privateBoundaryHits: actual.privateBoundaryHits,
+  };
+  const expectedStored = {
+    median: expected.median,
+    mad: expected.mad,
+    consoleErrors: expected.consoleErrors,
+    hydrationErrors: expected.hydrationErrors,
+    axeSeriousOrCritical: expected.axeSeriousOrCritical,
+    imageFailures: expected.imageFailures,
+    overflow: expected.overflow,
+    privateBoundaryHits: expected.privateBoundaryHits,
+  };
+  if (JSON.stringify(actualStored) !== JSON.stringify(actualDerived)) {
+    failures.push(failure(renderer, route, viewport, 'measurement-summary', actualDerived, actualStored));
+  }
+  if (JSON.stringify(expectedStored) !== JSON.stringify(expectedDerived)) {
+    failures.push(failure(renderer, route, viewport, 'baseline-measurement-summary', expectedDerived, expectedStored));
   }
 
-  const lcpMaximum = expected.median.lcpMs * MANDATORY_BUDGETS.lcpAstroMultiplier;
-  if (actual.median.lcpMs > lcpMaximum) {
-    failures.push(failure(renderer, route, viewport, 'lcp-ms', `<=${lcpMaximum}`, actual.median.lcpMs));
+  if (actualDerived.median.cls > MANDATORY_BUDGETS.clsMax) {
+    failures.push(failure(
+      renderer,
+      route,
+      viewport,
+      'cls',
+      `<=${MANDATORY_BUDGETS.clsMax}`,
+      actualDerived.median.cls,
+    ));
   }
 
-  if (route !== '/' && actual.median.jsGzipBytes > MANDATORY_BUDGETS.detailInitialJsGzipBytesMax) {
+  const lcpMaximum = expectedDerived.median.lcpMs * MANDATORY_BUDGETS.lcpAstroMultiplier;
+  if (actualDerived.median.lcpMs > lcpMaximum) {
+    failures.push(failure(renderer, route, viewport, 'lcp-ms', `<=${lcpMaximum}`, actualDerived.median.lcpMs));
+  }
+
+  if (route !== '/' && actualDerived.median.jsGzipBytes > MANDATORY_BUDGETS.detailInitialJsGzipBytesMax) {
     failures.push(failure(
       renderer,
       route,
       viewport,
       'initial-js-gzip-bytes',
       `<=${MANDATORY_BUDGETS.detailInitialJsGzipBytesMax}`,
-      actual.median.jsGzipBytes,
+      actualDerived.median.jsGzipBytes,
     ));
   }
 
   const zeroIssueMetrics = [
-    ['console-errors', actual.consoleErrors],
-    ['hydration-errors', actual.hydrationErrors],
-    ['axe-serious-critical', actual.axeSeriousOrCritical],
-    ['private-path-leak', actual.privateBoundaryHits],
+    ['console-errors', actualDerived.consoleErrors],
+    ['hydration-errors', actualDerived.hydrationErrors],
+    ['axe-serious-critical', actualDerived.axeSeriousOrCritical],
+    ['image-failures', actualDerived.imageFailures],
+    ['private-path-leak', actualDerived.privateBoundaryHits],
   ] as const;
   for (const [metric, issues] of zeroIssueMetrics) {
     if (issues.length > 0) {
@@ -297,14 +399,14 @@ function compareBrowserMeasurement(
     }
   }
 
-  if (actual.overflow.overflow) {
+  if (actualDerived.overflow?.overflow) {
     failures.push(failure(
       renderer,
       route,
       viewport,
       'viewport-overflow',
-      actual.overflow.expectedMaxWidth,
-      actual.overflow.actualScrollWidth,
+      actualDerived.overflow.expectedMaxWidth,
+      actualDerived.overflow.actualScrollWidth,
     ));
   }
 
@@ -318,14 +420,7 @@ export function compareRendererContracts(
   const failures: string[] = [];
   const baselineByPath = new Map(baseline.routes.map((route) => [route.path, route]));
   const candidateByPath = new Map(candidate.routes.map((route) => [route.path, route]));
-  const expectedCaptureProtocol = {
-    decisionRoutes: [...DECISION_ROUTES],
-    viewports: VIEWPORTS,
-    warmups: 1,
-    samplesPerRouteViewport: 5,
-    freshBrowserContextPerSample: true,
-    emptyHttpCachePerSample: true,
-  };
+  const expectedCaptureProtocol = CAPTURE_PROTOCOL;
 
   if (JSON.stringify(candidate.captureProtocol) !== JSON.stringify(expectedCaptureProtocol)) {
     failures.push(failure(
@@ -368,14 +463,45 @@ export function compareRendererContracts(
     ));
   }
   const buildHashes = candidate.build.samples.map((sample) => sample.artifactHash);
-  if (candidate.build.samples.length !== 3 || !candidate.build.reproducible || new Set(buildHashes).size !== 1) {
+  const buildDurations = candidate.build.samples.map((sample) => sample.durationMs);
+  const derivedBuildMetric = buildDurations.length > 0 ? metric(buildDurations) : null;
+  const derivedReproducible = buildHashes.length === 3 && new Set(buildHashes).size === 1;
+  if (derivedBuildMetric && (
+    candidate.build.medianDurationMs !== derivedBuildMetric.median
+    || candidate.build.madDurationMs !== derivedBuildMetric.mad
+    || candidate.build.reproducible !== derivedReproducible
+  )) {
+    failures.push(failure(
+      candidate.renderer,
+      '/',
+      'desktop',
+      'build-summary',
+      { ...derivedBuildMetric, reproducible: derivedReproducible },
+      {
+        median: candidate.build.medianDurationMs,
+        mad: candidate.build.madDurationMs,
+        reproducible: candidate.build.reproducible,
+      },
+    ));
+  }
+  if (candidate.build.samples.length !== 3 || !derivedReproducible) {
     failures.push(failure(
       candidate.renderer,
       '/',
       'desktop',
       'build-reproducibility',
       '3 identical artifact hashes',
-      { sampleCount: candidate.build.samples.length, reproducible: candidate.build.reproducible, buildHashes },
+      { sampleCount: candidate.build.samples.length, reproducible: derivedReproducible, buildHashes },
+    ));
+  }
+  if (candidate.artifactPrivateBoundaryHits.length > 0) {
+    failures.push(failure(
+      candidate.renderer,
+      '/',
+      'desktop',
+      'artifact-private-boundary',
+      0,
+      candidate.artifactPrivateBoundaryHits,
     ));
   }
 
@@ -481,8 +607,7 @@ function selectionCandidate(
       jsGzipBytes: metric(reportSampleValues(report, 'jsGzipBytes', 'sum')),
       imageBytes: metric(reportSampleValues(report, 'imageBytes', 'sum')),
       buildDurationMs: {
-        median: report.build.medianDurationMs,
-        mad: report.build.madDurationMs,
+        ...metric(report.build.samples.map((sample) => sample.durationMs)),
       },
     },
     buildArtifactHashes: report.build.samples.map((sample) => sample.artifactHash),
@@ -498,6 +623,12 @@ function selectionCandidate(
         `${image.displayedWidth}x${image.displayedHeight}`,
       ].join(':'));
     })),
+    captureEvidence: {
+      provenance: report.provenance,
+      artifactHash: report.artifactHash,
+      browser: report.browser,
+      captureProtocol: report.captureProtocol,
+    },
   };
 }
 
@@ -511,11 +642,21 @@ export function buildRendererSelectionReport(
   if (reactRouter.renderer !== 'react-router') {
     throw new Error(`Expected react-router candidate report, got ${reactRouter.renderer}`);
   }
+  const syntheticStates = new Set([
+    baseline.provenance.synthetic,
+    next.provenance.synthetic,
+    reactRouter.provenance.synthetic,
+  ]);
+  if (syntheticStates.size !== 1) throw new Error('Cannot mix synthetic and real renderer capture reports');
+  const synthetic = baseline.provenance.synthetic;
+  if (!synthetic && next.artifactHash === reactRouter.artifactHash) {
+    throw new Error(`Duplicate artifact presented as both candidates: ${next.artifactHash}`);
+  }
   const nextComparison = compareRendererContracts(baseline, next);
   const reactRouterComparison = compareRendererContracts(baseline, reactRouter);
   return {
-    version: 1,
-    synthetic: false,
+    version: 2,
+    synthetic,
     candidates: {
       next: selectionCandidate(next, nextComparison.failures),
       reactRouter: selectionCandidate(reactRouter, reactRouterComparison.failures),
@@ -544,16 +685,388 @@ function cliArguments(argv: string[]) {
   };
 }
 
-async function readCapture(path: string): Promise<RendererCaptureReport> {
-  return JSON.parse(await readFile(path, 'utf8')) as RendererCaptureReport;
+type UnknownObject = Record<string, unknown>;
+
+function strictObject(
+  value: unknown,
+  path: string,
+  required: readonly string[],
+  optional: readonly string[] = [],
+): UnknownObject {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${path} must be an object`);
+  }
+  const object = value as UnknownObject;
+  const allowed = new Set([...required, ...optional]);
+  const unknown = Object.keys(object).filter((key) => !allowed.has(key));
+  if (unknown.length > 0) throw new Error(`${path} has unknown field ${unknown[0]}`);
+  const missing = required.filter((key) => !Object.hasOwn(object, key));
+  if (missing.length > 0) throw new Error(`${path} is missing ${missing[0]}`);
+  return object;
+}
+
+function strictArray(value: unknown, path: string): unknown[] {
+  if (!Array.isArray(value)) throw new Error(`${path} must be an array`);
+  return value;
+}
+
+function strictString(value: unknown, path: string, pattern?: RegExp): string {
+  if (typeof value !== 'string' || (pattern && !pattern.test(value))) {
+    throw new Error(`${path} must be a valid string`);
+  }
+  return value;
+}
+
+function strictNumber(value: unknown, path: string, minimum = 0): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < minimum) {
+    throw new Error(`${path} must be a finite number >= ${minimum}`);
+  }
+  return value;
+}
+
+function strictBoolean(value: unknown, path: string): boolean {
+  if (typeof value !== 'boolean') throw new Error(`${path} must be boolean`);
+  return value;
+}
+
+function strictStringArray(value: unknown, path: string): string[] {
+  return strictArray(value, path).map((item, index) => strictString(item, `${path}[${index}]`));
+}
+
+function strictStringRecord(value: unknown, path: string): void {
+  const object = strictObject(value, path, [], Object.keys((value ?? {}) as UnknownObject));
+  for (const [key, child] of Object.entries(object)) strictString(child, `${path}.${key}`);
+}
+
+function validateMetricValues(value: unknown, path: string, exact = true): void {
+  const metric = exact
+    ? strictObject(value, path, ['lcpMs', 'cls', 'jsGzipBytes', 'imageBytes'])
+    : value as UnknownObject;
+  for (const key of ['lcpMs', 'cls', 'jsGzipBytes', 'imageBytes']) strictNumber(metric[key], `${path}.${key}`);
+}
+
+function validateOverflow(value: unknown, path: string): void {
+  const overflow = strictObject(value, path, ['expectedMaxWidth', 'actualScrollWidth', 'overflow']);
+  strictNumber(overflow.expectedMaxWidth, `${path}.expectedMaxWidth`, 1);
+  strictNumber(overflow.actualScrollWidth, `${path}.actualScrollWidth`, 1);
+  strictBoolean(overflow.overflow, `${path}.overflow`);
+}
+
+function validateBrowserSample(value: unknown, path: string): void {
+  const sample = strictObject(value, path, [
+    'lcpMs', 'cls', 'jsGzipBytes', 'imageBytes', 'renderedImages', 'imageFailures',
+    'consoleErrors', 'hydrationErrors', 'axeSeriousOrCritical', 'overflow', 'privateBoundaryHits',
+  ]);
+  validateMetricValues(sample, path, false);
+  strictStringArray(sample.imageFailures, `${path}.imageFailures`);
+  strictStringArray(sample.consoleErrors, `${path}.consoleErrors`);
+  strictStringArray(sample.hydrationErrors, `${path}.hydrationErrors`);
+  strictStringArray(sample.axeSeriousOrCritical, `${path}.axeSeriousOrCritical`);
+  strictStringArray(sample.privateBoundaryHits, `${path}.privateBoundaryHits`);
+  validateOverflow(sample.overflow, `${path}.overflow`);
+  strictArray(sample.renderedImages, `${path}.renderedImages`).forEach((image, index) => {
+    const imagePath = `${path}.renderedImages[${index}]`;
+    const evidence = strictObject(image, imagePath, [
+      'source', 'displayedWidth', 'displayedHeight', 'naturalWidth', 'naturalHeight',
+      'declaredWidth', 'declaredHeight', 'format',
+    ]);
+    strictString(evidence.source, `${imagePath}.source`);
+    strictString(evidence.format, `${imagePath}.format`, /^image\/[a-z0-9.+-]+$/u);
+    for (const key of [
+      'displayedWidth', 'displayedHeight', 'naturalWidth', 'naturalHeight', 'declaredWidth', 'declaredHeight',
+    ]) strictNumber(evidence[key], `${imagePath}.${key}`, 1);
+  });
+}
+
+function validateBrowserMeasurement(value: unknown, path: string): void {
+  const measurement = strictObject(value, path, [
+    'viewport', 'size', 'warmupDiscarded', 'sampleCount', 'samples', 'median', 'mad',
+    'consoleErrors', 'hydrationErrors', 'axeSeriousOrCritical', 'imageFailures', 'overflow',
+    'privateBoundaryHits',
+  ]);
+  const viewport = strictString(measurement.viewport, `${path}.viewport`);
+  if (viewport !== 'desktop' && viewport !== 'mobile') throw new Error(`${path}.viewport is invalid`);
+  const size = strictObject(measurement.size, `${path}.size`, ['width', 'height']);
+  strictNumber(size.width, `${path}.size.width`, 1);
+  strictNumber(size.height, `${path}.size.height`, 1);
+  strictNumber(measurement.warmupDiscarded, `${path}.warmupDiscarded`, 1);
+  strictNumber(measurement.sampleCount, `${path}.sampleCount`, 1);
+  strictArray(measurement.samples, `${path}.samples`).forEach((sample, index) => (
+    validateBrowserSample(sample, `${path}.samples[${index}]`)
+  ));
+  validateMetricValues(measurement.median, `${path}.median`);
+  validateMetricValues(measurement.mad, `${path}.mad`);
+  strictStringArray(measurement.consoleErrors, `${path}.consoleErrors`);
+  strictStringArray(measurement.hydrationErrors, `${path}.hydrationErrors`);
+  strictStringArray(measurement.axeSeriousOrCritical, `${path}.axeSeriousOrCritical`);
+  strictStringArray(measurement.imageFailures, `${path}.imageFailures`);
+  strictStringArray(measurement.privateBoundaryHits, `${path}.privateBoundaryHits`);
+  validateOverflow(measurement.overflow, `${path}.overflow`);
+}
+
+export function parseRendererCapture(
+  value: unknown,
+  options: { expectedRenderer?: RendererName; allowSynthetic?: boolean } = {},
+): RendererCaptureReport {
+  const root = strictObject(value, 'capture', [
+    'version', 'renderer', 'provenance', 'measuredAt', 'captureProtocol', 'browser',
+    'artifactHash', 'artifactPrivateBoundaryHits', 'build', 'routes',
+  ]);
+  if (root.version !== 2) throw new Error('capture.version must be 2');
+  const renderer = strictString(root.renderer, 'capture.renderer');
+  if (!['astro', 'next', 'react-router'].includes(renderer)) throw new Error('capture.renderer is invalid');
+  if (options.expectedRenderer && renderer !== options.expectedRenderer) {
+    throw new Error(`Expected ${options.expectedRenderer} capture, got ${renderer}`);
+  }
+  strictString(root.measuredAt, 'capture.measuredAt', /^\d{4}-\d{2}-\d{2}T/u);
+  const provenance = strictObject(root.provenance, 'capture.provenance', [
+    'synthetic', 'repositoryCommit', 'rendererRoot', 'rendererManifest', 'rendererManifestHash',
+    'buildCommand', 'outputRoot', 'captureToolHash',
+  ]);
+  const synthetic = strictBoolean(provenance.synthetic, 'capture.provenance.synthetic');
+  if (synthetic && !options.allowSynthetic) throw new Error('capture.provenance synthetic reports are not real evidence');
+  strictString(provenance.repositoryCommit, 'capture.provenance.repositoryCommit', /^[a-f0-9]{40}$/u);
+  for (const key of ['rendererRoot', 'rendererManifest', 'buildCommand', 'outputRoot']) {
+    strictString(provenance[key], `capture.provenance.${key}`);
+  }
+  for (const key of ['rendererManifestHash', 'captureToolHash']) {
+    strictString(provenance[key], `capture.provenance.${key}`, /^sha256:[a-f0-9]{64}$/u);
+  }
+  const protocol = strictObject(root.captureProtocol, 'capture.captureProtocol', [
+    'decisionRoutes', 'viewports', 'warmups', 'samplesPerRouteViewport',
+    'freshBrowserContextPerSample', 'emptyHttpCachePerSample', 'initialJavaScriptByteProtocol',
+  ]);
+  strictStringArray(protocol.decisionRoutes, 'capture.captureProtocol.decisionRoutes');
+  const protocolViewports = strictObject(protocol.viewports, 'capture.captureProtocol.viewports', [
+    'desktop', 'mobile',
+  ]);
+  for (const viewport of ['desktop', 'mobile']) {
+    const size = strictObject(protocolViewports[viewport], `capture.captureProtocol.viewports.${viewport}`, [
+      'width', 'height',
+    ]);
+    strictNumber(size.width, `capture.captureProtocol.viewports.${viewport}.width`, 1);
+    strictNumber(size.height, `capture.captureProtocol.viewports.${viewport}.height`, 1);
+  }
+  strictNumber(protocol.warmups, 'capture.captureProtocol.warmups', 1);
+  strictNumber(protocol.samplesPerRouteViewport, 'capture.captureProtocol.samplesPerRouteViewport', 1);
+  strictBoolean(protocol.freshBrowserContextPerSample, 'capture.captureProtocol.freshBrowserContextPerSample');
+  strictBoolean(protocol.emptyHttpCachePerSample, 'capture.captureProtocol.emptyHttpCachePerSample');
+  strictString(protocol.initialJavaScriptByteProtocol, 'capture.captureProtocol.initialJavaScriptByteProtocol');
+  if (JSON.stringify(protocol) !== JSON.stringify(CAPTURE_PROTOCOL)) {
+    throw new Error('capture.captureProtocol does not match the accepted protocol');
+  }
+  const browser = strictObject(root.browser, 'capture.browser', [
+    'package', 'packageVersion', 'chromiumVersion', 'chromiumRevision',
+  ]);
+  if (browser.package !== '@playwright/test') throw new Error('capture.browser.package is invalid');
+  for (const key of ['packageVersion', 'chromiumVersion', 'chromiumRevision']) {
+    strictString(browser[key], `capture.browser.${key}`);
+  }
+  const hashPattern = /^sha256:[a-f0-9]{64}$/u;
+  strictString(root.artifactHash, 'capture.artifactHash', hashPattern);
+  strictArray(root.artifactPrivateBoundaryHits, 'capture.artifactPrivateBoundaryHits').forEach((hit, index) => {
+    const hitPath = `capture.artifactPrivateBoundaryHits[${index}]`;
+    const evidence = strictObject(hit, hitPath, ['path', 'kind', 'marker']);
+    strictString(evidence.path, `${hitPath}.path`);
+    strictString(evidence.kind, `${hitPath}.kind`);
+    strictString(evidence.marker, `${hitPath}.marker`);
+  });
+  const build = strictObject(root.build, 'capture.build', [
+    'samples', 'medianDurationMs', 'madDurationMs', 'reproducible', 'command',
+    'workingDirectory', 'clean',
+  ]);
+  strictArray(build.samples, 'capture.build.samples').forEach((sample, index) => {
+    const samplePath = `capture.build.samples[${index}]`;
+    const evidence = strictObject(sample, samplePath, ['durationMs', 'artifactHash', 'cleanedPaths']);
+    strictNumber(evidence.durationMs, `${samplePath}.durationMs`);
+    strictString(evidence.artifactHash, `${samplePath}.artifactHash`, hashPattern);
+    strictStringArray(evidence.cleanedPaths, `${samplePath}.cleanedPaths`);
+  });
+  strictNumber(build.medianDurationMs, 'capture.build.medianDurationMs');
+  strictNumber(build.madDurationMs, 'capture.build.madDurationMs');
+  strictBoolean(build.reproducible, 'capture.build.reproducible');
+  strictString(build.command, 'capture.build.command');
+  strictString(build.workingDirectory, 'capture.build.workingDirectory');
+  const clean = strictObject(build.clean, 'capture.build.clean', [
+    'strategy', 'paths', 'beforeEachBuild',
+  ]);
+  if (clean.strategy !== 'remove-recreate' || clean.beforeEachBuild !== true) {
+    throw new Error('capture.build.clean does not prove remove-recreate before every build');
+  }
+  strictStringArray(clean.paths, 'capture.build.clean.paths');
+  strictArray(root.routes, 'capture.routes').forEach((route, routeIndex) => {
+    const routePath = `capture.routes[${routeIndex}]`;
+    const evidence = strictObject(route, routePath, ['path', 'contract', 'measurements']);
+    strictString(evidence.path, `${routePath}.path`);
+    const contract = strictObject(evidence.contract, `${routePath}.contract`, [
+      'canonical', 'title', 'description', 'openGraph', 'headings', 'bodyTextHash',
+      'internalHrefs', 'externalHrefs', 'imageAttributes', 'stableHtmlHash',
+    ]);
+    for (const key of ['canonical', 'title', 'description', 'bodyTextHash', 'stableHtmlHash']) {
+      strictString(contract[key], `${routePath}.contract.${key}`);
+    }
+    strictStringRecord(contract.openGraph, `${routePath}.contract.openGraph`);
+    strictStringArray(contract.internalHrefs, `${routePath}.contract.internalHrefs`);
+    strictStringArray(contract.externalHrefs, `${routePath}.contract.externalHrefs`);
+    strictArray(contract.headings, `${routePath}.contract.headings`).forEach((heading, index) => {
+      const headingPath = `${routePath}.contract.headings[${index}]`;
+      const item = strictObject(heading, headingPath, ['level', 'text'], ['id']);
+      strictNumber(item.level, `${headingPath}.level`, 1);
+      strictString(item.text, `${headingPath}.text`);
+      if (item.id !== undefined) strictString(item.id, `${headingPath}.id`);
+    });
+    strictArray(contract.imageAttributes, `${routePath}.contract.imageAttributes`).forEach((image, index) => (
+      strictStringRecord(image, `${routePath}.contract.imageAttributes[${index}]`)
+    ));
+    strictArray(evidence.measurements, `${routePath}.measurements`).forEach((measurement, index) => (
+      validateBrowserMeasurement(measurement, `${routePath}.measurements[${index}]`)
+    ));
+  });
+
+  const report = root as unknown as RendererCaptureReport;
+  const expectedEvidence = {
+    astro: { root: '.', manifest: 'package.json', command: 'npm run legacy:build', output: 'dist' },
+    next: {
+      root: 'spikes/site-next',
+      manifest: 'spikes/site-next/package.json',
+      command: 'npm run build',
+      output: 'spikes/site-next/out',
+    },
+    'react-router': {
+      root: 'spikes/site-react-router',
+      manifest: 'spikes/site-react-router/package.json',
+      command: 'npm run build',
+      output: 'spikes/site-react-router/build/client',
+    },
+  }[report.renderer];
+  if (report.provenance.rendererRoot !== expectedEvidence.root
+    || report.provenance.rendererManifest !== expectedEvidence.manifest
+    || report.provenance.buildCommand !== expectedEvidence.command
+    || report.provenance.outputRoot !== expectedEvidence.output
+    || report.build.command !== expectedEvidence.command
+    || report.build.workingDirectory !== expectedEvidence.root) {
+    throw new Error(`capture.provenance is not renderer-specific for ${report.renderer}`);
+  }
+  if (!report.build.clean.paths.some((path) => (
+    report.provenance.outputRoot === path || report.provenance.outputRoot.startsWith(`${path}/`)
+  ))) {
+    throw new Error('capture.build.clean.paths does not include or contain the output root');
+  }
+  if (report.build.samples.length !== 3) throw new Error('capture.build must contain exactly three clean samples');
+  for (const sample of report.build.samples) {
+    if (JSON.stringify(sample.cleanedPaths) !== JSON.stringify(report.build.clean.paths)) {
+      throw new Error('capture.build sample cleaning provenance does not match the clean protocol');
+    }
+  }
+  if (report.build.samples.at(-1)?.artifactHash !== report.artifactHash) {
+    throw new Error('capture.artifactHash does not match the final clean build artifact');
+  }
+  const buildDurations = report.build.samples.map((sample) => sample.durationMs);
+  const buildMetric = metric(buildDurations);
+  const buildReproducible = new Set(report.build.samples.map((sample) => sample.artifactHash)).size === 1;
+  if (report.build.medianDurationMs !== buildMetric.median
+    || report.build.madDurationMs !== buildMetric.mad
+    || report.build.reproducible !== buildReproducible) {
+    throw new Error('capture.build stored summary does not match the raw clean samples');
+  }
+  if (JSON.stringify(report.routes.map((route) => route.path)) !== JSON.stringify(DECISION_ROUTES)) {
+    throw new Error('capture.routes does not match the exact decision route order');
+  }
+  for (const route of report.routes) {
+    if (JSON.stringify(route.measurements.map((measurement) => measurement.viewport)) !== JSON.stringify([
+      'desktop', 'mobile',
+    ])) throw new Error(`capture route ${route.path} does not contain exact viewport evidence`);
+    for (const measurement of route.measurements) {
+      const expectedSize = VIEWPORTS[measurement.viewport];
+      if (measurement.warmupDiscarded !== 1
+        || measurement.sampleCount !== 5
+        || measurement.samples.length !== 5
+        || JSON.stringify(measurement.size) !== JSON.stringify(expectedSize)) {
+        throw new Error(`capture route ${route.path} ${measurement.viewport} must contain five cold samples`);
+      }
+    }
+  }
+  return report;
+}
+
+async function readCapture(
+  path: string,
+  expectedRenderer: RendererName,
+): Promise<RendererCaptureReport> {
+  const report = parseRendererCapture(JSON.parse(await readFile(path, 'utf8')), { expectedRenderer });
+  const repositoryRoot = process.cwd();
+  const contained = (artifactPath: string, label: string): string => {
+    const resolved = resolve(repositoryRoot, artifactPath);
+    const fromRoot = relative(repositoryRoot, resolved);
+    if (fromRoot === '' || fromRoot === '..' || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot)) {
+      throw new Error(`${label} is outside the repository evidence root`);
+    }
+    return resolved;
+  };
+  const fileHash = async (file: string): Promise<string> => (
+    `sha256:${createHash('sha256').update(await readFile(file)).digest('hex')}`
+  );
+  const rendererHarnessHash = async (): Promise<string> => {
+    const hash = createHash('sha256');
+    for (const harnessPath of [
+      'tools/parity/src/capture-renderer.ts',
+      'tools/parity/src/compare-contracts.ts',
+      'tools/parity/src/measure-browser.ts',
+      'tools/parity/src/select-renderer.ts',
+      'tools/parity/src/serve-static.ts',
+    ]) {
+      const bytes = await readFile(contained(harnessPath, 'Renderer harness file'));
+      hash.update(`${Buffer.byteLength(harnessPath)}:${harnessPath}:${bytes.byteLength}:`);
+      hash.update(bytes);
+    }
+    return `sha256:${hash.digest('hex')}`;
+  };
+  const walk = async (root: string, directory = root): Promise<string[]> => {
+    const files: string[] = [];
+    for (const entry of (await readdir(directory, { withFileTypes: true }))
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const child = join(directory, entry.name);
+      if (entry.isSymbolicLink()) throw new Error(`Capture artifact may not contain symlinks: ${child}`);
+      if (entry.isDirectory()) files.push(...await walk(root, child));
+      if (entry.isFile()) files.push(child);
+    }
+    return files;
+  };
+  const artifactHash = async (root: string): Promise<string> => {
+    const stats = await lstat(root);
+    if (!stats.isDirectory()) throw new Error(`Capture output is not a directory: ${root}`);
+    const hash = createHash('sha256');
+    for (const file of await walk(root)) {
+      const filePath = relative(root, file).split(sep).join('/');
+      const bytes = await readFile(file);
+      hash.update(`${Buffer.byteLength(filePath)}:${filePath}:${bytes.byteLength}:`);
+      hash.update(bytes);
+    }
+    return `sha256:${hash.digest('hex')}`;
+  };
+  const manifest = contained(report.provenance.rendererManifest, 'Renderer manifest');
+  const output = contained(report.provenance.outputRoot, 'Renderer output');
+  if (await fileHash(manifest) !== report.provenance.rendererManifestHash) {
+    throw new Error(`${expectedRenderer} renderer manifest hash no longer matches capture evidence`);
+  }
+  if (await rendererHarnessHash() !== report.provenance.captureToolHash) {
+    throw new Error(`${expectedRenderer} renderer harness hash no longer matches capture evidence`);
+  }
+  if (await artifactHash(output) !== report.artifactHash) {
+    throw new Error(`${expectedRenderer} output artifact hash no longer matches capture evidence`);
+  }
+  await execFileAsync('git', ['cat-file', '-e', `${report.provenance.repositoryCommit}^{commit}`], {
+    cwd: repositoryRoot,
+  });
+  return report;
 }
 
 export async function runComparisonCli(argv: string[]): Promise<string> {
   const paths = cliArguments(argv);
   const report = buildRendererSelectionReport(
-    await readCapture(paths.baseline),
-    await readCapture(paths.next),
-    await readCapture(paths.reactRouter),
+    await readCapture(paths.baseline, 'astro'),
+    await readCapture(paths.next, 'next'),
+    await readCapture(paths.reactRouter, 'react-router'),
   );
   await mkdir(dirname(paths.output), { recursive: true });
   await writeFile(paths.output, `${JSON.stringify(report, null, 2)}\n`);

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "synthetic": true,
   "candidates": {
     "next": {
@@ -11,8 +11,23 @@
         "imageBytes": { "median": 90000, "mad": 1000 },
         "buildDurationMs": { "median": 9000, "mad": 100 }
       },
-      "buildArtifactHashes": ["next-a", "next-a", "next-a"],
-      "responsiveImageContract": ["/:desktop:image/webp:1200x800"]
+      "buildArtifactHashes": ["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+      "responsiveImageContract": ["/:desktop:image/webp:1200x800"],
+      "captureEvidence": {
+        "provenance": {
+          "synthetic": true,
+          "repositoryCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rendererRoot": "spikes/site-next",
+          "rendererManifest": "spikes/site-next/package.json",
+          "rendererManifestHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "buildCommand": "npm run build",
+          "outputRoot": "spikes/site-next/out",
+          "captureToolHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "artifactHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "browser": { "package": "@playwright/test", "packageVersion": "1.62.1", "chromiumVersion": "151.0.7922.34", "chromiumRevision": "1234" },
+        "captureProtocol": { "decisionRoutes": ["/", "/articles/why-i-read-in-the-ai-era/", "/reviews/black-swan/", "/memory/agent-harnesses-are-operating-systems/"], "viewports": { "desktop": { "width": 1440, "height": 960 }, "mobile": { "width": 390, "height": 844 } }, "warmups": 1, "samplesPerRouteViewport": 5, "freshBrowserContextPerSample": true, "emptyHttpCachePerSample": true, "initialJavaScriptByteProtocol": "sum-gzip-level-9-inline-and-unique-initial-executable-responses" }
+      }
     },
     "reactRouter": {
       "renderer": "react-router",
@@ -23,8 +38,23 @@
         "imageBytes": { "median": 100000, "mad": 1000 },
         "buildDurationMs": { "median": 10000, "mad": 100 }
       },
-      "buildArtifactHashes": ["router-a", "router-a", "router-a"],
-      "responsiveImageContract": ["/:desktop:image/webp:1200x800"]
+      "buildArtifactHashes": ["sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"],
+      "responsiveImageContract": ["/:desktop:image/webp:1200x800"],
+      "captureEvidence": {
+        "provenance": {
+          "synthetic": true,
+          "repositoryCommit": "dddddddddddddddddddddddddddddddddddddddd",
+          "rendererRoot": "spikes/site-react-router",
+          "rendererManifest": "spikes/site-react-router/package.json",
+          "rendererManifestHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "buildCommand": "npm run build",
+          "outputRoot": "spikes/site-react-router/build",
+          "captureToolHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "artifactHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "browser": { "package": "@playwright/test", "packageVersion": "1.62.1", "chromiumVersion": "151.0.7922.34", "chromiumRevision": "1234" },
+        "captureProtocol": { "decisionRoutes": ["/", "/articles/why-i-read-in-the-ai-era/", "/reviews/black-swan/", "/memory/agent-harnesses-are-operating-systems/"], "viewports": { "desktop": { "width": 1440, "height": 960 }, "mobile": { "width": 390, "height": 844 } }, "warmups": 1, "samplesPerRouteViewport": 5, "freshBrowserContextPerSample": true, "emptyHttpCachePerSample": true, "initialJavaScriptByteProtocol": "sum-gzip-level-9-inline-and-unique-initial-executable-responses" }
+      }
     }
   }
 }

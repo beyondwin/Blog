@@ -1,15 +1,17 @@
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
 import { promisify } from 'node:util';
 import { chromium } from '@playwright/test';
 import { parse } from 'parse5';
+import { findPublicBoundaryHits } from '../../../packages/content/src/release/read-release.ts';
 import { buildHtmlContract } from './html-contract.ts';
 import {
   DECISION_ROUTES,
+  CAPTURE_PROTOCOL,
   VIEWPORTS,
   type DecisionRoute,
   type RendererCaptureReport,
@@ -40,13 +42,25 @@ export interface StableRouteCapture {
 
 export interface CaptureRendererOptions {
   repositoryRoot: string;
+  rendererRoot: string;
+  rendererManifest: string;
   outputDirectory: string;
+  cleanDirectories: string[];
   outputPath: string;
   renderer: RendererName;
   buildScript: string;
   buildSamples: number;
   host: string;
   port: number;
+}
+
+interface BuildSamplingOptions {
+  repositoryRoot: string;
+  rendererRoot: string;
+  outputDirectory: string;
+  cleanDirectories: string[];
+  buildScript: string;
+  buildSamples: number;
 }
 
 function normalizeText(value: string): string {
@@ -141,6 +155,21 @@ async function walkFiles(root: string, directory = root): Promise<string[]> {
   return files;
 }
 
+export async function scanArtifactPrivateBoundary(root: string) {
+  const resolvedRoot = resolve(root);
+  const rootState = await lstat(resolvedRoot);
+  if (rootState.isSymbolicLink() || !rootState.isDirectory()) {
+    throw new Error(`Renderer artifact root must be a real directory: ${root}`);
+  }
+  const hits = [];
+  for (const file of await walkFiles(resolvedRoot)) {
+    const artifactPath = relative(resolvedRoot, file).split(sep).join('/');
+    const value = (await readFile(file)).toString('utf8');
+    hits.push(...findPublicBoundaryHits(value, artifactPath));
+  }
+  return hits;
+}
+
 export async function hashOutputArtifact(root: string): Promise<string> {
   const resolvedRoot = resolve(root);
   const stats = await lstat(resolvedRoot);
@@ -168,23 +197,67 @@ async function captureStaticContracts(outputDirectory: string) {
   })));
 }
 
-async function runBuildSamples(options: CaptureRendererOptions) {
+function containedRelativePath(root: string, candidate: string, label: string, allowRoot = false): string {
+  const resolvedRoot = resolve(root);
+  const resolvedCandidate = resolve(candidate);
+  const candidateRelative = relative(resolvedRoot, resolvedCandidate);
+  const contained = candidateRelative === ''
+    || (!candidateRelative.startsWith(`..${sep}`) && candidateRelative !== '..' && !candidateRelative.startsWith('/'));
+  if (!contained || (!allowRoot && candidateRelative === '')) {
+    throw new Error(`${label} must be a contained repository path: ${candidate}`);
+  }
+  return candidateRelative.split(sep).join('/') || '.';
+}
+
+export async function runBuildSamples(options: BuildSamplingOptions) {
   if (!/^[a-z0-9:-]+$/u.test(options.buildScript)) {
     throw new Error(`Unsafe npm build script name: ${options.buildScript}`);
   }
   if (options.buildSamples !== 3) throw new Error('Renderer comparison requires exactly three clean build samples');
+  const rendererRoot = resolve(options.rendererRoot);
+  containedRelativePath(options.repositoryRoot, rendererRoot, 'Renderer root', true);
+  const cleanDirectories = [...new Set(options.cleanDirectories.map((directory) => resolve(directory)))];
+  if (cleanDirectories.length === 0) throw new Error('At least one clean output/cache directory is required');
+  const cleanedPaths = cleanDirectories.map((directory) => (
+    containedRelativePath(options.repositoryRoot, directory, 'Clean directory')
+  ));
+  const outputRoot = resolve(options.outputDirectory);
+  const outputRelative = containedRelativePath(options.repositoryRoot, outputRoot, 'Output directory');
+  const isContainedBy = (parent: string, child: string): boolean => {
+    const childRelative = relative(parent, child);
+    return childRelative === ''
+      || (childRelative !== '..' && !childRelative.startsWith(`..${sep}`) && !childRelative.startsWith('/'));
+  };
+  if (!cleanDirectories.some((directory) => isContainedBy(directory, outputRoot))) {
+    throw new Error(`Clean directories must include or contain output directory: ${outputRelative}`);
+  }
+  for (let index = 0; index < cleanDirectories.length; index += 1) {
+    const directory = cleanDirectories[index];
+    const cacheName = cleanedPaths[index].split('/').at(-1) ?? '';
+    const coversOutput = isContainedBy(directory, outputRoot);
+    const recognizedCache = /^\.(?:[a-z0-9_-]*cache|astro|next)$/u.test(cacheName);
+    if (!coversOutput && !recognizedCache) {
+      throw new Error(`Clean directory must be a renderer output or cache: ${cleanedPaths[index]}`);
+    }
+  }
 
-  const samples: Array<{ durationMs: number; artifactHash: string }> = [];
+  const samples: Array<{ durationMs: number; artifactHash: string; cleanedPaths: string[] }> = [];
   for (let index = 0; index < options.buildSamples; index += 1) {
+    for (const directory of cleanDirectories) {
+      const stats = await lstat(directory).catch(() => null);
+      if (stats?.isSymbolicLink()) throw new Error(`Clean directory may not be a symlink: ${directory}`);
+      await rm(directory, { recursive: true, force: true });
+    }
     const startedAt = performance.now();
     await execFileAsync('npm', ['run', options.buildScript], {
-      cwd: options.repositoryRoot,
+      cwd: rendererRoot,
       env: { ...process.env, NODE_ENV: 'production' },
       maxBuffer: 20 * 1024 * 1024,
     });
     samples.push({
       durationMs: Math.round(performance.now() - startedAt),
       artifactHash: await hashOutputArtifact(options.outputDirectory),
+      cleanedPaths,
     });
   }
   const durations = samples.map((sample) => sample.durationMs);
@@ -193,6 +266,13 @@ async function runBuildSamples(options: CaptureRendererOptions) {
     medianDurationMs: median(durations),
     madDurationMs: medianAbsoluteDeviation(durations),
     reproducible: new Set(samples.map((sample) => sample.artifactHash)).size === 1,
+    command: `npm run ${options.buildScript}`,
+    workingDirectory: containedRelativePath(options.repositoryRoot, rendererRoot, 'Renderer root', true),
+    clean: {
+      strategy: 'remove-recreate' as const,
+      paths: cleanedPaths,
+      beforeEachBuild: true as const,
+    },
   };
 }
 
@@ -211,10 +291,87 @@ async function readBrowserPin(repositoryRoot: string) {
   return { packageVersion, chromiumPin };
 }
 
+async function sha256File(path: string): Promise<string> {
+  const state = await lstat(path);
+  if (state.isSymbolicLink() || !state.isFile()) throw new Error(`Evidence file must be a real file: ${path}`);
+  return `sha256:${createHash('sha256').update(await readFile(path)).digest('hex')}`;
+}
+
+const RENDERER_HARNESS_PATHS = [
+  'tools/parity/src/capture-renderer.ts',
+  'tools/parity/src/compare-contracts.ts',
+  'tools/parity/src/measure-browser.ts',
+  'tools/parity/src/select-renderer.ts',
+  'tools/parity/src/serve-static.ts',
+] as const;
+
+async function rendererHarnessHash(repositoryRoot: string): Promise<string> {
+  const hash = createHash('sha256');
+  for (const path of RENDERER_HARNESS_PATHS) {
+    const bytes = await readFile(join(repositoryRoot, path));
+    hash.update(`${Buffer.byteLength(path)}:${path}:${bytes.byteLength}:`);
+    hash.update(bytes);
+  }
+  return `sha256:${hash.digest('hex')}`;
+}
+
+async function captureProvenance(options: CaptureRendererOptions) {
+  const rendererRoot = containedRelativePath(options.repositoryRoot, options.rendererRoot, 'Renderer root', true);
+  const rendererManifest = containedRelativePath(
+    options.repositoryRoot,
+    options.rendererManifest,
+    'Renderer manifest',
+  );
+  const outputRoot = containedRelativePath(options.repositoryRoot, options.outputDirectory, 'Output directory');
+  const expected = {
+    astro: {
+      rendererRoot: '.',
+      rendererManifest: 'package.json',
+      buildScript: 'legacy:build',
+      outputRoot: 'dist',
+    },
+    next: {
+      rendererRoot: 'spikes/site-next',
+      rendererManifest: 'spikes/site-next/package.json',
+      buildScript: 'build',
+      outputRoot: 'spikes/site-next/out',
+    },
+    'react-router': {
+      rendererRoot: 'spikes/site-react-router',
+      rendererManifest: 'spikes/site-react-router/package.json',
+      buildScript: 'build',
+      outputRoot: 'spikes/site-react-router/build/client',
+    },
+  }[options.renderer];
+  if (rendererRoot !== expected.rendererRoot
+    || rendererManifest !== expected.rendererManifest
+    || options.buildScript !== expected.buildScript
+    || outputRoot !== expected.outputRoot) {
+    throw new Error(
+      `Renderer evidence mismatch for ${options.renderer}: root=${rendererRoot} manifest=${rendererManifest} build=${options.buildScript} output=${outputRoot}`,
+    );
+  }
+  const repositoryCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], {
+    cwd: options.repositoryRoot,
+  })).stdout.trim();
+  return {
+    synthetic: false,
+    repositoryCommit,
+    rendererRoot,
+    rendererManifest,
+    rendererManifestHash: await sha256File(options.rendererManifest),
+    buildCommand: `npm run ${options.buildScript}`,
+    outputRoot,
+    captureToolHash: await rendererHarnessHash(options.repositoryRoot),
+  } as const;
+}
+
 export async function captureRenderer(options: CaptureRendererOptions): Promise<RendererCaptureReport> {
+  const provenance = await captureProvenance(options);
   const build = await runBuildSamples(options);
   const staticRoutes = await captureStaticContracts(options.outputDirectory);
   const artifactHash = await hashOutputArtifact(options.outputDirectory);
+  const artifactPrivateBoundaryHits = await scanArtifactPrivateBoundary(options.outputDirectory);
   const pin = await readBrowserPin(options.repositoryRoot);
   const server = await startStaticServer({
     root: options.outputDirectory,
@@ -246,17 +403,11 @@ export async function captureRenderer(options: CaptureRendererOptions): Promise<
     }
 
     return {
-      version: 1,
+      version: 2,
       renderer: options.renderer,
+      provenance,
       measuredAt: new Date().toISOString(),
-      captureProtocol: {
-        decisionRoutes: [...DECISION_ROUTES],
-        viewports: VIEWPORTS,
-        warmups: 1,
-        samplesPerRouteViewport: 5,
-        freshBrowserContextPerSample: true,
-        emptyHttpCachePerSample: true,
-      },
+      captureProtocol: CAPTURE_PROTOCOL,
       browser: {
         package: '@playwright/test',
         packageVersion: pin.packageVersion,
@@ -264,6 +415,7 @@ export async function captureRenderer(options: CaptureRendererOptions): Promise<
         chromiumRevision: pin.chromiumPin.revision,
       },
       artifactHash,
+      artifactPrivateBoundaryHits,
       build,
       routes,
     };
@@ -296,7 +448,10 @@ function parseArguments(argv: string[]): CaptureRendererOptions {
   };
   return {
     repositoryRoot,
+    rendererRoot: resolve(repositoryRoot, values.get('renderer-root') ?? '.'),
+    rendererManifest: resolve(repositoryRoot, required('renderer-manifest')),
     outputDirectory: resolve(repositoryRoot, required('root')),
+    cleanDirectories: required('clean-paths').split(',').map((path) => resolve(repositoryRoot, path.trim())),
     outputPath: resolve(repositoryRoot, required('output')),
     renderer,
     buildScript: required('build-script'),

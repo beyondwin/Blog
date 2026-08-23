@@ -4,6 +4,7 @@ import {
   VIEWPORTS,
   buildRendererSelectionReport,
   compareRendererContracts,
+  parseRendererCapture,
   type RendererCaptureReport,
   type RendererName,
 } from '../src/compare-contracts';
@@ -16,7 +17,17 @@ function measurement(viewport: 'desktop' | 'mobile') {
     cls: 0.01,
     jsGzipBytes: 40_000,
     imageBytes: 60_000,
-    renderedImages: [{ displayedWidth: 1200, displayedHeight: 800, format: 'image/webp' }],
+    renderedImages: [{
+      source: '/cover.webp',
+      displayedWidth: 1200,
+      displayedHeight: 800,
+      naturalWidth: 1200,
+      naturalHeight: 800,
+      declaredWidth: 1200,
+      declaredHeight: 800,
+      format: 'image/webp',
+    }],
+    imageFailures: [] as string[],
     consoleErrors: [] as string[],
     hydrationErrors: [] as string[],
     axeSeriousOrCritical: [] as string[],
@@ -44,6 +55,7 @@ function measurement(viewport: 'desktop' | 'mobile') {
     consoleErrors: [] as string[],
     hydrationErrors: [] as string[],
     axeSeriousOrCritical: [] as string[],
+    imageFailures: [] as string[],
     overflow: sample.overflow,
     privateBoundaryHits: [] as string[],
   };
@@ -51,8 +63,18 @@ function measurement(viewport: 'desktop' | 'mobile') {
 
 function report(renderer: RendererName): RendererCaptureReport {
   return {
-    version: 1,
+    version: 2,
     renderer,
+    provenance: {
+      synthetic: true,
+      repositoryCommit: 'a'.repeat(40),
+      rendererRoot: '.',
+      rendererManifest: 'package.json',
+      rendererManifestHash: `sha256:${'b'.repeat(64)}`,
+      buildCommand: 'npm run test:synthetic',
+      outputRoot: 'dist',
+      captureToolHash: `sha256:${'c'.repeat(64)}`,
+    },
     measuredAt: '2026-08-24T00:00:00.000Z',
     captureProtocol: {
       decisionRoutes: [...DECISION_ROUTES],
@@ -61,6 +83,7 @@ function report(renderer: RendererName): RendererCaptureReport {
       samplesPerRouteViewport: 5,
       freshBrowserContextPerSample: true,
       emptyHttpCachePerSample: true,
+      initialJavaScriptByteProtocol: 'sum-gzip-level-9-inline-and-unique-initial-executable-responses',
     },
     browser: {
       package: '@playwright/test',
@@ -69,15 +92,19 @@ function report(renderer: RendererName): RendererCaptureReport {
       chromiumRevision: '1234',
     },
     artifactHash: 'sha256:artifact',
+    artifactPrivateBoundaryHits: [],
     build: {
       samples: [
-        { durationMs: 1_000, artifactHash: 'sha256:artifact' },
-        { durationMs: 1_010, artifactHash: 'sha256:artifact' },
-        { durationMs: 990, artifactHash: 'sha256:artifact' },
+        { durationMs: 1_000, artifactHash: 'sha256:artifact', cleanedPaths: ['dist'] },
+        { durationMs: 1_010, artifactHash: 'sha256:artifact', cleanedPaths: ['dist'] },
+        { durationMs: 990, artifactHash: 'sha256:artifact', cleanedPaths: ['dist'] },
       ],
       medianDurationMs: 1_000,
       madDurationMs: 10,
       reproducible: true,
+      command: 'npm run test:synthetic',
+      workingDirectory: '.',
+      clean: { strategy: 'remove-recreate', paths: ['dist'], beforeEachBuild: true },
     },
     routes: DECISION_ROUTES.map((path) => ({
       path,
@@ -96,6 +123,49 @@ function report(renderer: RendererName): RendererCaptureReport {
       measurements: [measurement('desktop'), measurement('mobile')],
     })),
   };
+}
+
+function strictSyntheticReport(renderer: RendererName): RendererCaptureReport {
+  const fixture = report(renderer);
+  const artifactHash = `sha256:${'d'.repeat(64)}`;
+  fixture.artifactHash = artifactHash;
+  fixture.build.samples = fixture.build.samples.map((sample) => ({ ...sample, artifactHash }));
+  const evidence = {
+    astro: {
+      rendererRoot: '.',
+      rendererManifest: 'package.json',
+      buildCommand: 'npm run legacy:build',
+      outputRoot: 'dist',
+      cleanPaths: ['dist', 'node_modules/.astro'],
+    },
+    next: {
+      rendererRoot: 'spikes/site-next',
+      rendererManifest: 'spikes/site-next/package.json',
+      buildCommand: 'npm run build',
+      outputRoot: 'spikes/site-next/out',
+      cleanPaths: ['spikes/site-next/out', 'spikes/site-next/.next'],
+    },
+    'react-router': {
+      rendererRoot: 'spikes/site-react-router',
+      rendererManifest: 'spikes/site-react-router/package.json',
+      buildCommand: 'npm run build',
+      outputRoot: 'spikes/site-react-router/build/client',
+      cleanPaths: ['spikes/site-react-router/build'],
+    },
+  }[renderer];
+  const { cleanPaths, ...provenanceEvidence } = evidence;
+  fixture.provenance = {
+    ...fixture.provenance,
+    ...provenanceEvidence,
+  };
+  fixture.build.command = evidence.buildCommand;
+  fixture.build.workingDirectory = evidence.rendererRoot;
+  fixture.build.clean.paths = cleanPaths;
+  fixture.build.samples = fixture.build.samples.map((sample) => ({
+    ...sample,
+    cleanedPaths: cleanPaths,
+  }));
+  return fixture;
 }
 
 function expectActionableFailure(
@@ -134,12 +204,14 @@ describe('renderer contract comparison', () => {
     }
     next.build.samples = next.build.samples.map((sample) => ({ ...sample, durationMs: 9_000 }));
     next.build.medianDurationMs = 9_000;
+    next.build.madDurationMs = 0;
     reactRouter.build.samples = reactRouter.build.samples.map((sample) => ({ ...sample, durationMs: 10_000 }));
     reactRouter.build.medianDurationMs = 10_000;
+    reactRouter.build.madDurationMs = 0;
 
     const selectionReport = buildRendererSelectionReport(baseline, next, reactRouter);
 
-    expect(selectionReport.synthetic).toBe(false);
+    expect(selectionReport.synthetic).toBe(true);
     expect(selectionReport.candidates.next.mandatoryFailures).toEqual([]);
     expect(selectionReport.candidates.reactRouter.mandatoryFailures).toEqual([]);
     expect(selectionReport.candidates.next.quality.lcpMs).toEqual({ median: 800, mad: 0 });
@@ -157,6 +229,41 @@ describe('renderer contract comparison', () => {
     expect(() => buildRendererSelectionReport(baseline, next, reactRouter)).toThrow(
       'Expected next candidate report, got react-router',
     );
+  });
+
+  it('refuses duplicate artifacts presented as two non-synthetic candidates', () => {
+    const baseline = report('astro');
+    const next = report('next');
+    const reactRouter = report('react-router');
+    baseline.provenance = { ...baseline.provenance, synthetic: false };
+    next.provenance = {
+      ...next.provenance,
+      synthetic: false,
+      rendererRoot: 'spikes/site-next',
+      rendererManifest: 'spikes/site-next/package.json',
+      buildCommand: 'npm run build',
+      outputRoot: 'spikes/site-next/out',
+    };
+    reactRouter.provenance = {
+      ...reactRouter.provenance,
+      synthetic: false,
+      rendererRoot: 'spikes/site-react-router',
+      rendererManifest: 'spikes/site-react-router/package.json',
+      buildCommand: 'npm run build',
+      outputRoot: 'spikes/site-react-router/build',
+    };
+
+    expect(() => buildRendererSelectionReport(baseline, next, reactRouter)).toThrow(/duplicate artifact/iu);
+  });
+
+  it('strictly rejects missing cold samples and final artifacts not produced by the clean builds', () => {
+    const missingSample = strictSyntheticReport('next');
+    missingSample.routes[0].measurements[0].samples.pop();
+    const mismatchedArtifact = strictSyntheticReport('react-router');
+    mismatchedArtifact.artifactHash = `sha256:${'e'.repeat(64)}`;
+
+    expect(() => parseRendererCapture(missingSample, { allowSynthetic: true })).toThrow(/five cold samples/iu);
+    expect(() => parseRendererCapture(mismatchedArtifact, { allowSynthetic: true })).toThrow(/artifact/iu);
   });
 
   it('names a title mismatch by renderer, route, viewport, metric, expected, and actual', () => {
@@ -208,6 +315,35 @@ describe('renderer contract comparison', () => {
     expect(result.failures).toContainEqual(expect.stringContaining('metric=chromium-version'));
     expect(result.failures).toContainEqual(expect.stringContaining('metric=chromium-revision'));
     expect(result.failures).toContainEqual(expect.stringContaining('metric=sampling-protocol'));
+    expect(result.mandatoryPass).toBe(false);
+  });
+
+  it('recomputes mandatory metrics and issue unions from raw cold samples', () => {
+    const baseline = report('astro');
+    const candidate = report('next');
+    const route = '/reviews/black-swan/' as const;
+    const target = candidate.routes.find((entry) => entry.path === route)!;
+    const mobile = target.measurements.find((entry) => entry.viewport === 'mobile')!;
+    for (const sample of mobile.samples) sample.cls = 1;
+    mobile.samples[0].axeSeriousOrCritical = ['image-alt: serious'];
+
+    const result = compareRendererContracts(baseline, candidate);
+
+    expect(result.failures).toContainEqual(expect.stringContaining('metric=measurement-summary'));
+    expect(result.failures).toContainEqual(expect.stringContaining('metric=cls'));
+    expect(result.failures).toContainEqual(expect.stringContaining('metric=axe-serious-critical'));
+    expect(result.mandatoryPass).toBe(false);
+  });
+
+  it('rejects stored build summaries that disagree with the three raw durations', () => {
+    const baseline = report('astro');
+    const candidate = report('next');
+    candidate.build.medianDurationMs = 1;
+    candidate.build.madDurationMs = 0;
+
+    const result = compareRendererContracts(baseline, candidate);
+
+    expect(result.failures).toContainEqual(expect.stringContaining('metric=build-summary'));
     expect(result.mandatoryPass).toBe(false);
   });
 
@@ -285,6 +421,7 @@ describe('renderer contract comparison', () => {
     const route = '/reviews/black-swan/' as const;
     const target = candidate.routes.find((entry) => entry.path === route)!;
     const mobile = target.measurements.find((entry) => entry.viewport === 'mobile')!;
+    mobile.samples[0].axeSeriousOrCritical = ['button-name: serious'];
     mobile.axeSeriousOrCritical = ['button-name: serious'];
 
     const result = compareRendererContracts(baseline, candidate);
@@ -306,6 +443,7 @@ describe('renderer contract comparison', () => {
     const route = '/memory/agent-harnesses-are-operating-systems/' as const;
     const target = candidate.routes.find((entry) => entry.path === route)!;
     const desktop = target.measurements.find((entry) => entry.viewport === 'desktop')!;
+    desktop.samples[0].privateBoundaryHits = ['/Users/user/private/memory.md'];
     desktop.privateBoundaryHits = ['/Users/user/private/memory.md'];
 
     const result = compareRendererContracts(baseline, candidate);

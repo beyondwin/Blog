@@ -57,9 +57,14 @@ Node 24 LTS와 npm workspaces를 사용한다. `apps/server`의 API와 worker는
 - 비교 route는 `/`, `/articles/why-i-read-in-the-ai-era/`, `/reviews/black-swan/`, `/memory/agent-harnesses-are-operating-systems/` 네 개로 제한한다.
 - viewport는 desktop `1440x960`, mobile `390x844`를 사용한다. 각 route/viewport에서 discarded warm-up 1회 뒤 production output의 cold sample 5회를 기록한다. Sample마다 새 browser context를 만들고 HTTP cache를 비운다.
 - Route/viewport metric은 median과 median absolute deviation(MAD)을 함께 기록한다. Candidate advantage는 정해진 margin뿐 아니라 두 candidate 중 큰 MAD의 2배도 초과해야 한다.
+- Initial JavaScript byte는 각 cold sample에서 executable inline script와 중복 제거한 initial executable response를 각각 gzip level 9로 압축한 byte 수의 합이다. `script` response뿐 아니라 JavaScript MIME response, Next bootstrap inline script, `.rsc`/`text/x-component` payload를 포함하고 JSON 등 non-executable script는 제외한다.
+- 세 build sample은 매번 renderer output과 renderer-local cache를 명시적으로 제거한 뒤 시작한다. Report는 build command, working directory, 삭제한 repository-contained path를 sample마다 기록하며 final artifact는 마지막 clean build hash와 일치해야 한다. Astro baseline은 `dist`와 `node_modules/.astro`만 제거한다.
+- Evidence schema v2에서는 정확히 다섯 raw cold sample을 authoritative input으로 삼아 median/MAD, issue union, overflow, byte aggregate, build summary를 다시 계산한다. Stored summary가 raw evidence와 다르거나 sample/route/viewport가 빠지거나 추가되면 fail-closed한다.
+- Private boundary는 HTML만이 아니라 owned output root의 JavaScript, CSS, JSON, source map과 binary를 포함한 전체 artifact file set에 repository 공통 policy를 적용한다. Symlinked root/file은 거부하고 artifact-relative evidence를 남긴다.
+- Responsive-image evidence와 image-byte advantage는 표시 크기가 양수인 image 중 response가 성공하고 decode되며 natural/declared dimensions, aspect ratio, declared source와 `currentSrc`, response format이 일치하는 image만 포함한다. 표시되지 않는 decorative duplicate는 비교 집합에서 제외하고, 보이는 broken image는 mandatory failure다.
 - Next.js의 네 advantage category는 (1) LCP가 10%와 75ms를 모두 초과해 개선, (2) gzip JavaScript가 15%와 10 KiB를 모두 초과해 감소, (3) 같은 표시 dimensions/format의 responsive-image transfer가 15%를 초과해 감소, (4) 세 clean build가 같은 route/asset contract를 만들면서 median build time이 20%를 초과해 개선되는 경우다.
 - Browser pin은 committed `package-lock.json`의 `@playwright/test` `1.62.1`이 결정하는 Chromium `151.0.7922.34`, revision `1234`다. Pin과 실제 실행 version이 다르면 report를 만들지 않는다.
-- Astro 측정값은 [tracked baseline fixture](../../../../tests/fixtures/parity/astro-renderer-baseline.json)에 보존한다. Next.js와 React Router의 실제 candidate report가 모두 생기기 전에는 renderer selection을 차단하며 synthetic fixture는 selector CLI의 입력으로 허용하지 않는다.
+- Astro 측정값은 [tracked baseline fixture](../../../../tests/fixtures/parity/astro-renderer-baseline.json)에 보존한다. Real capture는 candidate commit, renderer별 root/manifest/build command/output, manifest hash, artifact hash, browser pin, 전체 renderer harness source-set hash, exact protocol을 기록하며 comparison 시 현재 local evidence와 다시 대조한다. 이 chain은 repository를 재작성할 수 있는 operator에 대한 암호학적 증명이 아니라 같은 local checkout 안의 accidental/stale/forged evidence를 fail-closed하는 bounded trust다. Next.js와 React Router의 실제 candidate report가 모두 생기기 전에는 renderer selection을 차단하며 synthetic fixture는 selector CLI의 입력으로 허용하지 않는다.
 
 ### host와 인증 경계
 
@@ -133,7 +138,7 @@ deploy/
 - 2026-08-23 사용자 결정: 한 Docker host에서 시작하되 process를 나중에 분리할 수 있어야 한다.
 - 2026-08-23 사용자 결정: 품질을 최우선으로 하되 품질에 기여하지 않는 복잡도는 도입하지 않는다.
 - 2026-08-24 사용자 결정: renderer mandatory budget, 네 advantage threshold, median/MAD protocol을 승인하고 중간 승인 checkpoint 없이 보수적인 재현성 기준으로 고정한다.
-- Astro browser baseline은 세 build 모두 동일 artifact hash `sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a`를 만들었고 build median `6,965ms`, MAD `508ms`를 기록했다. 40개 cold sample에서 console/hydration/private-path/overflow issue는 0이었으며 기존 mobile home의 serious color-contrast finding 1건은 candidate가 승계해서는 안 되는 baseline evidence로 보존했다.
+- Evidence schema v2로 다시 캡처한 Astro browser baseline은 `dist`와 `node_modules/.astro`를 각 sample 전에 비우고 세 build 모두 동일 artifact hash `sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a`를 만들었으며 build median `7,256ms`, MAD `68ms`를 기록했다. 40개 cold sample에서 console/hydration/image/private-path/overflow issue는 0이었고 full-artifact private-boundary hit도 0이었다. 기존 mobile home의 serious color-contrast finding 1건은 candidate가 승계해서는 안 되는 baseline evidence로 보존했다.
 - 공식 Next.js 문서는 self-hosting, build-time params, MDX와 image optimization을 지원하지만 Route Handler를 완전한 backend replacement로 설명하지 않는다.
 - 공식 React Router 문서는 Data Mode SPA와 Framework Mode SSR/prerender를 구분한다.
 - Fastify response schema와 plugin encapsulation은 public/private DTO와 vertical module 경계에 적합하다.

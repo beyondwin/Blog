@@ -1,7 +1,17 @@
 {
-  "version": 1,
+  "version": 2,
   "renderer": "astro",
-  "measuredAt": "2026-08-23T19:38:19.105Z",
+  "provenance": {
+    "synthetic": false,
+    "repositoryCommit": "97c7aec09be438810f4b2c8eff14585de593c5e1",
+    "rendererRoot": ".",
+    "rendererManifest": "package.json",
+    "rendererManifestHash": "sha256:1b7f1a400157ac6c569598e43f62ece76086306a309c62e3dcf1463c7884909f",
+    "buildCommand": "npm run legacy:build",
+    "outputRoot": "dist",
+    "captureToolHash": "sha256:b53f4a4c508c24b2033a0a3714dcc607ddac135dcc164caa4426068d6feaef10"
+  },
+  "measuredAt": "2026-08-23T20:38:09.739Z",
   "captureProtocol": {
     "decisionRoutes": [
       "/",
@@ -22,7 +32,8 @@
     "warmups": 1,
     "samplesPerRouteViewport": 5,
     "freshBrowserContextPerSample": true,
-    "emptyHttpCachePerSample": true
+    "emptyHttpCachePerSample": true,
+    "initialJavaScriptByteProtocol": "sum-gzip-level-9-inline-and-unique-initial-executable-responses"
   },
   "browser": {
     "package": "@playwright/test",
@@ -31,24 +42,47 @@
     "chromiumRevision": "1234"
   },
   "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a",
+  "artifactPrivateBoundaryHits": [],
   "build": {
     "samples": [
       {
-        "durationMs": 6965,
-        "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a"
+        "durationMs": 7324,
+        "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a",
+        "cleanedPaths": [
+          "dist",
+          "node_modules/.astro"
+        ]
       },
       {
-        "durationMs": 6457,
-        "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a"
+        "durationMs": 7083,
+        "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a",
+        "cleanedPaths": [
+          "dist",
+          "node_modules/.astro"
+        ]
       },
       {
-        "durationMs": 8905,
-        "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a"
+        "durationMs": 7256,
+        "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a",
+        "cleanedPaths": [
+          "dist",
+          "node_modules/.astro"
+        ]
       }
     ],
-    "medianDurationMs": 6965,
-    "madDurationMs": 508,
-    "reproducible": true
+    "medianDurationMs": 7256,
+    "madDurationMs": 68,
+    "reproducible": true,
+    "command": "npm run legacy:build",
+    "workingDirectory": ".",
+    "clean": {
+      "strategy": "remove-recreate",
+      "paths": [
+        "dist",
+        "node_modules/.astro"
+      ],
+      "beforeEachBuild": true
+    }
   },
   "routes": [
     {
@@ -133,117 +167,37 @@
               "imageBytes": 232382,
               "renderedImages": [
                 {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
                   "displayedWidth": 878,
                   "displayedHeight": 643,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
                   "displayedWidth": 430,
                   "displayedHeight": 336,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
                   "displayedWidth": 389,
                   "displayedHeight": 288,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 20,
-              "jsGzipBytes": 1759,
-              "imageBytes": 232382,
-              "renderedImages": [
-                {
-                  "displayedWidth": 878,
-                  "displayedHeight": 643,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 430,
-                  "displayedHeight": 336,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 389,
-                  "displayedHeight": 288,
-                  "format": "image/webp"
-                }
-              ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 20,
-              "jsGzipBytes": 1759,
-              "imageBytes": 232382,
-              "renderedImages": [
-                {
-                  "displayedWidth": 878,
-                  "displayedHeight": 643,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 430,
-                  "displayedHeight": 336,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 389,
-                  "displayedHeight": 288,
-                  "format": "image/webp"
-                }
-              ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 1759,
-              "imageBytes": 232382,
-              "renderedImages": [
-                {
-                  "displayedWidth": 878,
-                  "displayedHeight": 643,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 430,
-                  "displayedHeight": 336,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 389,
-                  "displayedHeight": 288,
-                  "format": "image/webp"
-                }
-              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -261,21 +215,181 @@
               "imageBytes": 232382,
               "renderedImages": [
                 {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
                   "displayedWidth": 878,
                   "displayedHeight": 643,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
                   "displayedWidth": 430,
                   "displayedHeight": 336,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
                   "displayedWidth": 389,
                   "displayedHeight": 288,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 1759,
+              "imageBytes": 232382,
+              "renderedImages": [
+                {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
+                  "displayedWidth": 878,
+                  "displayedHeight": 643,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 430,
+                  "displayedHeight": 336,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+                  "displayedWidth": 389,
+                  "displayedHeight": 288,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 1759,
+              "imageBytes": 232382,
+              "renderedImages": [
+                {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
+                  "displayedWidth": 878,
+                  "displayedHeight": 643,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 430,
+                  "displayedHeight": 336,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+                  "displayedWidth": 389,
+                  "displayedHeight": 288,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 1759,
+              "imageBytes": 232382,
+              "renderedImages": [
+                {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
+                  "displayedWidth": 878,
+                  "displayedHeight": 643,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 430,
+                  "displayedHeight": 336,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+                  "displayedWidth": 389,
+                  "displayedHeight": 288,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -294,7 +408,7 @@
             "imageBytes": 232382
           },
           "mad": {
-            "lcpMs": 4,
+            "lcpMs": 0,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -302,6 +416,7 @@
           "consoleErrors": [],
           "hydrationErrors": [],
           "axeSeriousOrCritical": [],
+          "imageFailures": [],
           "overflow": {
             "expectedMaxWidth": 1440,
             "actualScrollWidth": 1440,
@@ -322,126 +437,50 @@
               "cls": 0,
               "lcpMs": 24,
               "jsGzipBytes": 1759,
-              "imageBytes": 119268,
+              "imageBytes": 232382,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
                   "displayedWidth": 109,
                   "displayedHeight": 186,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
                   "displayedWidth": 273,
                   "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
                   "displayedWidth": 281,
                   "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [
-                "color-contrast: serious"
-              ],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 20,
-              "jsGzipBytes": 1759,
-              "imageBytes": 119268,
-              "renderedImages": [
-                {
-                  "displayedWidth": 109,
-                  "displayedHeight": 186,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 273,
-                  "displayedHeight": 354,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "format": "image/webp"
-                }
-              ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [
-                "color-contrast: serious"
-              ],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 1759,
-              "imageBytes": 119268,
-              "renderedImages": [
-                {
-                  "displayedWidth": 109,
-                  "displayedHeight": 186,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 273,
-                  "displayedHeight": 354,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "format": "image/webp"
-                }
-              ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [
-                "color-contrast: serious"
-              ],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 20,
-              "jsGzipBytes": 1759,
-              "imageBytes": 119268,
-              "renderedImages": [
-                {
-                  "displayedWidth": 109,
-                  "displayedHeight": 186,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 273,
-                  "displayedHeight": 354,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "format": "image/webp"
-                }
-              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [
@@ -458,24 +497,230 @@
               "cls": 0,
               "lcpMs": 24,
               "jsGzipBytes": 1759,
-              "imageBytes": 119268,
+              "imageBytes": 232382,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
                   "displayedWidth": 109,
                   "displayedHeight": 186,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
                   "displayedWidth": 273,
                   "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
                   "displayedWidth": 281,
                   "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [
+                "color-contrast: serious"
+              ],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 1759,
+              "imageBytes": 232382,
+              "renderedImages": [
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 109,
+                  "displayedHeight": 186,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
+                  "displayedWidth": 273,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [
+                "color-contrast: serious"
+              ],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 1759,
+              "imageBytes": 232382,
+              "renderedImages": [
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 109,
+                  "displayedHeight": 186,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
+                  "displayedWidth": 273,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [
+                "color-contrast: serious"
+              ],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 1759,
+              "imageBytes": 232382,
+              "renderedImages": [
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 109,
+                  "displayedHeight": 186,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/reading-desk-cobalt.DIy0j40__Z1QFEa6.webp",
+                  "displayedWidth": 273,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_1YWu7G.webp",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_ZCSiBe.webp",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 1536,
+                  "naturalHeight": 1024,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [
@@ -493,7 +738,7 @@
             "lcpMs": 24,
             "cls": 0,
             "jsGzipBytes": 1759,
-            "imageBytes": 119268
+            "imageBytes": 232382
           },
           "mad": {
             "lcpMs": 0,
@@ -506,6 +751,7 @@
           "axeSeriousOrCritical": [
             "color-contrast: serious"
           ],
+          "imageFailures": [],
           "overflow": {
             "expectedMaxWidth": 390,
             "actualScrollWidth": 390,
@@ -605,26 +851,90 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 132,
-              "jsGzipBytes": 0,
+              "lcpMs": 28,
+              "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 32,
+              "jsGzipBytes": 197,
+              "imageBytes": 80718,
+              "renderedImages": [
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -638,25 +948,41 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -670,25 +996,41 @@
             {
               "cls": 0,
               "lcpMs": 28,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -702,57 +1044,41 @@
             {
               "cls": 0,
               "lcpMs": 28,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
                   "displayedWidth": 672,
                   "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 0,
-              "imageBytes": 80718,
-              "renderedImages": [
-                {
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "format": "image/webp"
-                }
-              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -767,7 +1093,7 @@
           "median": {
             "lcpMs": 28,
             "cls": 0,
-            "jsGzipBytes": 0,
+            "jsGzipBytes": 197,
             "imageBytes": 80718
           },
           "mad": {
@@ -779,6 +1105,7 @@
           "consoleErrors": [],
           "hydrationErrors": [],
           "axeSeriousOrCritical": [],
+          "imageFailures": [],
           "overflow": {
             "expectedMaxWidth": 1440,
             "actualScrollWidth": 1440,
@@ -797,26 +1124,42 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -830,25 +1173,89 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 197,
+              "imageBytes": 80718,
+              "renderedImages": [
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
+                  "displayedWidth": 326,
+                  "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
+                  "displayedWidth": 326,
+                  "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
+                  "displayedWidth": 326,
+                  "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -862,25 +1269,41 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -893,58 +1316,42 @@
             },
             {
               "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
                 {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 },
                 {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
                   "displayedWidth": 326,
                   "displayedHeight": 217,
+                  "naturalWidth": 349,
+                  "naturalHeight": 233,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
                   "format": "image/webp"
                 }
               ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 0,
-              "imageBytes": 80718,
-              "renderedImages": [
-                {
-                  "displayedWidth": 326,
-                  "displayedHeight": 217,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 326,
-                  "displayedHeight": 217,
-                  "format": "image/webp"
-                },
-                {
-                  "displayedWidth": 326,
-                  "displayedHeight": 217,
-                  "format": "image/webp"
-                }
-              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -957,9 +1364,9 @@
             }
           ],
           "median": {
-            "lcpMs": 24,
+            "lcpMs": 20,
             "cls": 0,
-            "jsGzipBytes": 0,
+            "jsGzipBytes": 197,
             "imageBytes": 80718
           },
           "mad": {
@@ -971,6 +1378,7 @@
           "consoleErrors": [],
           "hydrationErrors": [],
           "axeSeriousOrCritical": [],
+          "imageFailures": [],
           "overflow": {
             "expectedMaxWidth": 390,
             "actualScrollWidth": 390,
@@ -1038,15 +1446,21 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
                 {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
                   "displayedWidth": 216,
                   "displayedHeight": 324,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1060,15 +1474,77 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
                 {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
                   "displayedWidth": 216,
                   "displayedHeight": 324,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 230,
+              "imageBytes": 58350,
+              "renderedImages": [
+                {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+                  "displayedWidth": 216,
+                  "displayedHeight": 324,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 230,
+              "imageBytes": 58350,
+              "renderedImages": [
+                {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+                  "displayedWidth": 216,
+                  "displayedHeight": 324,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1082,59 +1558,21 @@
             {
               "cls": 0,
               "lcpMs": 28,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
                 {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
                   "displayedWidth": 216,
                   "displayedHeight": 324,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
                   "format": "image/webp"
                 }
               ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 0,
-              "imageBytes": 58350,
-              "renderedImages": [
-                {
-                  "displayedWidth": 216,
-                  "displayedHeight": 324,
-                  "format": "image/webp"
-                }
-              ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 0,
-              "imageBytes": 58350,
-              "renderedImages": [
-                {
-                  "displayedWidth": 216,
-                  "displayedHeight": 324,
-                  "format": "image/webp"
-                }
-              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1147,9 +1585,9 @@
             }
           ],
           "median": {
-            "lcpMs": 28,
+            "lcpMs": 24,
             "cls": 0,
-            "jsGzipBytes": 0,
+            "jsGzipBytes": 230,
             "imageBytes": 58350
           },
           "mad": {
@@ -1161,6 +1599,7 @@
           "consoleErrors": [],
           "hydrationErrors": [],
           "axeSeriousOrCritical": [],
+          "imageFailures": [],
           "overflow": {
             "expectedMaxWidth": 1440,
             "actualScrollWidth": 1440,
@@ -1179,16 +1618,50 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
                 {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
                   "displayedWidth": 148,
                   "displayedHeight": 222,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 230,
+              "imageBytes": 58350,
+              "renderedImages": [
+                {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+                  "displayedWidth": 148,
+                  "displayedHeight": 222,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1202,15 +1675,49 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
                 {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
                   "displayedWidth": 148,
                   "displayedHeight": 222,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
                   "format": "image/webp"
                 }
               ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 230,
+              "imageBytes": 58350,
+              "renderedImages": [
+                {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
+                  "displayedWidth": 148,
+                  "displayedHeight": 222,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1224,59 +1731,21 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 0,
+              "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
                 {
+                  "source": "/_astro/cover.D1KMqeQf_ZekhaL.webp",
                   "displayedWidth": 148,
                   "displayedHeight": 222,
+                  "naturalWidth": 458,
+                  "naturalHeight": 671,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
                   "format": "image/webp"
                 }
               ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 0,
-              "imageBytes": 58350,
-              "renderedImages": [
-                {
-                  "displayedWidth": 148,
-                  "displayedHeight": 222,
-                  "format": "image/webp"
-                }
-              ],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 0,
-              "imageBytes": 58350,
-              "renderedImages": [
-                {
-                  "displayedWidth": 148,
-                  "displayedHeight": 222,
-                  "format": "image/webp"
-                }
-              ],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1289,9 +1758,9 @@
             }
           ],
           "median": {
-            "lcpMs": 24,
+            "lcpMs": 20,
             "cls": 0,
-            "jsGzipBytes": 0,
+            "jsGzipBytes": 230,
             "imageBytes": 58350
           },
           "mad": {
@@ -1303,6 +1772,7 @@
           "consoleErrors": [],
           "hydrationErrors": [],
           "axeSeriousOrCritical": [],
+          "imageFailures": [],
           "overflow": {
             "expectedMaxWidth": 390,
             "actualScrollWidth": 390,
@@ -1364,22 +1834,7 @@
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 20,
-              "jsGzipBytes": 0,
-              "imageBytes": 0,
-              "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1396,6 +1851,7 @@
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1408,10 +1864,11 @@
             },
             {
               "cls": 0,
-              "lcpMs": 28,
+              "lcpMs": 20,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1424,10 +1881,28 @@
             },
             {
               "cls": 0,
-              "lcpMs": 28,
+              "lcpMs": 20,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 0,
+              "imageBytes": 0,
+              "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1440,13 +1915,13 @@
             }
           ],
           "median": {
-            "lcpMs": 24,
+            "lcpMs": 20,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
           },
           "mad": {
-            "lcpMs": 4,
+            "lcpMs": 0,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -1454,6 +1929,7 @@
           "consoleErrors": [],
           "hydrationErrors": [],
           "axeSeriousOrCritical": [],
+          "imageFailures": [],
           "overflow": {
             "expectedMaxWidth": 1440,
             "actualScrollWidth": 1440,
@@ -1472,10 +1948,11 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 28,
+              "lcpMs": 20,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1488,10 +1965,11 @@
             },
             {
               "cls": 0,
-              "lcpMs": 36,
+              "lcpMs": 20,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1504,10 +1982,11 @@
             },
             {
               "cls": 0,
-              "lcpMs": 24,
+              "lcpMs": 20,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1520,10 +1999,11 @@
             },
             {
               "cls": 0,
-              "lcpMs": 52,
+              "lcpMs": 20,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1536,10 +2016,11 @@
             },
             {
               "cls": 0,
-              "lcpMs": 36,
+              "lcpMs": 20,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
+              "imageFailures": [],
               "consoleErrors": [],
               "hydrationErrors": [],
               "axeSeriousOrCritical": [],
@@ -1552,13 +2033,13 @@
             }
           ],
           "median": {
-            "lcpMs": 36,
+            "lcpMs": 20,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
           },
           "mad": {
-            "lcpMs": 8,
+            "lcpMs": 0,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -1566,6 +2047,7 @@
           "consoleErrors": [],
           "hydrationErrors": [],
           "axeSeriousOrCritical": [],
+          "imageFailures": [],
           "overflow": {
             "expectedMaxWidth": 390,
             "actualScrollWidth": 390,

@@ -149,7 +149,7 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Fixes the Node/React app boundaries, Fastify modular monolith, immutable public release, and accepted numeric renderer quality gate with median/MAD evidence.
+  summary: Fixes the Node/React app boundaries, Fastify modular monolith, immutable public release, and accepted numeric renderer quality gate with fail-closed raw-sample, provenance, and median/MAD evidence.
   source: user decisions 2026-08-23 and 2026-08-24
   updated: 2026-08-24
 

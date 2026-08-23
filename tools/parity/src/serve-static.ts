@@ -15,6 +15,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.json': 'application/json; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
   '.png': 'image/png',
+  '.rsc': 'text/x-component; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.webp': 'image/webp',
   '.woff': 'font/woff',
@@ -32,6 +33,14 @@ export interface StaticServer {
   host: string;
   port: number;
   close: () => Promise<void>;
+}
+
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
+
+export function validateLoopbackHost(host: string): void {
+  if (!LOOPBACK_HOSTS.has(host)) {
+    throw new Error(`Renderer static server host must be explicit loopback, got ${host}`);
+  }
 }
 
 function isWithinRoot(root: string, candidate: string): boolean {
@@ -82,6 +91,7 @@ async function resolveRequestFile(root: string, requestPath: string): Promise<st
 }
 
 export async function startStaticServer(options: StaticServerOptions): Promise<StaticServer> {
+  validateLoopbackHost(options.host);
   const root = await realpath(options.root);
   const rootStats = await lstat(root);
   if (!rootStats.isDirectory()) throw new Error(`Static root is not a directory: ${options.root}`);

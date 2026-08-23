@@ -68,54 +68,140 @@ async function responseBodySize(page: Page): Promise<{
   jsGzipBytes: number;
   imageBytes: number;
   renderedImages: BrowserSample['renderedImages'];
+  imageFailures: string[];
 }> {
+  const inlineScripts = await page.evaluate(() => [...document.scripts]
+    .filter((script) => !script.src)
+    .filter((script) => {
+      const type = script.type.trim().toLowerCase();
+      return type === ''
+        || type === 'module'
+        || type === 'text/javascript'
+        || type === 'application/javascript';
+    })
+    .map((script) => script.textContent ?? '')
+    .filter((source) => source.length > 0));
+  const imageElements = await page.evaluate(async () => Promise.all([...document.images].map(async (image) => {
+      const bounds = image.getBoundingClientRect();
+      const displayed = bounds.width > 0 && bounds.height > 0;
+      if (displayed) image.loading = 'eager';
+      const decoded = !displayed || await Promise.race([
+          image.decode().then(() => true, () => false),
+          new Promise<boolean>((resolve) => setTimeout(resolve, 5_000, false)),
+        ]);
+      const candidates = [
+        image.getAttribute('src'),
+        ...[image.getAttribute('srcset'), ...[...(image.closest('picture')?.querySelectorAll('source') ?? [])]
+          .map((source) => source.getAttribute('srcset'))]
+          .filter((value): value is string => Boolean(value))
+          .flatMap((value) => value.split(',').map((entry) => entry.trim().split(/\s+/u)[0])),
+      ].filter((value): value is string => Boolean(value)).map((value) => {
+        const url = new URL(value, location.href);
+        return url.origin === location.origin ? `${url.pathname}${url.search}` : url.href;
+      });
+      const currentSrc = image.currentSrc || image.src;
+      const currentUrl = new URL(currentSrc, location.href);
+      const normalizedCurrentSrc = currentUrl.origin === location.origin
+        ? `${currentUrl.pathname}${currentUrl.search}`
+        : currentUrl.href;
+      return {
+        url: currentUrl.href,
+        source: normalizedCurrentSrc,
+        sourceMatched: candidates.includes(normalizedCurrentSrc),
+        decoded,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        declaredWidth: Number(image.getAttribute('width') ?? 0),
+        declaredHeight: Number(image.getAttribute('height') ?? 0),
+        displayedWidth: Math.round(bounds.width),
+        displayedHeight: Math.round(bounds.height),
+      };
+    })));
   const responses = await page.evaluate(() => performance.getEntriesByType('resource').map((entry) => {
     const resource = entry as PerformanceResourceTiming;
     return { name: resource.name, initiatorType: resource.initiatorType };
   }));
-  const imageElements = await page.evaluate(() => [...document.images]
-    .filter((image) => Boolean(image.currentSrc))
-    .map((image) => {
-      const bounds = image.getBoundingClientRect();
-      return {
-        url: new URL(image.currentSrc, location.href).href,
-        displayedWidth: Math.round(bounds.width),
-        displayedHeight: Math.round(bounds.height),
-      };
-    })
-    .filter((image) => image.displayedWidth > 0 && image.displayedHeight > 0));
-  const resources = (await Promise.all(responses.map(async ({ name, initiatorType }) => {
+  const resourcesByName = new Map(responses.map((entry) => [entry.name, entry] as const));
+  for (const image of imageElements) {
+    if (image.displayedWidth > 0 && image.displayedHeight > 0 && !resourcesByName.has(image.url)) {
+      resourcesByName.set(image.url, { name: image.url, initiatorType: 'img' });
+    }
+  }
+  const resources = (await Promise.all([...resourcesByName.values()].map(async ({ name, initiatorType }) => {
     const response = await page.request.get(name).catch(() => null);
-    if (!response || !response.ok()) return null;
+    if (!response) return null;
     const body = await response.body();
     return {
       name,
       initiatorType,
       body,
+      ok: response.ok(),
+      status: response.status(),
       contentType: response.headers()['content-type']?.split(';', 1)[0]?.trim().toLowerCase() ?? 'unknown',
     };
   }))).filter((entry): entry is {
     name: string;
     initiatorType: string;
     body: Buffer;
+    ok: boolean;
+    status: number;
     contentType: string;
   } => entry !== null);
 
-  let jsGzipBytes = 0;
-  let imageBytes = 0;
-  for (const entry of resources) {
-    if (entry.initiatorType === 'script') jsGzipBytes += gzipSync(entry.body, { level: 9 }).byteLength;
-    if (entry.initiatorType === 'img') imageBytes += entry.body.byteLength;
-  }
-  const formats = new Map(resources
-    .filter((entry) => entry.initiatorType === 'img')
-    .map((entry) => [entry.name, entry.contentType] as const));
-  const renderedImages = imageElements.map(({ url, displayedWidth, displayedHeight }) => ({
-    displayedWidth,
-    displayedHeight,
-    format: formats.get(url) ?? (/^data:([^;,]+)/u.exec(url)?.[1]?.toLowerCase() ?? 'unknown'),
-  }));
-  return { jsGzipBytes, imageBytes, renderedImages };
+  const executableResources = resources.filter((entry) => entry.ok && (
+    entry.initiatorType === 'script'
+    || /^(?:application|text)\/(?:javascript|ecmascript)$/u.test(entry.contentType)
+    || entry.contentType === 'text/x-component'
+    || /\.rsc(?:\?|$)/u.test(entry.name)
+  ));
+  const jsGzipBytes = [
+    ...executableResources.map((entry) => entry.body),
+    ...inlineScripts.map((source) => Buffer.from(source)),
+  ].reduce((total, body) => total + gzipSync(body, { level: 9 }).byteLength, 0);
+  const resourcesByUrl = new Map(resources.map((entry) => [entry.name, entry] as const));
+  const imageFailures: string[] = [];
+  const validVisibleImages = imageElements.flatMap((image) => {
+    if (image.displayedWidth <= 0 || image.displayedHeight <= 0) return [];
+    const response = resourcesByUrl.get(image.url);
+    const failures = [];
+    if (!response?.ok) failures.push(`response-status=${response?.status ?? 'missing'}`);
+    if (!response?.contentType.startsWith('image/')) failures.push(`response-format=${response?.contentType ?? 'missing'}`);
+    if (!image.decoded) failures.push('decode-failed');
+    if (image.naturalWidth <= 0 || image.naturalHeight <= 0) failures.push('natural-dimensions');
+    if (image.declaredWidth <= 0 || image.declaredHeight <= 0) failures.push('declared-dimensions');
+    if (image.naturalWidth > 0 && image.naturalHeight > 0 && image.declaredWidth > 0 && image.declaredHeight > 0) {
+      const naturalRatio = image.naturalWidth / image.naturalHeight;
+      const declaredRatio = image.declaredWidth / image.declaredHeight;
+      if (Math.abs(naturalRatio - declaredRatio) > 0.01) failures.push('declared-aspect-ratio');
+    }
+    if (!image.sourceMatched) failures.push('current-src-not-declared');
+    if (failures.length > 0) {
+      imageFailures.push(`${image.source} ${failures.join(',')}`);
+      return [];
+    }
+    return [{
+      source: image.source,
+      displayedWidth: image.displayedWidth,
+      displayedHeight: image.displayedHeight,
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      declaredWidth: image.declaredWidth,
+      declaredHeight: image.declaredHeight,
+      format: response?.contentType ?? 'unknown',
+    }];
+  });
+  const comparableUrls = new Set(validVisibleImages.map((image) => image.source));
+  const imageBytes = [...resourcesByUrl.values()]
+    .filter((entry) => comparableUrls.has(new URL(entry.name).origin === new URL(page.url()).origin
+      ? `${new URL(entry.name).pathname}${new URL(entry.name).search}`
+      : entry.name))
+    .reduce((total, entry) => total + entry.body.byteLength, 0);
+  return {
+    jsGzipBytes,
+    imageBytes,
+    renderedImages: validVisibleImages,
+    imageFailures: unique(imageFailures),
+  };
 }
 
 async function measureSample(
@@ -241,6 +327,7 @@ export async function measureBrowserPage(
     consoleErrors: unique(samples.flatMap((sample) => sample.consoleErrors)),
     hydrationErrors: unique(samples.flatMap((sample) => sample.hydrationErrors)),
     axeSeriousOrCritical: unique(samples.flatMap((sample) => sample.axeSeriousOrCritical)),
+    imageFailures: unique(samples.flatMap((sample) => sample.imageFailures)),
     overflow: widest,
     privateBoundaryHits: unique(samples.flatMap((sample) => sample.privateBoundaryHits)),
   };

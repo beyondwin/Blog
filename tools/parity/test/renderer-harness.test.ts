@@ -109,16 +109,21 @@ describe('renderer capture harness', () => {
     const secondScript = 'globalThis.secondLoaded = true;';
     const firstImage = '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><path fill="red" d="M0 0h2v2H0z"/></svg>';
     const secondImage = '<svg xmlns="http://www.w3.org/2000/svg" width="3" height="3"><path fill="blue" d="M0 0h3v3H0z"/></svg>';
+    const lazyImage = '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><path fill="green" d="M0 0h4v4H0z"/></svg>';
     await writeFile(join(root, 'first.js'), firstScript);
     await writeFile(join(root, 'second.js'), secondScript);
     await writeFile(join(root, 'first.svg'), firstImage);
     await writeFile(join(root, 'second.svg'), secondImage);
+    await writeFile(join(root, 'lazy.svg'), lazyImage);
     await writeFile(join(root, 'index.html'), `<!doctype html><html lang="ko"><head>
       <title>Measured</title><meta name="viewport" content="width=device-width">
       <script src="/first.js"></script><script src="/second.js"></script>
       </head><body><main><h1>Measured page</h1><p>Stable content.</p>
-      <img src="/first.svg" alt="Red square"><img src="/second.svg" alt="Blue square">
-      <img src="/first.svg" alt="Hidden duplicate" hidden>
+      <img src="/first.svg" width="2" height="2" alt="Red square">
+      <img src="/second.svg" width="3" height="3" alt="Blue square">
+      <img src="/first.svg" width="2" height="2" alt="Hidden duplicate" hidden>
+      <img loading="lazy" src="/lazy.svg" width="4" height="4" alt="Offscreen green square"
+        style="display:block;margin-top:5000px">
       </main></body></html>`);
     const server = await startStaticServer({ root, host: '127.0.0.1', port: 0 });
     servers.push(server);
@@ -138,16 +143,114 @@ describe('renderer capture harness', () => {
         gzipSync(firstScript, { level: 9 }).byteLength + gzipSync(secondScript, { level: 9 }).byteLength,
       );
       expect(result.samples[0].imageBytes).toBe(
-        Buffer.byteLength(firstImage) + Buffer.byteLength(secondImage),
+        Buffer.byteLength(firstImage) + Buffer.byteLength(secondImage) + Buffer.byteLength(lazyImage),
       );
       expect(result.samples[0].renderedImages).toEqual([
-        { displayedHeight: 2, displayedWidth: 2, format: 'image/svg+xml' },
-        { displayedHeight: 3, displayedWidth: 3, format: 'image/svg+xml' },
+        {
+          source: '/first.svg',
+          displayedHeight: 2,
+          displayedWidth: 2,
+          naturalHeight: 2,
+          naturalWidth: 2,
+          declaredHeight: 2,
+          declaredWidth: 2,
+          format: 'image/svg+xml',
+        },
+        {
+          source: '/second.svg',
+          displayedHeight: 3,
+          displayedWidth: 3,
+          naturalHeight: 3,
+          naturalWidth: 3,
+          declaredHeight: 3,
+          declaredWidth: 3,
+          format: 'image/svg+xml',
+        },
+        {
+          source: '/lazy.svg',
+          displayedHeight: 4,
+          displayedWidth: 4,
+          naturalHeight: 4,
+          naturalWidth: 4,
+          declaredHeight: 4,
+          declaredWidth: 4,
+          format: 'image/svg+xml',
+        },
       ]);
+      expect(result.imageFailures).toEqual([]);
       expect(result.consoleErrors).toEqual([]);
       expect(result.hydrationErrors).toEqual([]);
       expect(result.axeSeriousOrCritical).toEqual([]);
       expect(result.overflow.overflow).toBe(false);
+    } finally {
+      await browser.close();
+    }
+  }, 30_000);
+
+  it('counts external, inline, and Next flight bootstrap JavaScript without double counting', async () => {
+    const root = await createRoot();
+    let state = 0x12345678;
+    const payload = Array.from({ length: 150 * 1024 }, () => {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
+      return String.fromCharCode(33 + (state % 90));
+    }).join('');
+    const externalScript = 'globalThis.externalLoaded = true;';
+    const inlineScript = `globalThis.inlinePayload=${JSON.stringify(payload)};`;
+    const flightBootstrap = `self.__next_f=self.__next_f||[];self.__next_f.push(${JSON.stringify(payload.slice(0, 4096))});`;
+    const flightPayload = `1:${JSON.stringify({ buildId: 'test', payload: payload.slice(0, 8192) })}`;
+    const flightLoader = "fetch('/flight.rsc').then((response)=>response.text()).then((value)=>globalThis.flight=value);";
+    await writeFile(join(root, 'external.js'), externalScript);
+    await writeFile(join(root, 'flight.rsc'), flightPayload);
+    await writeFile(join(root, 'index.html'), `<!doctype html><html lang="ko"><head>
+      <title>JavaScript bytes</title><meta name="viewport" content="width=device-width">
+      <script src="/external.js"></script><script>${inlineScript}</script>
+      <script>${flightBootstrap}</script><script>${flightLoader}</script>
+      </head><body><main><h1>JavaScript bytes</h1></main></body></html>`);
+    const server = await startStaticServer({ root, host: '127.0.0.1', port: 0 });
+    servers.push(server);
+    const browser = await chromium.launch({ headless: true });
+
+    try {
+      const result = await measureBrowserPage(browser, server.baseUrl, '/', 'desktop', {
+        warmups: 1,
+        samples: 1,
+      });
+
+      expect(Buffer.byteLength(inlineScript)).toBeGreaterThan(150 * 1024);
+      expect(result.samples[0].jsGzipBytes).toBe([
+        externalScript,
+        inlineScript,
+        flightBootstrap,
+        flightLoader,
+        flightPayload,
+      ].reduce((total, source) => total + gzipSync(source, { level: 9 }).byteLength, 0));
+    } finally {
+      await browser.close();
+    }
+  }, 30_000);
+
+  it('rejects a styled invalid image instead of treating its tiny bytes as an advantage', async () => {
+    const root = await createRoot();
+    await writeFile(join(root, 'broken.webp'), 'not-webp!');
+    await writeFile(join(root, 'index.html'), `<!doctype html><html lang="ko"><head>
+      <title>Broken image</title><meta name="viewport" content="width=device-width">
+      </head><body><main><h1>Broken image</h1>
+      <img src="/broken.webp" srcset="/broken.webp 600w" sizes="600px"
+        width="600" height="400" style="width:600px;height:400px" alt="Broken fixture">
+      </main></body></html>`);
+    const server = await startStaticServer({ root, host: '127.0.0.1', port: 0 });
+    servers.push(server);
+    const browser = await chromium.launch({ headless: true });
+
+    try {
+      const result = await measureBrowserPage(browser, server.baseUrl, '/', 'desktop', {
+        warmups: 1,
+        samples: 1,
+      });
+
+      expect(result.samples[0].imageFailures ?? []).toContainEqual(expect.stringContaining('decode-failed'));
+      expect(result.samples[0].renderedImages).toEqual([]);
+      expect(result.samples[0].imageBytes).toBe(0);
     } finally {
       await browser.close();
     }
