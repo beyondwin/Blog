@@ -8,6 +8,7 @@ const root = process.cwd();
 const execFileAsync = promisify(execFile);
 const manifestPaths = [
   'package.json',
+  'apps/site/package.json',
   'packages/contracts/package.json',
   'packages/content/package.json',
   'tools/parity/package.json',
@@ -46,6 +47,14 @@ function declaredDependencies(manifest: PackageManifest): Record<string, string>
 }
 
 describe('Node 24 workspace contract', () => {
+  it('excludes rejected renderer evidence from root Vitest discovery', async () => {
+    const config = (await import('../vitest.config.mjs')).default as {
+      test?: { exclude?: string[] };
+    };
+
+    expect(config.test?.exclude).toContain('spikes/rejected/**');
+  });
+
   it('declares the approved workspace roots and private Node 24 manifests', async () => {
     const manifests = await Promise.all(manifestPaths.map(readManifest));
 
@@ -82,8 +91,8 @@ describe('Node 24 workspace contract', () => {
     }
   });
 
-  it('keeps retained generated Next output outside the root Astro diagnostic boundary', async () => {
-    const generatedRoot = resolve(root, 'spikes/site-next/out');
+  it('keeps rejected Next evidence outside the root Astro diagnostic boundary', async () => {
+    const generatedRoot = resolve(root, 'spikes/rejected/site-next/out');
     const sentinel = resolve(generatedRoot, 'root-scan-boundary-reviewer.js');
     const {
       BASE_URL,
@@ -106,17 +115,17 @@ describe('Node 24 workspace contract', () => {
         env: { ...environment, NODE_ENV: 'production' },
         maxBuffer: 1024 * 1024,
       });
-      expect(stdout).not.toContain('spikes/site-next/out');
+      expect(stdout).not.toContain('spikes/rejected/site-next/out');
       expect(stdout).not.toContain('root-scan-boundary-reviewer.js');
     } finally {
       await rm(sentinel, { force: true });
     }
   }, 30_000);
 
-  it('keeps retained generated React Router output outside the root Astro diagnostic boundary', async () => {
+  it('keeps selected React Router output outside the root Astro diagnostic boundary', async () => {
     const generatedRoots = [
-      resolve(root, 'spikes/site-react-router/build'),
-      resolve(root, 'spikes/site-react-router/.react-router'),
+      resolve(root, 'apps/site/build'),
+      resolve(root, 'apps/site/.react-router'),
     ];
     const sentinels = generatedRoots.map((generatedRoot, index) => (
       resolve(generatedRoot, `root-scan-boundary-react-router-${index}.js`)
@@ -145,8 +154,8 @@ describe('Node 24 workspace contract', () => {
         env: { ...environment, NODE_ENV: 'production' },
         maxBuffer: 1024 * 1024,
       });
-      expect(stdout).not.toContain('spikes/site-react-router/build');
-      expect(stdout).not.toContain('spikes/site-react-router/.react-router');
+      expect(stdout).not.toContain('apps/site/build');
+      expect(stdout).not.toContain('apps/site/.react-router');
       expect(stdout).not.toContain('root-scan-boundary-react-router');
     } finally {
       await Promise.all(sentinels.map((sentinel) => rm(sentinel, { force: true })));

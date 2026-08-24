@@ -13,12 +13,13 @@
     "tools/*"
   ],
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro check && astro build",
-    "preview": "astro preview",
     "legacy:dev": "astro dev",
     "legacy:build": "astro check && astro build",
     "legacy:preview": "astro preview",
+    "site:dev": "npm run dev --workspace @beyondwin/site",
+    "site:build": "npm run build --workspace @beyondwin/site",
+    "site:preview": "npm run preview --workspace @beyondwin/site",
+    "site:test": "npm run test --workspace @beyondwin/site",
     "public-release:build": "tsx packages/content/src/cli.ts build",
     "public-release:verify": "tsx packages/content/src/cli.ts verify",
     "public-release:clean-test": "tsx packages/content/src/cli.ts clean-test",
@@ -26,6 +27,7 @@
     "parity:capture:renderer": "tsx tools/parity/src/capture-renderer.ts",
     "parity:compare-renderers": "tsx tools/parity/src/compare-contracts.ts --baseline tests/fixtures/parity/astro-renderer-baseline.json --next docs/notes/project/evidence/next-renderer-report.json --react-router docs/notes/project/evidence/react-router-renderer-report.json --output docs/notes/project/evidence/public-renderer-report.json",
     "parity:select-renderer": "tsx tools/parity/src/select-renderer.ts --baseline tests/fixtures/parity/astro-renderer-baseline.json --next docs/notes/project/evidence/next-renderer-report.json --react-router docs/notes/project/evidence/react-router-renderer-report.json",
+    "parity:verify-selection": "tsx tools/parity/src/verify-promotion.ts --report docs/notes/project/evidence/public-renderer-report.json",
     "test": "vitest run",
     "test:workspaces": "vitest run tests/workspace-contract.test.ts packages/contracts/test packages/content/test tools/parity/test",
     "typecheck:workspaces": "npm run typecheck --workspaces --if-present",
@@ -40,7 +42,7 @@
     "memory:validate": "node scripts/memory/project.mjs --validate",
     "media:validate": "node scripts/validate-media.mjs",
     "agent:check": "node scripts/agent-check.mjs",
-    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm run test && npm run build"
+    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm run test && npm run legacy:build"
   },
   "dependencies": {
     "@astrojs/mdx": "^7.0.0",

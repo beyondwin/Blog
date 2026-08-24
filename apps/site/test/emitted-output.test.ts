@@ -20,7 +20,7 @@ beforeAll(async () => {
     'run',
     'build',
     '--workspace',
-    '@beyondwin/site-react-router-spike',
+    '@beyondwin/site',
   ], {
     cwd: repositoryRoot,
     env: { ...process.env, NODE_ENV: 'production' },

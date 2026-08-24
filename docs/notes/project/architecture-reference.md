@@ -1,14 +1,14 @@
 # 아키텍처 레퍼런스
 
-`beyondwin`의 현재 built truth는 Astro 기반 private-first 정적 지식 제품이다. 핵심은 typed MDX collection, script validation, private-first memory projection, 그리고 그중 공개 승인된 object만 조합하는 공개 탐색 화면이다.
+`beyondwin`의 현재 public rollback/built truth는 Astro 기반 private-first 정적 지식 제품이다. 핵심은 typed MDX collection, script validation, private-first memory projection, 그리고 그중 공개 승인된 object만 조합하는 공개 탐색 화면이다.
 
-2026-08-23 승인된 목표 구조는 [ADR-0005](adr/0005-node-react-modular-monolith.md)와 [상세 설계](node-react-modular-monolith-design.md)에 기록돼 있다. Node/React, PostgreSQL, Fastify, worker는 아직 구현된 현재 상태가 아니다. 구현과 검증이 끝나기 전까지 아래 Astro reference를 current truth로 사용한다.
+2026-08-23 승인된 목표 구조는 [ADR-0005](adr/0005-node-react-modular-monolith.md)와 [상세 설계](node-react-modular-monolith-design.md)에 기록돼 있다. 2026-08-25 측정 게이트는 React Router Framework Mode를 선택해 `apps/site`로 승격했다. 이는 네 route parity vertical slice의 선택·승격이며 full-route migration, cutover, PostgreSQL, Fastify, worker 구현 완료를 뜻하지 않는다. 그 전까지 아래 Astro reference를 public rollback truth로 사용한다.
 
-## Approved Target Architecture — Not Implemented
+## Approved Target Architecture — Partially Implemented
 
 | Layer | Target | Boundary |
 | --- | --- | --- |
-| 공개 사이트 | Next.js App Router 후보, React/TypeScript | 동일 slice 비교 게이트를 통과할 때 채택한다. Immutable public release만 소비하며 private DB credential을 갖지 않는다. |
+| 공개 사이트 | React Router Framework Mode, React/TypeScript | 측정 게이트에서 선택돼 `apps/site`로 승격됐다. 현재 네 parity route만 포함하며 immutable public release만 소비하고 private DB credential을 갖지 않는다. |
 | 내 작업실 | Vite, React Router Data Mode | Same-origin `/api`를 통해 private workflow를 수행한다. |
 | API | Fastify on Node.js | Auth, request/response schema, domain transaction boundary. |
 | Worker | Node.js + Graphile Worker | Ingestion, parsing, embedding, AI suggestion, public release build. |
@@ -16,7 +16,7 @@
 | Deployment | Docker Compose + reverse proxy | 한 host에서 시작하고 process를 독립적으로 분리할 수 있다. |
 
 Astro 제거는 migration 시작 조건이 아니라 route/content/media/browser parity와 rollback evidence를 모두 통과한 뒤 수행하는 마지막 단계다.
-Next.js가 동일한 React Router Framework Mode slice보다 최소 두 품질 항목에서 측정 가능한 이점을 보이지 않으면 공개 사이트도 React Router로 통일한다.
+[Public renderer comparison evidence](evidence/public-renderer-comparison.md)에서 Next.js는 mandatory failure 7건, React Router는 0건이었고 Next.js advantage는 0개였다. 이에 따라 공개 사이트 renderer는 React Router로 확정됐다.
 
 ## Runtime Stack
 

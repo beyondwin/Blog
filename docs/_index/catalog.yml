@@ -193,6 +193,16 @@
   source: ADR-0005 and ADR-0006
   updated: 2026-08-23
 
+- title: Public renderer comparison and promotion evidence
+  path: docs/notes/project/evidence/public-renderer-comparison.md
+  topic: project
+  type: evidence
+  language: en
+  status: organized
+  summary: Records the sealed raw samples, deterministic three-run comparison, mandatory and variance calculations, no-override React Router selection, promotion boundary, and preserved rejected Next.js source.
+  source: ADR-0005
+  updated: 2026-08-25
+
 - title: Public Atlas Visual Storyworld vertical slice 설계
   path: docs/notes/project/visual-storyworld-public-atlas-design.md
   topic: project

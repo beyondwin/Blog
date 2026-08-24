@@ -92,6 +92,30 @@ export const RENDERER_LAYOUTS: Record<RendererName, RendererLayout> = {
   },
 };
 
+/**
+ * The promoted application layout. RENDERER_LAYOUTS remains the immutable
+ * capture-time map used to re-verify the sealed Task 6/7 comparison evidence.
+ */
+export const ACTIVE_SITE_LAYOUT: RendererLayout = {
+  rendererRoot: 'apps/site',
+  rendererManifest: 'apps/site/package.json',
+  buildScript: 'build',
+  outputRoot: 'apps/site/build/client',
+  cleanRoots: [
+    'apps/site/build',
+    'apps/site/node_modules/.vite',
+    'apps/site/.react-router',
+  ],
+  sourceClosureVersion: SOURCE_CLOSURE_VERSION,
+  sourceClosure: [
+    '.nvmrc', 'package.json', 'package-lock.json', 'tsconfig.base.json',
+    'apps/site',
+    'packages/contracts/package.json', 'packages/contracts/tsconfig.json', 'packages/contracts/src',
+    'packages/content/package.json', 'packages/content/tsconfig.json', 'packages/content/src',
+    'tools/parity/package.json', 'tools/parity/tsconfig.json', 'tools/parity/src',
+  ],
+};
+
 function isAllowedIgnoredPath(
   path: string,
   renderer: RendererName,
@@ -100,6 +124,7 @@ function isAllowedIgnoredPath(
   const normalized = path.replace(/\/$/u, '');
   const allowedRoots = [
     ...Object.values(RENDERER_LAYOUTS).flatMap((layout) => layout.cleanRoots),
+    ...ACTIVE_SITE_LAYOUT.cleanRoots,
     '.superpowers', '.parallel', '.worktrees', '.playwright-cli', '.impeccable',
   ];
   if (allowedRoots.some((root) => normalized === root || normalized.startsWith(`${root}/`))) return true;

@@ -1,4 +1,5 @@
-import { join, resolve } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isPublicRecord, type PublicRecord } from '@beyondwin/contracts';
 import type { VerifiedActivePublicRelease } from '@beyondwin/content/release';
 import {
@@ -10,9 +11,19 @@ export type CandidateRelease = Pick<VerifiedActivePublicRelease, 'manifest' | 'r
 export type CandidateCollection = 'articles' | 'reviews' | 'memory';
 export type CandidateRecord<C extends CandidateCollection> = Extract<PublicRecord, { collection: C }>;
 
+export function repositoryRootFromModuleUrl(moduleUrl: string): string {
+  let current = dirname(fileURLToPath(moduleUrl));
+  while (true) {
+    const parent = dirname(current);
+    if (basename(current) === 'site' && basename(parent) === 'apps') return dirname(parent);
+    if (parent === current) break;
+    current = parent;
+  }
+  throw new Error('Public site module must be contained by apps/site');
+}
+
 function repositoryRoot(): string {
-  const cwd = resolve(process.cwd());
-  return cwd.endsWith('/spikes/site-react-router') ? resolve(cwd, '../..') : cwd;
+  return repositoryRootFromModuleUrl(import.meta.url);
 }
 
 let verifiedReleasePromise: Promise<VerifiedActivePublicRelease> | undefined;

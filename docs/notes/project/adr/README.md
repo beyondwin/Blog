@@ -13,7 +13,7 @@ ADR은 회의록이나 일일 작업 로그가 아니다. 미래 구현을 제�
 | [ADR-0002](0002-consumer-grade-visual-experience.md) | Consumer-grade visual experience를 UX 품질 기준으로 사용 | accepted guardrail | 2026-08-22 | 거부된 시각 방향과 다음 디자인이 지켜야 할 경계를 기록한다. 구체적인 visual world는 아직 proposed다. |
 | [ADR-0003](0003-visual-storyworld-experience-model.md) | Visual Storyworld 경험 모델 | accepted | 2026-08-22 | Public Storyworld, Private Material Field, Resurface의 역할과 공통 object continuity를 고정한다. |
 | [ADR-0004](0004-staged-aperture-public-composition.md) | Public Atlas의 기본 구성을 Staged Aperture로 사용 | accepted | 2026-08-22 | 첫 public scene의 desktop composition과 responsive/focus 번역 원칙을 고정한다. |
-| [ADR-0005](0005-node-react-modular-monolith.md) | Node/React 모듈러 모놀리스와 분리된 공개 projection | accepted | 2026-08-24 | Node/React runtime, 앱 경계, immutable public release와 raw-sample/provenance 기반 fail-closed public renderer 품질 게이트를 고정한다. |
+| [ADR-0005](0005-node-react-modular-monolith.md) | Node/React 모듈러 모놀리스와 분리된 공개 projection | accepted | 2026-08-25 | Node/React runtime, 앱 경계, immutable public release, fail-closed 품질 게이트와 측정으로 선택된 React Router public renderer를 고정한다. |
 | [ADR-0006](0006-unified-public-reading-continuity.md) | 하나의 public visual world 안에서 탐색과 독서 모드를 분리 | accepted | 2026-08-23 | Storyworld와 reading surface가 공통 visual material, chrome, return, continuation grammar를 공유하도록 고정한다. |
 
 ## 상태

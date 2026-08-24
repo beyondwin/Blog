@@ -171,6 +171,20 @@ describe('renderer evidence boundaries', () => {
         sourceClosure: expect.any(Array),
       },
     });
+    expect(module).toHaveProperty('ACTIVE_SITE_LAYOUT');
+    expect((module as typeof module & { ACTIVE_SITE_LAYOUT: unknown }).ACTIVE_SITE_LAYOUT).toEqual({
+      rendererRoot: 'apps/site',
+      rendererManifest: 'apps/site/package.json',
+      buildScript: 'build',
+      outputRoot: 'apps/site/build/client',
+      cleanRoots: [
+        'apps/site/build',
+        'apps/site/node_modules/.vite',
+        'apps/site/.react-router',
+      ],
+      sourceClosureVersion: 2,
+      sourceClosure: expect.arrayContaining(['apps/site']),
+    });
   });
 
   it('refuses capture from a dirty source tree before any build runs', async () => {

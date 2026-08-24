@@ -36,6 +36,20 @@ afterAll(() => {
 });
 
 describe('React Router current-behavior static route contract', () => {
+  it('resolves the repository root from both source and bundled module locations', async () => {
+    const releaseModule = await candidateModule<{
+      repositoryRootFromModuleUrl(moduleUrl: string): string;
+    }>('app/release.server.ts');
+    const repositoryRoot = resolve(candidateRoot, '../..');
+
+    expect(releaseModule.repositoryRootFromModuleUrl(
+      pathToFileURL(join(candidateRoot, 'app/release.server.ts')).href,
+    )).toBe(repositoryRoot);
+    expect(releaseModule.repositoryRootFromModuleUrl(
+      pathToFileURL(join(candidateRoot, 'build/server/index.js')).href,
+    )).toBe(repositoryRoot);
+  });
+
   it('uses Framework Mode explicit routes, disables runtime SSR, and prerenders every verified decision-slice URL', async () => {
     const configModule = await candidateModule<{ default: { ssr: boolean; prerender(): Promise<string[]> } }>(
       'react-router.config.ts',

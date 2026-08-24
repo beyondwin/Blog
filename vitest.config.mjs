@@ -4,6 +4,7 @@ export default {
       '**/node_modules/**',
       '**/dist/**',
       '**/.worktrees/**',
+      'spikes/rejected/**',
     ],
   },
 };

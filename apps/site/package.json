@@ -1,5 +1,5 @@
 {
-  "name": "@beyondwin/site-react-router-spike",
+  "name": "@beyondwin/site",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,9 @@
     "node": ">=24 <25"
   },
   "scripts": {
+    "dev": "react-router dev",
     "build": "tsx build-static-export.ts",
+    "preview": "vite preview --outDir build/client --host 127.0.0.1",
     "typecheck": "react-router typegen && tsc --noEmit --project tsconfig.json",
     "test": "vitest run test"
   },

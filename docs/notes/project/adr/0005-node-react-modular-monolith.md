@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-08-23
-- Last amended: 2026-08-24
+- Last amended: 2026-08-25
 - Decision owners: user / project
 - Supersedes: none
 - Superseded by: none
@@ -34,13 +34,13 @@
 
 하나의 TypeScript repository 안에 다음 세 실행 단위를 둔다.
 
-1. `apps/site`: Next.js App Router를 우선 후보로 검증하는 공개 사이트. 비교 게이트에서 탈락하면 React Router Framework Mode를 사용한다.
+1. `apps/site`: Task 8 측정 게이트에서 선택된 React Router Framework Mode 기반 공개 사이트. Next.js App Router 후보와 그 비교 결과는 결정 evidence로 보존한다.
 2. `apps/studio`: Vite와 React Router Data Mode 기반 비공개 작업실 SPA.
 3. `apps/server`: Fastify HTTP entry와 Node worker entry를 공유하는 modular monolith.
 
 Node 24 LTS와 npm workspaces를 사용한다. `apps/server`의 API와 worker는 별도 process로 실행할 수 있지만 같은 domain/application/database module을 직접 공유하며 서로 HTTP로 호출하지 않는다.
 
-공개 사이트의 Next.js 사용은 다음 제한을 갖는다.
+공개 사이트 후보 비교는 다음 제한을 가졌다. Next.js는 아래 경계로 검증됐지만 Task 8에서 선택되지 않았다.
 
 - 공개 content route를 build time에 prerender한다.
 - React Server Component를 기본으로 사용하고 실제 interaction만 좁은 client boundary로 둔다.
@@ -141,6 +141,9 @@ deploy/
 - 2026-08-23 사용자 결정: 한 Docker host에서 시작하되 process를 나중에 분리할 수 있어야 한다.
 - 2026-08-23 사용자 결정: 품질을 최우선으로 하되 품질에 기여하지 않는 복잡도는 도입하지 않는다.
 - 2026-08-24 사용자 결정: renderer mandatory budget, 네 advantage threshold, median/MAD protocol을 승인하고 중간 승인 checkpoint 없이 보수적인 재현성 기준으로 고정한다.
+- 2026-08-25 Task 8 strict selector: clean base `8d81bc20946dc089cad1dd21f042426e43feb88b`에서 세 번 재계산한 comparison report가 모두 byte-identical SHA-256 `b793548f4d0e963fd1b118ae553fa5edf3ff57b43f0296041d7192094c784f30`과 React Router 승자를 만들었고, 단 한 번 실행한 selector도 override 없이 같은 승자를 반환했다.
+- React Router는 mandatory failure 0건이었다. Next.js는 article desktop LCP 1건과 세 detail route의 desktop/mobile initial JavaScript 6건, 합계 7건으로 mandatory gate를 통과하지 못했다. LCP, JavaScript, image, build 중 Next.js가 accepted margin과 variance를 넘겨 이긴 advantage도 0개였다.
+- [Public renderer comparison evidence](../evidence/public-renderer-comparison.md)와 machine report는 Node/npm/browser, immutable release, 네 route의 desktop/mobile raw cold sample 5개씩, 세 deterministic run, source/evidence commit, build/variance 계산, 선택·거절 tree hash를 보존하고 final verifier가 sealed input에서 독립적으로 다시 계산한다.
 - Evidence schema v2로 다시 캡처한 Astro browser baseline은 `dist`와 `node_modules/.astro`를 각 sample 전에 비우고 세 build 모두 동일 artifact hash `sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a`를 만들었으며 build median `7,256ms`, MAD `68ms`를 기록했다. 40개 cold sample에서 console/hydration/image/private-path/overflow issue는 0이었고 full-artifact private-boundary hit도 0이었다. 기존 mobile home의 serious color-contrast finding 1건은 candidate가 승계해서는 안 되는 baseline evidence로 보존했다.
 - 공식 Next.js 문서는 self-hosting, build-time params, MDX와 image optimization을 지원하지만 Route Handler를 완전한 backend replacement로 설명하지 않는다.
 - 공식 React Router 문서는 Data Mode SPA와 Framework Mode SSR/prerender를 구분한다.
@@ -161,11 +164,11 @@ deploy/
 
 ### 지불하는 비용
 
-- 초기에는 Next.js와 Vite/React Router 두 frontend toolchain을 유지한다.
+- 후보 비교 단계에서는 Next.js와 Vite/React Router 두 frontend toolchain을 유지했다. Task 8 이후 active public workspace에는 React Router만 남고 Next.js source는 rejected evidence로 격리한다.
 - immutable public release를 만들고 검증하는 publication pipeline이 필요하다.
 - DB와 filesystem은 atomic transaction을 공유하지 않으므로 orphan cleanup과 restore verification이 필요하다.
 - job handler, AI call, publication build는 duplicate execution을 견뎌야 한다.
-- Next.js public vertical slice가 품질 gate를 통과하지 못하면 public renderer 결정을 다시 적용해야 한다.
+- Next.js public vertical slice가 mandatory gate를 통과하지 못해 승인된 fallback인 React Router Framework Mode를 public renderer로 적용했다.
 
 ### 구현 제약
 
@@ -187,7 +190,7 @@ Public과 작업실, API를 한 Next.js application으로 합치면 시작은 �
 
 ### React Router를 두 frontend에 사용
 
-하나의 frontend ecosystem이라는 장점이 있다. 하지만 현재 공개 corpus에서 deterministic responsive image pipeline과 low-hydration reading route를 직접 소유해야 한다. 첫 Next.js vertical slice가 실제 이점을 증명하지 못할 경우의 승인된 fallback으로 둔다.
+하나의 frontend ecosystem이라는 장점이 있다. 현재 공개 corpus에서 deterministic responsive image pipeline과 low-hydration reading route를 직접 소유해야 한다는 비용을 수용한다. Task 8 측정에서 React Router는 mandatory failure 0건이었고 Next.js는 7건이었으므로 승인된 fallback이 실제 public renderer로 선택됐다.
 
 ### Microservices
 
@@ -200,7 +203,6 @@ Public과 작업실, API를 한 Next.js application으로 합치면 시작은 �
 ## Open questions
 
 - 단일 owner의 첫 인증 방식을 password bootstrap, external OIDC, passkey 중 무엇으로 할지.
-- 공개 vertical slice에서 Next.js와 React Router 중 어느 renderer가 accepted gate를 실제로 통과하고 선택되는지. Task 6-7 candidate evidence 전에는 미정이다.
 - 허용 RPO/RTO와 PostgreSQL dump 이후 PITR 도입 시점.
 - public release build를 local worker, CI, 별도 build process 중 어디서 실행할지.
 - exact dependency version과 update cadence. `latest` range는 사용하지 않는다.
@@ -209,7 +211,7 @@ Public과 작업실, API를 한 Next.js application으로 합치면 시작은 �
 
 - [Node/React 모듈러 모놀리스 상세 설계](../node-react-modular-monolith-design.md)를 구현 가능한 boundary와 migration gate의 source로 사용한다.
 - 첫 implementation plan은 parity manifest와 framework-neutral content package부터 시작한다.
-- public vertical slice는 홈, article, review, memory route를 포함하고 Next.js 유지/React Router 통일 decision gate를 실행한다.
+- public vertical slice의 홈, article, review, memory route 비교와 decision gate는 React Router 선택으로 완료됐다. 후속 작업은 `apps/site` 하나에 승인된 reading continuity를 구현한다.
 - Astro는 route, content, media, browser parity와 rollback evidence가 모두 통과한 뒤 마지막에 제거한다.
 
 ## Primary references

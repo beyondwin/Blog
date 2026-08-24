@@ -35,7 +35,7 @@ import {
   type RendererPublicReleaseEvidence,
 } from './renderer-layouts.ts';
 
-export { RENDERER_LAYOUTS } from './renderer-layouts.ts';
+export { ACTIVE_SITE_LAYOUT, RENDERER_LAYOUTS } from './renderer-layouts.ts';
 
 const execFileAsync = promisify(execFile);
 

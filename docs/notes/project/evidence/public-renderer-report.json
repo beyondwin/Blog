@@ -1,0 +1,1736 @@
+{
+  "version": 1,
+  "kind": "public-renderer-selection",
+  "decisionDate": "2026-08-25",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v24.18.0",
+    "npm": "11.16.0",
+    "browser": {
+      "package": "@playwright/test",
+      "packageVersion": "1.62.1",
+      "chromiumVersion": "151.0.7922.34",
+      "chromiumRevision": "1234"
+    }
+  },
+  "releaseId": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+  "routeSet": [
+    "/",
+    "/articles/why-i-read-in-the-ai-era/",
+    "/reviews/black-swan/",
+    "/memory/agent-harnesses-are-operating-systems/"
+  ],
+  "comparisonRuns": [
+    {
+      "sequence": 1,
+      "command": "npm run parity:compare-renderers",
+      "reportHash": "sha256:b793548f4d0e963fd1b118ae553fa5edf3ff57b43f0296041d7192094c784f30",
+      "selection": {
+        "winner": "react-router"
+      },
+      "rawSamples": [
+        {
+          "path": "tests/fixtures/parity/astro-renderer-baseline.json",
+          "hash": "sha256:1e90c4632e31574cb024a185686770bc32cdccdd81dc0c102d62cbcd3e13d085",
+          "renderer": "astro",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "docs/notes/project/evidence/next-renderer-report.json",
+          "hash": "sha256:b791c84b7101baa9744de38a6337d83cb6135807989bc5d1804bdf8f87c7a3a7",
+          "renderer": "next",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "docs/notes/project/evidence/react-router-renderer-report.json",
+          "hash": "sha256:1100f38af4682ff9fd414fbfca9649f00a01ed57ba90bd85f70eac5a37d734a3",
+          "renderer": "react-router",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 2,
+      "command": "npm run parity:compare-renderers",
+      "reportHash": "sha256:b793548f4d0e963fd1b118ae553fa5edf3ff57b43f0296041d7192094c784f30",
+      "selection": {
+        "winner": "react-router"
+      },
+      "rawSamples": [
+        {
+          "path": "tests/fixtures/parity/astro-renderer-baseline.json",
+          "hash": "sha256:1e90c4632e31574cb024a185686770bc32cdccdd81dc0c102d62cbcd3e13d085",
+          "renderer": "astro",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "docs/notes/project/evidence/next-renderer-report.json",
+          "hash": "sha256:b791c84b7101baa9744de38a6337d83cb6135807989bc5d1804bdf8f87c7a3a7",
+          "renderer": "next",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "docs/notes/project/evidence/react-router-renderer-report.json",
+          "hash": "sha256:1100f38af4682ff9fd414fbfca9649f00a01ed57ba90bd85f70eac5a37d734a3",
+          "renderer": "react-router",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 3,
+      "command": "npm run parity:compare-renderers",
+      "reportHash": "sha256:b793548f4d0e963fd1b118ae553fa5edf3ff57b43f0296041d7192094c784f30",
+      "selection": {
+        "winner": "react-router"
+      },
+      "rawSamples": [
+        {
+          "path": "tests/fixtures/parity/astro-renderer-baseline.json",
+          "hash": "sha256:1e90c4632e31574cb024a185686770bc32cdccdd81dc0c102d62cbcd3e13d085",
+          "renderer": "astro",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "docs/notes/project/evidence/next-renderer-report.json",
+          "hash": "sha256:b791c84b7101baa9744de38a6337d83cb6135807989bc5d1804bdf8f87c7a3a7",
+          "renderer": "next",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "path": "docs/notes/project/evidence/react-router-renderer-report.json",
+          "hash": "sha256:1100f38af4682ff9fd414fbfca9649f00a01ed57ba90bd85f70eac5a37d734a3",
+          "renderer": "react-router",
+          "routes": [
+            {
+              "path": "/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/0/measurements/0/samples/0",
+                    "/routes/0/measurements/0/samples/1",
+                    "/routes/0/measurements/0/samples/2",
+                    "/routes/0/measurements/0/samples/3",
+                    "/routes/0/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/0/measurements/1/samples/0",
+                    "/routes/0/measurements/1/samples/1",
+                    "/routes/0/measurements/1/samples/2",
+                    "/routes/0/measurements/1/samples/3",
+                    "/routes/0/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/articles/why-i-read-in-the-ai-era/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/1/measurements/0/samples/0",
+                    "/routes/1/measurements/0/samples/1",
+                    "/routes/1/measurements/0/samples/2",
+                    "/routes/1/measurements/0/samples/3",
+                    "/routes/1/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/1/measurements/1/samples/0",
+                    "/routes/1/measurements/1/samples/1",
+                    "/routes/1/measurements/1/samples/2",
+                    "/routes/1/measurements/1/samples/3",
+                    "/routes/1/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/reviews/black-swan/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/2/measurements/0/samples/0",
+                    "/routes/2/measurements/0/samples/1",
+                    "/routes/2/measurements/0/samples/2",
+                    "/routes/2/measurements/0/samples/3",
+                    "/routes/2/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/2/measurements/1/samples/0",
+                    "/routes/2/measurements/1/samples/1",
+                    "/routes/2/measurements/1/samples/2",
+                    "/routes/2/measurements/1/samples/3",
+                    "/routes/2/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            },
+            {
+              "path": "/memory/agent-harnesses-are-operating-systems/",
+              "measurements": [
+                {
+                  "viewport": "desktop",
+                  "samplePointers": [
+                    "/routes/3/measurements/0/samples/0",
+                    "/routes/3/measurements/0/samples/1",
+                    "/routes/3/measurements/0/samples/2",
+                    "/routes/3/measurements/0/samples/3",
+                    "/routes/3/measurements/0/samples/4"
+                  ]
+                },
+                {
+                  "viewport": "mobile",
+                  "samplePointers": [
+                    "/routes/3/measurements/1/samples/0",
+                    "/routes/3/measurements/1/samples/1",
+                    "/routes/3/measurements/1/samples/2",
+                    "/routes/3/measurements/1/samples/3",
+                    "/routes/3/measurements/1/samples/4"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "selector": {
+    "command": "npm run parity:select-renderer",
+    "outputHash": "sha256:d126bb6713f78ec7e4eccbf995a814ca52e14f3ea442cfdfdf992b12672542ba",
+    "result": {
+      "winner": "react-router"
+    },
+    "noPreferenceOverride": true
+  },
+  "rawCaptures": {
+    "astro": {
+      "path": "tests/fixtures/parity/astro-renderer-baseline.json",
+      "hash": "sha256:1e90c4632e31574cb024a185686770bc32cdccdd81dc0c102d62cbcd3e13d085",
+      "renderer": "astro",
+      "routes": [
+        {
+          "path": "/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/0/measurements/0/samples/0",
+                "/routes/0/measurements/0/samples/1",
+                "/routes/0/measurements/0/samples/2",
+                "/routes/0/measurements/0/samples/3",
+                "/routes/0/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/0/measurements/1/samples/0",
+                "/routes/0/measurements/1/samples/1",
+                "/routes/0/measurements/1/samples/2",
+                "/routes/0/measurements/1/samples/3",
+                "/routes/0/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/articles/why-i-read-in-the-ai-era/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/1/measurements/0/samples/0",
+                "/routes/1/measurements/0/samples/1",
+                "/routes/1/measurements/0/samples/2",
+                "/routes/1/measurements/0/samples/3",
+                "/routes/1/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/1/measurements/1/samples/0",
+                "/routes/1/measurements/1/samples/1",
+                "/routes/1/measurements/1/samples/2",
+                "/routes/1/measurements/1/samples/3",
+                "/routes/1/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/reviews/black-swan/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/2/measurements/0/samples/0",
+                "/routes/2/measurements/0/samples/1",
+                "/routes/2/measurements/0/samples/2",
+                "/routes/2/measurements/0/samples/3",
+                "/routes/2/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/2/measurements/1/samples/0",
+                "/routes/2/measurements/1/samples/1",
+                "/routes/2/measurements/1/samples/2",
+                "/routes/2/measurements/1/samples/3",
+                "/routes/2/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/memory/agent-harnesses-are-operating-systems/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/3/measurements/0/samples/0",
+                "/routes/3/measurements/0/samples/1",
+                "/routes/3/measurements/0/samples/2",
+                "/routes/3/measurements/0/samples/3",
+                "/routes/3/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/3/measurements/1/samples/0",
+                "/routes/3/measurements/1/samples/1",
+                "/routes/3/measurements/1/samples/2",
+                "/routes/3/measurements/1/samples/3",
+                "/routes/3/measurements/1/samples/4"
+              ]
+            }
+          ]
+        }
+      ],
+      "sourceCommit": "fd884c1627312250db85da1a0596e406175072aa",
+      "evidenceCommit": "05d791f67e01f3b9ae639da2ddc529053de1505e",
+      "sourceClosureHash": "sha256:95376d39b48c49d5e75640827485ca8af3c7404a5ed8332927128974cbd8b84f",
+      "artifactHash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37",
+      "measuredAt": "2026-08-24T16:49:49.965Z"
+    },
+    "next": {
+      "path": "docs/notes/project/evidence/next-renderer-report.json",
+      "hash": "sha256:b791c84b7101baa9744de38a6337d83cb6135807989bc5d1804bdf8f87c7a3a7",
+      "renderer": "next",
+      "routes": [
+        {
+          "path": "/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/0/measurements/0/samples/0",
+                "/routes/0/measurements/0/samples/1",
+                "/routes/0/measurements/0/samples/2",
+                "/routes/0/measurements/0/samples/3",
+                "/routes/0/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/0/measurements/1/samples/0",
+                "/routes/0/measurements/1/samples/1",
+                "/routes/0/measurements/1/samples/2",
+                "/routes/0/measurements/1/samples/3",
+                "/routes/0/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/articles/why-i-read-in-the-ai-era/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/1/measurements/0/samples/0",
+                "/routes/1/measurements/0/samples/1",
+                "/routes/1/measurements/0/samples/2",
+                "/routes/1/measurements/0/samples/3",
+                "/routes/1/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/1/measurements/1/samples/0",
+                "/routes/1/measurements/1/samples/1",
+                "/routes/1/measurements/1/samples/2",
+                "/routes/1/measurements/1/samples/3",
+                "/routes/1/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/reviews/black-swan/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/2/measurements/0/samples/0",
+                "/routes/2/measurements/0/samples/1",
+                "/routes/2/measurements/0/samples/2",
+                "/routes/2/measurements/0/samples/3",
+                "/routes/2/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/2/measurements/1/samples/0",
+                "/routes/2/measurements/1/samples/1",
+                "/routes/2/measurements/1/samples/2",
+                "/routes/2/measurements/1/samples/3",
+                "/routes/2/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/memory/agent-harnesses-are-operating-systems/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/3/measurements/0/samples/0",
+                "/routes/3/measurements/0/samples/1",
+                "/routes/3/measurements/0/samples/2",
+                "/routes/3/measurements/0/samples/3",
+                "/routes/3/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/3/measurements/1/samples/0",
+                "/routes/3/measurements/1/samples/1",
+                "/routes/3/measurements/1/samples/2",
+                "/routes/3/measurements/1/samples/3",
+                "/routes/3/measurements/1/samples/4"
+              ]
+            }
+          ]
+        }
+      ],
+      "sourceCommit": "05d791f67e01f3b9ae639da2ddc529053de1505e",
+      "evidenceCommit": "c0ac142435de441e26bfadce70120af68a19fde0",
+      "sourceClosureHash": "sha256:fdc1e66f3ad87bf13af08d46e27031dbb30a3ba69263265b11c3f01812684137",
+      "artifactHash": "sha256:294f0190bb5db9d61f1555ea534ab4904190c4ab7378dc42c171d2dd366e2747",
+      "measuredAt": "2026-08-24T16:51:17.040Z"
+    },
+    "react-router": {
+      "path": "docs/notes/project/evidence/react-router-renderer-report.json",
+      "hash": "sha256:1100f38af4682ff9fd414fbfca9649f00a01ed57ba90bd85f70eac5a37d734a3",
+      "renderer": "react-router",
+      "routes": [
+        {
+          "path": "/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/0/measurements/0/samples/0",
+                "/routes/0/measurements/0/samples/1",
+                "/routes/0/measurements/0/samples/2",
+                "/routes/0/measurements/0/samples/3",
+                "/routes/0/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/0/measurements/1/samples/0",
+                "/routes/0/measurements/1/samples/1",
+                "/routes/0/measurements/1/samples/2",
+                "/routes/0/measurements/1/samples/3",
+                "/routes/0/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/articles/why-i-read-in-the-ai-era/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/1/measurements/0/samples/0",
+                "/routes/1/measurements/0/samples/1",
+                "/routes/1/measurements/0/samples/2",
+                "/routes/1/measurements/0/samples/3",
+                "/routes/1/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/1/measurements/1/samples/0",
+                "/routes/1/measurements/1/samples/1",
+                "/routes/1/measurements/1/samples/2",
+                "/routes/1/measurements/1/samples/3",
+                "/routes/1/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/reviews/black-swan/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/2/measurements/0/samples/0",
+                "/routes/2/measurements/0/samples/1",
+                "/routes/2/measurements/0/samples/2",
+                "/routes/2/measurements/0/samples/3",
+                "/routes/2/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/2/measurements/1/samples/0",
+                "/routes/2/measurements/1/samples/1",
+                "/routes/2/measurements/1/samples/2",
+                "/routes/2/measurements/1/samples/3",
+                "/routes/2/measurements/1/samples/4"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "/memory/agent-harnesses-are-operating-systems/",
+          "measurements": [
+            {
+              "viewport": "desktop",
+              "samplePointers": [
+                "/routes/3/measurements/0/samples/0",
+                "/routes/3/measurements/0/samples/1",
+                "/routes/3/measurements/0/samples/2",
+                "/routes/3/measurements/0/samples/3",
+                "/routes/3/measurements/0/samples/4"
+              ]
+            },
+            {
+              "viewport": "mobile",
+              "samplePointers": [
+                "/routes/3/measurements/1/samples/0",
+                "/routes/3/measurements/1/samples/1",
+                "/routes/3/measurements/1/samples/2",
+                "/routes/3/measurements/1/samples/3",
+                "/routes/3/measurements/1/samples/4"
+              ]
+            }
+          ]
+        }
+      ],
+      "sourceCommit": "2fd496f0ba2d534e814b59d26318e7b61c5aa418",
+      "evidenceCommit": "8d81bc20946dc089cad1dd21f042426e43feb88b",
+      "sourceClosureHash": "sha256:9257454194e43311c5fb5f0505295a4bb2ba49b0d1495a439b780a9273e53266",
+      "artifactHash": "sha256:d6b2df739e03d66985e3d6c790c37651b65d66c694c498137b7ae13f43a233a8",
+      "measuredAt": "2026-08-24T19:38:27.692Z"
+    }
+  },
+  "comparison": {
+    "version": 2,
+    "synthetic": false,
+    "candidates": {
+      "next": {
+        "renderer": "next",
+        "mandatoryFailures": [
+          "renderer=next route=/articles/why-i-read-in-the-ai-era/ viewport=desktop metric=lcp-ms expected=\"<=30.800000000000004\" actual=32",
+          "renderer=next route=/articles/why-i-read-in-the-ai-era/ viewport=desktop metric=initial-js-gzip-bytes expected=\"<=112640\" actual=138484",
+          "renderer=next route=/articles/why-i-read-in-the-ai-era/ viewport=mobile metric=initial-js-gzip-bytes expected=\"<=112640\" actual=138484",
+          "renderer=next route=/reviews/black-swan/ viewport=desktop metric=initial-js-gzip-bytes expected=\"<=112640\" actual=138035",
+          "renderer=next route=/reviews/black-swan/ viewport=mobile metric=initial-js-gzip-bytes expected=\"<=112640\" actual=138035",
+          "renderer=next route=/memory/agent-harnesses-are-operating-systems/ viewport=desktop metric=initial-js-gzip-bytes expected=\"<=112640\" actual=136221",
+          "renderer=next route=/memory/agent-harnesses-are-operating-systems/ viewport=mobile metric=initial-js-gzip-bytes expected=\"<=112640\" actual=136221"
+        ],
+        "quality": {
+          "lcpMs": {
+            "median": 22,
+            "mad": 0
+          },
+          "jsGzipBytes": {
+            "median": 1101124,
+            "mad": 0
+          },
+          "imageBytes": {
+            "median": 625152,
+            "mad": 0
+          },
+          "buildDurationMs": {
+            "median": 5843,
+            "mad": 14
+          }
+        },
+        "buildArtifactHashes": [
+          "sha256:294f0190bb5db9d61f1555ea534ab4904190c4ab7378dc42c171d2dd366e2747",
+          "sha256:294f0190bb5db9d61f1555ea534ab4904190c4ab7378dc42c171d2dd366e2747",
+          "sha256:294f0190bb5db9d61f1555ea534ab4904190c4ab7378dc42c171d2dd366e2747"
+        ],
+        "responsiveImageContract": [
+          "/:desktop:image/avif:878x643",
+          "/:desktop:image/avif:430x336",
+          "/:desktop:image/avif:389x288",
+          "/:mobile:image/avif:109x186",
+          "/:mobile:image/avif:273x354",
+          "/:mobile:image/avif:281x354",
+          "/:mobile:image/avif:281x354",
+          "/articles/why-i-read-in-the-ai-era/:desktop:image/avif:672x448",
+          "/articles/why-i-read-in-the-ai-era/:desktop:image/avif:672x448",
+          "/articles/why-i-read-in-the-ai-era/:desktop:image/avif:672x448",
+          "/articles/why-i-read-in-the-ai-era/:mobile:image/avif:326x217",
+          "/articles/why-i-read-in-the-ai-era/:mobile:image/avif:326x217",
+          "/articles/why-i-read-in-the-ai-era/:mobile:image/avif:326x217",
+          "/reviews/black-swan/:desktop:image/avif:216x324",
+          "/reviews/black-swan/:mobile:image/avif:148x222"
+        ],
+        "captureEvidence": {
+          "provenance": {
+            "synthetic": false,
+            "repositoryCommit": "05d791f67e01f3b9ae639da2ddc529053de1505e",
+            "rendererRoot": "spikes/site-next",
+            "rendererManifest": "spikes/site-next/package.json",
+            "rendererManifestHash": "sha256:6532ed8d1b9790f752b64048b1760a0aee89d9d167ec3465308a25c6b1110e14",
+            "buildCommand": "npm run build",
+            "outputRoot": "spikes/site-next/out",
+            "captureToolHash": "sha256:8987170c9fec7e39fd0cd3bcb3d47148597075cfb12322d077835e8457bac64f",
+            "buildEnvironmentVersion": 1,
+            "sourceClosureVersion": 2,
+            "sourceClosureHash": "sha256:fdc1e66f3ad87bf13af08d46e27031dbb30a3ba69263265b11c3f01812684137",
+            "publicRelease": {
+              "version": 1,
+              "verificationPolicyVersion": 1,
+              "root": "build/public-releases",
+              "releaseId": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+              "rendererVersion": "mdx-3.1.1-sharp-0.35.3-v2",
+              "activePointer": {
+                "releaseId": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+                "path": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b"
+              },
+              "activePointerHash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
+              "manifestHash": "sha256:5462764b984aa492eb6f4194988ddad035a25c9ef751a2857f4b6571ac978195",
+              "artifactHash": "sha256:38829f0d35c78c5777f1b094a1196fd17146c615c1d5982387c7b2a153c95a08"
+            }
+          },
+          "artifactHash": "sha256:294f0190bb5db9d61f1555ea534ab4904190c4ab7378dc42c171d2dd366e2747",
+          "browser": {
+            "package": "@playwright/test",
+            "packageVersion": "1.62.1",
+            "chromiumVersion": "151.0.7922.34",
+            "chromiumRevision": "1234"
+          },
+          "captureProtocol": {
+            "decisionRoutes": [
+              "/",
+              "/articles/why-i-read-in-the-ai-era/",
+              "/reviews/black-swan/",
+              "/memory/agent-harnesses-are-operating-systems/"
+            ],
+            "viewports": {
+              "desktop": {
+                "width": 1440,
+                "height": 960
+              },
+              "mobile": {
+                "width": 390,
+                "height": 844
+              }
+            },
+            "warmups": 1,
+            "samplesPerRouteViewport": 5,
+            "freshBrowserContextPerSample": true,
+            "emptyHttpCachePerSample": true,
+            "initialJavaScriptByteProtocol": "sum-gzip-level-9-inline-and-unique-initial-executable-responses"
+          }
+        }
+      },
+      "reactRouter": {
+        "renderer": "react-router",
+        "mandatoryFailures": [],
+        "quality": {
+          "lcpMs": {
+            "median": 20,
+            "mad": 0
+          },
+          "jsGzipBytes": {
+            "median": 810874,
+            "mad": 0
+          },
+          "imageBytes": {
+            "median": 625152,
+            "mad": 0
+          },
+          "buildDurationMs": {
+            "median": 2444,
+            "mad": 27
+          }
+        },
+        "buildArtifactHashes": [
+          "sha256:d6b2df739e03d66985e3d6c790c37651b65d66c694c498137b7ae13f43a233a8",
+          "sha256:d6b2df739e03d66985e3d6c790c37651b65d66c694c498137b7ae13f43a233a8",
+          "sha256:d6b2df739e03d66985e3d6c790c37651b65d66c694c498137b7ae13f43a233a8"
+        ],
+        "responsiveImageContract": [
+          "/:desktop:image/avif:878x643",
+          "/:desktop:image/avif:430x336",
+          "/:desktop:image/avif:389x288",
+          "/:mobile:image/avif:109x186",
+          "/:mobile:image/avif:273x354",
+          "/:mobile:image/avif:281x354",
+          "/:mobile:image/avif:281x354",
+          "/articles/why-i-read-in-the-ai-era/:desktop:image/avif:672x448",
+          "/articles/why-i-read-in-the-ai-era/:desktop:image/avif:672x448",
+          "/articles/why-i-read-in-the-ai-era/:desktop:image/avif:672x448",
+          "/articles/why-i-read-in-the-ai-era/:mobile:image/avif:326x217",
+          "/articles/why-i-read-in-the-ai-era/:mobile:image/avif:326x217",
+          "/articles/why-i-read-in-the-ai-era/:mobile:image/avif:326x217",
+          "/reviews/black-swan/:desktop:image/avif:216x324",
+          "/reviews/black-swan/:mobile:image/avif:148x222"
+        ],
+        "captureEvidence": {
+          "provenance": {
+            "synthetic": false,
+            "repositoryCommit": "2fd496f0ba2d534e814b59d26318e7b61c5aa418",
+            "rendererRoot": "spikes/site-react-router",
+            "rendererManifest": "spikes/site-react-router/package.json",
+            "rendererManifestHash": "sha256:943181e0377586a2474e95143a2b2c2dc84be3600e232f1d5c29d0b3a924c084",
+            "buildCommand": "npm run build",
+            "outputRoot": "spikes/site-react-router/build/client",
+            "captureToolHash": "sha256:8987170c9fec7e39fd0cd3bcb3d47148597075cfb12322d077835e8457bac64f",
+            "buildEnvironmentVersion": 1,
+            "sourceClosureVersion": 2,
+            "sourceClosureHash": "sha256:9257454194e43311c5fb5f0505295a4bb2ba49b0d1495a439b780a9273e53266",
+            "publicRelease": {
+              "version": 1,
+              "verificationPolicyVersion": 1,
+              "root": "build/public-releases",
+              "releaseId": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+              "rendererVersion": "mdx-3.1.1-sharp-0.35.3-v2",
+              "activePointer": {
+                "releaseId": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+                "path": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b"
+              },
+              "activePointerHash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
+              "manifestHash": "sha256:5462764b984aa492eb6f4194988ddad035a25c9ef751a2857f4b6571ac978195",
+              "artifactHash": "sha256:38829f0d35c78c5777f1b094a1196fd17146c615c1d5982387c7b2a153c95a08"
+            }
+          },
+          "artifactHash": "sha256:d6b2df739e03d66985e3d6c790c37651b65d66c694c498137b7ae13f43a233a8",
+          "browser": {
+            "package": "@playwright/test",
+            "packageVersion": "1.62.1",
+            "chromiumVersion": "151.0.7922.34",
+            "chromiumRevision": "1234"
+          },
+          "captureProtocol": {
+            "decisionRoutes": [
+              "/",
+              "/articles/why-i-read-in-the-ai-era/",
+              "/reviews/black-swan/",
+              "/memory/agent-harnesses-are-operating-systems/"
+            ],
+            "viewports": {
+              "desktop": {
+                "width": 1440,
+                "height": 960
+              },
+              "mobile": {
+                "width": 390,
+                "height": 844
+              }
+            },
+            "warmups": 1,
+            "samplesPerRouteViewport": 5,
+            "freshBrowserContextPerSample": true,
+            "emptyHttpCachePerSample": true,
+            "initialJavaScriptByteProtocol": "sum-gzip-level-9-inline-and-unique-initial-executable-responses"
+          }
+        }
+      }
+    }
+  },
+  "mandatoryOutcomes": {
+    "next": {
+      "pass": false,
+      "failureCount": 7,
+      "failures": [
+        "renderer=next route=/articles/why-i-read-in-the-ai-era/ viewport=desktop metric=lcp-ms expected=\"<=30.800000000000004\" actual=32",
+        "renderer=next route=/articles/why-i-read-in-the-ai-era/ viewport=desktop metric=initial-js-gzip-bytes expected=\"<=112640\" actual=138484",
+        "renderer=next route=/articles/why-i-read-in-the-ai-era/ viewport=mobile metric=initial-js-gzip-bytes expected=\"<=112640\" actual=138484",
+        "renderer=next route=/reviews/black-swan/ viewport=desktop metric=initial-js-gzip-bytes expected=\"<=112640\" actual=138035",
+        "renderer=next route=/reviews/black-swan/ viewport=mobile metric=initial-js-gzip-bytes expected=\"<=112640\" actual=138035",
+        "renderer=next route=/memory/agent-harnesses-are-operating-systems/ viewport=desktop metric=initial-js-gzip-bytes expected=\"<=112640\" actual=136221",
+        "renderer=next route=/memory/agent-harnesses-are-operating-systems/ viewport=mobile metric=initial-js-gzip-bytes expected=\"<=112640\" actual=136221"
+      ]
+    },
+    "reactRouter": {
+      "pass": true,
+      "failureCount": 0,
+      "failures": []
+    }
+  },
+  "advantageCalculations": {
+    "lcp": {
+      "nextMedian": 22,
+      "nextMad": 0,
+      "reactRouterMedian": 20,
+      "reactRouterMad": 0,
+      "improvement": -2,
+      "requiredRelativeImprovement": 2,
+      "requiredAbsoluteImprovement": 75,
+      "requiredVarianceImprovement": 0,
+      "nextWins": false
+    },
+    "javascript": {
+      "nextMedian": 1101124,
+      "nextMad": 0,
+      "reactRouterMedian": 810874,
+      "reactRouterMad": 0,
+      "improvement": -290250,
+      "requiredRelativeImprovement": 121631.09999999999,
+      "requiredAbsoluteImprovement": 10240,
+      "requiredVarianceImprovement": 0,
+      "nextWins": false
+    },
+    "image": {
+      "nextMedian": 625152,
+      "nextMad": 0,
+      "reactRouterMedian": 625152,
+      "reactRouterMad": 0,
+      "improvement": 0,
+      "requiredRelativeImprovement": 93772.8,
+      "requiredAbsoluteImprovement": 0,
+      "requiredVarianceImprovement": 0,
+      "nextWins": false,
+      "equalDisplayedDimensionsAndFormat": true
+    },
+    "build": {
+      "nextMedian": 5843,
+      "nextMad": 14,
+      "reactRouterMedian": 2444,
+      "reactRouterMad": 27,
+      "improvement": -3399,
+      "requiredRelativeImprovement": 488.8,
+      "requiredAbsoluteImprovement": 0,
+      "requiredVarianceImprovement": 54,
+      "nextWins": false,
+      "reproducible": true
+    }
+  },
+  "promotion": {
+    "baseCommit": "8d81bc20946dc089cad1dd21f042426e43feb88b",
+    "selectedRenderer": "react-router",
+    "selectedPath": "apps/site",
+    "selectedPackage": "@beyondwin/site",
+    "selectedManifestHash": "sha256:14033e3e7551cbb92736bbb8b0bdfff920ada5496669075e72befe9318956bd0",
+    "rejectedRenderer": "next",
+    "rejectedPath": "spikes/rejected/site-next",
+    "rejectedSource": {
+      "path": "spikes/rejected/site-next",
+      "files": [
+        ".gitignore",
+        "app/articles/[slug]/page.tsx",
+        "app/current-parity.css",
+        "app/layout.tsx",
+        "app/memory/[slug]/page.tsx",
+        "app/page.tsx",
+        "app/reviews/[slug]/page.tsx",
+        "build-static-export.ts",
+        "next-env.d.ts",
+        "next.config.ts",
+        "package.json",
+        "public/favicon.svg",
+        "release-binding.ts",
+        "test/routes.test.tsx",
+        "test/static-export.test.ts",
+        "tsconfig.json"
+      ],
+      "hash": "sha256:b93d96fd2ed3ed879838d6de791afa42c6a310b95dd19b7047fe39437d7617f7"
+    },
+    "activeNextDependencies": []
+  },
+  "exactCommands": [
+    "npm run parity:compare-renderers",
+    "npm run parity:compare-renderers",
+    "npm run parity:compare-renderers",
+    "npm run parity:select-renderer"
+  ],
+  "preservedGenerated": [
+    {
+      "originalPath": "spikes/site-next/.next",
+      "preservedPath": ".superpowers/sdd/public-reading-continuity-implementation-plan/preserved-task8-generated/site-next/.next",
+      "entries": 558,
+      "bytes": 42572374,
+      "treeHash": "sha256:0ba3c74b0865b1b1b238f1b72224f6a0854ebceb24cac2f1c14937e10ae7c7e1"
+    },
+    {
+      "originalPath": "spikes/site-next/node_modules",
+      "preservedPath": ".superpowers/sdd/public-reading-continuity-implementation-plan/preserved-task8-generated/site-next/node_modules",
+      "entries": 0,
+      "bytes": 0,
+      "treeHash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "originalPath": "spikes/site-next/out",
+      "preservedPath": ".superpowers/sdd/public-reading-continuity-implementation-plan/preserved-task8-generated/site-next/out",
+      "entries": 401,
+      "bytes": 13408675,
+      "treeHash": "sha256:d6139b4bb57d492efea701370dc508d56404a19433a769df9cb79d423020f565"
+    },
+    {
+      "originalPath": "spikes/site-react-router/.react-router",
+      "preservedPath": ".superpowers/sdd/public-reading-continuity-implementation-plan/preserved-task8-generated/site-react-router/.react-router",
+      "entries": 1458,
+      "bytes": 58284260,
+      "treeHash": "sha256:4a02d622724ed3619b18d70dc68c96c91121be5d2e15e6ef668239df5a507c9a"
+    },
+    {
+      "originalPath": "spikes/site-react-router/build",
+      "preservedPath": ".superpowers/sdd/public-reading-continuity-implementation-plan/preserved-task8-generated/site-react-router/build",
+      "entries": 286,
+      "bytes": 11654450,
+      "treeHash": "sha256:345a719362a2b200f0abcf641905f89ec22020edc83ed3a34157557c080baed3"
+    },
+    {
+      "originalPath": "spikes/site-react-router/node_modules",
+      "preservedPath": ".superpowers/sdd/public-reading-continuity-implementation-plan/preserved-task8-generated/site-react-router/node_modules",
+      "entries": 5,
+      "bytes": 334,
+      "treeHash": "sha256:979ffc82f77468eba8cd3aa0616ea0d5c1bad7151d6ac67a30ab1bf31aa2b455"
+    }
+  ]
+}
