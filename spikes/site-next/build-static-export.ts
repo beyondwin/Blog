@@ -5,10 +5,11 @@ import {
   copyFile,
   lstat,
   mkdir,
+  mkdtemp,
   open,
   readdir,
   realpath,
-  rm,
+  rename,
 } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +31,12 @@ interface StaticExportOptions {
   repositoryRoot: string;
   spikeRoot: string;
   runNextBuild?: (context: NextBuildContext) => Promise<void>;
+  beforeFailedStagingRetention?: (context: StagingContext) => Promise<void>;
+  beforeVerifiedStagingPublication?: (context: StagingContext) => Promise<void>;
+}
+
+interface StagingContext {
+  stagedOutput: string;
 }
 
 interface ExpectedAsset {
@@ -47,6 +54,12 @@ interface RealDirectoryIdentity {
 
 interface OwnedOutputTree {
   spikeRoot: RealDirectoryIdentity;
+  outputRoot: RealDirectoryIdentity;
+}
+
+interface OwnedStagedOutput {
+  publicOutputPath: string;
+  stagingRoot: RealDirectoryIdentity;
   outputRoot: RealDirectoryIdentity;
 }
 
@@ -126,29 +139,55 @@ async function assertOwnedOutputTreeCurrent(tree: OwnedOutputTree): Promise<void
   }
 }
 
-async function removeOwnedOutputAssets(
-  spikeRootPath: string,
-  knownTree?: OwnedOutputTree,
-): Promise<boolean> {
+async function assertOwnedStagedOutputCurrent(staged: OwnedStagedOutput): Promise<void> {
+  const [stagingRoot, outputRoot] = await Promise.all([
+    lstat(staged.stagingRoot.path),
+    lstat(staged.outputRoot.path),
+  ]);
+  if (!isSameDirectory(stagingRoot, staged.stagingRoot)
+    || !isSameDirectory(outputRoot, staged.outputRoot)
+    || await realpath(staged.stagingRoot.path) !== staged.stagingRoot.realPath
+    || await realpath(staged.outputRoot.path) !== staged.outputRoot.realPath) {
+    throw new Error('Owned staged Next output changed after validation');
+  }
+}
+
+async function stageOwnedOutput(tree: OwnedOutputTree): Promise<OwnedStagedOutput> {
+  await assertOwnedOutputTreeCurrent(tree);
+  const stagingParentPath = join(tree.spikeRoot.path, '.next');
+  await mkdir(stagingParentPath, { recursive: true });
+  const stagingParent = await readRealDirectoryIdentity(stagingParentPath, 'Next staging parent');
+  if (stagingParent.realPath !== join(tree.spikeRoot.realPath, '.next')) {
+    throw new Error('Next staging parent resolves outside the owned spike root');
+  }
+  const stagingRootPath = await mkdtemp(join(stagingParent.path, 'export-stage-'));
+  const stagingRoot = await readRealDirectoryIdentity(stagingRootPath, 'Next export staging root');
+  if (dirname(stagingRoot.realPath) !== stagingParent.realPath) {
+    throw new Error('Next export staging root resolves outside the owned staging parent');
+  }
+
+  await assertOwnedOutputTreeCurrent(tree);
+  const stagedOutputPath = join(stagingRoot.path, 'out');
+  await rename(tree.outputRoot.path, stagedOutputPath);
+  const outputRoot = await readRealDirectoryIdentity(stagedOutputPath, 'staged Next output root');
+  if (outputRoot.dev !== tree.outputRoot.dev
+    || outputRoot.ino !== tree.outputRoot.ino
+    || outputRoot.uid !== tree.outputRoot.uid
+    || outputRoot.realPath !== join(stagingRoot.realPath, 'out')) {
+    throw new Error('Next output changed while entering the owned staging root');
+  }
+  return { publicOutputPath: tree.outputRoot.path, stagingRoot, outputRoot };
+}
+
+async function retainFailedStaging(
+  staged: OwnedStagedOutput,
+  beforeRetention?: (context: StagingContext) => Promise<void>,
+): Promise<void> {
   try {
-    const tree = knownTree ?? await readOwnedOutputTree(spikeRootPath);
-    await assertOwnedOutputTreeCurrent(tree);
-    const assetsPath = join(tree.outputRoot.path, 'assets');
-    const state = await lstat(assetsPath).catch((error: NodeJS.ErrnoException) => {
-      if (error.code === 'ENOENT') return null;
-      throw error;
-    });
-    if (!state) return true;
-    if (state.isSymbolicLink() || !state.isDirectory()
-      || (typeof process.getuid === 'function' && state.uid !== process.getuid())) return false;
-    const assets = await readRealDirectoryIdentity(assetsPath, 'exported assets root');
-    if (assets.realPath !== join(tree.outputRoot.realPath, 'assets')) return false;
-    await assertOwnedOutputTreeCurrent(tree);
-    await rm(assetsPath, { recursive: true });
-    await assertOwnedOutputTreeCurrent(tree);
-    return true;
+    await assertOwnedStagedOutputCurrent(staged);
+    await beforeRetention?.({ stagedOutput: staged.outputRoot.path });
   } catch {
-    return false;
+    // Failure output is deliberately retained. Cleanup must never re-resolve a mutable path.
   }
 }
 
@@ -205,12 +244,11 @@ async function verifyExportedAssets(
 }
 
 async function copyVerifiedAssets(
-  outputTree: OwnedOutputTree,
+  staged: OwnedStagedOutput,
   active: VerifiedActivePublicRelease,
 ): Promise<void> {
-  const spikeRoot = outputTree.spikeRoot.path;
-  const out = outputTree.outputRoot.path;
-  await assertOwnedOutputTreeCurrent(outputTree);
+  const out = staged.outputRoot.path;
+  await assertOwnedStagedOutputCurrent(staged);
   const outputAssets = join(out, 'assets');
   const existing = await lstat(outputAssets).catch((error: NodeJS.ErrnoException) => {
     if (error.code === 'ENOENT') return null;
@@ -219,10 +257,8 @@ async function copyVerifiedAssets(
   if (existing && (existing.isSymbolicLink() || !existing.isDirectory())) {
     throw new Error('Existing exported assets root must be a real directory');
   }
-  if (existing && !await removeOwnedOutputAssets(spikeRoot, outputTree)) {
-    throw new Error('Owned Next output tree changed while removing existing assets');
-  }
-  await assertOwnedOutputTreeCurrent(outputTree);
+  if (existing) throw new Error('Existing exported assets are untrusted build output');
+  await assertOwnedStagedOutputCurrent(staged);
   await mkdir(outputAssets);
   const expected = expectedAssets(active);
   for (const [relativePath, asset] of expected) {
@@ -230,13 +266,29 @@ async function copyVerifiedAssets(
     if (sourceState.isSymbolicLink() || !sourceState.isFile()) {
       throw new Error(`${relativePath}: verified release asset changed to a symlink or special file`);
     }
-    await assertOwnedOutputTreeCurrent(outputTree);
+    await assertOwnedStagedOutputCurrent(staged);
     const destination = join(out, relativePath);
     await mkdir(dirname(destination), { recursive: true });
     await copyFile(asset.sourcePath, destination, fsConstants.COPYFILE_EXCL);
   }
-  await assertOwnedOutputTreeCurrent(outputTree);
+  await assertOwnedStagedOutputCurrent(staged);
   await verifyExportedAssets(outputAssets, expected);
+}
+
+async function publishVerifiedStaging(staged: OwnedStagedOutput): Promise<void> {
+  await assertOwnedStagedOutputCurrent(staged);
+  const existing = await lstat(staged.publicOutputPath).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (existing) throw new Error('Public Next output appeared before verified publication');
+  await rename(staged.outputRoot.path, staged.publicOutputPath);
+  const published = await readRealDirectoryIdentity(staged.publicOutputPath, 'published Next output root');
+  if (published.dev !== staged.outputRoot.dev
+    || published.ino !== staged.outputRoot.ino
+    || published.uid !== staged.outputRoot.uid) {
+    throw new Error('Published Next output does not match the verified staging object');
+  }
 }
 
 async function runProductionNextBuild(spikeRoot: string, environment: NodeJS.ProcessEnv): Promise<void> {
@@ -265,15 +317,18 @@ export async function buildStaticExport(options: StaticExportOptions): Promise<v
   const runNextBuild = options.runNextBuild
     ?? ((context: NextBuildContext) => runProductionNextBuild(spikeRoot, context.environment));
 
-  let outputTree: OwnedOutputTree | undefined;
+  let staged: OwnedStagedOutput | undefined;
   try {
     await runNextBuild({ environment });
-    outputTree = await readOwnedOutputTree(spikeRoot);
+    const outputTree = await readOwnedOutputTree(spikeRoot);
+    staged = await stageOwnedOutput(outputTree);
     const afterBuild = await readBoundActiveRelease(releasesRoot, binding);
-    await copyVerifiedAssets(outputTree, afterBuild);
+    await copyVerifiedAssets(staged, afterBuild);
     await readBoundActiveRelease(releasesRoot, binding);
+    await options.beforeVerifiedStagingPublication?.({ stagedOutput: staged.outputRoot.path });
+    await publishVerifiedStaging(staged);
   } catch (error) {
-    await removeOwnedOutputAssets(spikeRoot, outputTree);
+    if (staged) await retainFailedStaging(staged, options.beforeFailedStagingRetention);
     throw error;
   }
 }

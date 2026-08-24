@@ -60,6 +60,18 @@ async function releasePair() {
   return { repositoryRoot, releasesRoot, spikeRoot, first, second };
 }
 
+async function stagedOutputs(spikeRoot: string): Promise<string[]> {
+  const stagingParent = join(spikeRoot, '.next');
+  const entries = await readdir(stagingParent, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  });
+  return entries
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith('export-stage-'))
+    .map((entry) => join(stagingParent, entry.name, 'out'))
+    .sort();
+}
+
 describe('fail-closed Next static export orchestration', () => {
   it('rejects a symlinked output root without deleting external assets through it', async () => {
     const fixture = await releasePair();
@@ -100,7 +112,10 @@ describe('fail-closed Next static export orchestration', () => {
     })).rejects.toThrow(/Existing exported assets root must be a real directory/iu);
     expect(await readFile(victim)).toEqual(sentinel);
     expect(await readdir(externalAssets)).toEqual(['victim.txt']);
-    expect((await lstat(join(out, 'assets'))).isSymbolicLink()).toBe(true);
+    await expect(access(out)).rejects.toThrow();
+    const [stagedOutput] = await stagedOutputs(fixture.spikeRoot);
+    expect(stagedOutput).toBeDefined();
+    expect((await lstat(join(stagedOutput!, 'assets'))).isSymbolicLink()).toBe(true);
   }, 30_000);
 
   it('does not traverse an output parent replaced between validation and cleanup', async () => {
@@ -133,6 +148,100 @@ describe('fail-closed Next static export orchestration', () => {
     expect(await readFile(victim)).toEqual(sentinel);
     expect(await readdir(externalRoot, { recursive: true })).toEqual(['assets', 'assets/victim.txt']);
     expect((await lstat(out)).isSymbolicLink()).toBe(true);
+  }, 30_000);
+
+  it('does not mutate a replacement installed after final failed-stage validation', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+    const externalRoot = join(fixture.repositoryRoot, 'post-validation-target');
+    const victim = join(externalRoot, 'assets/victim.txt');
+    const sentinel = Buffer.from('post-validation replacement must survive cleanup');
+    await mkdir(join(externalRoot, 'assets'), { recursive: true });
+    await writeFile(victim, sentinel);
+
+    let hookCalls = 0;
+    const options = {
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        await mkdir(join(out, 'assets'), { recursive: true });
+        await writeFile(join(out, 'assets/mismatched.txt'), 'unverified prerender output');
+        await activate(fixture.releasesRoot, fixture.second);
+      },
+      beforeFailedStagingRetention: async ({ stagedOutput }: { stagedOutput: string }) => {
+        hookCalls += 1;
+        await rename(stagedOutput, join(stagedOutput, '..', 'parked-after-validation'));
+        await symlink(externalRoot, stagedOutput, 'dir');
+      },
+    } as Parameters<typeof buildStaticExport>[0] & {
+      beforeFailedStagingRetention: (context: { stagedOutput: string }) => Promise<void>;
+    };
+
+    await expect(buildStaticExport(options)).rejects.toThrow(/bound public release changed|release evidence mismatch/iu);
+    expect(hookCalls).toBe(1);
+    expect(await readFile(victim)).toEqual(sentinel);
+    expect(await readdir(externalRoot, { recursive: true })).toEqual(['assets', 'assets/victim.txt']);
+    await expect(access(out)).rejects.toThrow();
+    const [stagedOutput] = await stagedOutputs(fixture.spikeRoot);
+    expect(stagedOutput).toBeDefined();
+    expect((await lstat(stagedOutput!)).isSymbolicLink()).toBe(true);
+    expect(await readFile(join(stagedOutput!, '..', 'parked-after-validation/assets/mismatched.txt'), 'utf8'))
+      .toBe('unverified prerender output');
+  }, 30_000);
+
+  it('rejects untrusted pre-existing assets instead of accepting them as this build', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        await mkdir(join(out, 'assets'), { recursive: true });
+        await writeFile(join(out, 'index.html'), '<h1>candidate output</h1>');
+        await writeFile(join(out, 'assets/untrusted.txt'), 'not verified by the active release');
+      },
+    })).rejects.toThrow(/existing exported assets are untrusted/iu);
+
+    await expect(access(out)).rejects.toThrow();
+    const [stagedOutput] = await stagedOutputs(fixture.spikeRoot);
+    expect(stagedOutput).toBeDefined();
+    expect(await readFile(join(stagedOutput!, 'assets/untrusted.txt'), 'utf8'))
+      .toBe('not verified by the active release');
+  }, 30_000);
+
+  it('publishes only the successfully verified staged output and assets', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+    let publicationHookCalls = 0;
+    const options = {
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        await mkdir(out, { recursive: true });
+        await writeFile(join(out, 'index.html'), '<h1>verified candidate output</h1>');
+      },
+      beforeVerifiedStagingPublication: async ({ stagedOutput }: { stagedOutput: string }) => {
+        publicationHookCalls += 1;
+        await expect(access(out)).rejects.toThrow();
+        expect(await readFile(join(stagedOutput, 'index.html'), 'utf8'))
+          .toBe('<h1>verified candidate output</h1>');
+      },
+    } as Parameters<typeof buildStaticExport>[0] & {
+      beforeVerifiedStagingPublication: (context: { stagedOutput: string }) => Promise<void>;
+    };
+    await buildStaticExport(options);
+
+    expect(publicationHookCalls).toBe(1);
+    expect(await readFile(join(out, 'index.html'), 'utf8')).toBe('<h1>verified candidate output</h1>');
+    const active = await readActiveRelease(fixture.releasesRoot);
+    const asset = Object.values(active.manifest.assets)[0]?.fallback;
+    if (!asset) throw new Error('fixture has no verified release asset');
+    expect(await readFile(join(out, asset.src.slice(1))))
+      .toEqual(await readFile(join(active.releasePath, asset.src.slice(1))));
+    const [publishedStagePath] = await stagedOutputs(fixture.spikeRoot);
+    expect(publishedStagePath).toBeDefined();
+    await expect(access(publishedStagePath!)).rejects.toThrow();
+    expect(await readdir(join(publishedStagePath!, '..'))).toEqual([]);
   }, 30_000);
 
   it('rejects an active pointer swap inside the prerender instead of accepting mismatched assets', async () => {
