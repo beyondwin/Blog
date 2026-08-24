@@ -1,4 +1,4 @@
-import { Children, cloneElement, isValidElement, type ReactNode } from 'react';
+import { Children, isValidElement, type ReactNode } from 'react';
 import { Links, Meta, Outlet, Scripts as ReactRouterScripts } from 'react-router';
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
@@ -45,34 +45,10 @@ export function withoutModulePreloads(children: ReactNode): ReactNode[] {
   ));
 }
 
-export function deferModuleScripts(children: ReactNode): ReactNode[] {
-  return Children.toArray(children).map((child) => (
-    isValidElement<{ type?: string }>(child) && child.type === 'script' && child.props.type === 'module'
-      ? cloneElement(child, { type: 'application/react-router-deferred' })
-      : child
-  ));
-}
-
-export const activateDeferredModule = `requestAnimationFrame(() => setTimeout(() => {
-  const source = document.querySelector('script[type="application/react-router-deferred"]');
-  if (!source) return;
-  const script = document.createElement('script');
-  script.type = 'module';
-  script.async = true;
-  script.textContent = source.textContent;
-  script.addEventListener('load', () => script.remove(), { once: true });
-  document.head.append(script);
-}, 0));`;
-
 export function CriticalScripts() {
   const rendered = ReactRouterScripts({});
   if (!isValidElement<{ children?: ReactNode }>(rendered)) return rendered;
-  return (
-    <>
-      {deferModuleScripts(withoutModulePreloads(rendered.props.children))}
-      <script dangerouslySetInnerHTML={{ __html: activateDeferredModule }} />
-    </>
-  );
+  return <>{withoutModulePreloads(rendered.props.children)}</>;
 }
 
 export function metadataForRecord(record: PublicRecord) {

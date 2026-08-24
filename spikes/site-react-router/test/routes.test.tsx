@@ -94,16 +94,6 @@ describe('React Router current-behavior static route contract', () => {
     expect(criticalResources).not.toContain('rel="modulepreload"');
     expect(criticalResources).toContain('rel="preload"');
     expect(criticalResources).toContain('import("/boot.js")');
-
-    const deferredScripts = renderToStaticMarkup(createElement('div', null, root.deferModuleScripts([
-      createElement('script', { key: 'module', type: 'module' }, 'import("/boot.js")'),
-      createElement('script', { key: 'classic' }, 'window.ready=true'),
-    ])));
-    expect(deferredScripts).not.toContain('type="module"');
-    expect(deferredScripts).toContain('type="application/react-router-deferred"');
-    expect(deferredScripts).toContain('window.ready=true');
-    expect(root.activateDeferredModule).toContain('requestAnimationFrame');
-    expect(root.activateDeferredModule).toContain('setTimeout');
   });
 
   it('loads only the four page-specific public slices and emits incumbent metadata with clean canonicals', async () => {
