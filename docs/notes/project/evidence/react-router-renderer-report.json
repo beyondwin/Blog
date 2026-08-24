@@ -3,7 +3,7 @@
   "renderer": "react-router",
   "provenance": {
     "synthetic": false,
-    "repositoryCommit": "c0ac142435de441e26bfadce70120af68a19fde0",
+    "repositoryCommit": "672e3068f170559ff77e4a204eec050ef61d54d3",
     "rendererRoot": "spikes/site-react-router",
     "rendererManifest": "spikes/site-react-router/package.json",
     "rendererManifestHash": "sha256:943181e0377586a2474e95143a2b2c2dc84be3600e232f1d5c29d0b3a924c084",
@@ -12,7 +12,7 @@
     "captureToolHash": "sha256:8987170c9fec7e39fd0cd3bcb3d47148597075cfb12322d077835e8457bac64f",
     "buildEnvironmentVersion": 1,
     "sourceClosureVersion": 2,
-    "sourceClosureHash": "sha256:dedbd24d7d2890b984cb5aa0a2bc7d0265068bc5fd6cca586b9a3fc46717be42",
+    "sourceClosureHash": "sha256:20fb1c43c7197750e2a7033eef40b30ce94cf2d950d02e1e58b70de5b468ce60",
     "publicRelease": {
       "version": 1,
       "verificationPolicyVersion": 1,
@@ -28,7 +28,7 @@
       "artifactHash": "sha256:38829f0d35c78c5777f1b094a1196fd17146c615c1d5982387c7b2a153c95a08"
     }
   },
-  "measuredAt": "2026-08-24T16:52:28.051Z",
+  "measuredAt": "2026-08-24T17:34:47.326Z",
   "captureProtocol": {
     "decisionRoutes": [
       "/",
@@ -58,13 +58,13 @@
     "chromiumVersion": "151.0.7922.34",
     "chromiumRevision": "1234"
   },
-  "artifactHash": "sha256:7dcfcbd61470d93ebc2939ef2ec10e734f0bc484795fe490586ea9b60d14a8ed",
+  "artifactHash": "sha256:4aaaac4ab643b2a3bca52107b4a5e66b99f2778b4817794046be2a97e31dcd59",
   "artifactPrivateBoundaryHits": [],
   "build": {
     "samples": [
       {
-        "durationMs": 2652,
-        "artifactHash": "sha256:7dcfcbd61470d93ebc2939ef2ec10e734f0bc484795fe490586ea9b60d14a8ed",
+        "durationMs": 2575,
+        "artifactHash": "sha256:4aaaac4ab643b2a3bca52107b4a5e66b99f2778b4817794046be2a97e31dcd59",
         "cleanedPaths": [
           "spikes/site-react-router/build",
           "spikes/site-react-router/node_modules/.vite",
@@ -72,8 +72,8 @@
         ]
       },
       {
-        "durationMs": 2481,
-        "artifactHash": "sha256:7dcfcbd61470d93ebc2939ef2ec10e734f0bc484795fe490586ea9b60d14a8ed",
+        "durationMs": 3912,
+        "artifactHash": "sha256:4aaaac4ab643b2a3bca52107b4a5e66b99f2778b4817794046be2a97e31dcd59",
         "cleanedPaths": [
           "spikes/site-react-router/build",
           "spikes/site-react-router/node_modules/.vite",
@@ -81,8 +81,8 @@
         ]
       },
       {
-        "durationMs": 2692,
-        "artifactHash": "sha256:7dcfcbd61470d93ebc2939ef2ec10e734f0bc484795fe490586ea9b60d14a8ed",
+        "durationMs": 2460,
+        "artifactHash": "sha256:4aaaac4ab643b2a3bca52107b4a5e66b99f2778b4817794046be2a97e31dcd59",
         "cleanedPaths": [
           "spikes/site-react-router/build",
           "spikes/site-react-router/node_modules/.vite",
@@ -90,8 +90,8 @@
         ]
       }
     ],
-    "medianDurationMs": 2652,
-    "madDurationMs": 40,
+    "medianDurationMs": 2575,
+    "madDurationMs": 115,
     "reproducible": true,
     "command": "npm run build",
     "workingDirectory": "spikes/site-react-router",
@@ -195,8 +195,8 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 32,
-              "jsGzipBytes": 101419,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
               "imageBytes": 143129,
               "renderedImages": [
                 {
@@ -243,8 +243,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 101419,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
               "imageBytes": 143129,
               "renderedImages": [
                 {
@@ -291,8 +291,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 32,
-              "jsGzipBytes": 101419,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
               "imageBytes": 143129,
               "renderedImages": [
                 {
@@ -339,8 +339,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 32,
-              "jsGzipBytes": 101419,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
               "imageBytes": 143129,
               "renderedImages": [
                 {
@@ -387,8 +387,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 101419,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
               "imageBytes": 143129,
               "renderedImages": [
                 {
@@ -435,9 +435,9 @@
             }
           ],
           "median": {
-            "lcpMs": 32,
+            "lcpMs": 20,
             "cls": 0,
-            "jsGzipBytes": 101419,
+            "jsGzipBytes": 105816,
             "imageBytes": 143129
           },
           "mad": {
@@ -468,8 +468,182 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 101419,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
+              "imageBytes": 95632,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
+                  "displayedWidth": 109,
+                  "displayedHeight": 186,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif",
+                  "displayedWidth": 273,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-720w.avif",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
+              "imageBytes": 95632,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
+                  "displayedWidth": 109,
+                  "displayedHeight": 186,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif",
+                  "displayedWidth": 273,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-720w.avif",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
+              "imageBytes": 95632,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
+                  "displayedWidth": 109,
+                  "displayedHeight": 186,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif",
+                  "displayedWidth": 273,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-720w.avif",
+                  "displayedWidth": 281,
+                  "displayedHeight": 354,
+                  "naturalWidth": 280,
+                  "naturalHeight": 187,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 105816,
               "imageBytes": 95632,
               "renderedImages": [
                 {
@@ -527,181 +701,7 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 101419,
-              "imageBytes": 95632,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
-                  "displayedWidth": 109,
-                  "displayedHeight": 186,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif",
-                  "displayedWidth": 273,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-720w.avif",
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 44,
-              "jsGzipBytes": 101419,
-              "imageBytes": 95632,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
-                  "displayedWidth": 109,
-                  "displayedHeight": 186,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif",
-                  "displayedWidth": 273,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-720w.avif",
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 101419,
-              "imageBytes": 95632,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
-                  "displayedWidth": 109,
-                  "displayedHeight": 186,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif",
-                  "displayedWidth": 273,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-720w.avif",
-                  "displayedWidth": 281,
-                  "displayedHeight": 354,
-                  "naturalWidth": 280,
-                  "naturalHeight": 187,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 44,
-              "jsGzipBytes": 101419,
+              "jsGzipBytes": 105816,
               "imageBytes": 95632,
               "renderedImages": [
                 {
@@ -758,13 +758,13 @@
             }
           ],
           "median": {
-            "lcpMs": 28,
+            "lcpMs": 20,
             "cls": 0,
-            "jsGzipBytes": 101419,
+            "jsGzipBytes": 105816,
             "imageBytes": 95632
           },
           "mad": {
-            "lcpMs": 4,
+            "lcpMs": 0,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -869,152 +869,8 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 32,
-              "jsGzipBytes": 101683,
-              "imageBytes": 222159,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 40,
-              "jsGzipBytes": 101683,
-              "imageBytes": 222159,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 32,
-              "jsGzipBytes": 101683,
-              "imageBytes": 222159,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-1536w.avif",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 1439,
-                  "naturalHeight": 959,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 32,
-              "jsGzipBytes": 101683,
+              "lcpMs": 28,
+              "jsGzipBytes": 106008,
               "imageBytes": 222159,
               "renderedImages": [
                 {
@@ -1062,7 +918,151 @@
             {
               "cls": 0,
               "lcpMs": 28,
-              "jsGzipBytes": 101683,
+              "jsGzipBytes": 106008,
+              "imageBytes": 222159,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 32,
+              "jsGzipBytes": 106008,
+              "imageBytes": 222159,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 106008,
+              "imageBytes": 222159,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-1536w.avif",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 1439,
+                  "naturalHeight": 959,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 28,
+              "jsGzipBytes": 106008,
               "imageBytes": 222159,
               "renderedImages": [
                 {
@@ -1109,9 +1109,9 @@
             }
           ],
           "median": {
-            "lcpMs": 32,
+            "lcpMs": 28,
             "cls": 0,
-            "jsGzipBytes": 101683,
+            "jsGzipBytes": 106008,
             "imageBytes": 222159
           },
           "mad": {
@@ -1142,56 +1142,8 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 101683,
-              "imageBytes": 72428,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
-                  "displayedWidth": 326,
-                  "displayedHeight": 217,
-                  "naturalWidth": 390,
-                  "naturalHeight": 260,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light-720w.avif",
-                  "displayedWidth": 326,
-                  "displayedHeight": 217,
-                  "naturalWidth": 390,
-                  "naturalHeight": 260,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                },
-                {
-                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-720w.avif",
-                  "displayedWidth": 326,
-                  "displayedHeight": 217,
-                  "naturalWidth": 390,
-                  "naturalHeight": 260,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 101683,
+              "lcpMs": 20,
+              "jsGzipBytes": 106008,
               "imageBytes": 72428,
               "renderedImages": [
                 {
@@ -1239,7 +1191,7 @@
             {
               "cls": 0,
               "lcpMs": 20,
-              "jsGzipBytes": 101683,
+              "jsGzipBytes": 106008,
               "imageBytes": 72428,
               "renderedImages": [
                 {
@@ -1286,8 +1238,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 101683,
+              "lcpMs": 20,
+              "jsGzipBytes": 106008,
               "imageBytes": 72428,
               "renderedImages": [
                 {
@@ -1334,8 +1286,56 @@
             },
             {
               "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 101683,
+              "lcpMs": 20,
+              "jsGzipBytes": 106008,
+              "imageBytes": 72428,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif",
+                  "displayedWidth": 326,
+                  "displayedHeight": 217,
+                  "naturalWidth": 390,
+                  "naturalHeight": 260,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light-720w.avif",
+                  "displayedWidth": 326,
+                  "displayedHeight": 217,
+                  "naturalWidth": 390,
+                  "naturalHeight": 260,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                },
+                {
+                  "source": "/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table-720w.avif",
+                  "displayedWidth": 326,
+                  "displayedHeight": 217,
+                  "naturalWidth": 390,
+                  "naturalHeight": 260,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 106008,
               "imageBytes": 72428,
               "renderedImages": [
                 {
@@ -1382,9 +1382,9 @@
             }
           ],
           "median": {
-            "lcpMs": 24,
+            "lcpMs": 20,
             "cls": 0,
-            "jsGzipBytes": 101683,
+            "jsGzipBytes": 106008,
             "imageBytes": 72428
           },
           "mad": {
@@ -1466,8 +1466,8 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 44,
-              "jsGzipBytes": 101106,
+              "lcpMs": 24,
+              "jsGzipBytes": 105425,
               "imageBytes": 45902,
               "renderedImages": [
                 {
@@ -1495,7 +1495,7 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 101106,
+              "jsGzipBytes": 105425,
               "imageBytes": 45902,
               "renderedImages": [
                 {
@@ -1522,8 +1522,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 101106,
+              "lcpMs": 24,
+              "jsGzipBytes": 105425,
               "imageBytes": 45902,
               "renderedImages": [
                 {
@@ -1550,8 +1550,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 101106,
+              "lcpMs": 24,
+              "jsGzipBytes": 105425,
               "imageBytes": 45902,
               "renderedImages": [
                 {
@@ -1578,8 +1578,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 101106,
+              "lcpMs": 24,
+              "jsGzipBytes": 105425,
               "imageBytes": 45902,
               "renderedImages": [
                 {
@@ -1606,9 +1606,9 @@
             }
           ],
           "median": {
-            "lcpMs": 28,
+            "lcpMs": 24,
             "cls": 0,
-            "jsGzipBytes": 101106,
+            "jsGzipBytes": 105425,
             "imageBytes": 45902
           },
           "mad": {
@@ -1639,92 +1639,8 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 32,
-              "jsGzipBytes": 101106,
-              "imageBytes": 45902,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/reviews/black-swan/cover-458w.avif",
-                  "displayedWidth": 148,
-                  "displayedHeight": 222,
-                  "naturalWidth": 163,
-                  "naturalHeight": 239,
-                  "declaredWidth": 458,
-                  "declaredHeight": 671,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 36,
-              "jsGzipBytes": 101106,
-              "imageBytes": 45902,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/reviews/black-swan/cover-458w.avif",
-                  "displayedWidth": 148,
-                  "displayedHeight": 222,
-                  "naturalWidth": 163,
-                  "naturalHeight": 239,
-                  "declaredWidth": 458,
-                  "declaredHeight": 671,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 101106,
-              "imageBytes": 45902,
-              "renderedImages": [
-                {
-                  "source": "/assets/content/reviews/black-swan/cover-458w.avif",
-                  "displayedWidth": 148,
-                  "displayedHeight": 222,
-                  "naturalWidth": 163,
-                  "naturalHeight": 239,
-                  "declaredWidth": 458,
-                  "declaredHeight": 671,
-                  "format": "image/avif"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 36,
-              "jsGzipBytes": 101106,
+              "jsGzipBytes": 105425,
               "imageBytes": 45902,
               "renderedImages": [
                 {
@@ -1752,7 +1668,91 @@
             {
               "cls": 0,
               "lcpMs": 20,
-              "jsGzipBytes": 101106,
+              "jsGzipBytes": 105425,
+              "imageBytes": 45902,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                  "displayedWidth": 148,
+                  "displayedHeight": 222,
+                  "naturalWidth": 163,
+                  "naturalHeight": 239,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 105425,
+              "imageBytes": 45902,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                  "displayedWidth": 148,
+                  "displayedHeight": 222,
+                  "naturalWidth": 163,
+                  "naturalHeight": 239,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 105425,
+              "imageBytes": 45902,
+              "renderedImages": [
+                {
+                  "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                  "displayedWidth": 148,
+                  "displayedHeight": 222,
+                  "naturalWidth": 163,
+                  "naturalHeight": 239,
+                  "declaredWidth": 458,
+                  "declaredHeight": 671,
+                  "format": "image/avif"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
+              "jsGzipBytes": 105425,
               "imageBytes": 45902,
               "renderedImages": [
                 {
@@ -1779,13 +1779,13 @@
             }
           ],
           "median": {
-            "lcpMs": 32,
+            "lcpMs": 20,
             "cls": 0,
-            "jsGzipBytes": 101106,
+            "jsGzipBytes": 105425,
             "imageBytes": 45902
           },
           "mad": {
-            "lcpMs": 4,
+            "lcpMs": 0,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -1851,25 +1851,8 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 40,
-              "jsGzipBytes": 98979,
-              "imageBytes": 0,
-              "renderedImages": [],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 36,
-              "jsGzipBytes": 98979,
+              "lcpMs": 20,
+              "jsGzipBytes": 103302,
               "imageBytes": 0,
               "renderedImages": [],
               "imageFailures": [],
@@ -1886,7 +1869,7 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 98979,
+              "jsGzipBytes": 103302,
               "imageBytes": 0,
               "renderedImages": [],
               "imageFailures": [],
@@ -1902,8 +1885,8 @@
             },
             {
               "cls": 0,
-              "lcpMs": 24,
-              "jsGzipBytes": 98979,
+              "lcpMs": 20,
+              "jsGzipBytes": 103302,
               "imageBytes": 0,
               "renderedImages": [],
               "imageFailures": [],
@@ -1919,8 +1902,25 @@
             },
             {
               "cls": 0,
-              "lcpMs": 40,
-              "jsGzipBytes": 98979,
+              "lcpMs": 20,
+              "jsGzipBytes": 103302,
+              "imageBytes": 0,
+              "renderedImages": [],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 103302,
               "imageBytes": 0,
               "renderedImages": [],
               "imageFailures": [],
@@ -1936,13 +1936,13 @@
             }
           ],
           "median": {
-            "lcpMs": 36,
+            "lcpMs": 20,
             "cls": 0,
-            "jsGzipBytes": 98979,
+            "jsGzipBytes": 103302,
             "imageBytes": 0
           },
           "mad": {
-            "lcpMs": 4,
+            "lcpMs": 0,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -1970,24 +1970,7 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 98979,
-              "imageBytes": 0,
-              "renderedImages": [],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 390,
-                "actualScrollWidth": 390,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 98979,
+              "jsGzipBytes": 103302,
               "imageBytes": 0,
               "renderedImages": [],
               "imageFailures": [],
@@ -2004,7 +1987,7 @@
             {
               "cls": 0,
               "lcpMs": 20,
-              "jsGzipBytes": 98979,
+              "jsGzipBytes": 103302,
               "imageBytes": 0,
               "renderedImages": [],
               "imageFailures": [],
@@ -2021,7 +2004,7 @@
             {
               "cls": 0,
               "lcpMs": 24,
-              "jsGzipBytes": 98979,
+              "jsGzipBytes": 103302,
               "imageBytes": 0,
               "renderedImages": [],
               "imageFailures": [],
@@ -2038,7 +2021,24 @@
             {
               "cls": 0,
               "lcpMs": 20,
-              "jsGzipBytes": 98979,
+              "jsGzipBytes": 103302,
+              "imageBytes": 0,
+              "renderedImages": [],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 390,
+                "actualScrollWidth": 390,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 20,
+              "jsGzipBytes": 103302,
               "imageBytes": 0,
               "renderedImages": [],
               "imageFailures": [],
@@ -2054,13 +2054,13 @@
             }
           ],
           "median": {
-            "lcpMs": 24,
+            "lcpMs": 20,
             "cls": 0,
-            "jsGzipBytes": 98979,
+            "jsGzipBytes": 103302,
             "imageBytes": 0
           },
           "mad": {
-            "lcpMs": 4,
+            "lcpMs": 0,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
