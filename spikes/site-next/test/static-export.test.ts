@@ -1,4 +1,16 @@
-import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import {
+  access,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -49,6 +61,80 @@ async function releasePair() {
 }
 
 describe('fail-closed Next static export orchestration', () => {
+  it('rejects a symlinked output root without deleting external assets through it', async () => {
+    const fixture = await releasePair();
+    const externalRoot = join(fixture.repositoryRoot, 'external-output');
+    const victim = join(externalRoot, 'assets/victim.txt');
+    const sentinel = Buffer.from('external sentinel must survive cleanup');
+    await mkdir(join(externalRoot, 'assets'), { recursive: true });
+    await writeFile(victim, sentinel);
+    await symlink(externalRoot, join(fixture.spikeRoot, 'out'), 'dir');
+
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {},
+    })).rejects.toThrow(/Next output root must be a real directory/iu);
+    expect(await readFile(victim)).toEqual(sentinel);
+    expect(await readdir(externalRoot, { recursive: true })).toEqual(['assets', 'assets/victim.txt']);
+    expect((await lstat(join(fixture.spikeRoot, 'out'))).isSymbolicLink()).toBe(true);
+  }, 30_000);
+
+  it('leaves a symlinked output assets entry and its external target untouched', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+    const externalAssets = join(fixture.repositoryRoot, 'external-assets');
+    const victim = join(externalAssets, 'victim.txt');
+    const sentinel = Buffer.from('external assets symlink target must survive cleanup');
+    await Promise.all([
+      mkdir(out, { recursive: true }),
+      mkdir(externalAssets, { recursive: true }),
+    ]);
+    await writeFile(victim, sentinel);
+    await symlink(externalAssets, join(out, 'assets'), 'dir');
+
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {},
+    })).rejects.toThrow(/Existing exported assets root must be a real directory/iu);
+    expect(await readFile(victim)).toEqual(sentinel);
+    expect(await readdir(externalAssets)).toEqual(['victim.txt']);
+    expect((await lstat(join(out, 'assets'))).isSymbolicLink()).toBe(true);
+  }, 30_000);
+
+  it('does not traverse an output parent replaced between validation and cleanup', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+    const parkedOut = join(fixture.spikeRoot, 'parked-out');
+    const externalRoot = join(fixture.repositoryRoot, 'replacement-target');
+    const victim = join(externalRoot, 'assets/victim.txt');
+    const sentinel = Buffer.from('replacement target must survive cleanup');
+    await Promise.all([
+      mkdir(join(out, 'assets'), { recursive: true }),
+      mkdir(join(externalRoot, 'assets'), { recursive: true }),
+    ]);
+    await Promise.all([
+      writeFile(join(out, 'assets/generated.txt'), 'replace this owned output'),
+      writeFile(victim, sentinel),
+    ]);
+
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        expect((await lstat(out)).isDirectory()).toBe(true);
+        expect(await realpath(out)).toMatch(/\/spikes\/site-next\/out$/u);
+        await rename(out, parkedOut);
+        await symlink(externalRoot, out, 'dir');
+        throw new Error('fake prerender failed after output replacement');
+      },
+    })).rejects.toThrow('fake prerender failed after output replacement');
+    expect(await readFile(victim)).toEqual(sentinel);
+    expect(await readdir(externalRoot, { recursive: true })).toEqual(['assets', 'assets/victim.txt']);
+    expect((await lstat(out)).isSymbolicLink()).toBe(true);
+  }, 30_000);
+
   it('rejects an active pointer swap inside the prerender instead of accepting mismatched assets', async () => {
     const fixture = await releasePair();
 

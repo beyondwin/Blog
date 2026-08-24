@@ -7,6 +7,7 @@ import {
   mkdir,
   open,
   readdir,
+  realpath,
   rm,
 } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -36,6 +37,19 @@ interface ExpectedAsset {
   sourcePath: string;
 }
 
+interface RealDirectoryIdentity {
+  dev: number;
+  ino: number;
+  path: string;
+  realPath: string;
+  uid: number;
+}
+
+interface OwnedOutputTree {
+  spikeRoot: RealDirectoryIdentity;
+  outputRoot: RealDirectoryIdentity;
+}
+
 function expectedAssets(active: VerifiedActivePublicRelease): Map<string, ExpectedAsset> {
   const assets = new Map<string, ExpectedAsset>();
   const add = (href: string, checksum: string): void => {
@@ -59,6 +73,83 @@ function expectedAssets(active: VerifiedActivePublicRelease): Map<string, Expect
 async function assertRealDirectory(path: string, label: string): Promise<void> {
   const state = await lstat(path);
   if (state.isSymbolicLink() || !state.isDirectory()) throw new Error(`${label} must be a real directory`);
+}
+
+function isSameDirectory(
+  state: Awaited<ReturnType<typeof lstat>>,
+  identity: RealDirectoryIdentity,
+): boolean {
+  return !state.isSymbolicLink()
+    && state.isDirectory()
+    && state.dev === identity.dev
+    && state.ino === identity.ino
+    && state.uid === identity.uid;
+}
+
+async function readRealDirectoryIdentity(path: string, label: string): Promise<RealDirectoryIdentity> {
+  const before = await lstat(path);
+  if (before.isSymbolicLink() || !before.isDirectory()) throw new Error(`${label} must be a real directory`);
+  if (typeof process.getuid === 'function' && before.uid !== process.getuid()) {
+    throw new Error(`${label} must be an owned directory`);
+  }
+  const identity = {
+    dev: before.dev,
+    ino: before.ino,
+    path,
+    realPath: await realpath(path),
+    uid: before.uid,
+  };
+  const after = await lstat(path);
+  if (!isSameDirectory(after, identity)) throw new Error(`${label} changed during validation`);
+  return identity;
+}
+
+async function readOwnedOutputTree(spikeRootPath: string): Promise<OwnedOutputTree> {
+  const spikeRoot = await readRealDirectoryIdentity(spikeRootPath, 'Next spike root');
+  const outputRoot = await readRealDirectoryIdentity(join(spikeRootPath, 'out'), 'Next output root');
+  if (outputRoot.realPath !== join(spikeRoot.realPath, 'out')) {
+    throw new Error('Next output root resolves outside the owned spike root');
+  }
+  return { spikeRoot, outputRoot };
+}
+
+async function assertOwnedOutputTreeCurrent(tree: OwnedOutputTree): Promise<void> {
+  const [spikeRoot, outputRoot] = await Promise.all([
+    lstat(tree.spikeRoot.path),
+    lstat(tree.outputRoot.path),
+  ]);
+  if (!isSameDirectory(spikeRoot, tree.spikeRoot)
+    || !isSameDirectory(outputRoot, tree.outputRoot)
+    || await realpath(tree.spikeRoot.path) !== tree.spikeRoot.realPath
+    || await realpath(tree.outputRoot.path) !== tree.outputRoot.realPath) {
+    throw new Error('Owned Next output tree changed after validation');
+  }
+}
+
+async function removeOwnedOutputAssets(
+  spikeRootPath: string,
+  knownTree?: OwnedOutputTree,
+): Promise<boolean> {
+  try {
+    const tree = knownTree ?? await readOwnedOutputTree(spikeRootPath);
+    await assertOwnedOutputTreeCurrent(tree);
+    const assetsPath = join(tree.outputRoot.path, 'assets');
+    const state = await lstat(assetsPath).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return null;
+      throw error;
+    });
+    if (!state) return true;
+    if (state.isSymbolicLink() || !state.isDirectory()
+      || (typeof process.getuid === 'function' && state.uid !== process.getuid())) return false;
+    const assets = await readRealDirectoryIdentity(assetsPath, 'exported assets root');
+    if (assets.realPath !== join(tree.outputRoot.realPath, 'assets')) return false;
+    await assertOwnedOutputTreeCurrent(tree);
+    await rm(assetsPath, { recursive: true });
+    await assertOwnedOutputTreeCurrent(tree);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function readOwnedRegularFile(path: string, label: string): Promise<Buffer> {
@@ -114,12 +205,12 @@ async function verifyExportedAssets(
 }
 
 async function copyVerifiedAssets(
-  spikeRoot: string,
+  outputTree: OwnedOutputTree,
   active: VerifiedActivePublicRelease,
 ): Promise<void> {
-  const out = join(spikeRoot, 'out');
-  await assertRealDirectory(spikeRoot, 'Next spike root');
-  await assertRealDirectory(out, 'Next output root');
+  const spikeRoot = outputTree.spikeRoot.path;
+  const out = outputTree.outputRoot.path;
+  await assertOwnedOutputTreeCurrent(outputTree);
   const outputAssets = join(out, 'assets');
   const existing = await lstat(outputAssets).catch((error: NodeJS.ErrnoException) => {
     if (error.code === 'ENOENT') return null;
@@ -128,24 +219,24 @@ async function copyVerifiedAssets(
   if (existing && (existing.isSymbolicLink() || !existing.isDirectory())) {
     throw new Error('Existing exported assets root must be a real directory');
   }
-  if (existing) await rm(outputAssets, { recursive: true });
+  if (existing && !await removeOwnedOutputAssets(spikeRoot, outputTree)) {
+    throw new Error('Owned Next output tree changed while removing existing assets');
+  }
+  await assertOwnedOutputTreeCurrent(outputTree);
   await mkdir(outputAssets);
   const expected = expectedAssets(active);
-  try {
-    for (const [relativePath, asset] of expected) {
-      const sourceState = await lstat(asset.sourcePath);
-      if (sourceState.isSymbolicLink() || !sourceState.isFile()) {
-        throw new Error(`${relativePath}: verified release asset changed to a symlink or special file`);
-      }
-      const destination = join(out, relativePath);
-      await mkdir(dirname(destination), { recursive: true });
-      await copyFile(asset.sourcePath, destination, fsConstants.COPYFILE_EXCL);
+  for (const [relativePath, asset] of expected) {
+    const sourceState = await lstat(asset.sourcePath);
+    if (sourceState.isSymbolicLink() || !sourceState.isFile()) {
+      throw new Error(`${relativePath}: verified release asset changed to a symlink or special file`);
     }
-    await verifyExportedAssets(outputAssets, expected);
-  } catch (error) {
-    await rm(outputAssets, { recursive: true, force: true });
-    throw error;
+    await assertOwnedOutputTreeCurrent(outputTree);
+    const destination = join(out, relativePath);
+    await mkdir(dirname(destination), { recursive: true });
+    await copyFile(asset.sourcePath, destination, fsConstants.COPYFILE_EXCL);
   }
+  await assertOwnedOutputTreeCurrent(outputTree);
+  await verifyExportedAssets(outputAssets, expected);
 }
 
 async function runProductionNextBuild(spikeRoot: string, environment: NodeJS.ProcessEnv): Promise<void> {
@@ -174,13 +265,15 @@ export async function buildStaticExport(options: StaticExportOptions): Promise<v
   const runNextBuild = options.runNextBuild
     ?? ((context: NextBuildContext) => runProductionNextBuild(spikeRoot, context.environment));
 
+  let outputTree: OwnedOutputTree | undefined;
   try {
     await runNextBuild({ environment });
+    outputTree = await readOwnedOutputTree(spikeRoot);
     const afterBuild = await readBoundActiveRelease(releasesRoot, binding);
-    await copyVerifiedAssets(spikeRoot, afterBuild);
+    await copyVerifiedAssets(outputTree, afterBuild);
     await readBoundActiveRelease(releasesRoot, binding);
   } catch (error) {
-    await rm(join(spikeRoot, 'out/assets'), { recursive: true, force: true });
+    await removeOwnedOutputAssets(spikeRoot, outputTree);
     throw error;
   }
 }
