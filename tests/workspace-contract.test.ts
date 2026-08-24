@@ -1,8 +1,11 @@
-import { readFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
 
 const root = process.cwd();
+const execFileAsync = promisify(execFile);
 const manifestPaths = [
   'package.json',
   'packages/contracts/package.json',
@@ -78,4 +81,35 @@ describe('Node 24 workspace contract', () => {
       expect(Object.keys(dependencies).some((name) => name.startsWith('@astrojs/'))).toBe(false);
     }
   });
+
+  it('keeps retained generated Next output outside the root Astro diagnostic boundary', async () => {
+    const generatedRoot = resolve(root, 'spikes/site-next/out');
+    const sentinel = resolve(generatedRoot, 'root-scan-boundary-reviewer.js');
+    const {
+      BASE_URL,
+      DEV,
+      MODE,
+      PROD,
+      SSR,
+      TEST,
+      VITEST,
+      VITEST_MODE,
+      VITEST_POOL_ID,
+      VITEST_WORKER_ID,
+      ...environment
+    } = process.env;
+    await mkdir(generatedRoot, { recursive: true });
+    await writeFile(sentinel, 'const generatedOutputMustNotBeScanned = true;\n');
+    try {
+      const { stdout } = await execFileAsync('npm', ['exec', '--', 'astro', 'check'], {
+        cwd: root,
+        env: { ...environment, NODE_ENV: 'production' },
+        maxBuffer: 1024 * 1024,
+      });
+      expect(stdout).not.toContain('spikes/site-next/out');
+      expect(stdout).not.toContain('root-scan-boundary-reviewer.js');
+    } finally {
+      await rm(sentinel, { force: true });
+    }
+  }, 30_000);
 });

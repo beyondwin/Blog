@@ -5,5 +5,9 @@
     "paths": {
       "@/*": ["src/*"]
     }
-  }
+  },
+  "exclude": [
+    "spikes/site-next/out",
+    "spikes/site-next/.next"
+  ]
 }

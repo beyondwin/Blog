@@ -3,10 +3,13 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { isPublicRecord, type PublicRecord } from '@beyondwin/contracts';
 import {
-  readActiveRelease,
   type PublicReleaseManifest,
   type VerifiedActivePublicRelease,
 } from '@beyondwin/content/release';
+import {
+  PUBLIC_RELEASE_BINDING_ENV,
+  readBoundActiveRelease,
+} from '../release-binding';
 import './current-parity.css';
 
 export type CandidateRelease = Pick<VerifiedActivePublicRelease, 'manifest' | 'releasePath'>;
@@ -29,9 +32,13 @@ function repositoryRoot(): string {
   return cwd.endsWith('/spikes/site-next') ? resolve(cwd, '../..') : cwd;
 }
 
-const verifiedReleasePromise = readActiveRelease(join(repositoryRoot(), 'build/public-releases'));
+let verifiedReleasePromise: Promise<VerifiedActivePublicRelease> | undefined;
 
 export function loadVerifiedRelease(): Promise<VerifiedActivePublicRelease> {
+  verifiedReleasePromise ??= readBoundActiveRelease(
+    join(repositoryRoot(), 'build/public-releases'),
+    process.env[PUBLIC_RELEASE_BINDING_ENV],
+  );
   return verifiedReleasePromise;
 }
 

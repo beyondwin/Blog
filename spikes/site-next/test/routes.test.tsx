@@ -1,15 +1,17 @@
 import { readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import ts from 'typescript';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { readActiveRelease } from '@beyondwin/content/release';
 import {
   loadVerifiedRelease,
   staticParamsForCollection,
   type CandidateRelease,
 } from '../app/layout';
-import HomePage, { HOME_METADATA } from '../app/page';
+import HomePage, { HOME_METADATA, HomePresentation } from '../app/page';
 import ArticlePage, {
   ArticlePresentation,
   generateMetadata as generateArticleMetadata,
@@ -26,10 +28,27 @@ import MemoryPage, {
   generateStaticParams as generateMemoryStaticParams,
 } from '../app/memory/[slug]/page';
 import nextConfig from '../next.config';
+import {
+  PUBLIC_RELEASE_BINDING_ENV,
+  serializeReleaseBinding,
+} from '../release-binding';
 
 const ARTICLE_ID = 'why-i-read-in-the-ai-era';
 const REVIEW_ID = 'black-swan';
 const MEMORY_ID = 'agent-harnesses-are-operating-systems';
+const candidateRoot = fileURLToPath(new URL('..', import.meta.url));
+const originalReleaseBinding = process.env[PUBLIC_RELEASE_BINDING_ENV];
+
+beforeAll(async () => {
+  const repositoryRoot = resolve(candidateRoot, '../..');
+  const active = await readActiveRelease(join(repositoryRoot, 'build/public-releases'));
+  process.env[PUBLIC_RELEASE_BINDING_ENV] = serializeReleaseBinding(active);
+});
+
+afterAll(() => {
+  if (originalReleaseBinding === undefined) delete process.env[PUBLIC_RELEASE_BINDING_ENV];
+  else process.env[PUBLIC_RELEASE_BINDING_ENV] = originalReleaseBinding;
+});
 
 describe('Next current-behavior route adapters', () => {
   it('keeps static export and clean-build identity deterministic', async () => {
@@ -123,6 +142,17 @@ describe('Next current-behavior route adapters', () => {
     expect(memoryHtml).toContain('href="/memory/agent-workflows-need-review-gates/"');
   });
 
+  it('renders the selected article date from its verified UTC timestamp', async () => {
+    const release = structuredClone(await loadVerifiedRelease());
+    const article = release.manifest.records[`articles/${ARTICLE_ID}`];
+    if (article?.collection !== 'articles') throw new Error('Decision article is absent from the verified release');
+    article.createdAt = '2027-01-02T00:00:00.000Z';
+
+    const html = renderToStaticMarkup(createElement(HomePresentation, { release }));
+    expect(html).toContain('에세이 · 2027.01.02');
+    expect(html).not.toContain('에세이 · 2026.08.16');
+  });
+
   it('keeps page entry points server-only and returns candidate-local presentation output', async () => {
     for (const page of [HomePage, ArticlePage, ReviewPage, MemoryPage]) expect(page).toBeTypeOf('function');
     expect(renderToStaticMarkup(await HomePage())).toContain('href="/articles/why-i-read-in-the-ai-era/"');
@@ -135,7 +165,7 @@ describe('Next current-behavior route adapters', () => {
   });
 
   it('has no client runtime directives or direct source/private imports in the candidate', async () => {
-    const appRoot = join(process.cwd(), 'spikes/site-next/app');
+    const appRoot = join(candidateRoot, 'app');
     const files = (await readdir(appRoot, { recursive: true }))
       .filter((path) => /\.(?:ts|tsx)$/u.test(path));
     expect(files.some((path) => /(?:^|\/)route\.tsx?$/u.test(path))).toBe(false);

@@ -7,7 +7,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "build": "next build && node copy-release-assets.mjs",
+    "build": "tsx build-static-export.ts",
     "typecheck": "next typegen && tsc --noEmit --project tsconfig.json",
     "test": "vitest run test"
   },
@@ -22,6 +22,7 @@
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
+    "tsx": "4.23.12",
     "typescript": "6.0.3",
     "vitest": "4.1.11"
   }

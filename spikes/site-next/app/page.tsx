@@ -38,6 +38,16 @@ function requireAsset(release: CandidateRelease, key: string): ReleaseAsset {
   return asset;
 }
 
+export function formatSceneDate(createdAt: string): string {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.valueOf())) throw new Error('Verified article has an invalid createdAt timestamp');
+  return [
+    date.getUTCFullYear().toString().padStart(4, '0'),
+    (date.getUTCMonth() + 1).toString().padStart(2, '0'),
+    date.getUTCDate().toString().padStart(2, '0'),
+  ].join('.');
+}
+
 function MediaSceneObject({
   asset,
   id,
@@ -123,7 +133,7 @@ export function HomePresentation({ release }: { release: CandidateRelease }) {
         <header className="scene-heading">
           <p className="visually-hidden">판단</p>
           <h1>{titleBreak ? <>{titleBreak[1]}<br />{titleBreak[2]}</> : article.title}</h1>
-          <span>에세이 · 2026.08.16</span>
+          <span>에세이 · {formatSceneDate(article.createdAt)}</span>
         </header>
 
         <div className="scene-stage" aria-label="판단 장면">
