@@ -3,7 +3,7 @@
   "renderer": "astro",
   "provenance": {
     "synthetic": false,
-    "repositoryCommit": "63810dba87aea3d94befa3aa2e30a1694d69438f",
+    "repositoryCommit": "1653577b46de0b5dad1555d8fe55651edd63cf13",
     "rendererRoot": ".",
     "rendererManifest": "package.json",
     "rendererManifestHash": "sha256:a536cf97f2a6b2de6fb5c8f47e792557fb4916a8cd0ed5cc118a7c18b9a23a19",
@@ -12,10 +12,10 @@
     "captureToolHash": "sha256:8987170c9fec7e39fd0cd3bcb3d47148597075cfb12322d077835e8457bac64f",
     "buildEnvironmentVersion": 1,
     "sourceClosureVersion": 2,
-    "sourceClosureHash": "sha256:b8b59cf57e1f0d87394fb452eb6036c6a2ebd7d7f79e1763a348f6e8c85169bf",
+    "sourceClosureHash": "sha256:1e0567a0c9663808e3061da8e69bf40dfabb93b5c1d2f580f97194aa5ced7038",
     "publicRelease": null
   },
-  "measuredAt": "2026-08-24T13:20:07.726Z",
+  "measuredAt": "2026-08-24T14:09:08.066Z",
   "captureProtocol": {
     "decisionRoutes": [
       "/",
@@ -50,7 +50,7 @@
   "build": {
     "samples": [
       {
-        "durationMs": 7226,
+        "durationMs": 7279,
         "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a",
         "cleanedPaths": [
           "dist",
@@ -59,7 +59,7 @@
         ]
       },
       {
-        "durationMs": 7029,
+        "durationMs": 7174,
         "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a",
         "cleanedPaths": [
           "dist",
@@ -68,7 +68,7 @@
         ]
       },
       {
-        "durationMs": 6949,
+        "durationMs": 7258,
         "artifactHash": "sha256:665bfcb58b569c1795d0942d6ee6b060b6424b1cfbac8196cb400529e727d22a",
         "cleanedPaths": [
           "dist",
@@ -77,8 +77,8 @@
         ]
       }
     ],
-    "medianDurationMs": 7029,
-    "madDurationMs": 80,
+    "medianDurationMs": 7258,
+    "madDurationMs": 21,
     "reproducible": true,
     "command": "npm run legacy:build",
     "workingDirectory": ".",
@@ -218,7 +218,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 28,
               "jsGzipBytes": 1759,
               "imageBytes": 232382,
               "renderedImages": [
@@ -410,13 +410,13 @@
             }
           ],
           "median": {
-            "lcpMs": 20,
+            "lcpMs": 24,
             "cls": 0,
             "jsGzipBytes": 1759,
             "imageBytes": 232382
           },
           "mad": {
-            "lcpMs": 0,
+            "lcpMs": 4,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -563,7 +563,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 1759,
               "imageBytes": 232382,
               "renderedImages": [
@@ -623,7 +623,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 1759,
               "imageBytes": 232382,
               "renderedImages": [
@@ -683,7 +683,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 32,
               "jsGzipBytes": 1759,
               "imageBytes": 232382,
               "renderedImages": [
@@ -743,13 +743,13 @@
             }
           ],
           "median": {
-            "lcpMs": 20,
+            "lcpMs": 24,
             "cls": 0,
             "jsGzipBytes": 1759,
             "imageBytes": 232382
           },
           "mad": {
-            "lcpMs": 0,
+            "lcpMs": 4,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -907,55 +907,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 28,
-              "jsGzipBytes": 197,
-              "imageBytes": 80718,
-              "renderedImages": [
-                {
-                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 672,
-                  "naturalHeight": 448,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/webp"
-                },
-                {
-                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 672,
-                  "naturalHeight": 448,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/webp"
-                },
-                {
-                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
-                  "displayedWidth": 672,
-                  "displayedHeight": 448,
-                  "naturalWidth": 672,
-                  "naturalHeight": 448,
-                  "declaredWidth": 1536,
-                  "declaredHeight": 1024,
-                  "format": "image/webp"
-                }
-              ],
-              "imageFailures": [],
-              "consoleErrors": [],
-              "hydrationErrors": [],
-              "axeSeriousOrCritical": [],
-              "overflow": {
-                "expectedMaxWidth": 1440,
-                "actualScrollWidth": 1440,
-                "overflow": false
-              },
-              "privateBoundaryHits": []
-            },
-            {
-              "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 32,
               "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
@@ -1051,7 +1003,55 @@
             },
             {
               "cls": 0,
-              "lcpMs": 32,
+              "lcpMs": 28,
+              "jsGzipBytes": 197,
+              "imageBytes": 80718,
+              "renderedImages": [
+                {
+                  "source": "/_astro/judgment-scale.C_t5D8VM_yVEAI.webp",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/reading-desk-light.CFbUBIfw_1lJGsy.webp",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                },
+                {
+                  "source": "/_astro/shared-reading-table.Bg8uTvGd_Z1VfOaN.webp",
+                  "displayedWidth": 672,
+                  "displayedHeight": 448,
+                  "naturalWidth": 672,
+                  "naturalHeight": 448,
+                  "declaredWidth": 1536,
+                  "declaredHeight": 1024,
+                  "format": "image/webp"
+                }
+              ],
+              "imageFailures": [],
+              "consoleErrors": [],
+              "hydrationErrors": [],
+              "axeSeriousOrCritical": [],
+              "overflow": {
+                "expectedMaxWidth": 1440,
+                "actualScrollWidth": 1440,
+                "overflow": false
+              },
+              "privateBoundaryHits": []
+            },
+            {
+              "cls": 0,
+              "lcpMs": 24,
               "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
@@ -1132,7 +1132,7 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
@@ -1228,7 +1228,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
@@ -1276,7 +1276,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 197,
               "imageBytes": 80718,
               "renderedImages": [
@@ -1372,7 +1372,7 @@
             }
           ],
           "median": {
-            "lcpMs": 20,
+            "lcpMs": 24,
             "cls": 0,
             "jsGzipBytes": 197,
             "imageBytes": 80718
@@ -1537,7 +1537,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 24,
+              "lcpMs": 28,
               "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
@@ -1710,7 +1710,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
@@ -1738,7 +1738,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 24,
+              "lcpMs": 20,
               "jsGzipBytes": 230,
               "imageBytes": 58350,
               "renderedImages": [
@@ -1838,7 +1838,7 @@
           "samples": [
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
@@ -1855,7 +1855,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 28,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
@@ -1872,7 +1872,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
@@ -1889,7 +1889,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 20,
+              "lcpMs": 24,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
@@ -1923,7 +1923,7 @@
             }
           ],
           "median": {
-            "lcpMs": 20,
+            "lcpMs": 24,
             "cls": 0,
             "jsGzipBytes": 0,
             "imageBytes": 0
@@ -1990,7 +1990,7 @@
             },
             {
               "cls": 0,
-              "lcpMs": 16,
+              "lcpMs": 20,
               "jsGzipBytes": 0,
               "imageBytes": 0,
               "renderedImages": [],
