@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
-import { constants as fsConstants } from 'node:fs';
+import { constants as fsConstants, type Stats } from 'node:fs';
 import {
+  chmod,
   copyFile,
   lstat,
   mkdir,
@@ -47,6 +48,7 @@ interface ExpectedAsset {
 interface RealDirectoryIdentity {
   dev: number;
   ino: number;
+  mode: number;
   path: string;
   realPath: string;
   uid: number;
@@ -61,6 +63,12 @@ interface OwnedStagedOutput {
   publicOutputPath: string;
   stagingRoot: RealDirectoryIdentity;
   outputRoot: RealDirectoryIdentity;
+}
+
+const PRIVATE_STAGING_MODE = 0o700;
+
+function permissionMode(mode: number): number {
+  return mode & 0o777;
 }
 
 function expectedAssets(active: VerifiedActivePublicRelease): Map<string, ExpectedAsset> {
@@ -89,13 +97,14 @@ async function assertRealDirectory(path: string, label: string): Promise<void> {
 }
 
 function isSameDirectory(
-  state: Awaited<ReturnType<typeof lstat>>,
+  state: Stats,
   identity: RealDirectoryIdentity,
 ): boolean {
   return !state.isSymbolicLink()
     && state.isDirectory()
     && state.dev === identity.dev
     && state.ino === identity.ino
+    && permissionMode(state.mode) === identity.mode
     && state.uid === identity.uid;
 }
 
@@ -108,6 +117,7 @@ async function readRealDirectoryIdentity(path: string, label: string): Promise<R
   const identity = {
     dev: before.dev,
     ino: before.ino,
+    mode: permissionMode(before.mode),
     path,
     realPath: await realpath(path),
     uid: before.uid,
@@ -161,9 +171,13 @@ async function stageOwnedOutput(tree: OwnedOutputTree): Promise<OwnedStagedOutpu
     throw new Error('Next staging parent resolves outside the owned spike root');
   }
   const stagingRootPath = await mkdtemp(join(stagingParent.path, 'export-stage-'));
+  await chmod(stagingRootPath, PRIVATE_STAGING_MODE);
   const stagingRoot = await readRealDirectoryIdentity(stagingRootPath, 'Next export staging root');
   if (dirname(stagingRoot.realPath) !== stagingParent.realPath) {
     throw new Error('Next export staging root resolves outside the owned staging parent');
+  }
+  if (stagingRoot.mode !== PRIVATE_STAGING_MODE) {
+    throw new Error('Next export staging root must remain private to the build owner');
   }
 
   await assertOwnedOutputTreeCurrent(tree);
@@ -200,12 +214,36 @@ async function readOwnedRegularFile(path: string, label: string): Promise<Buffer
     throw error;
   }
   try {
-    const state = await handle.stat();
-    if (!state.isFile() || state.nlink !== 1
-      || (typeof process.getuid === 'function' && state.uid !== process.getuid())) {
+    const before = await handle.stat();
+    if (!before.isFile() || before.nlink !== 1
+      || (typeof process.getuid === 'function' && before.uid !== process.getuid())) {
       throw new Error(`${label} must be one regular owned file`);
     }
-    return await handle.readFile();
+    const bytes = await handle.readFile();
+    const after = await handle.stat();
+    if (!after.isFile()
+      || after.dev !== before.dev
+      || after.ino !== before.ino
+      || after.uid !== before.uid
+      || after.nlink !== before.nlink
+      || after.size !== before.size
+      || after.mtimeMs !== before.mtimeMs
+      || after.ctimeMs !== before.ctimeMs) {
+      throw new Error(`${label} changed during checksum verification`);
+    }
+    const current = await lstat(path);
+    if (current.isSymbolicLink()
+      || !current.isFile()
+      || current.dev !== after.dev
+      || current.ino !== after.ino
+      || current.uid !== after.uid
+      || current.nlink !== after.nlink
+      || current.size !== after.size
+      || current.mtimeMs !== after.mtimeMs
+      || current.ctimeMs !== after.ctimeMs) {
+      throw new Error(`${label} changed after checksum verification`);
+    }
+    return bytes;
   } finally {
     await handle.close();
   }
@@ -213,12 +251,16 @@ async function readOwnedRegularFile(path: string, label: string): Promise<Buffer
 
 async function outputFiles(root: string, directory = root): Promise<string[]> {
   const files: string[] = [];
-  for (const entry of (await readdir(directory, { withFileTypes: true }))
-    .sort((left, right) => left.name.localeCompare(right.name))) {
-    const path = join(directory, entry.name);
-    if (entry.isSymbolicLink()) throw new Error(`${path}: exported asset must not be a symbolic link`);
-    if (entry.isDirectory()) files.push(...await outputFiles(root, path));
-    else if (entry.isFile()) files.push(relative(root, path).split(sep).join('/'));
+  const names = (await readdir(directory)).sort((left, right) => left.localeCompare(right));
+  for (const name of names) {
+    const path = join(directory, name);
+    const state = await lstat(path);
+    if (state.isSymbolicLink()) throw new Error(`${path}: exported asset must not be a symbolic link`);
+    if (typeof process.getuid === 'function' && state.uid !== process.getuid()) {
+      throw new Error(`${path}: exported asset must be owned by the build user`);
+    }
+    if (state.isDirectory()) files.push(...await outputFiles(root, path));
+    else if (state.isFile()) files.push(relative(root, path).split(sep).join('/'));
     else throw new Error(`${path}: unexpected special exported asset file`);
   }
   return files;
@@ -275,13 +317,26 @@ async function copyVerifiedAssets(
   await verifyExportedAssets(outputAssets, expected);
 }
 
-async function publishVerifiedStaging(staged: OwnedStagedOutput): Promise<void> {
+async function publishVerifiedStaging(
+  staged: OwnedStagedOutput,
+  releasesRoot: string,
+  binding: string,
+): Promise<void> {
   await assertOwnedStagedOutputCurrent(staged);
   const existing = await lstat(staged.publicOutputPath).catch((error: NodeJS.ErrnoException) => {
     if (error.code === 'ENOENT') return null;
     throw error;
   });
   if (existing) throw new Error('Public Next output appeared before verified publication');
+
+  const active = await readBoundActiveRelease(releasesRoot, binding);
+  await assertOwnedStagedOutputCurrent(staged);
+  await verifyExportedAssets(join(staged.outputRoot.path, 'assets'), expectedAssets(active));
+  await readBoundActiveRelease(releasesRoot, binding);
+  await assertOwnedStagedOutputCurrent(staged);
+  // Node 24 on macOS does not expose an immutable-directory transaction or a
+  // no-replace directory rename. The owner-only staging root and the absence of
+  // application hooks after this final seal define the cooperative same-user boundary.
   await rename(staged.outputRoot.path, staged.publicOutputPath);
   const published = await readRealDirectoryIdentity(staged.publicOutputPath, 'published Next output root');
   if (published.dev !== staged.outputRoot.dev
@@ -326,7 +381,7 @@ export async function buildStaticExport(options: StaticExportOptions): Promise<v
     await copyVerifiedAssets(staged, afterBuild);
     await readBoundActiveRelease(releasesRoot, binding);
     await options.beforeVerifiedStagingPublication?.({ stagedOutput: staged.outputRoot.path });
-    await publishVerifiedStaging(staged);
+    await publishVerifiedStaging(staged, releasesRoot, binding);
   } catch (error) {
     if (staged) await retainFailedStaging(staged, options.beforeFailedStagingRetention);
     throw error;

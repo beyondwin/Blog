@@ -1,5 +1,6 @@
 import {
   access,
+  chmod,
   lstat,
   mkdir,
   mkdtemp,
@@ -12,7 +13,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   activateRelease,
@@ -70,6 +71,13 @@ async function stagedOutputs(spikeRoot: string): Promise<string[]> {
     .filter((entry) => entry.isDirectory() && entry.name.startsWith('export-stage-'))
     .map((entry) => join(stagingParent, entry.name, 'out'))
     .sort();
+}
+
+async function firstVerifiedAssetPath(releasesRoot: string): Promise<string> {
+  const active = await readActiveRelease(releasesRoot);
+  const assetPath = Object.values(active.manifest.assets)[0]?.fallback.src;
+  if (!assetPath) throw new Error('fixture has no verified release asset');
+  return assetPath.slice(1);
 }
 
 describe('fail-closed Next static export orchestration', () => {
@@ -242,6 +250,121 @@ describe('fail-closed Next static export orchestration', () => {
     expect(publishedStagePath).toBeDefined();
     await expect(access(publishedStagePath!)).rejects.toThrow();
     expect(await readdir(join(publishedStagePath!, '..'))).toEqual([]);
+  }, 30_000);
+
+  it('refuses publication when verified staging gains an extra asset', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        await mkdir(out, { recursive: true });
+        await writeFile(join(out, 'index.html'), '<h1>verified candidate output</h1>');
+      },
+      beforeVerifiedStagingPublication: async ({ stagedOutput }) => {
+        await writeFile(join(stagedOutput, 'assets/unverified-extra.bin'), 'not in the verified release');
+      },
+    })).rejects.toThrow();
+
+    await expect(access(out)).rejects.toThrow();
+    const [stagedOutput] = await stagedOutputs(fixture.spikeRoot);
+    expect(await readFile(join(stagedOutput!, 'assets/unverified-extra.bin'), 'utf8'))
+      .toBe('not in the verified release');
+  }, 30_000);
+
+  it('refuses publication when verified staging asset bytes change', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+    const assetPath = await firstVerifiedAssetPath(fixture.releasesRoot);
+
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        await mkdir(out, { recursive: true });
+        await writeFile(join(out, 'index.html'), '<h1>verified candidate output</h1>');
+      },
+      beforeVerifiedStagingPublication: async ({ stagedOutput }) => {
+        await writeFile(join(stagedOutput, assetPath), 'changed after verification');
+      },
+    })).rejects.toThrow();
+
+    await expect(access(out)).rejects.toThrow();
+    const [stagedOutput] = await stagedOutputs(fixture.spikeRoot);
+    expect(await readFile(join(stagedOutput!, assetPath), 'utf8')).toBe('changed after verification');
+  }, 30_000);
+
+  it('refuses publication when a verified staging asset disappears', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+    const assetPath = await firstVerifiedAssetPath(fixture.releasesRoot);
+
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        await mkdir(out, { recursive: true });
+        await writeFile(join(out, 'index.html'), '<h1>verified candidate output</h1>');
+      },
+      beforeVerifiedStagingPublication: async ({ stagedOutput }) => {
+        await rm(join(stagedOutput, assetPath));
+      },
+    })).rejects.toThrow();
+
+    await expect(access(out)).rejects.toThrow();
+    const [stagedOutput] = await stagedOutputs(fixture.spikeRoot);
+    await expect(access(join(stagedOutput!, assetPath))).rejects.toThrow();
+  }, 30_000);
+
+  it('refuses publication when a verified staging asset becomes a symlink', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+    const assetPath = await firstVerifiedAssetPath(fixture.releasesRoot);
+    const externalTarget = join(fixture.repositoryRoot, 'external-publication-target');
+    const sentinel = Buffer.from('external publication target must stay untouched');
+    await writeFile(externalTarget, sentinel);
+
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        await mkdir(out, { recursive: true });
+        await writeFile(join(out, 'index.html'), '<h1>verified candidate output</h1>');
+      },
+      beforeVerifiedStagingPublication: async ({ stagedOutput }) => {
+        const stagedAsset = join(stagedOutput, assetPath);
+        await rm(stagedAsset);
+        await symlink(externalTarget, stagedAsset, 'file');
+      },
+    })).rejects.toThrow();
+
+    await expect(access(out)).rejects.toThrow();
+    const [stagedOutput] = await stagedOutputs(fixture.spikeRoot);
+    expect((await lstat(join(stagedOutput!, assetPath))).isSymbolicLink()).toBe(true);
+    expect(await readFile(externalTarget)).toEqual(sentinel);
+  }, 30_000);
+
+  it('refuses publication if the private staging root loses its restrictive mode', async () => {
+    const fixture = await releasePair();
+    const out = join(fixture.spikeRoot, 'out');
+
+    await expect(buildStaticExport({
+      repositoryRoot: fixture.repositoryRoot,
+      spikeRoot: fixture.spikeRoot,
+      runNextBuild: async () => {
+        await mkdir(out, { recursive: true });
+        await writeFile(join(out, 'index.html'), '<h1>verified candidate output</h1>');
+      },
+      beforeVerifiedStagingPublication: async ({ stagedOutput }) => {
+        await chmod(dirname(stagedOutput), 0o755);
+      },
+    })).rejects.toThrow();
+
+    await expect(access(out)).rejects.toThrow();
+    const [stagedOutput] = await stagedOutputs(fixture.spikeRoot);
+    expect((await lstat(dirname(stagedOutput!))).mode & 0o777).toBe(0o755);
   }, 30_000);
 
   it('rejects an active pointer swap inside the prerender instead of accepting mismatched assets', async () => {
