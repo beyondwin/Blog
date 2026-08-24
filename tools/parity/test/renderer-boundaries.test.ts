@@ -1,9 +1,11 @@
 import { execFile } from 'node:child_process';
-import { access, cp, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { access, chmod, cp, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
+import { buildPublicRelease } from '../../../packages/content/src/release/build-release';
+import { writeReleaseFixture } from '../../../packages/content/test/helpers/release-fixture';
 
 const execFileAsync = promisify(execFile);
 const temporaryRoots: string[] = [];
@@ -143,7 +145,7 @@ describe('renderer evidence boundaries', () => {
         buildScript: 'legacy:build',
         outputRoot: 'dist',
         cleanRoots: ['dist', '.astro', 'node_modules/.astro'],
-        sourceClosureVersion: 1,
+        sourceClosureVersion: 2,
         sourceClosure: expect.any(Array),
       },
       next: {
@@ -152,7 +154,7 @@ describe('renderer evidence boundaries', () => {
         buildScript: 'build',
         outputRoot: 'spikes/site-next/out',
         cleanRoots: ['spikes/site-next/out', 'spikes/site-next/.next'],
-        sourceClosureVersion: 1,
+        sourceClosureVersion: 2,
         sourceClosure: expect.any(Array),
       },
       'react-router': {
@@ -165,7 +167,7 @@ describe('renderer evidence boundaries', () => {
           'spikes/site-react-router/node_modules/.vite',
           'spikes/site-react-router/.react-router',
         ],
-        sourceClosureVersion: 1,
+        sourceClosureVersion: 2,
         sourceClosure: expect.any(Array),
       },
     });
@@ -274,6 +276,210 @@ describe('renderer evidence boundaries', () => {
     const { assertRendererRepositoryState } = await import('../src/renderer-layouts');
 
     await expect(assertRendererRepositoryState(root, 'capture')).resolves.toMatch(/^[a-f0-9]{40}$/u);
+  });
+
+  it('rejects an ignored unverified public release before a candidate build can consume it', async () => {
+    const root = await createRoot();
+    await writeFile(join(root, '.gitignore'), '/build/public-releases/\n');
+    await execFileAsync('git', ['init'], { cwd: root });
+    await execFileAsync('git', ['add', '.gitignore'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'fixture'], { cwd: root });
+    await mkdir(join(root, 'build/public-releases'), { recursive: true });
+    await writeFile(join(root, 'build/public-releases/unbound-input.json'), '{"release":"unverified"}\n');
+    const { assertRendererRepositoryState } = await import('../src/renderer-layouts');
+    const assertCandidateState = assertRendererRepositoryState as unknown as (
+      repositoryRoot: string,
+      purpose: 'capture' | 'selection',
+      renderer: 'next',
+    ) => Promise<string>;
+
+    await expect(assertCandidateState(root, 'capture', 'next')).rejects.toThrow(
+      /public release|active release|verified release/iu,
+    );
+  });
+
+  it('binds both candidates to the same verified active immutable public release', async () => {
+    const root = await createRoot();
+    await writeReleaseFixture(root);
+    const built = await buildPublicRelease({ root });
+    const module = await import('../src/renderer-layouts');
+    expect(module).toHaveProperty('verifyRendererPublicReleaseInput');
+    const verify = (module as typeof module & {
+      verifyRendererPublicReleaseInput: (
+        repositoryRoot: string,
+        renderer: 'next' | 'react-router',
+      ) => Promise<Record<string, unknown>>;
+    }).verifyRendererPublicReleaseInput;
+
+    const next = await verify(root, 'next');
+    const reactRouter = await verify(root, 'react-router');
+
+    expect(next).toEqual(reactRouter);
+    expect(next).toMatchObject({
+      version: 1,
+      verificationPolicyVersion: 1,
+      root: 'build/public-releases',
+      releaseId: built.releaseId,
+      rendererVersion: built.manifest.rendererVersion,
+      activePointer: { releaseId: built.releaseId, path: built.releaseId },
+      manifestHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u),
+      artifactHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u),
+      activePointerHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u),
+    });
+  });
+
+  it('rejects a candidate release after an ignored immutable artifact is modified', async () => {
+    const root = await createRoot();
+    await writeReleaseFixture(root);
+    const built = await buildPublicRelease({ root });
+    const module = await import('../src/renderer-layouts');
+    expect(module).toHaveProperty('verifyRendererPublicReleaseInput');
+    const verify = (module as typeof module & {
+      verifyRendererPublicReleaseInput: (
+        repositoryRoot: string,
+        renderer: 'next',
+      ) => Promise<Record<string, unknown>>;
+    }).verifyRendererPublicReleaseInput;
+    await writeFile(join(built.releasePath, 'manifest.json'), '{"modified":true}\n');
+
+    await expect(verify(root, 'next')).rejects.toThrow(/release|manifest|verify/iu);
+  });
+
+  it('rejects a candidate build that replaces its verified active release input', async () => {
+    const root = await createRoot();
+    await writeReleaseFixture(root, { title: 'First release' });
+    await buildPublicRelease({ root });
+    await writeReleaseFixture(root, { title: 'Second release' });
+    const second = await buildPublicRelease({ root, activate: false });
+    const rendererRoot = join(root, 'spikes/site-next');
+    await mkdir(rendererRoot, { recursive: true });
+    await writeFile(join(rendererRoot, 'package.json'), JSON.stringify({
+      private: true,
+      scripts: { build: 'node build.mjs' },
+    }));
+    await writeFile(join(rendererRoot, 'build.mjs'), `
+      import { mkdirSync, writeFileSync } from 'node:fs';
+      import { join } from 'node:path';
+      const repositoryRoot = ${JSON.stringify(root)};
+      writeFileSync(join(repositoryRoot, 'build/public-releases/active.json'), ${JSON.stringify(`${JSON.stringify({
+        releaseId: second.releaseId,
+        path: second.releaseId,
+      })}\n`)});
+      mkdirSync(join(process.cwd(), 'out'), { recursive: true });
+      writeFileSync(join(process.cwd(), 'out/index.html'), '<h1>candidate</h1>');
+    `);
+    const { runBuildSamples } = await import('../src/capture-renderer');
+    const { verifyRendererPublicReleaseInput } = await import('../src/renderer-layouts');
+    const expectedPublicRelease = await verifyRendererPublicReleaseInput(root, 'next');
+
+    await expect(runBuildSamples({
+      repositoryRoot: root,
+      rendererRoot,
+      outputDirectory: join(rendererRoot, 'out'),
+      cleanDirectories: [join(rendererRoot, 'out'), join(rendererRoot, '.next')],
+      renderer: 'next',
+      buildScript: 'build',
+      buildSamples: 3,
+      expectedPublicRelease,
+    } as never)).rejects.toThrow(/public release.*changed|release evidence|active release/iu);
+  });
+
+  it('changes the source closure when a regular file becomes a symlink to identical blob bytes', async () => {
+    const root = await createRoot();
+    await mkdir(join(root, 'src'));
+    await writeFile(join(root, 'src/entry'), 'target');
+    await execFileAsync('git', ['init'], { cwd: root });
+    await execFileAsync('git', ['add', '.'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'regular'], { cwd: root });
+    const regularCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+    const { rendererSourceClosureHashAtCommit } = await import('../src/renderer-layouts');
+    const regularHash = await rendererSourceClosureHashAtCommit(root, 'astro', regularCommit);
+
+    await rm(join(root, 'src/entry'));
+    await symlink('target', join(root, 'src/entry'));
+    await execFileAsync('git', ['add', 'src/entry'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'symlink'], { cwd: root });
+    const symlinkCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+
+    expect(await execFileAsync('git', ['rev-parse', `${regularCommit}:src/entry`], { cwd: root })
+      .then(({ stdout }) => stdout.trim())).toBe(
+      await execFileAsync('git', ['rev-parse', `${symlinkCommit}:src/entry`], { cwd: root })
+        .then(({ stdout }) => stdout.trim()),
+    );
+    expect(await rendererSourceClosureHashAtCommit(root, 'astro', symlinkCommit)).not.toBe(regularHash);
+  });
+
+  it('changes the source closure when only the executable bit changes', async () => {
+    const root = await createRoot();
+    await mkdir(join(root, 'src'));
+    await writeFile(join(root, 'src/script.sh'), '#!/bin/sh\nexit 0\n');
+    await chmod(join(root, 'src/script.sh'), 0o644);
+    await execFileAsync('git', ['init'], { cwd: root });
+    await execFileAsync('git', ['add', '.'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'non-executable'], { cwd: root });
+    const regularCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+    const { rendererSourceClosureHashAtCommit } = await import('../src/renderer-layouts');
+    const regularHash = await rendererSourceClosureHashAtCommit(root, 'astro', regularCommit);
+
+    await chmod(join(root, 'src/script.sh'), 0o755);
+    await execFileAsync('git', ['add', 'src/script.sh'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'executable'], { cwd: root });
+    const executableCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+
+    expect(await rendererSourceClosureHashAtCommit(root, 'astro', executableCommit)).not.toBe(regularHash);
+  });
+
+  it('changes the source closure when a regular path becomes a tree', async () => {
+    const root = await createRoot();
+    await mkdir(join(root, 'src'));
+    await writeFile(join(root, 'src/entry'), 'regular\n');
+    await execFileAsync('git', ['init'], { cwd: root });
+    await execFileAsync('git', ['add', '.'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'regular path'], { cwd: root });
+    const regularCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+    const { rendererSourceClosureHashAtCommit } = await import('../src/renderer-layouts');
+    const regularHash = await rendererSourceClosureHashAtCommit(root, 'astro', regularCommit);
+
+    await rm(join(root, 'src/entry'));
+    await mkdir(join(root, 'src/entry'));
+    await writeFile(join(root, 'src/entry/child'), 'tree child\n');
+    await execFileAsync('git', ['add', '-A', 'src/entry'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'tree path'], { cwd: root });
+    const treeCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+
+    expect(await rendererSourceClosureHashAtCommit(root, 'astro', treeCommit)).not.toBe(regularHash);
+  });
+
+  it('does not couple one candidate closure to a sibling candidate tree', async () => {
+    const root = await createRoot();
+    await mkdir(join(root, 'spikes/site-next'), { recursive: true });
+    await mkdir(join(root, 'spikes/site-react-router'), { recursive: true });
+    await writeFile(join(root, 'spikes/site-next/source.ts'), 'export const next = 1;\n');
+    await writeFile(join(root, 'spikes/site-react-router/source.ts'), 'export const router = 1;\n');
+    await execFileAsync('git', ['init'], { cwd: root });
+    await execFileAsync('git', ['add', '.'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'both candidates'], { cwd: root });
+    const initialCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+    const { rendererSourceClosureHashAtCommit } = await import('../src/renderer-layouts');
+    const nextHash = await rendererSourceClosureHashAtCommit(root, 'next', initialCommit);
+    const reactRouterHash = await rendererSourceClosureHashAtCommit(root, 'react-router', initialCommit);
+
+    await writeFile(join(root, 'spikes/site-next/only-next.ts'), 'export const onlyNext = true;\n');
+    await execFileAsync('git', ['add', '.'], { cwd: root });
+    await execFileAsync('git', ['-c', 'user.name=Renderer Test', '-c', 'user.email=renderer@example.invalid',
+      'commit', '-m', 'next only'], { cwd: root });
+    const nextOnlyCommit = (await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: root })).stdout.trim();
+
+    expect(await rendererSourceClosureHashAtCommit(root, 'next', nextOnlyCommit)).not.toBe(nextHash);
+    expect(await rendererSourceClosureHashAtCommit(root, 'react-router', nextOnlyCommit)).toBe(reactRouterHash);
   });
 
   it('does not expose ambient build environment variables to renderer builds', async () => {

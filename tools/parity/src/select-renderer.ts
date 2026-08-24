@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildRendererSelectionReport, readCaptureEvidence } from './compare-contracts.ts';
+import type { RendererPublicReleaseEvidence } from './renderer-layouts.ts';
 
 export interface QualityMetric {
   median: number;
@@ -29,8 +30,9 @@ export interface RendererSelectionCandidate {
       outputRoot: string;
       captureToolHash: string;
       buildEnvironmentVersion: 1;
-      sourceClosureVersion: 1;
+      sourceClosureVersion: 2;
       sourceClosureHash: string;
+      publicRelease: RendererPublicReleaseEvidence;
     };
     artifactHash: string;
     browser: {
@@ -157,11 +159,21 @@ export async function selectRendererFromCaptures(
   paths: { baseline: string; next: string; reactRouter: string },
   repositoryRoot = process.cwd(),
 ): Promise<RendererSelection> {
-  const [baseline, next, reactRouter] = await Promise.all([
-    readCaptureEvidence(paths.baseline, 'astro', { repositoryRoot, requireCommittedCleanEvidence: true }),
-    readCaptureEvidence(paths.next, 'next', { repositoryRoot, requireCommittedCleanEvidence: true }),
-    readCaptureEvidence(paths.reactRouter, 'react-router', { repositoryRoot, requireCommittedCleanEvidence: true }),
-  ]);
+  const baseline = await readCaptureEvidence(
+    paths.baseline,
+    'astro',
+    { repositoryRoot, requireCommittedCleanEvidence: true },
+  );
+  const next = await readCaptureEvidence(
+    paths.next,
+    'next',
+    { repositoryRoot, requireCommittedCleanEvidence: true },
+  );
+  const reactRouter = await readCaptureEvidence(
+    paths.reactRouter,
+    'react-router',
+    { repositoryRoot, requireCommittedCleanEvidence: true },
+  );
   const report = buildRendererSelectionReport(baseline, next, reactRouter);
   if (report.synthetic) throw new Error('Synthetic renderer captures cannot select a renderer');
   return selectRenderer(report);

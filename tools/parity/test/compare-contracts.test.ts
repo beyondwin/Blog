@@ -62,6 +62,18 @@ function measurement(viewport: 'desktop' | 'mobile') {
 }
 
 function report(renderer: RendererName): RendererCaptureReport {
+  const releaseId = '1'.repeat(64);
+  const publicRelease = renderer === 'astro' ? null : {
+    version: 1 as const,
+    verificationPolicyVersion: 1 as const,
+    root: 'build/public-releases' as const,
+    releaseId,
+    rendererVersion: 'mdx-3.1.1-sharp-0.35.3-v2',
+    activePointer: { releaseId, path: releaseId },
+    activePointerHash: `sha256:${'2'.repeat(64)}`,
+    manifestHash: `sha256:${'3'.repeat(64)}`,
+    artifactHash: `sha256:${'4'.repeat(64)}`,
+  };
   return {
     version: 2,
     renderer,
@@ -75,8 +87,9 @@ function report(renderer: RendererName): RendererCaptureReport {
       outputRoot: 'dist',
       captureToolHash: `sha256:${'c'.repeat(64)}`,
       buildEnvironmentVersion: 1,
-      sourceClosureVersion: 1,
+      sourceClosureVersion: 2,
       sourceClosureHash: `sha256:${'d'.repeat(64)}`,
+      publicRelease,
     },
     measuredAt: '2026-08-24T00:00:00.000Z',
     captureProtocol: {
@@ -263,6 +276,34 @@ describe('renderer contract comparison', () => {
     expect(() => buildRendererSelectionReport(baseline, next, reactRouter)).toThrow(/duplicate artifact/iu);
   });
 
+  it('refuses candidates captured from different verified public releases', () => {
+    const baseline = report('astro');
+    const next = report('next');
+    const reactRouter = report('react-router');
+    const releaseEvidence = {
+      version: 1,
+      verificationPolicyVersion: 1,
+      root: 'build/public-releases',
+      releaseId: '1'.repeat(64),
+      rendererVersion: 'mdx-3.1.1-sharp-0.35.3-v2',
+      activePointer: { releaseId: '1'.repeat(64), path: '1'.repeat(64) },
+      activePointerHash: `sha256:${'2'.repeat(64)}`,
+      manifestHash: `sha256:${'3'.repeat(64)}`,
+      artifactHash: `sha256:${'4'.repeat(64)}`,
+    };
+    (baseline.provenance as unknown as { publicRelease: null }).publicRelease = null;
+    (next.provenance as unknown as { publicRelease: typeof releaseEvidence }).publicRelease = releaseEvidence;
+    (reactRouter.provenance as unknown as { publicRelease: typeof releaseEvidence }).publicRelease = {
+      ...releaseEvidence,
+      releaseId: '5'.repeat(64),
+      activePointer: { releaseId: '5'.repeat(64), path: '5'.repeat(64) },
+    };
+
+    expect(() => buildRendererSelectionReport(baseline, next, reactRouter)).toThrow(
+      /same verified public release|public release.*differ/iu,
+    );
+  });
+
   it('strictly rejects missing cold samples and final artifacts not produced by the clean builds', () => {
     const missingSample = strictSyntheticReport('next');
     missingSample.routes[0].measurements[0].samples.pop();
@@ -271,6 +312,20 @@ describe('renderer contract comparison', () => {
 
     expect(() => parseRendererCapture(missingSample, { allowSynthetic: true })).toThrow(/five cold samples/iu);
     expect(() => parseRendererCapture(mismatchedArtifact, { allowSynthetic: true })).toThrow(/artifact/iu);
+  });
+
+  it('strictly rejects closure-v1 evidence and candidates without verified public release evidence', () => {
+    const legacyClosure = strictSyntheticReport('astro');
+    const unboundCandidate = strictSyntheticReport('next');
+    (legacyClosure.provenance as unknown as { sourceClosureVersion: number }).sourceClosureVersion = 1;
+    (unboundCandidate.provenance as unknown as { publicRelease: null }).publicRelease = null;
+
+    expect(() => parseRendererCapture(legacyClosure, { allowSynthetic: true })).toThrow(
+      /sourceClosureVersion/iu,
+    );
+    expect(() => parseRendererCapture(unboundCandidate, { allowSynthetic: true })).toThrow(
+      /publicRelease/iu,
+    );
   });
 
   it('names a title mismatch by renderer, route, viewport, metric, expected, and actual', () => {

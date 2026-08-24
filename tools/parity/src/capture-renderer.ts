@@ -31,6 +31,8 @@ import {
   RENDERER_LAYOUTS,
   assertRendererRepositoryState,
   rendererSourceClosureHashAtCommit,
+  verifyRendererPublicReleaseInput,
+  type RendererPublicReleaseEvidence,
 } from './renderer-layouts.ts';
 
 export { RENDERER_LAYOUTS } from './renderer-layouts.ts';
@@ -70,6 +72,7 @@ interface BuildSamplingOptions {
   renderer: RendererName;
   buildScript: string;
   buildSamples: number;
+  expectedPublicRelease?: RendererPublicReleaseEvidence | null;
 }
 
 function normalizeText(value: string): string {
@@ -281,9 +284,18 @@ export async function runBuildSamples(options: BuildSamplingOptions) {
   }
   containedRelativePath(repositoryRoot, rendererRoot, 'Renderer root', true);
   const cleanedPaths = [...layout.cleanRoots];
+  const expectedPublicRelease = options.expectedPublicRelease
+    ?? await verifyRendererPublicReleaseInput(repositoryRoot, options.renderer);
+  const assertPublicReleaseUnchanged = async (): Promise<void> => {
+    const current = await verifyRendererPublicReleaseInput(repositoryRoot, options.renderer);
+    if (JSON.stringify(current) !== JSON.stringify(expectedPublicRelease)) {
+      throw new Error(`Renderer ${options.renderer} verified public release evidence changed during capture`);
+    }
+  };
 
   const samples: Array<{ durationMs: number; artifactHash: string; cleanedPaths: string[] }> = [];
   for (let index = 0; index < options.buildSamples; index += 1) {
+    await assertPublicReleaseUnchanged();
     for (const directory of cleanDirectories) {
       await removeCanonicalRendererPath(repositoryRoot, directory);
     }
@@ -301,6 +313,7 @@ export async function runBuildSamples(options: BuildSamplingOptions) {
       },
       maxBuffer: 20 * 1024 * 1024,
     });
+    await assertPublicReleaseUnchanged();
     samples.push({
       durationMs: Math.round(performance.now() - startedAt),
       artifactHash: await hashOutputArtifact(options.outputDirectory),
@@ -396,7 +409,12 @@ async function captureProvenance(options: CaptureRendererOptions) {
       `Renderer evidence mismatch for ${options.renderer}: root=${rendererRoot} manifest=${rendererManifest} build=${options.buildScript} output=${outputRoot}`,
     );
   }
-  const repositoryCommit = await assertRendererRepositoryState(options.repositoryRoot, 'capture');
+  const repositoryCommit = await assertRendererRepositoryState(
+    options.repositoryRoot,
+    'capture',
+    options.renderer,
+  );
+  const publicRelease = await verifyRendererPublicReleaseInput(options.repositoryRoot, options.renderer);
   await execFileAsync('git', ['ls-files', '--error-unmatch', '--', rendererManifest], {
     cwd: options.repositoryRoot,
   }).catch(() => {
@@ -436,12 +454,16 @@ async function captureProvenance(options: CaptureRendererOptions) {
       options.renderer,
       repositoryCommit,
     ),
+    publicRelease,
   } as const;
 }
 
 export async function captureRenderer(options: CaptureRendererOptions): Promise<RendererCaptureReport> {
   const provenance = await captureProvenance(options);
-  const build = await runBuildSamples(options);
+  const build = await runBuildSamples({
+    ...options,
+    expectedPublicRelease: provenance.publicRelease,
+  });
   const staticRoutes = await captureStaticContracts(options.outputDirectory);
   const artifactHash = await hashOutputArtifact(options.outputDirectory);
   const artifactPrivateBoundaryHits = await scanArtifactPrivateBoundary(options.outputDirectory);
@@ -492,9 +514,17 @@ export async function captureRenderer(options: CaptureRendererOptions): Promise<
       build,
       routes,
     };
-    const finalCommit = await assertRendererRepositoryState(options.repositoryRoot, 'capture');
+    const finalCommit = await assertRendererRepositoryState(
+      options.repositoryRoot,
+      'capture',
+      options.renderer,
+    );
     if (finalCommit !== provenance.repositoryCommit) {
       throw new Error('Renderer source commit changed during capture');
+    }
+    if (JSON.stringify(await verifyRendererPublicReleaseInput(options.repositoryRoot, options.renderer))
+      !== JSON.stringify(provenance.publicRelease)) {
+      throw new Error(`Renderer ${options.renderer} verified public release input changed during capture`);
     }
     return report;
   } finally {

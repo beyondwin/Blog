@@ -15,6 +15,7 @@ import {
 } from '../media/build-responsive-media';
 
 const releaseIdSchema = z.string().regex(/^[a-f0-9]{64}$/);
+export const PUBLIC_RELEASE_VERIFICATION_POLICY_VERSION = 1 as const;
 const canonicalAssetHrefSchema = z.string().regex(
   /^\/assets\/content\/(?:analysis|articles|ideas|reviews|travel)\/[a-z0-9][a-z0-9-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)+\.(?:jpg|jpeg|png|webp|avif)$/,
 );
@@ -103,12 +104,23 @@ export interface ActivePublicRelease {
   releasePath: string;
   manifest: PublicReleaseManifest;
   boundaryHits: PublicBoundaryHit[];
+  verificationPolicyVersion: typeof PUBLIC_RELEASE_VERIFICATION_POLICY_VERSION;
+  manifestHash: string;
+  artifactHash: string;
+}
+
+export interface VerifiedActivePublicRelease extends ActivePublicRelease {
+  activePointerHash: string;
 }
 
 export interface PublicBoundaryHit {
   path: string;
   kind: 'forbidden-key' | 'private-locator' | 'serialized-private-field' | 'embedding-payload';
   marker: string;
+}
+
+function sha256(bytes: Buffer): string {
+  return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
 export async function resolveOwnedReleasesRoot(releasesRoot: string): Promise<string> {
@@ -546,6 +558,39 @@ async function releaseFiles(
   }
 }
 
+async function hashReleaseArtifact(
+  releasePath: string,
+  files: ReadonlySet<string>,
+  guards: readonly DirectoryGuard[],
+): Promise<string> {
+  const hash = createHash('sha256');
+  hash.update('public-release-artifact-v1\0');
+  for (const artifactPath of [...files].sort((left, right) => (
+    Buffer.compare(Buffer.from(left), Buffer.from(right))
+  ))) {
+    const filePath = resolve(releasePath, artifactPath);
+    if (!filePath.startsWith(`${releasePath}${sep}`)) {
+      throw new Error(`${artifactPath}: release artifact hash path escapes containment`);
+    }
+    const parentGuard = await openDirectoryGuard(
+      dirname(filePath),
+      `${artifactPath} artifact hash parent directory`,
+    );
+    try {
+      const realParent = await realpath(dirname(filePath));
+      if (realParent !== releasePath && !realParent.startsWith(`${releasePath}${sep}`)) {
+        throw new Error(`${artifactPath}: artifact hash parent escapes release containment`);
+      }
+      const bytes = await readOwnedRegularFile(filePath, artifactPath, [...guards, parentGuard]);
+      hash.update(`${Buffer.byteLength(artifactPath)}:${artifactPath}:${bytes.byteLength}:`);
+      hash.update(bytes);
+    } finally {
+      await parentGuard.handle.close();
+    }
+  }
+  return `sha256:${hash.digest('hex')}`;
+}
+
 export async function verifyReleaseDirectory(
   releasesRoot: string,
   pointer: ActiveReleasePointer,
@@ -567,9 +612,12 @@ export async function verifyReleaseDirectory(
       throw new Error('active release real path escapes public-releases containment');
     }
 
-    const manifest = parseReleaseManifest(JSON.parse(
-      (await readOwnedRegularFile(join(realReleasePath, 'manifest.json'), 'release manifest', guards)).toString('utf8'),
-    ));
+    const manifestBytes = await readOwnedRegularFile(
+      join(realReleasePath, 'manifest.json'),
+      'release manifest',
+      guards,
+    );
+    const manifest = parseReleaseManifest(JSON.parse(manifestBytes.toString('utf8')));
     const boundaryHits = findPublicBoundaryHits(manifest);
     if (manifest.releaseId !== parsedPointer.releaseId) {
       throw new Error('release ID mismatch between active pointer and manifest');
@@ -624,28 +672,36 @@ export async function verifyReleaseDirectory(
         responsiveRoleForAsset(manifest, assetKey, asset),
       );
     }
+    const artifactHash = await hashReleaseArtifact(realReleasePath, actualFiles, guards);
     await assertDirectoryGuards(guards);
-    return { pointer: parsedPointer, releasePath, manifest, boundaryHits };
+    return {
+      pointer: parsedPointer,
+      releasePath,
+      manifest,
+      boundaryHits,
+      verificationPolicyVersion: PUBLIC_RELEASE_VERIFICATION_POLICY_VERSION,
+      manifestHash: sha256(manifestBytes),
+      artifactHash,
+    };
   } finally {
     if (releaseGuard) await releaseGuard.handle.close();
     await rootGuard.handle.close();
   }
 }
 
-export async function readActiveRelease(releasesRoot: string): Promise<ActivePublicRelease> {
+export async function readActiveRelease(releasesRoot: string): Promise<VerifiedActivePublicRelease> {
   const root = await resolveOwnedReleasesRoot(releasesRoot);
   const rootGuard = await openDirectoryGuard(root, 'public-releases root');
   try {
-    const pointer = activeReleasePointerSchema.parse(JSON.parse(
-      (await readOwnedRegularFile(
-        join(root, 'active.json'),
-        'active release pointer',
-        [rootGuard],
-      )).toString('utf8'),
-    ));
+    const pointerBytes = await readOwnedRegularFile(
+      join(root, 'active.json'),
+      'active release pointer',
+      [rootGuard],
+    );
+    const pointer = activeReleasePointerSchema.parse(JSON.parse(pointerBytes.toString('utf8')));
     const active = await verifyReleaseDirectory(root, pointer);
     await assertDirectoryGuard(rootGuard);
-    return active;
+    return { ...active, activePointerHash: sha256(pointerBytes) };
   } finally {
     await rootGuard.handle.close();
   }

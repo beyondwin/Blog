@@ -11,9 +11,14 @@ import type {
 } from './select-renderer.ts';
 import {
   BUILD_ENVIRONMENT_VERSION,
+  PUBLIC_RELEASE_VERIFICATION_POLICY_VERSION,
+  PUBLIC_RELEASE_PROVENANCE_VERSION,
+  PUBLIC_RELEASE_ROOT,
   RENDERER_LAYOUTS,
   assertRendererRepositoryState,
   rendererSourceClosureHashAtCommit,
+  verifyRendererPublicReleaseInput,
+  type RendererPublicReleaseEvidence,
 } from './renderer-layouts.ts';
 
 const execFileAsync = promisify(execFile);
@@ -130,8 +135,9 @@ export interface RendererCaptureReport {
     outputRoot: string;
     captureToolHash: string;
     buildEnvironmentVersion: 1;
-    sourceClosureVersion: 1;
+    sourceClosureVersion: 2;
     sourceClosureHash: string;
+    publicRelease: RendererPublicReleaseEvidence | null;
   };
   measuredAt: string;
   captureProtocol: {
@@ -608,6 +614,8 @@ function selectionCandidate(
   if (report.renderer !== 'next' && report.renderer !== 'react-router') {
     throw new Error(`Selection candidate must be next or react-router, got ${report.renderer}`);
   }
+  const publicRelease = report.provenance.publicRelease;
+  if (!publicRelease) throw new Error('Selection candidate requires verified public release evidence');
   return {
     renderer: report.renderer,
     mandatoryFailures,
@@ -633,7 +641,7 @@ function selectionCandidate(
       ].join(':'));
     })),
     captureEvidence: {
-      provenance: report.provenance,
+      provenance: { ...report.provenance, publicRelease },
       artifactHash: report.artifactHash,
       browser: report.browser,
       captureProtocol: report.captureProtocol,
@@ -660,6 +668,12 @@ export function buildRendererSelectionReport(
   const synthetic = baseline.provenance.synthetic;
   if (!synthetic && next.artifactHash === reactRouter.artifactHash) {
     throw new Error(`Duplicate artifact presented as both candidates: ${next.artifactHash}`);
+  }
+  if (!next.provenance.publicRelease || !reactRouter.provenance.publicRelease) {
+    throw new Error('Renderer candidates require verified public release evidence');
+  }
+  if (JSON.stringify(next.provenance.publicRelease) !== JSON.stringify(reactRouter.provenance.publicRelease)) {
+    throw new Error('Renderer candidates must use the same verified public release evidence');
   }
   const nextComparison = compareRendererContracts(baseline, next);
   const reactRouterComparison = compareRendererContracts(baseline, reactRouter);
@@ -831,7 +845,7 @@ export function parseRendererCapture(
   const provenance = strictObject(root.provenance, 'capture.provenance', [
     'synthetic', 'repositoryCommit', 'rendererRoot', 'rendererManifest', 'rendererManifestHash',
     'buildCommand', 'outputRoot', 'captureToolHash', 'buildEnvironmentVersion',
-    'sourceClosureVersion', 'sourceClosureHash',
+    'sourceClosureVersion', 'sourceClosureHash', 'publicRelease',
   ]);
   const synthetic = strictBoolean(provenance.synthetic, 'capture.provenance.synthetic');
   if (synthetic && !options.allowSynthetic) throw new Error('capture.provenance synthetic reports are not real evidence');
@@ -847,6 +861,40 @@ export function parseRendererCapture(
   }
   if (provenance.sourceClosureVersion !== RENDERER_LAYOUTS[renderer as RendererName].sourceClosureVersion) {
     throw new Error('capture.provenance.sourceClosureVersion is invalid');
+  }
+  if (renderer === 'astro') {
+    if (provenance.publicRelease !== null) {
+      throw new Error('capture.provenance.publicRelease must be null for Astro source capture');
+    }
+  } else {
+    const publicRelease = strictObject(provenance.publicRelease, 'capture.provenance.publicRelease', [
+      'version', 'verificationPolicyVersion', 'root', 'releaseId', 'rendererVersion',
+      'activePointer', 'activePointerHash', 'manifestHash', 'artifactHash',
+    ]);
+    if (publicRelease.version !== PUBLIC_RELEASE_PROVENANCE_VERSION) {
+      throw new Error('capture.provenance.publicRelease.version is invalid');
+    }
+    if (publicRelease.verificationPolicyVersion !== PUBLIC_RELEASE_VERIFICATION_POLICY_VERSION) {
+      throw new Error('capture.provenance.publicRelease.verificationPolicyVersion is invalid');
+    }
+    if (publicRelease.root !== PUBLIC_RELEASE_ROOT) {
+      throw new Error('capture.provenance.publicRelease.root is invalid');
+    }
+    strictString(publicRelease.releaseId, 'capture.provenance.publicRelease.releaseId', /^[a-f0-9]{64}$/u);
+    strictString(publicRelease.rendererVersion, 'capture.provenance.publicRelease.rendererVersion');
+    for (const key of ['activePointerHash', 'manifestHash', 'artifactHash']) {
+      strictString(publicRelease[key], `capture.provenance.publicRelease.${key}`, /^sha256:[a-f0-9]{64}$/u);
+    }
+    const activePointer = strictObject(
+      publicRelease.activePointer,
+      'capture.provenance.publicRelease.activePointer',
+      ['releaseId', 'path'],
+    );
+    strictString(activePointer.releaseId, 'capture.provenance.publicRelease.activePointer.releaseId', /^[a-f0-9]{64}$/u);
+    strictString(activePointer.path, 'capture.provenance.publicRelease.activePointer.path', /^[a-f0-9]{64}$/u);
+    if (activePointer.releaseId !== publicRelease.releaseId || activePointer.path !== publicRelease.releaseId) {
+      throw new Error('capture.provenance.publicRelease active pointer does not match releaseId');
+    }
   }
   const protocol = strictObject(root.captureProtocol, 'capture.captureProtocol', [
     'decisionRoutes', 'viewports', 'warmups', 'samplesPerRouteViewport',
@@ -1022,7 +1070,7 @@ export async function readCaptureEvidence(
   }
   const report = parseRendererCapture(JSON.parse(await readFile(capturePath, 'utf8')), { expectedRenderer });
   if (options.requireCommittedCleanEvidence) {
-    await assertRendererRepositoryState(repositoryRoot, 'selection');
+    await assertRendererRepositoryState(repositoryRoot, 'selection', expectedRenderer);
     await execFileAsync('git', ['ls-files', '--error-unmatch', '--', captureRelative], {
       cwd: repositoryRoot,
     }).catch(() => {
@@ -1122,6 +1170,10 @@ export async function readCaptureEvidence(
   }
   if (await artifactHash(output) !== report.artifactHash) {
     throw new Error(`${expectedRenderer} output artifact hash no longer matches capture evidence`);
+  }
+  const currentPublicRelease = await verifyRendererPublicReleaseInput(repositoryRoot, expectedRenderer);
+  if (JSON.stringify(currentPublicRelease) !== JSON.stringify(report.provenance.publicRelease)) {
+    throw new Error(`${expectedRenderer} verified public release input changed after capture; evidence is stale`);
   }
   await execFileAsync('git', ['cat-file', '-e', `${report.provenance.repositoryCommit}^{commit}`], {
     cwd: repositoryRoot,

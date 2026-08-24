@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -10,6 +10,12 @@ import { hashOutputArtifact } from '../src/capture-renderer';
 import { RENDERER_LAYOUTS, rendererSourceClosureHashAtCommit } from '../src/renderer-layouts';
 import { selectRendererFromCaptures } from '../src/select-renderer';
 import type { RendererSelectionReport } from '../src/select-renderer';
+import {
+  activateRelease,
+  buildPublicRelease,
+  prepareActiveRelease,
+} from '../../../packages/content/src/release/build-release';
+import { writeReleaseFixture } from '../../../packages/content/test/helpers/release-fixture';
 
 const execFileAsync = promisify(execFile);
 const temporaryRoots: string[] = [];
@@ -131,6 +137,7 @@ describe('renderer harness CLIs', () => {
     }
     await mkdir(join(root, 'src'), { recursive: true });
     await writeFile(join(root, 'src/page.astro'), '<h1>captured Astro source</h1>');
+    await writeReleaseFixture(root);
     await writeFile(join(root, 'astro.config.mjs'), 'export default {};\n');
     await writeFile(join(root, 'package-lock.json'), '{}\n');
     await mkdir(join(root, 'packages/content/src'), { recursive: true });
@@ -143,8 +150,10 @@ describe('renderer harness CLIs', () => {
       '/spikes/site-react-router/build/',
       '/spikes/site-react-router/node_modules/.vite/',
       '/spikes/site-react-router/.react-router/',
+      '/build/public-releases/',
       '',
     ].join('\n'));
+    const initialRelease = await buildPublicRelease({ root });
     await execFileAsync('git', ['init'], { cwd: root });
     const sourceCommit = await gitCommit(root, 'source');
     const captureToolHash = await harnessHash(root);
@@ -180,6 +189,11 @@ describe('renderer harness CLIs', () => {
         buildEnvironmentVersion: 1,
         sourceClosureVersion: layout.sourceClosureVersion,
         sourceClosureHash: await rendererSourceClosureHashAtCommit(root, renderer, sourceCommit),
+        publicRelease: renderer === 'astro'
+          ? null
+          : await import('../src/renderer-layouts').then(({ verifyRendererPublicReleaseInput }) => (
+            verifyRendererPublicReleaseInput(root, renderer)
+          )),
       };
       report.build.command = `npm run ${layout.buildScript}`;
       report.build.workingDirectory = layout.rendererRoot;
@@ -194,6 +208,26 @@ describe('renderer harness CLIs', () => {
     await gitCommit(root, 'evidence');
 
     await expect(selectRendererFromCaptures(paths, root)).resolves.toMatchObject({ blocked: true });
+
+    const replacementSource = await createRoot();
+    await writeReleaseFixture(replacementSource, { title: 'Replacement release' });
+    await buildPublicRelease({
+      root: replacementSource,
+      releasesRoot: join(root, 'build/public-releases'),
+    });
+    await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(
+      /verified public release.*changed|public release.*stale/iu,
+    );
+    await activateRelease(await prepareActiveRelease(join(root, 'build/public-releases'), {
+      releaseId: initialRelease.releaseId,
+      path: initialRelease.releaseId,
+    }));
+
+    await chmod(join(root, 'src/page.astro'), 0o755);
+    await gitCommit(root, 'change Astro source mode');
+    await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(/source closure|stale.*source/iu);
+    await chmod(join(root, 'src/page.astro'), 0o644);
+    await gitCommit(root, 'restore Astro source mode');
 
     for (const [relativePath, changed] of [
       ['src/page.astro', '<h1>changed after capture</h1>'],
