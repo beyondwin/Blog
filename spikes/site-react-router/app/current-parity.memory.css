@@ -1,0 +1,7 @@
+.memory-thought { max-width: 42em; }
+.memory-thought__en { margin: -.35em 0 1.4em; color: var(--soft); line-height: 1.65; }
+.memory-thought__sources, .memory-thought__companions { margin-top: 2.4em; }
+.memory-thought__sources h2, .memory-thought__companions h2 { margin: 0 0 .6em; color: var(--soft); font-size: .82rem; font-weight: 500; }
+.memory-thought ul { margin: 0; padding: 0; list-style: none; }
+.memory-thought li + li { margin-top: .55em; }
+.memory-thought__companions a { color: color-mix(in oklch,var(--proof) 70%,var(--ink)); font-weight: 600; line-height: 1.5; }

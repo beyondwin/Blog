@@ -1,8 +1,15 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import type { LinksFunction } from 'react-router';
-import { PageFrame, ResponsivePicture } from '../root';
+import { type CriticalCssHandle, PageFrame, ResponsivePicture } from '../root';
 import { loadVerifiedRelease } from '../release.server';
+
+const [currentParityHomeAccessibilityCss, currentParityHomeCss] = import.meta.env.SSR
+  ? await Promise.all([
+      import('../current-parity.home-accessibility.css?inline').then((module) => module.default),
+      import('../current-parity.home.css?inline').then((module) => module.default),
+    ])
+  : ['', ''];
 
 const ARTICLE_ID = 'why-i-read-in-the-ai-era';
 const REVIEW_ID = 'black-swan';
@@ -12,6 +19,11 @@ const LEAD_AVIF = '/assets/content/articles/why-i-read-in-the-ai-era/reading-des
 type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
+
+export const handle: CriticalCssHandle = {
+  currentParityPreludeCss: currentParityHomeAccessibilityCss,
+  currentParityCss: currentParityHomeCss,
+};
 
 export interface HomeData {
   article: Pick<ArticleRecord, 'createdAt' | 'href' | 'title'>;

@@ -1,9 +1,27 @@
 import type { PublicRecord } from '@beyondwin/contracts';
-import { DocumentMetadata, metadataForRecord, PageFrame } from '../root';
+import { type CriticalCssHandle, DocumentMetadata, metadataForRecord, PageFrame } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
+
+const [
+  currentParityDetailCss,
+  currentParityArticleCss,
+  currentParityDetailMobileCss,
+  currentParityArticleMobileCss,
+] = import.meta.env.SSR
+  ? await Promise.all([
+      import('../current-parity.detail.css?inline').then((module) => module.default),
+      import('../current-parity.article.css?inline').then((module) => module.default),
+      import('../current-parity.detail-mobile.css?inline').then((module) => module.default),
+      import('../current-parity.article-mobile.css?inline').then((module) => module.default),
+    ])
+  : ['', '', '', ''];
 
 type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
 export interface ArticleData { record: ArticleRecord }
+
+export const handle: CriticalCssHandle = {
+  currentParityCss: `${currentParityDetailCss}${currentParityArticleCss}${currentParityDetailMobileCss}${currentParityArticleMobileCss}`,
+};
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ArticleData> {
   const record = params.slug

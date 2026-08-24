@@ -1,0 +1,5 @@
+@media (max-width:720px) {
+  .book-sheet { display:flex; flex-direction:column; gap:28px; }
+  .book-object { position:relative; top:auto; }
+  .book-object__cover { width:min(148px,42vw); }
+}

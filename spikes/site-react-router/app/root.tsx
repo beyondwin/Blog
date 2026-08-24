@@ -1,10 +1,75 @@
 import { Children, isValidElement, type ReactNode } from 'react';
-import { Links, Meta, Outlet, Scripts as ReactRouterScripts } from 'react-router';
+import { Links, Meta, Outlet, Scripts as ReactRouterScripts, useMatches } from 'react-router';
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
-import currentParityCss from './current-parity.css?inline';
 
-export { currentParityCss };
+const [currentParitySharedCss, currentParityFocusCss, currentParityMotionCss] = import.meta.env.SSR
+  ? await Promise.all([
+      import('./current-parity.shared.css?inline').then((module) => module.default),
+      import('./current-parity.focus.css?inline').then((module) => module.default),
+      import('./current-parity.motion.css?inline').then((module) => module.default),
+    ])
+  : ['', '', ''];
+
+interface CriticalCssSources {
+  article: string;
+  articleMobile: string;
+  detail: string;
+  detailMobile: string;
+  home: string;
+  homeAccessibility: string;
+  memory: string;
+  motion: string;
+  focus: string;
+  review: string;
+  reviewMobile: string;
+  shared: string;
+}
+
+export function criticalCssForPath(
+  pathname: string,
+  sources: CriticalCssSources,
+): string {
+  let routeCss = `${sources.detail}${sources.detailMobile}`;
+  let routePreludeCss = '';
+  if (pathname === '/') {
+    routePreludeCss = sources.homeAccessibility;
+    routeCss = sources.home;
+  }
+  else if (pathname.startsWith('/articles/')) {
+    routeCss = `${sources.detail}${sources.article}${sources.detailMobile}${sources.articleMobile}`;
+  } else if (pathname.startsWith('/reviews/')) {
+    routeCss = `${sources.detail}${sources.review}${sources.detailMobile}${sources.reviewMobile}`;
+  } else if (pathname.startsWith('/memory/')) {
+    routeCss = `${sources.detail}${sources.memory}${sources.detailMobile}`;
+  }
+  return `${sources.shared}${routePreludeCss}${sources.focus}${routeCss}${sources.motion}`;
+}
+
+export interface CriticalCssHandle {
+  currentParityCss: string;
+  currentParityPreludeCss?: string;
+}
+
+export function resolveCriticalCssForRender(
+  routePreludeCss: string,
+  routeCss: string,
+  existingCss: string | null,
+  sharedCss: string,
+  focusCss: string,
+  motionCss: string,
+): string {
+  if (routeCss) return `${sharedCss}${routePreludeCss}${focusCss}${routeCss}${motionCss}`;
+  if (existingCss) return existingCss;
+  throw new Error('Route-scoped critical CSS is unavailable');
+}
+
+function isCriticalCssHandle(handle: unknown): handle is CriticalCssHandle {
+  return typeof handle === 'object'
+    && handle !== null
+    && 'currentParityCss' in handle
+    && typeof handle.currentParityCss === 'string';
+}
 
 const PUBLIC_NAV = [
   { href: '/', label: '장면' },
@@ -34,7 +99,29 @@ export function DocumentMetadata({
 }
 
 export function CriticalStyles() {
-  return <style data-current-parity dangerouslySetInnerHTML={{ __html: currentParityCss }} />;
+  const matches = useMatches();
+  const routeMatch = [...matches].reverse().find((match) => isCriticalCssHandle(match.handle));
+  if (!routeMatch || !isCriticalCssHandle(routeMatch.handle)) {
+    throw new Error('Matched route is missing route-scoped critical CSS');
+  }
+  const existingCss = typeof document === 'undefined'
+    ? null
+    : document.querySelector<HTMLStyleElement>('style[data-current-parity]')?.textContent ?? null;
+  return (
+    <style
+      data-current-parity
+      dangerouslySetInnerHTML={{
+        __html: resolveCriticalCssForRender(
+          routeMatch.handle.currentParityPreludeCss ?? '',
+          routeMatch.handle.currentParityCss,
+          existingCss,
+          currentParitySharedCss,
+          currentParityFocusCss,
+          currentParityMotionCss,
+        ),
+      }}
+    />
+  );
 }
 
 export function withoutModulePreloads(children: ReactNode): ReactNode[] {

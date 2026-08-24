@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
@@ -68,16 +67,86 @@ describe('React Router current-behavior static route contract', () => {
     expect(devRequire('vite/package.json').version).toBe('8.2.2');
   });
 
-  it('inlines the byte-identical parity CSS and prioritizes the home LCP image', async () => {
+  it('inlines route-scoped parity CSS and prioritizes the home LCP image', async () => {
     const root = await candidateModule<any>('app/root.tsx');
     const home = await candidateModule<any>('app/routes/home.tsx');
-    const css = await readFile(join(candidateRoot, 'app/current-parity.css'), 'utf8');
     const rootSource = await readFile(join(candidateRoot, 'app/root.tsx'), 'utf8');
+    const [homeSource, articleSource, reviewSource, memorySource] = await Promise.all([
+      readFile(join(candidateRoot, 'app/routes/home.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/article.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/review.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/memory.tsx'), 'utf8'),
+    ]);
+    const [
+      sharedCss,
+      homeAccessibilityCss,
+      focusCss,
+      homeCss,
+      detailCss,
+      articleCss,
+      reviewCss,
+      memoryCss,
+      detailMobileCss,
+      articleMobileCss,
+      reviewMobileCss,
+      motionCss,
+    ] = await Promise.all([
+      readFile(join(candidateRoot, 'app/current-parity.shared.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.home-accessibility.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.focus.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.home.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.detail.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.article.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.review.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.memory.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.detail-mobile.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.article-mobile.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.review-mobile.css'), 'utf8'),
+      readFile(join(candidateRoot, 'app/current-parity.motion.css'), 'utf8'),
+    ]);
+    const cssSources = {
+      shared: sharedCss,
+      homeAccessibility: homeAccessibilityCss,
+      focus: focusCss,
+      home: homeCss,
+      detail: detailCss,
+      article: articleCss,
+      review: reviewCss,
+      memory: memoryCss,
+      detailMobile: detailMobileCss,
+      articleMobile: articleMobileCss,
+      reviewMobile: reviewMobileCss,
+      motion: motionCss,
+    };
 
-    expect(createHash('sha256').update(css).digest('hex'))
-      .toBe('fd626eaf0c04e79c9f49cf3f971ce937e72ebca050836f73e596a9bd2e17ca9a');
-    expect(rootSource).toContain("import currentParityCss from './current-parity.css?inline';");
-    expect(renderToStaticMarkup(createElement(root.CriticalStyles))).toContain('data-current-parity');
+    expect(rootSource).toContain("import('./current-parity.shared.css?inline')");
+    expect(rootSource).toContain("import('./current-parity.focus.css?inline')");
+    expect(rootSource).toContain("import('./current-parity.motion.css?inline')");
+    expect(rootSource).toContain('import.meta.env.SSR');
+    expect(rootSource).not.toContain("from './current-parity.home.css?inline'");
+    expect(rootSource).not.toContain("from './current-parity.detail.css?inline'");
+    expect(homeSource).toContain("import('../current-parity.home.css?inline')");
+    expect(homeSource).toContain("import('../current-parity.home-accessibility.css?inline')");
+    expect(articleSource).toContain("import('../current-parity.article.css?inline')");
+    expect(reviewSource).toContain("import('../current-parity.review.css?inline')");
+    expect(memorySource).toContain("import('../current-parity.memory.css?inline')");
+    expect(root.criticalCssForPath('/', cssSources)).toContain('.public-scene');
+    expect(root.criticalCssForPath('/', cssSources)).not.toContain('.press-page');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.press-page');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.article-masthead');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.book-sheet');
+    expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).toContain('.book-sheet');
+    expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).not.toContain('.memory-thought');
+    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).toContain('.memory-thought');
+    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).not.toContain('.article-masthead');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.public-scene');
+    expect(root.resolveCriticalCssForRender('prelude', 'route', null, 'shared', 'focus', 'motion'))
+      .toBe('sharedpreludefocusroutemotion');
+    expect(root.resolveCriticalCssForRender('', '', 'server-rendered', '', '', ''))
+      .toBe('server-rendered');
+    expect(() => root.resolveCriticalCssForRender('', '', null, '', '', '')).toThrow(
+      'Route-scoped critical CSS is unavailable',
+    );
     expect(home.links()).toEqual([{
       rel: 'preload',
       as: 'image',

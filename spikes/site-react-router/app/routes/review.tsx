@@ -1,11 +1,35 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
-import { DocumentMetadata, metadataForRecord, PageFrame, ResponsivePicture } from '../root';
+import {
+  type CriticalCssHandle,
+  DocumentMetadata,
+  metadataForRecord,
+  PageFrame,
+  ResponsivePicture,
+} from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
+
+const [
+  currentParityDetailCss,
+  currentParityReviewCss,
+  currentParityDetailMobileCss,
+  currentParityReviewMobileCss,
+] = import.meta.env.SSR
+  ? await Promise.all([
+      import('../current-parity.detail.css?inline').then((module) => module.default),
+      import('../current-parity.review.css?inline').then((module) => module.default),
+      import('../current-parity.detail-mobile.css?inline').then((module) => module.default),
+      import('../current-parity.review-mobile.css?inline').then((module) => module.default),
+    ])
+  : ['', '', '', ''];
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 export interface ReviewData { record: ReviewRecord; coverAsset?: ReleaseAsset }
+
+export const handle: CriticalCssHandle = {
+  currentParityCss: `${currentParityDetailCss}${currentParityReviewCss}${currentParityDetailMobileCss}${currentParityReviewMobileCss}`,
+};
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ReviewData> {
   const release = await loadVerifiedRelease();

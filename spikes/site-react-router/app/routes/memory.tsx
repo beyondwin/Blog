@@ -1,9 +1,25 @@
 import type { PublicRecord } from '@beyondwin/contracts';
-import { DocumentMetadata, metadataForRecord, PageFrame } from '../root';
+import { type CriticalCssHandle, DocumentMetadata, metadataForRecord, PageFrame } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
+
+const [
+  currentParityDetailCss,
+  currentParityMemoryCss,
+  currentParityDetailMobileCss,
+] = import.meta.env.SSR
+  ? await Promise.all([
+      import('../current-parity.detail.css?inline').then((module) => module.default),
+      import('../current-parity.memory.css?inline').then((module) => module.default),
+      import('../current-parity.detail-mobile.css?inline').then((module) => module.default),
+    ])
+  : ['', '', ''];
 
 type MemoryRecord = Extract<PublicRecord, { collection: 'memory' }>;
 export interface MemoryData { record: MemoryRecord }
+
+export const handle: CriticalCssHandle = {
+  currentParityCss: `${currentParityDetailCss}${currentParityMemoryCss}${currentParityDetailMobileCss}`,
+};
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<MemoryData> {
   const record = params.slug
