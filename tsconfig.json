@@ -8,6 +8,8 @@
   },
   "exclude": [
     "spikes/site-next/out",
-    "spikes/site-next/.next"
+    "spikes/site-next/.next",
+    "spikes/site-react-router/build",
+    "spikes/site-react-router/.react-router"
   ]
 }
