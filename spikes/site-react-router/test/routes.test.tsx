@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
@@ -65,6 +66,44 @@ describe('React Router current-behavior static route contract', () => {
     const devRequire = createRequire(devPackagePath);
     expect(devRequire('@react-router/dev/package.json').version).toBe('8.3.0');
     expect(devRequire('vite/package.json').version).toBe('8.2.2');
+  });
+
+  it('inlines the byte-identical parity CSS and prioritizes the home LCP image', async () => {
+    const root = await candidateModule<any>('app/root.tsx');
+    const home = await candidateModule<any>('app/routes/home.tsx');
+    const css = await readFile(join(candidateRoot, 'app/current-parity.css'), 'utf8');
+    const rootSource = await readFile(join(candidateRoot, 'app/root.tsx'), 'utf8');
+
+    expect(createHash('sha256').update(css).digest('hex'))
+      .toBe('fd626eaf0c04e79c9f49cf3f971ce937e72ebca050836f73e596a9bd2e17ca9a');
+    expect(rootSource).toContain("import currentParityCss from './current-parity.css?inline';");
+    expect(renderToStaticMarkup(createElement(root.CriticalStyles))).toContain('data-current-parity');
+    expect(home.links()).toEqual([{
+      rel: 'preload',
+      as: 'image',
+      href: '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif',
+      type: 'image/avif',
+      fetchPriority: 'high',
+    }]);
+
+    const criticalResources = renderToStaticMarkup(createElement('div', null, root.withoutModulePreloads([
+      createElement('link', { key: 'module', rel: 'modulepreload', href: '/boot.js' }),
+      createElement('script', { key: 'script', type: 'module' }, 'import("/boot.js")'),
+      createElement('link', { key: 'image', rel: 'preload', as: 'image', href: '/lead.avif' }),
+    ])));
+    expect(criticalResources).not.toContain('rel="modulepreload"');
+    expect(criticalResources).toContain('rel="preload"');
+    expect(criticalResources).toContain('import("/boot.js")');
+
+    const deferredScripts = renderToStaticMarkup(createElement('div', null, root.deferModuleScripts([
+      createElement('script', { key: 'module', type: 'module' }, 'import("/boot.js")'),
+      createElement('script', { key: 'classic' }, 'window.ready=true'),
+    ])));
+    expect(deferredScripts).not.toContain('type="module"');
+    expect(deferredScripts).toContain('type="application/react-router-deferred"');
+    expect(deferredScripts).toContain('window.ready=true');
+    expect(root.activateDeferredModule).toContain('requestAnimationFrame');
+    expect(root.activateDeferredModule).toContain('setTimeout');
   });
 
   it('loads only the four page-specific public slices and emits incumbent metadata with clean canonicals', async () => {

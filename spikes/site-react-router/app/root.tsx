@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react';
-import { Links, Meta, Outlet, Scripts } from 'react-router';
+import { Children, cloneElement, isValidElement, type ReactNode } from 'react';
+import { Links, Meta, Outlet, Scripts as ReactRouterScripts } from 'react-router';
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
-import './current-parity.css';
+import currentParityCss from './current-parity.css?inline';
+
+export { currentParityCss };
 
 const PUBLIC_NAV = [
   { href: '/', label: '장면' },
@@ -27,6 +29,48 @@ export function DocumentMetadata({
       <title>{title}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={canonical} />
+    </>
+  );
+}
+
+export function CriticalStyles() {
+  return <style data-current-parity dangerouslySetInnerHTML={{ __html: currentParityCss }} />;
+}
+
+export function withoutModulePreloads(children: ReactNode): ReactNode[] {
+  return Children.toArray(children).filter((child) => !(
+    isValidElement<{ rel?: string }>(child)
+    && child.type === 'link'
+    && child.props.rel === 'modulepreload'
+  ));
+}
+
+export function deferModuleScripts(children: ReactNode): ReactNode[] {
+  return Children.toArray(children).map((child) => (
+    isValidElement<{ type?: string }>(child) && child.type === 'script' && child.props.type === 'module'
+      ? cloneElement(child, { type: 'application/react-router-deferred' })
+      : child
+  ));
+}
+
+export const activateDeferredModule = `requestAnimationFrame(() => setTimeout(() => {
+  const source = document.querySelector('script[type="application/react-router-deferred"]');
+  if (!source) return;
+  const script = document.createElement('script');
+  script.type = 'module';
+  script.async = true;
+  script.textContent = source.textContent;
+  script.addEventListener('load', () => script.remove(), { once: true });
+  document.head.append(script);
+}, 0));`;
+
+export function CriticalScripts() {
+  const rendered = ReactRouterScripts({});
+  if (!isValidElement<{ children?: ReactNode }>(rendered)) return rendered;
+  return (
+    <>
+      {deferModuleScripts(withoutModulePreloads(rendered.props.children))}
+      <script dangerouslySetInnerHTML={{ __html: activateDeferredModule }} />
     </>
   );
 }
@@ -146,12 +190,13 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#f2f4f7" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <CriticalStyles />
         <Meta />
         <Links />
       </head>
       <body>
         {children}
-        <Scripts />
+        <CriticalScripts />
       </body>
     </html>
   );

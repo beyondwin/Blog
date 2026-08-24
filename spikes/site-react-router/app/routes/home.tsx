@@ -1,11 +1,13 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
+import type { LinksFunction } from 'react-router';
 import { PageFrame, ResponsivePicture } from '../root';
 import { loadVerifiedRelease } from '../release.server';
 
 const ARTICLE_ID = 'why-i-read-in-the-ai-era';
 const REVIEW_ID = 'black-swan';
 const ARTICLE_HREF = `/articles/${ARTICLE_ID}/`;
+const LEAD_AVIF = '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif';
 
 type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
@@ -44,6 +46,14 @@ export async function loader(): Promise<HomeData> {
     assets: { judgment, lead, shared },
   };
 }
+
+export const links: LinksFunction = () => [{
+  rel: 'preload',
+  as: 'image',
+  href: LEAD_AVIF,
+  type: 'image/avif',
+  fetchPriority: 'high',
+}];
 
 export function meta() {
   return [
