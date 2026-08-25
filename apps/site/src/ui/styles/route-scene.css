@@ -9,6 +9,7 @@
 .scene-stage { position: relative; min-height: calc(100svh - 52px); }
 .scene-stage__objects { position: absolute; inset: 0; }
 .scene-edge-echoes { display: none; }
+.public-scene[data-rail-explored="true"] .scene-edge-echoes { visibility: hidden; opacity: 0; }
 .scene-object { position: absolute; display: block; min-width: 0; color: inherit; text-decoration: none; }
 .scene-object picture, .scene-object img { display: block; width: 100%; height: 100%; }
 .scene-object img { border-radius: 10px; object-fit: cover; }
@@ -41,7 +42,7 @@
   .scene-heading > span { margin-top: 10px; }
   .scene-stage { min-height: 42svh; }
   .scene-stage__objects { position: relative; inset: auto; display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 15vw 26px; scrollbar-width: none; }
-  .scene-edge-echoes { position: absolute; z-index: 6; inset: 0; display: block; pointer-events: none; }
+  .scene-edge-echoes { position: absolute; z-index: 6; inset: 0; display: block; pointer-events: none; transition: opacity 140ms ease; }
   .scene-edge-echoes .scene-object { position: absolute; width: auto; height: auto; }
   .scene-edge-echoes [data-scene-echo="judgment-scale"] { bottom: -52px; left: 0; width: 28vw; height: 22svh; }
   .scene-edge-echoes [data-scene-echo="black-swan"] { right: 0; bottom: -76px; width: 23vw; height: 154px; overflow: hidden; padding: 22px 14px 18px; background: var(--bw-white); }

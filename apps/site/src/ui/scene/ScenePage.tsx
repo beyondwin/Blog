@@ -38,6 +38,18 @@ export interface ScenePageData {
 const ARTICLE_EXCERPT = '요약은 결론을 주고, 독서는 그 결론까지 가는 시간을 준다.';
 let sceneFocusStyles: Promise<unknown> | undefined;
 
+interface PendingFocusRequest {
+  animate: boolean;
+  focusId: SceneObjectId;
+  generation: number;
+  pushHistory: boolean;
+  scrollLeft: number;
+}
+
+type TransitionDocument = Document & {
+  startViewTransition?: (update: () => void) => { finished: Promise<void> };
+};
+
 function loadSceneFocusStyles(): Promise<unknown> {
   sceneFocusStyles ??= import('../styles/scene.css');
   return sceneFocusStyles;
@@ -145,47 +157,125 @@ export function ScenePage({ data }: { data: ScenePageData }) {
   const focusPanelRef = useRef<HTMLElement>(null);
   const stateRef = useRef(sceneState);
   const revealTimerRef = useRef<number | undefined>(undefined);
+  const focusRequestGenerationRef = useRef(0);
+  const pendingFocusRef = useRef<PendingFocusRequest | undefined>(undefined);
 
   const reducedMotion = useCallback(() => (
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   ), []);
 
-  const commitState = useCallback((next: SceneState) => {
+  const transitionState = useCallback((
+    next: SceneState,
+    object?: HTMLAnchorElement,
+    duration = 480,
+  ): Promise<void> => {
     stateRef.current = next;
     const apply = () => flushSync(() => setSceneState(next));
-    if (reducedMotion() || !('startViewTransition' in document)) {
+    if (reducedMotion() || !object) {
       apply();
-      return;
+      return Promise.resolve();
     }
-    const transitionDocument = document as Document & {
-      startViewTransition(update: () => void): { finished: Promise<void> };
-    };
-    transitionDocument.startViewTransition(apply);
+
+    const startViewTransition = (document as TransitionDocument).startViewTransition;
+    if (typeof startViewTransition === 'function') {
+      return startViewTransition.call(document, apply).finished.then(() => undefined, () => undefined);
+    }
+
+    const first = object.getBoundingClientRect();
+    apply();
+    const last = object.getBoundingClientRect();
+    if (first.width <= 0 || first.height <= 0 || last.width <= 0 || last.height <= 0) {
+      return Promise.resolve();
+    }
+    const animation = object.animate(
+      [
+        {
+          transformOrigin: 'top left',
+          transform: `translate(${first.left - last.left}px,${first.top - last.top}px) scale(${first.width / last.width},${first.height / last.height})`,
+        },
+        { transformOrigin: 'top left', transform: 'none' },
+      ],
+      { duration, easing: 'cubic-bezier(.2,.8,.2,1)' },
+    );
+    return animation.finished.then(() => undefined, () => undefined);
   }, [reducedMotion]);
 
-  const enterFocus = useCallback(async (focusId: SceneObjectId, pushHistory: boolean) => {
-    if (stateRef.current.mode === 'focus' && stateRef.current.focusId === focusId) return;
-    await loadSceneFocusStyles();
-    const scrollLeft = stageRef.current?.scrollLeft ?? 0;
-    const next = reduceSceneState(stateRef.current, { type: 'focus', focusId, scrollLeft });
-    if (pushHistory) {
-      history.pushState(
-        { ...plainHistoryState(), bwScene: next.mode === 'focus' ? next.returnCheckpoint : undefined },
-        '',
-        sceneFocusHref(location.href, focusId),
+  const requestFocus = useCallback((
+    focusId: SceneObjectId,
+    pushHistory: boolean,
+    scrollLeft: number,
+    animate = true,
+  ) => {
+    const current = stateRef.current;
+    const pending = pendingFocusRef.current;
+    if (current.mode === 'focus' && current.focusId === focusId) {
+      if (pending && pending.focusId !== focusId) {
+        focusRequestGenerationRef.current += 1;
+        pendingFocusRef.current = undefined;
+      }
+      return;
+    }
+    if (pending?.focusId === focusId) return;
+
+    const request: PendingFocusRequest = {
+      animate,
+      focusId,
+      generation: focusRequestGenerationRef.current + 1,
+      pushHistory,
+      scrollLeft,
+    };
+    focusRequestGenerationRef.current = request.generation;
+    pendingFocusRef.current = request;
+
+    void loadSceneFocusStyles().then(() => {
+      if (pendingFocusRef.current?.generation !== request.generation) return;
+      pendingFocusRef.current = undefined;
+      const next = reduceSceneState(stateRef.current, {
+        type: 'focus',
+        focusId: request.focusId,
+        scrollLeft: request.scrollLeft,
+      });
+      if (request.pushHistory) {
+        history.pushState(
+          { ...plainHistoryState(), bwScene: next.mode === 'focus' ? next.returnCheckpoint : undefined },
+          '',
+          sceneFocusHref(location.href, request.focusId),
+        );
+      }
+      const reduce = reducedMotion();
+      setFocusRevealed(reduce || !request.animate);
+      void transitionState(
+        next,
+        request.animate ? objectRefs.current.get(request.focusId) : undefined,
+        480,
       );
-    }
-    setFocusRevealed(reducedMotion());
-    commitState(next);
-    window.clearTimeout(revealTimerRef.current);
-    if (!reducedMotion()) {
-      revealTimerRef.current = window.setTimeout(() => setFocusRevealed(true), 336);
-    }
-  }, [commitState, reducedMotion]);
+      window.clearTimeout(revealTimerRef.current);
+      if (!reduce && request.animate) {
+        revealTimerRef.current = window.setTimeout(() => {
+          if (stateRef.current.mode === 'focus' && stateRef.current.focusId === request.focusId) {
+            setFocusRevealed(true);
+          }
+        }, 336);
+      }
+    });
+  }, [reducedMotion, transitionState]);
+
+  const centerStageOn = useCallback((focusId: SceneObjectId): number => {
+    const stage = stageRef.current;
+    const object = objectRefs.current.get(focusId);
+    if (!stage || !object) return stage?.scrollLeft ?? 0;
+    const stageRect = stage.getBoundingClientRect();
+    const objectRect = object.getBoundingClientRect();
+    stage.scrollLeft += objectRect.left + objectRect.width / 2
+      - (stageRect.left + stageRect.width / 2);
+    return stage.scrollLeft;
+  }, []);
 
   const returnToOverview = useCallback((fromHistory = false) => {
     const current = stateRef.current;
     if (current.mode !== 'focus') return;
+    focusRequestGenerationRef.current += 1;
+    pendingFocusRef.current = undefined;
     setFocusRevealed(false);
     if (!fromHistory && readSceneHistoryCheckpoint(history.state)?.focusId === current.focusId) {
       history.back();
@@ -196,38 +286,52 @@ export function ScenePage({ data }: { data: ScenePageData }) {
       delete nextHistory.bwScene;
       history.replaceState(nextHistory, '', sceneOverviewHref(location.href));
     }
-    commitState(reduceSceneState(current, { type: 'return' }));
-  }, [commitState]);
+    void transitionState(
+      reduceSceneState(current, { type: 'return' }),
+      objectRefs.current.get(current.focusId),
+      360,
+    );
+  }, [transitionState]);
 
   useEffect(() => {
-    const syncFromLocation = () => {
+    const syncFromLocation = (animate = false) => {
       const focusId = readSceneFocus(location.search);
       if (focusId) {
         const checkpoint = readSceneHistoryCheckpoint(history.state);
-        const scrollLeft = checkpoint?.focusId === focusId
-          ? checkpoint.scrollLeft
-          : stageRef.current?.scrollLeft ?? 0;
-        const next = reduceSceneState(initialSceneState, { type: 'focus', focusId, scrollLeft });
-        setFocusRevealed(true);
-        void loadSceneFocusStyles().then(() => commitState(next));
+        let scrollLeft: number;
+        if (checkpoint?.focusId === focusId && stageRef.current) {
+          stageRef.current.scrollLeft = checkpoint.scrollLeft;
+          scrollLeft = stageRef.current.scrollLeft;
+        } else {
+          scrollLeft = centerStageOn(focusId);
+        }
+        requestFocus(focusId, false, scrollLeft, animate);
       } else if (new URLSearchParams(location.search).has('focus')) {
+        focusRequestGenerationRef.current += 1;
+        pendingFocusRef.current = undefined;
         history.replaceState(plainHistoryState(), '', sceneOverviewHref(location.href));
       } else if (stateRef.current.mode === 'focus') {
         returnToOverview(true);
+      } else {
+        focusRequestGenerationRef.current += 1;
+        pendingFocusRef.current = undefined;
       }
     };
     syncFromLocation();
-    addEventListener('popstate', syncFromLocation);
+    const onPopState = () => syncFromLocation(true);
+    addEventListener('popstate', onPopState);
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && stateRef.current.mode === 'focus') returnToOverview();
     };
     addEventListener('keydown', onKeyDown);
     return () => {
-      removeEventListener('popstate', syncFromLocation);
+      removeEventListener('popstate', onPopState);
       removeEventListener('keydown', onKeyDown);
       window.clearTimeout(revealTimerRef.current);
+      focusRequestGenerationRef.current += 1;
+      pendingFocusRef.current = undefined;
     };
-  }, [commitState, returnToOverview]);
+  }, [centerStageOn, requestFocus, returnToOverview]);
 
   useEffect(() => {
     if (sceneState.mode !== 'focus' || !focusRevealed) return;
@@ -253,7 +357,7 @@ export function ScenePage({ data }: { data: ScenePageData }) {
   const inspectObject = (event: MouseEvent<HTMLAnchorElement>, object: SceneObjectModel) => {
     if (!isUnmodifiedPrimaryClick(event)) return;
     event.preventDefault();
-    void enterFocus(object.id, true);
+    requestFocus(object.id, true, stageRef.current?.scrollLeft ?? 0);
   };
 
   const selected = sceneState.mode === 'focus' ? byId.get(sceneState.focusId) : undefined;
@@ -317,7 +421,7 @@ export function ScenePage({ data }: { data: ScenePageData }) {
           onClick={(event) => {
             if (!isUnmodifiedPrimaryClick(event)) return;
             event.preventDefault();
-            void enterFocus(lead.id, true);
+            requestFocus(lead.id, true, stageRef.current?.scrollLeft ?? 0);
           }}
         >
           {leadLabels.inspect}

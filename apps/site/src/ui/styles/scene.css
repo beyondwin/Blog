@@ -6,11 +6,6 @@
 
 .scene-object__folio { display: none; }
 
-.public-scene[data-rail-explored="true"] .scene-edge-echoes {
-  visibility: hidden;
-  opacity: 0;
-}
-
 .public-scene[data-mode="focus"] .scene-heading,
 .public-scene[data-mode="focus"] .scene-overview-actions,
 .public-scene[data-mode="focus"] .scene-swipe-cue,
@@ -226,8 +221,6 @@
 }
 
 @media (max-width: 720px) {
-  .scene-edge-echoes { transition: opacity 140ms ease; }
-
   .public-scene[data-mode="focus"] .scene-object[data-selected="true"] {
     position: fixed;
     inset: 58px 0 auto;
