@@ -53,6 +53,7 @@ export function selectContinuations(
   }
 
   for (const link of record.memoryLinks) {
+    if (link.kind !== 'direct') continue;
     append(`memory/${link.slug}`, link.claimKo, link.href);
     if (selected.length >= 3) break;
   }

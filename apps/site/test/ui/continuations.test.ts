@@ -85,7 +85,7 @@ describe('selectContinuations', () => {
     ]);
   });
 
-  it('omits self, non-public targets, blank reasons, inexact memory links, and duplicate targets', () => {
+  it('omits self, non-public targets, blank reasons, inexact or derived memory links, and duplicate targets', () => {
     const current = article('current', {
       relationships: [
         { target: 'articles/current', relation: 'related', reason: '자기 자신' },
@@ -97,6 +97,7 @@ describe('selectContinuations', () => {
       memoryLinks: [
         { slug: 'kept-memory', claimKo: ' ', href: '/memory/kept-memory/', kind: 'direct' },
         { slug: 'wrong-href', claimKo: 'href가 일치하지 않는다.', href: '/memory/other/', kind: 'direct' },
+        { slug: 'related-memory', claimKo: '태그로만 연관된 기억이다.', href: '/memory/related-memory/', kind: 'related' },
         { slug: 'kept', claimKo: 'authored target과 중복된다.', href: '/reviews/kept/', kind: 'direct' },
       ],
     });
@@ -106,6 +107,7 @@ describe('selectContinuations', () => {
       'reviews/kept': review('kept'),
       'memory/kept-memory': memory('kept-memory'),
       'memory/wrong-href': memory('wrong-href'),
+      'memory/related-memory': memory('related-memory'),
     };
 
     expect(selectContinuations(current, index)).toEqual([
