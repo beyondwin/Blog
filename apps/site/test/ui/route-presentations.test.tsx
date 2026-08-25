@@ -52,8 +52,8 @@ describe('full public route expansion', () => {
     const active = await releaseModule.loadVerifiedRelease();
 
     expect(releaseModule.recordsForCollection(active, 'articles').map(({ id }: { id: string }) => id)).toEqual([
-      'why-i-read-in-the-ai-era',
       'graphify-code-knowledge-graph-deep-dive',
+      'why-i-read-in-the-ai-era',
       'oh-my-pi-deep-review',
       'pgvector-hybrid-search',
       'postgresql-bm25-pg-search',

@@ -33,6 +33,8 @@ const VERIFIED_COMPATIBILITY_ROUTES = [{
   target: '/reviews/doing-good-better/',
 }] as const;
 
+const PREFERRED_PUBLIC_ARTICLE_LEAD_ID = 'graphify-code-knowledge-graph-deep-dive';
+
 export function repositoryRootFromModuleUrl(moduleUrl: string): string {
   let current = dirname(fileURLToPath(moduleUrl));
   while (true) {
@@ -69,12 +71,21 @@ function hasPublicPublicationState(record: PublicRecord): boolean {
 }
 
 function incumbentRecordDate(record: PublicRecord): string {
+  if (record.collection === 'articles') return record.updatedAt;
   if (record.collection === 'reviews' && record.completedAt) return record.completedAt;
   if (record.collection === 'travel' && record.visitedAt) return record.visitedAt;
   return record.createdAt;
 }
 
-function compareIncumbentLatestFirst(left: PublicRecord, right: PublicRecord): number {
+function compareIncumbentLatestFirst(
+  collection: CandidateCollection,
+  left: PublicRecord,
+  right: PublicRecord,
+): number {
+  if (collection === 'articles') {
+    if (left.id === PREFERRED_PUBLIC_ARTICLE_LEAD_ID && right.id !== PREFERRED_PUBLIC_ARTICLE_LEAD_ID) return -1;
+    if (right.id === PREFERRED_PUBLIC_ARTICLE_LEAD_ID && left.id !== PREFERRED_PUBLIC_ARTICLE_LEAD_ID) return 1;
+  }
   const dateOrder = Date.parse(incumbentRecordDate(right)) - Date.parse(incumbentRecordDate(left));
   return dateOrder || left.id.localeCompare(right.id);
 }
@@ -87,7 +98,7 @@ export function recordsForCollection<C extends CandidateCollection>(
     .filter((record) => record.collection === collection)
     .filter(hasPublicPublicationState)
     .filter((record) => record.href === `/${collection}/${record.id}/`)
-    .sort(compareIncumbentLatestFirst);
+    .sort((left, right) => compareIncumbentLatestFirst(collection, left, right));
   return records as Array<CandidateRecord<C>>;
 }
 
