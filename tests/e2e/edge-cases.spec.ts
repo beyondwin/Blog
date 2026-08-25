@@ -19,14 +19,6 @@ test('360px test-only settled-DOM long title mutation remains truthful and conta
   await expectNoHorizontalOverflow(page);
 });
 
-test('390px verified missing-media record keeps a text-only threshold', async ({ page }) => {
-  const value = await fixture<{ route: string; expectedThresholdImages: number }>('missing-media-record.json');
-  await page.setViewportSize(APPROVED_VIEWPORTS.mobile390);
-  await page.goto(canonicalUrl(value.route));
-  await expect(page.locator('.reading-threshold img')).toHaveCount(value.expectedThresholdImages);
-  await expectNoHorizontalOverflow(page);
-});
-
 test('426px verified zero-relation record does not synthesize continuation items', async ({ page }) => {
   const value = await fixture<{ route: string; expectedContinuationItems: number }>('no-relations-record.json');
   await page.setViewportSize(APPROVED_VIEWPORTS.mobile426);

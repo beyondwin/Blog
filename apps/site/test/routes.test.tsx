@@ -152,11 +152,7 @@ describe('React Router current-behavior static route contract', () => {
       as: 'image',
       href: '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif',
       type: 'image/avif',
-      imageSrcSet: [
-        '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-720w.avif 720w',
-        '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1080w.avif 1080w',
-        '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif 1536w',
-      ].join(', '),
+      imageSrcSet: '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif 1536w',
       imageSizes: '(max-width: 720px) 70vw, (max-width: 1540px) 61vw, 940px',
       fetchPriority: 'high',
     }]);

@@ -11,11 +11,7 @@ const sceneCss = import.meta.env.SSR
 const ARTICLE_ID = 'why-i-read-in-the-ai-era';
 const REVIEW_ID = 'black-swan';
 const LEAD_AVIF = '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif';
-const LEAD_AVIF_SRC_SET = [
-  '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-720w.avif 720w',
-  '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1080w.avif 1080w',
-  '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif 1536w',
-].join(', ');
+const LEAD_AVIF_SRC_SET = `${LEAD_AVIF} 1536w`;
 const LEAD_IMAGE_SIZES = '(max-width: 720px) 70vw, (max-width: 1540px) 61vw, 940px';
 
 export const handle: RouteCriticalCssHandle = { criticalCss: sceneCss };

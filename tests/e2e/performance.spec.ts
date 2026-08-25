@@ -7,19 +7,59 @@ import {
   DECISION_ROUTES,
   MANDATORY_BUDGETS,
   type BrowserMeasurement,
+  type DecisionRoute,
   type RendererCaptureReport,
   type ViewportName,
 } from '../../tools/parity/src/compare-contracts';
 import { measureBrowserPage } from '../../tools/parity/src/measure-browser';
+import {
+  PERFORMANCE_ROUTE_SELECTOR_ENV,
+  selectPerformanceRoutes,
+} from './performance-selection';
 import { OFFICIAL_BASE_URL } from './support';
 
-const outputPath = 'output/playwright/task14/performance-matrix.json';
+const routeSelection = selectPerformanceRoutes(process.env[PERFORMANCE_ROUTE_SELECTOR_ENV]);
+const outputPath = routeSelection.outputPath;
+const baselinePath = 'tests/fixtures/parity/astro-renderer-baseline.json';
+const routeSourcePaths: Record<DecisionRoute, string[]> = {
+  '/': [
+    'apps/site/app/routes/home.tsx',
+    'apps/site/src/ui/scene/SceneObject.tsx',
+    'apps/site/src/ui/scene/ScenePage.tsx',
+    'apps/site/src/ui/styles/route-scene.css',
+  ],
+  '/articles/why-i-read-in-the-ai-era/': [
+    'apps/site/app/routes/article.tsx',
+    'apps/site/src/ui/reading/ArticleReadingPage.tsx',
+    'apps/site/src/ui/styles/route-article.css',
+  ],
+  '/reviews/black-swan/': [
+    'apps/site/app/routes/review.tsx',
+    'apps/site/src/ui/reading/ReviewReadingPage.tsx',
+    'apps/site/src/ui/styles/route-review.css',
+  ],
+  '/memory/agent-harnesses-are-operating-systems/': [
+    'apps/site/app/routes/memory.tsx',
+    'apps/site/src/ui/memory/MemoryDetailPage.tsx',
+    'apps/site/src/ui/styles/route-memory.css',
+  ],
+};
+
+async function hashFiles(paths: readonly string[]): Promise<string> {
+  const hash = createHash('sha256');
+  for (const path of [...paths].sort()) {
+    const bytes = await readFile(path);
+    hash.update(`${Buffer.byteLength(path)}:${path}:${bytes.byteLength}:`);
+    hash.update(bytes);
+  }
+  return `sha256:${hash.digest('hex')}`;
+}
 
 async function json<T>(path: string): Promise<T> {
   return JSON.parse(await readFile(path, 'utf8')) as T;
 }
 
-test('one warmup plus five cold contexts meets the accepted Task 14 matrix', async ({ browser }) => {
+test('one warmup plus five cold contexts meets the selected accepted Task 14 cells', async ({ browser }) => {
   test.setTimeout(20 * 60_000);
   const packageLock = await json<{
     packages: Record<string, { version?: string }>;
@@ -41,7 +81,7 @@ test('one warmup plus five cold contexts meets the accepted Task 14 matrix', asy
     actual: '151.0.7922.34',
   });
 
-  const baseline = await json<RendererCaptureReport>('tests/fixtures/parity/astro-renderer-baseline.json');
+  const baseline = await json<RendererCaptureReport>(baselinePath);
   const active = await json<{ releaseId: string }>('build/public-releases/active.json');
   const measurements: Array<{
     path: (typeof DECISION_ROUTES)[number];
@@ -49,7 +89,7 @@ test('one warmup plus five cold contexts meets the accepted Task 14 matrix', asy
     measurement: BrowserMeasurement;
   }> = [];
 
-  for (const path of DECISION_ROUTES) {
+  for (const path of routeSelection.routes) {
     for (const viewport of ['desktop', 'mobile'] as const) {
       measurements.push({
         path,
@@ -94,19 +134,49 @@ test('one warmup plus five cold contexts meets the accepted Task 14 matrix', asy
 
   const appSourcePaths = execFileSync('git', ['ls-files', '-z', '--', 'apps/site'], { encoding: 'buffer' })
     .toString('utf8').split('\0').filter(Boolean).sort();
-  const sourceHash = createHash('sha256');
-  for (const path of appSourcePaths) {
-    const bytes = await readFile(path);
-    sourceHash.update(`${Buffer.byteLength(path)}:${path}:${bytes.byteLength}:`);
-    sourceHash.update(bytes);
-  }
+  const routeSpecificPaths = new Set(Object.values(routeSourcePaths).flat());
+  const sharedAppSourcePaths = appSourcePaths.filter((path) => !routeSpecificPaths.has(path));
+  const routeSourceHashes = Object.fromEntries(await Promise.all(
+    DECISION_ROUTES.map(async (path) => [path, await hashFiles(routeSourcePaths[path])]),
+  ));
   const report = {
-    version: 1,
+    version: 2,
     renderer: 'react-router',
     measuredAt: new Date().toISOString(),
     releaseId: active.releaseId,
     repositoryHead: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-    appSourceHash: `sha256:${sourceHash.digest('hex')}`,
+    selection: {
+      environmentVariable: PERFORMANCE_ROUTE_SELECTOR_ENV,
+      selector: routeSelection.selector,
+      routeNames: routeSelection.routeNames,
+      selectedRoutes: routeSelection.routes,
+      exactCommand: routeSelection.exactCommand,
+      outputPath,
+    },
+    sourceHashes: {
+      app: await hashFiles(appSourcePaths),
+      sharedApp: await hashFiles(sharedAppSourcePaths),
+      routes: routeSourceHashes,
+      measurementImplementation: await hashFiles([
+        'tools/parity/src/compare-contracts.ts',
+        'tools/parity/src/measure-browser.ts',
+        baselinePath,
+      ]),
+      harness: await hashFiles([
+        'tests/e2e/performance-selection.ts',
+        'tests/e2e/performance.spec.ts',
+      ]),
+      config: await hashFiles([
+        'package-lock.json',
+        'package.json',
+        'playwright.config.ts',
+        'tests/e2e/support.ts',
+      ]),
+      releaseManifest: await hashFiles([
+        'build/public-releases/active.json',
+        `build/public-releases/${active.releaseId}/manifest.json`,
+      ]),
+    },
     environment: {
       node: process.version,
       npm: execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(),
@@ -116,7 +186,8 @@ test('one warmup plus five cold contexts meets the accepted Task 14 matrix', asy
       chromiumRevision: chromiumPin?.revision,
     },
     protocol: {
-      routes: DECISION_ROUTES,
+      routes: routeSelection.routes,
+      fullDecisionRoutes: DECISION_ROUTES,
       viewports: ['desktop', 'mobile'],
       warmups: 1,
       coldSamplesPerCell: 5,

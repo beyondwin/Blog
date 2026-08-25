@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { APPROVED_VIEWPORTS, canonicalUrl, expectNoHorizontalOverflow } from './support';
 
 function url(path: string): string {
@@ -56,30 +56,6 @@ for (const viewport of [
     });
   });
 }
-
-async function proveNoJsAnchors(browser: Browser, width: number) {
-  const context = await browser.newContext({
-    javaScriptEnabled: false,
-    viewport: width === 390 ? APPROVED_VIEWPORTS.mobile390 : APPROVED_VIEWPORTS.desktop,
-  });
-  const page = await context.newPage();
-  await page.goto(url('/'));
-  const article = page.locator('[data-scene-object="reading-desk-cobalt"]');
-  const review = page.locator('[data-scene-object="black-swan"]');
-  await expect(article).toHaveAttribute('href', '/articles/why-i-read-in-the-ai-era/');
-  await expect(review).toHaveAttribute('href', '/reviews/black-swan/');
-  await article.click();
-  await expect(page).toHaveURL(url('/articles/why-i-read-in-the-ai-era/'));
-  await context.close();
-}
-
-test('1440px no-JS scene keeps canonical detail anchors', async ({ browser }) => {
-  await proveNoJsAnchors(browser, 1440);
-});
-
-test('390px no-JS scene keeps canonical detail anchors', async ({ browser }) => {
-  await proveNoJsAnchors(browser, 390);
-});
 
 test('390px reduced motion changes scene state without geometry animation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

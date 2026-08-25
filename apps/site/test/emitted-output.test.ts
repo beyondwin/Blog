@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { readFile, readdir } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -11,6 +11,15 @@ let homeHtml = '';
 let articleHtml = '';
 let reviewHtml = '';
 let memoryHtml = '';
+
+function attribute(tag: string, name: string): string | undefined {
+  return tag.match(new RegExp(`\\b${name}="([^"]*)"`, 'u'))?.[1];
+}
+
+function srcSetCandidates(value: string | undefined): string[] {
+  return value?.split(',').map((candidate) => candidate.trim().split(/\s+/u)[0] ?? '')
+    .filter(Boolean) ?? [];
+}
 
 beforeAll(async () => {
   const npmCli = process.env.npm_execpath;
@@ -101,9 +110,30 @@ describe('React Router emitted critical output', () => {
     for (const detailCss of routeCss.slice(1)) expect(detailCss.length).toBeLessThan(8_000);
     const imagePreload = homeHtml.match(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u)?.[0];
     expect(imagePreload).toContain('href="/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif"');
-    expect(imagePreload).toContain('imageSrcSet="/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-720w.avif 720w, /assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1080w.avif 1080w, /assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif 1536w"');
     expect(imagePreload).toContain('imageSizes="(max-width: 720px) 70vw, (max-width: 1540px) 61vw, 940px"');
     expect(imagePreload).toContain('fetchPriority="high"');
+  });
+
+  it('preloads only AVIF candidates declared by the lead picture and present in static output', async () => {
+    const imagePreload = homeHtml.match(
+      /<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u,
+    )?.[0];
+    const leadPicture = homeHtml.match(
+      /<picture><source\b[^>]*type="image\/avif"[^>]*reading-desk-cobalt[^>]*>[\s\S]*?<\/picture>/u,
+    )?.[0];
+    const avifSource = leadPicture?.match(/<source\b[^>]*type="image\/avif"[^>]*>/u)?.[0];
+
+    expect(imagePreload).toBeDefined();
+    expect(avifSource).toBeDefined();
+    const preloadCandidates = srcSetCandidates(attribute(imagePreload ?? '', 'imageSrcSet'));
+    const pictureCandidates = srcSetCandidates(attribute(avifSource ?? '', 'srcSet'));
+    expect(preloadCandidates).toEqual(pictureCandidates);
+    expect(preloadCandidates).toContain(attribute(imagePreload ?? '', 'href'));
+
+    for (const candidate of preloadCandidates) {
+      await expect(access(join(candidateRoot, 'build/client', candidate.replace(/^\//u, ''))))
+        .resolves.toBeUndefined();
+    }
   });
 
   it('keeps inlined critical CSS out of the hydration chunks', async () => {

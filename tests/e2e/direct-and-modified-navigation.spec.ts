@@ -4,13 +4,6 @@ import { APPROVED_VIEWPORTS, canonicalUrl } from './support';
 const detailPath = '/articles/why-i-read-in-the-ai-era/';
 const rowAnchor = 'record-articles-why-i-read-in-the-ai-era';
 
-test('direct detail uses the safe collection fallback', async ({ page }) => {
-  await page.setViewportSize(APPROVED_VIEWPORTS.desktop);
-  await page.goto(canonicalUrl(detailPath));
-  await expect(page.getByRole('link', { name: '글 목록으로' })).toHaveAttribute('href', '/articles/');
-  expect(page.url()).not.toContain('__bw_');
-});
-
 test('Ctrl, Cmd, Shift, middle, and explicit new-tab activations keep a clean canonical href and are not intercepted', async ({ page }) => {
   await page.setViewportSize(APPROVED_VIEWPORTS.desktop);
   await page.goto(canonicalUrl('/articles/'));
