@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "implementation_commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+  "implementation_commit": "f0d0e990f1ecb2c068ea98813e20da141010d257",
   "eligible": true,
   "errors": [],
   "ports": {
@@ -161,29 +161,29 @@
     }
   ],
   "controller": {
-    "pid": 35996,
-    "ppid": 35977,
-    "pgid": 35968,
+    "pid": 56979,
+    "ppid": 56978,
+    "pgid": 56953,
     "argv": [
       "/opt/homebrew/Cellar/node@24/24.18.0/bin/node",
       "/Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/scripts/cutover/verify-rollback.mts",
       "--implementation-commit",
-      "78e0907f5be86c6aeb8480516165f11c15ba2069",
+      "f0d0e990f1ecb2c068ea98813e20da141010d257",
       "--performance-receipt",
       "docs/notes/project/evidence/public-site-review-performance.json",
       "--output",
       "docs/notes/project/evidence/public-site-local-receipt.json"
     ],
-    "start_identity": "Wed Aug 26 05:35:42 2026",
+    "start_identity": "Wed Aug 26 06:33:25 2026",
     "observed": {
-      "pid": 35996,
-      "ppid": 35977,
-      "pgid": 35968,
-      "start_identity": "Wed Aug 26 05:35:42 2026",
-      "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/verify-rollback.mts --implementation-commit 78e0907f5be86c6aeb8480516165f11c15ba2069 --performance-receipt docs/notes/project/evidence/public-site-review-performance.json --output docs/notes/project/evidence/public-site-local-receipt.json"
+      "pid": 56979,
+      "ppid": 56978,
+      "pgid": 56953,
+      "start_identity": "Wed Aug 26 06:33:25 2026",
+      "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/verify-rollback.mts --implementation-commit f0d0e990f1ecb2c068ea98813e20da141010d257 --performance-receipt docs/notes/project/evidence/public-site-review-performance.json --output docs/notes/project/evidence/public-site-local-receipt.json"
     },
     "signal_handlers": {
-      "installed_at": "2026-08-25T20:35:43.485Z",
+      "installed_at": "2026-08-25T21:33:26.614Z",
       "signals": [
         "SIGINT",
         "SIGTERM"
@@ -191,7 +191,7 @@
       "active": false,
       "handled_signal": null,
       "cleanup_completed": true,
-      "removed_at": "2026-08-25T20:36:55.852Z"
+      "removed_at": "2026-08-25T21:34:38.570Z"
     }
   },
   "processes": [
@@ -208,20 +208,20 @@
         "4391"
       ],
       "expected_command_line": "npm run site:preview --host 127.0.0.1 --port 4391",
-      "root_pid": 36121,
-      "root_ppid": 35996,
-      "root_pgid": 36121,
-      "start_identity": "Wed Aug 26 05:35:43 2026",
+      "root_pid": 57099,
+      "root_ppid": 56979,
+      "root_pgid": 57099,
+      "start_identity": "Wed Aug 26 06:33:26 2026",
       "observed": {
-        "pid": 36121,
-        "ppid": 35996,
-        "pgid": 36121,
-        "start_identity": "Wed Aug 26 05:35:43 2026",
+        "pid": 57099,
+        "ppid": 56979,
+        "pgid": 57099,
+        "start_identity": "Wed Aug 26 06:33:26 2026",
         "command_line": "npm run site:preview --host 127.0.0.1 --port 4391"
       },
-      "started_at": "2026-08-25T20:35:43.494Z",
+      "started_at": "2026-08-25T21:33:26.621Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:35:43.605Z",
+        "completed_at": "2026-08-25T21:33:26.732Z",
         "polls": 2,
         "observed_commands": [
           "node /opt/homebrew/opt/node@24/bin/npm run site:preview -- --host 127.0.0.1 --port 4391",
@@ -229,45 +229,45 @@
         ]
       },
       "pre_term_identity": {
-        "pid": 36121,
-        "ppid": 35996,
-        "pgid": 36121,
-        "start_identity": "Wed Aug 26 05:35:43 2026",
+        "pid": 57099,
+        "ppid": 56979,
+        "pgid": 57099,
+        "start_identity": "Wed Aug 26 06:33:26 2026",
         "command_line": "npm run site:preview --host 127.0.0.1 --port 4391"
       },
-      "term_sent_at": "2026-08-25T20:36:55.789Z",
+      "term_sent_at": "2026-08-25T21:34:38.516Z",
       "root_exit": {
-        "exited_at": "2026-08-25T20:36:55.811Z",
+        "exited_at": "2026-08-25T21:34:38.535Z",
         "exit_code": 143,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 36121,
-            "ppid": 35996,
-            "pgid": 36121,
+            "pid": 57099,
+            "ppid": 56979,
+            "pgid": 57099,
             "command_line": "npm run site:preview --host 127.0.0.1 --port 4391",
-            "start_identity": "Wed Aug 26 05:35:43 2026"
+            "start_identity": "Wed Aug 26 06:33:26 2026"
           },
           {
-            "pid": 36156,
-            "ppid": 36121,
-            "pgid": 36121,
+            "pid": 57134,
+            "ppid": 57099,
+            "pgid": 57099,
             "command_line": "npm run preview --host 127.0.0.1 --port 4391",
-            "start_identity": "Wed Aug 26 05:35:43 2026"
+            "start_identity": "Wed Aug 26 06:33:26 2026"
           },
           {
-            "pid": 36271,
-            "ppid": 36156,
-            "pgid": 36121,
+            "pid": 57249,
+            "ppid": 57134,
+            "pgid": 57099,
             "command_line": "node /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/.bin/vite preview --outDir build/client --host 127.0.0.1 --host 127.0.0.1 --port 4391",
-            "start_identity": "Wed Aug 26 05:35:43 2026"
+            "start_identity": "Wed Aug 26 06:33:26 2026"
           }
         ],
         "group_empty": true,
         "polls": 2,
-        "completed_at": "2026-08-25T20:36:55.847Z"
+        "completed_at": "2026-08-25T21:34:38.566Z"
       },
       "stopped": true
     },
@@ -284,20 +284,20 @@
         "4392"
       ],
       "expected_command_line": "npm run legacy:preview --host 127.0.0.1 --port 4392",
-      "root_pid": 36201,
-      "root_ppid": 35996,
-      "root_pgid": 36201,
-      "start_identity": "Wed Aug 26 05:35:43 2026",
+      "root_pid": 57179,
+      "root_ppid": 56979,
+      "root_pgid": 57179,
+      "start_identity": "Wed Aug 26 06:33:26 2026",
       "observed": {
-        "pid": 36201,
-        "ppid": 35996,
-        "pgid": 36201,
-        "start_identity": "Wed Aug 26 05:35:43 2026",
+        "pid": 57179,
+        "ppid": 56979,
+        "pgid": 57179,
+        "start_identity": "Wed Aug 26 06:33:26 2026",
         "command_line": "npm run legacy:preview --host 127.0.0.1 --port 4392"
       },
-      "started_at": "2026-08-25T20:35:43.605Z",
+      "started_at": "2026-08-25T21:33:26.732Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:35:43.714Z",
+        "completed_at": "2026-08-25T21:33:26.842Z",
         "polls": 2,
         "observed_commands": [
           "node /opt/homebrew/opt/node@24/bin/npm run legacy:preview -- --host 127.0.0.1 --port 4392",
@@ -305,38 +305,38 @@
         ]
       },
       "pre_term_identity": {
-        "pid": 36201,
-        "ppid": 35996,
-        "pgid": 36201,
-        "start_identity": "Wed Aug 26 05:35:43 2026",
+        "pid": 57179,
+        "ppid": 56979,
+        "pgid": 57179,
+        "start_identity": "Wed Aug 26 06:33:26 2026",
         "command_line": "npm run legacy:preview --host 127.0.0.1 --port 4392"
       },
-      "term_sent_at": "2026-08-25T20:36:55.702Z",
+      "term_sent_at": "2026-08-25T21:34:38.439Z",
       "root_exit": {
-        "exited_at": "2026-08-25T20:36:55.710Z",
+        "exited_at": "2026-08-25T21:34:38.447Z",
         "exit_code": 143,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 36201,
-            "ppid": 35996,
-            "pgid": 36201,
+            "pid": 57179,
+            "ppid": 56979,
+            "pgid": 57179,
             "command_line": "npm run legacy:preview --host 127.0.0.1 --port 4392",
-            "start_identity": "Wed Aug 26 05:35:43 2026"
+            "start_identity": "Wed Aug 26 06:33:26 2026"
           },
           {
-            "pid": 36270,
-            "ppid": 36201,
-            "pgid": 36201,
+            "pid": 57231,
+            "ppid": 57179,
+            "pgid": 57179,
             "command_line": "node /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/.bin/astro preview --host 127.0.0.1 --port 4392",
-            "start_identity": "Wed Aug 26 05:35:43 2026"
+            "start_identity": "Wed Aug 26 06:33:26 2026"
           }
         ],
         "group_empty": true,
         "polls": 2,
-        "completed_at": "2026-08-25T20:36:55.746Z"
+        "completed_at": "2026-08-25T21:34:38.478Z"
       },
       "stopped": true
     },
@@ -354,82 +354,82 @@
         "--astro",
         "http://127.0.0.1:4392",
         "--state",
-        "/tmp/beyondwin-cutover.hdNDj6/target",
+        "/tmp/beyondwin-cutover.uSI7a2/target",
         "--pid-file",
-        "/tmp/beyondwin-cutover.hdNDj6/proxy.pid"
+        "/tmp/beyondwin-cutover.uSI7a2/proxy.pid"
       ],
-      "expected_command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
-      "root_pid": 36299,
-      "root_ppid": 35996,
-      "root_pgid": 36299,
-      "start_identity": "Wed Aug 26 05:35:44 2026",
+      "expected_command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid",
+      "root_pid": 57288,
+      "root_ppid": 56979,
+      "root_pgid": 57288,
+      "start_identity": "Wed Aug 26 06:33:27 2026",
       "observed": {
-        "pid": 36299,
-        "ppid": 35996,
-        "pgid": 36299,
-        "start_identity": "Wed Aug 26 05:35:44 2026",
-        "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid"
+        "pid": 57288,
+        "ppid": 56979,
+        "pgid": 57288,
+        "start_identity": "Wed Aug 26 06:33:27 2026",
+        "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid"
       },
-      "started_at": "2026-08-25T20:35:44.649Z",
+      "started_at": "2026-08-25T21:33:27.371Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:35:44.760Z",
+        "completed_at": "2026-08-25T21:33:27.483Z",
         "polls": 2,
         "observed_commands": [
-          "node /opt/homebrew/opt/node@24/bin/npm run cutover:proxy -- --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
-          "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid"
+          "node /opt/homebrew/opt/node@24/bin/npm run cutover:proxy -- --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid",
+          "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid"
         ]
       },
       "pre_term_identity": {
-        "pid": 36299,
-        "ppid": 35996,
-        "pgid": 36299,
-        "start_identity": "Wed Aug 26 05:35:44 2026",
-        "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid"
+        "pid": 57288,
+        "ppid": 56979,
+        "pgid": 57288,
+        "start_identity": "Wed Aug 26 06:33:27 2026",
+        "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid"
       },
-      "term_sent_at": "2026-08-25T20:36:55.618Z",
+      "term_sent_at": "2026-08-25T21:34:38.362Z",
       "root_exit": {
-        "exited_at": "2026-08-25T20:36:55.626Z",
+        "exited_at": "2026-08-25T21:34:38.370Z",
         "exit_code": 0,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 36299,
-            "ppid": 35996,
-            "pgid": 36299,
-            "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
-            "start_identity": "Wed Aug 26 05:35:44 2026"
+            "pid": 57288,
+            "ppid": 56979,
+            "pgid": 57288,
+            "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid",
+            "start_identity": "Wed Aug 26 06:33:27 2026"
           },
           {
-            "pid": 36368,
-            "ppid": 36299,
-            "pgid": 36299,
-            "command_line": "node /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/.bin/tsx scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
-            "start_identity": "Wed Aug 26 05:35:44 2026"
+            "pid": 57325,
+            "ppid": 57288,
+            "pgid": 57288,
+            "command_line": "node /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/.bin/tsx scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid",
+            "start_identity": "Wed Aug 26 06:33:27 2026"
           },
           {
-            "pid": 36369,
-            "ppid": 36368,
-            "pgid": 36299,
-            "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
-            "start_identity": "Wed Aug 26 05:35:44 2026"
+            "pid": 57358,
+            "ppid": 57325,
+            "pgid": 57288,
+            "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid",
+            "start_identity": "Wed Aug 26 06:33:27 2026"
           }
         ],
         "group_empty": true,
         "polls": 2,
-        "completed_at": "2026-08-25T20:36:55.660Z"
+        "completed_at": "2026-08-25T21:34:38.400Z"
       },
       "stopped": true
     }
   ],
   "proxy_worker": {
-    "pid": 36369,
-    "ppid": 36368,
-    "pgid": 36299,
-    "start_identity": "Wed Aug 26 05:35:44 2026",
-    "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
-    "root_pid": 36299,
+    "pid": 57358,
+    "ppid": 57325,
+    "pgid": 57288,
+    "start_identity": "Wed Aug 26 06:33:27 2026",
+    "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.uSI7a2/target --pid-file /tmp/beyondwin-cutover.uSI7a2/proxy.pid",
+    "root_pid": 57288,
     "descendant_of_proxy": true,
     "process_group_owned": true,
     "stopped": true
@@ -449,25 +449,25 @@
       {
         "port": 4390,
         "pids": [
-          36369
+          57358
         ],
-        "root_pid": 36299,
+        "root_pid": 57288,
         "owned_by_group": true
       },
       {
         "port": 4391,
         "pids": [
-          36271
+          57249
         ],
-        "root_pid": 36121,
+        "root_pid": 57099,
         "owned_by_group": true
       },
       {
         "port": 4392,
         "pids": [
-          36270
+          57231
         ],
-        "root_pid": 36201,
+        "root_pid": 57179,
         "owned_by_group": true
       }
     ],
@@ -479,8 +479,8 @@
   },
   "temp_root": {
     "pattern": "/tmp/beyondwin-cutover.*",
-    "path": "/tmp/beyondwin-cutover.hdNDj6",
-    "realpath": "/private/tmp/beyondwin-cutover.hdNDj6",
+    "path": "/tmp/beyondwin-cutover.uSI7a2",
+    "realpath": "/private/tmp/beyondwin-cutover.uSI7a2",
     "realpath_validated": true,
     "removed": true
   },
@@ -1792,7 +1792,7 @@
     },
     "builds": {
       "react_root": "apps/site/build/client",
-      "react_hash": "sha256:601a874e6b655c09b6b99bdb0a2eca24bb0545f4b71670219c9687a9bdc72aee",
+      "react_hash": "sha256:45fcdfbd64e990ccec5bf297fdace3cff4c54c8dc74988f22af572b0aee4d04c",
       "astro_root": "dist",
       "astro_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37",
       "rollback_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37"
