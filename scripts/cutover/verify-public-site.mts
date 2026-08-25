@@ -10,6 +10,7 @@ import {
   assertDynamicCrawl,
   assertLocalReceiptMaterialGroups,
   deriveChangedSurfacePerformance,
+  npmObservedCommandLine,
 } from './evidence-contracts.mts';
 import { hashFile, hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
 import { parseTask14Metrics, verifyStaticCutoverContract, type Task14Metric } from './verify-rollback.mts';
@@ -35,6 +36,7 @@ export interface PublicSiteEvidence {
     report_hash: string;
     performance_receipt_path: string;
     performance_receipt_hash: string;
+    performance_commit: string;
     route_source_hashes: Record<string, string>;
     metric_summary: Task14Metric[];
   };
@@ -166,7 +168,7 @@ function verifyHistoricalProcesses(receipt: Record<string, unknown>): void {
     exactKeys(process, ['role', 'argv', 'root_pid', 'root_ppid', 'start_identity', 'observed', 'started_at', 'term_sent_at', 'exited_at', 'exit_code', 'signal', 'stopped'], 'owned process');
     const observed = exactKeys(process.observed, ['pid', 'ppid', 'start_identity', 'command_line'], 'owned process observation');
     if (process.root_pid !== observed.pid || process.root_ppid !== observed.ppid || process.start_identity !== observed.start_identity
-      || observed.command_line !== (process.argv as string[]).join(' ') || process.stopped !== true) throw new Error('owned process identity/lifecycle was forged');
+      || observed.command_line !== npmObservedCommandLine(process.argv as string[]) || process.stopped !== true) throw new Error('owned process identity/lifecycle was forged');
     const times = [process.started_at, process.term_sent_at, process.exited_at].map((value) => Date.parse(String(value)));
     if (times.some(Number.isNaN) || !(times[0]! <= times[1]! && times[1]! <= times[2]!)) throw new Error('owned process timestamps are invalid or unordered');
   }
@@ -204,7 +206,7 @@ export async function verifyPublicSiteEvidence(evidence: PublicSiteEvidence, opt
   if (recomputedStatic.failures.length > 0) throw new Error('static cutover contract no longer passes');
 
   const task14 = evidence.task14!;
-  exactKeys(task14, ['eligible', 'report_path', 'report_hash', 'performance_receipt_path', 'performance_receipt_hash', 'route_source_hashes', 'metric_summary'], 'Task 14 summary');
+  exactKeys(task14, ['eligible', 'report_path', 'report_hash', 'performance_receipt_path', 'performance_receipt_hash', 'performance_commit', 'route_source_hashes', 'metric_summary'], 'Task 14 summary');
   const reportPath = join(root, safeRelativePath(task14.report_path, 'Task14 report')); const reportText = await readFile(reportPath, 'utf8');
   if (await hashFile(reportPath) !== task14.report_hash) throw new Error('Task 14 report changed');
   const reportMetrics = parseTask14Metrics(reportText);
@@ -212,8 +214,14 @@ export async function verifyPublicSiteEvidence(evidence: PublicSiteEvidence, opt
   if (JSON.stringify(routeHashes) !== JSON.stringify(task14.route_source_hashes)) throw new Error('Task 14 route source summary drifted');
   const performancePath = join(root, safeRelativePath(task14.performance_receipt_path, 'changed-surface receipt'));
   if (await hashFile(performancePath) !== task14.performance_receipt_hash) throw new Error('changed-surface receipt changed');
+  if (!commitPattern.test(task14.performance_commit)) throw new Error('changed-surface performance commit is invalid');
+  try {
+    await execFileAsync('git', ['merge-base', '--is-ancestor', task14.performance_commit, evidence.implementation_commit], { cwd: root });
+  } catch {
+    throw new Error('changed-surface performance commit is not an ancestor of implementation commit');
+  }
   const performance = deriveChangedSurfacePerformance(await readJson(performancePath), {
-    implementationCommit: evidence.implementation_commit, releaseId: active.manifest.releaseId, routeSourceHash: routeHashes[reviewRoute]!,
+    implementationCommit: task14.performance_commit, releaseId: active.manifest.releaseId, routeSourceHash: routeHashes[reviewRoute]!,
     measurementImplementationHash: await hashFiles(root, ['tools/parity/src/compare-contracts.ts', 'tools/parity/src/measure-browser.ts', 'tests/fixtures/parity/astro-renderer-baseline.json']),
     harnessHash: await hashFiles(root, ['tests/e2e/performance-selection.ts', 'tests/e2e/performance.spec.ts']),
     configHash: await hashFiles(root, ['package-lock.json', 'package.json', 'playwright.config.ts', 'tests/e2e/support.ts']),

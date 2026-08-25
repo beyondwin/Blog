@@ -218,14 +218,19 @@ export function deriveChangedSurfacePerformance(
 
 export function validateOwnedProcessIdentity(
   value: any,
-  options: { controllerPid: number; expectedArgv: readonly string[] },
+  options: { controllerPid: number; expectedArgv: readonly string[]; expectedObservedCommandLine?: string },
 ): void {
   if (value.root_pid !== value.observed?.pid) throw new Error('owned process PID was replaced');
   if (value.root_ppid !== options.controllerPid || value.observed?.ppid !== options.controllerPid) throw new Error('owned process has a foreign parent');
   if (value.start_identity !== value.observed?.start_identity) throw new Error('owned process start identity changed');
   if (JSON.stringify(value.argv) !== JSON.stringify(options.expectedArgv)) throw new Error('owned process argv drifted');
-  const expectedCommand = options.expectedArgv.join(' ');
+  const expectedCommand = options.expectedObservedCommandLine ?? options.expectedArgv.join(' ');
   if (value.observed?.command_line !== expectedCommand) throw new Error('owned process observed command was tampered');
+}
+
+export function npmObservedCommandLine(argv: readonly string[]): string {
+  if (argv[0] !== 'npm') throw new Error('owned preview command must use npm');
+  return argv.filter((argument) => argument !== '--').join(' ');
 }
 
 export function assertDynamicCrawl(value: unknown, expectedRoutes: readonly string[]): void {

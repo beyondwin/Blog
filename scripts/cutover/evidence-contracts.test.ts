@@ -5,6 +5,7 @@ import {
   assertDynamicCrawl,
   assertLocalReceiptMaterialGroups,
   deriveChangedSurfacePerformance,
+  npmObservedCommandLine,
   validateOwnedProcessIdentity,
 } from './evidence-contracts.mts';
 
@@ -113,6 +114,8 @@ describe('source-bound cutover evidence contracts', () => {
       { ...identity, observed: { ...identity.observed, start_identity: 'replacement' } },
       { ...identity, observed: { ...identity.observed, command_line: 'npm run foreign' } },
     ]) expect(() => validateOwnedProcessIdentity(changed, { controllerPid: 99, expectedArgv: identity.argv })).toThrow();
+    expect(npmObservedCommandLine(['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1']))
+      .toBe('npm run site:preview --host 127.0.0.1');
   });
 
   it('requires the exact 80 dynamic route set with zero mandatory issues', () => {

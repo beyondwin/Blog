@@ -10,7 +10,7 @@ import { readActiveRelease } from '../../packages/content/src/release/read-relea
 import { buildHtmlContract, type AstroBaseline } from '../../tools/parity/src/html-contract.ts';
 import { hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
 import { checkExactDrillPorts, prepareStateFile, writeProxyTarget, type ProxyTarget } from './local-proxy.mts';
-import { deriveChangedSurfacePerformance, sealChangedSurfacePerformance, validateOwnedProcessIdentity } from './evidence-contracts.mts';
+import { deriveChangedSurfacePerformance, npmObservedCommandLine, sealChangedSurfacePerformance, validateOwnedProcessIdentity } from './evidence-contracts.mts';
 import type { ProxyTransition } from './verify-public-site.mts';
 
 const execFileAsync = promisify(execFile);
@@ -377,7 +377,18 @@ async function spawnedProcess(role: keyof typeof exactCommands, argv: readonly s
     start_identity: observed.start_identity, observed, started_at: startedAt, term_sent_at: null,
     exited_at: null, exit_code: null, signal: null, stopped: false,
   };
-  validateOwnedProcessIdentity(result, { controllerPid: process.pid, expectedArgv: argv });
+  try {
+    validateOwnedProcessIdentity(result, {
+      controllerPid: process.pid,
+      expectedArgv: argv,
+      expectedObservedCommandLine: npmObservedCommandLine(argv),
+    });
+  } catch (error) {
+    const exited = new Promise<void>((resolveExit) => child.once('exit', () => resolveExit()));
+    process.kill(-child.pid, 'SIGTERM');
+    await Promise.race([exited, new Promise<void>((resolveWait) => setTimeout(resolveWait, 5_000))]);
+    throw error;
+  }
   return result;
 }
 
@@ -400,7 +411,11 @@ async function portOwnerPids(port: number): Promise<number[]> {
 
 async function stopOwned(entry: Awaited<ReturnType<typeof spawnedProcess>>): Promise<void> {
   const beforeTerm = await processSnapshot(entry.root_pid);
-  validateOwnedProcessIdentity({ ...entry, observed: beforeTerm }, { controllerPid: process.pid, expectedArgv: entry.argv });
+  validateOwnedProcessIdentity({ ...entry, observed: beforeTerm }, {
+    controllerPid: process.pid,
+    expectedArgv: entry.argv,
+    expectedObservedCommandLine: npmObservedCommandLine(entry.argv),
+  });
   entry.observed = beforeTerm; entry.term_sent_at = new Date().toISOString();
   const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolveExit) => {
     entry.child.once('exit', (code, signal) => resolveExit({ code, signal }));
@@ -470,8 +485,15 @@ async function runDrill(options: DrillArguments): Promise<void> {
     Object.entries(task14RoutePaths).map(async ([route, paths]) => [route, await hashFiles(root, paths)]),
   ));
   const performanceReport = sealChangedSurfacePerformance(await readJson(options.performanceReceipt));
+  const performanceCommit = String(performanceReport.repositoryHead ?? '');
+  if (!/^[a-f0-9]{40}$/u.test(performanceCommit)) throw new Error('changed-surface performance commit is invalid');
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', performanceCommit, head], { cwd: root });
+  } catch {
+    throw new Error('changed-surface performance commit is not an ancestor of the final implementation commit');
+  }
   const performance = deriveChangedSurfacePerformance(performanceReport, {
-    implementationCommit: head, releaseId: active.manifest.releaseId,
+    implementationCommit: performanceCommit, releaseId: active.manifest.releaseId,
     routeSourceHash: routeSourceHashes['/reviews/black-swan/']!,
     measurementImplementationHash: await hashFiles(root, ['tools/parity/src/compare-contracts.ts', 'tools/parity/src/measure-browser.ts', 'tests/fixtures/parity/astro-renderer-baseline.json']),
     harnessHash: await hashFiles(root, ['tests/e2e/performance-selection.ts', 'tests/e2e/performance.spec.ts']),
@@ -551,7 +573,7 @@ async function runDrill(options: DrillArguments): Promise<void> {
       environment: { node: process.version, npm: execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(), os: `${platform()} ${osRelease()} ${arch()}`, playwright: packageLock.packages['node_modules/@playwright/test']?.version ?? 'unknown', chromium: browsers.browsers.find(({ name }) => name === 'chromium')?.browserVersion ?? 'unknown' },
       release: { release_id: active.manifest.releaseId, active_pointer_hash: active.activePointerHash, manifest_hash: active.manifestHash, artifact_hash: active.artifactHash },
       builds: { react_root: 'apps/site/build/client', react_hash: await hashTree(reactRoot), astro_root: 'dist', astro_hash: await hashTree(astroRoot), rollback_hash: await hashTree(astroRoot) },
-      task14: { eligible: performance.eligible, route_source_hashes: routeSourceHashes, metric_summary: performance.metrics },
+      task14: { eligible: performance.eligible, performance_commit: performanceCommit, route_source_hashes: routeSourceHashes, metric_summary: performance.metrics },
     },
   };
   await mkdir(dirname(options.output), { recursive: true }); await writeFile(options.output, `${JSON.stringify(receipt, null, 2)}\n`);
