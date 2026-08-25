@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "implementation_commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+  "implementation_commit": "f0d0e990f1ecb2c068ea98813e20da141010d257",
   "release": {
     "release_id": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
     "active_pointer_hash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
@@ -9,14 +9,14 @@
   },
   "builds": {
     "react_root": "apps/site/build/client",
-    "react_hash": "sha256:601a874e6b655c09b6b99bdb0a2eca24bb0545f4b71670219c9687a9bdc72aee",
+    "react_hash": "sha256:45fcdfbd64e990ccec5bf297fdace3cff4c54c8dc74988f22af572b0aee4d04c",
     "astro_root": "dist",
     "astro_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37",
     "rollback_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37"
   },
   "route_parity": {
     "receipt_path": "docs/notes/project/evidence/public-site-local-receipt.json",
-    "receipt_hash": "sha256:c1391d32c41186186da248cbd69d0e8758ac2098d8e7032fd2d57c8a57cc0f2a",
+    "receipt_hash": "sha256:9a29e457f86dd850cd32425f79398c1b2711646043e8326c83d9ec15b27b9b12",
     "inventory_hash": "sha256:1dda2a3b837dcbbab650358cf145481cc81210470a6d5677c7b1958b7c275f18",
     "route_count": 80,
     "failures": []
@@ -47,7 +47,7 @@
   },
   "local_proxy": {
     "receipt_path": "docs/notes/project/evidence/public-site-local-receipt.json",
-    "receipt_hash": "sha256:c1391d32c41186186da248cbd69d0e8758ac2098d8e7032fd2d57c8a57cc0f2a",
+    "receipt_hash": "sha256:9a29e457f86dd850cd32425f79398c1b2711646043e8326c83d9ec15b27b9b12",
     "transitions": [
       {
         "target": "react",
@@ -91,10 +91,10 @@
   },
   "clean_host": {
     "receipt_path": "docs/notes/project/evidence/public-site-clean-host-receipt.json",
-    "receipt_hash": "sha256:91274c388009cb7aa0cfcc400bdf0db5d7bf321374cd698ab20ad9e7f8809a9d",
+    "receipt_hash": "sha256:0abc3c94821c40dec838acf78736f8814e160c4e38beb92aeae04e3d753ecdfb",
     "eligible": true,
-    "implementation_commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
-    "archive_hash": "sha256:d6044dcce2c104fd7be56415a81645d64cdab0bda56ee5c3355921ff4f54863e",
+    "implementation_commit": "f0d0e990f1ecb2c068ea98813e20da141010d257",
+    "archive_hash": "sha256:a48e2b624682679569b2f35a66f294893984b00cb3c4ac448bf102513862cd19",
     "temp_removed": true
   },
   "execution_log": [
@@ -167,6 +167,53 @@
       "proof_run_count": 1,
       "route_count": 80,
       "errors": [],
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "final_local_cutover_resealed",
+      "commit": "f0d0e990f1ecb2c068ea98813e20da141010d257",
+      "reason": "whole_branch_review_changed_app_and_release_source_hashes",
+      "receipt_commit": "42b2147b357fb77497abd38d2731100042b06842",
+      "receipt_hash": "sha256:9a29e457f86dd850cd32425f79398c1b2711646043e8326c83d9ec15b27b9b12",
+      "selected_build_hash": "sha256:45fcdfbd64e990ccec5bf297fdace3cff4c54c8dc74988f22af572b0aee4d04c",
+      "transitions": ["react", "astro", "react"],
+      "static_routes": 80,
+      "dynamic_routes": 80,
+      "mandatory_failures": 0,
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "final_clean_host_resealed",
+      "commit": "f0d0e990f1ecb2c068ea98813e20da141010d257",
+      "reason": "whole_branch_review_changed_app_and_release_source_hashes",
+      "receipt_commit": "d9c7710e9bcd204d2d4d1953efdd99053de7105e",
+      "receipt_hash": "sha256:0abc3c94821c40dec838acf78736f8814e160c4e38beb92aeae04e3d753ecdfb",
+      "archive_hash": "sha256:a48e2b624682679569b2f35a66f294893984b00cb3c4ac448bf102513862cd19",
+      "archive_inventory_hash": "sha256:f5885a595f7cc1d2538333e1c63ab1dfa894fc23ed5797bd911296269c687561",
+      "archive_inventory_count": 634,
+      "route_count": 80,
+      "errors": [],
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "final_whole_branch_validation",
+      "commit": "f0d0e990f1ecb2c068ea98813e20da141010d257",
+      "node": 24,
+      "status": "passed",
+      "vitest_files": 72,
+      "vitest_tests": 595,
+      "astro_files": 250,
+      "astro_diagnostics": 0,
+      "astro_pages": 79,
+      "focused_browser_cells": 4,
+      "browser_console_errors": 0,
+      "browser_page_errors": 0,
+      "browser_severe_axe_findings": 0,
+      "browser_overflow_findings": 0,
+      "incumbent_article_order_preserved": true,
       "production": false
     },
     {
