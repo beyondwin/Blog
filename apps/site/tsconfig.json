@@ -9,6 +9,8 @@
     "*.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".react-router/types/**/*.ts",
     "test/**/*.ts",
     "test/**/*.tsx"

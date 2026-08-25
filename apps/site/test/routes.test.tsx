@@ -91,62 +91,35 @@ describe('React Router current-behavior static route contract', () => {
       readFile(join(candidateRoot, 'app/routes/review.tsx'), 'utf8'),
       readFile(join(candidateRoot, 'app/routes/memory.tsx'), 'utf8'),
     ]);
-    const [
-      sharedCss,
-      homeAccessibilityCss,
-      focusCss,
-      homeCss,
-      detailCss,
-      articleCss,
-      reviewCss,
-      memoryCss,
-      detailMobileCss,
-      articleMobileCss,
-      reviewMobileCss,
-      motionCss,
-    ] = await Promise.all([
-      readFile(join(candidateRoot, 'app/current-parity.shared.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.home-accessibility.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.focus.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.home.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.detail.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.article.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.review.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.memory.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.detail-mobile.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.article-mobile.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.review-mobile.css'), 'utf8'),
-      readFile(join(candidateRoot, 'app/current-parity.motion.css'), 'utf8'),
+    const [tokens, shell, scene, reading, articleCss, reviewCss, memoryCss] = await Promise.all([
+      readFile(join(candidateRoot, 'src/ui/styles/tokens.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/shell.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-scene.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-reading.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-article.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-review.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-memory.css'), 'utf8'),
     ]);
     const cssSources = {
-      shared: sharedCss,
-      homeAccessibility: homeAccessibilityCss,
-      focus: focusCss,
-      home: homeCss,
-      detail: detailCss,
+      tokens,
+      shell,
+      scene,
+      reading,
       article: articleCss,
       review: reviewCss,
       memory: memoryCss,
-      detailMobile: detailMobileCss,
-      articleMobile: articleMobileCss,
-      reviewMobile: reviewMobileCss,
-      motion: motionCss,
     };
 
-    expect(rootSource).toContain("import('./current-parity.shared.css?inline')");
-    expect(rootSource).toContain("import('./current-parity.focus.css?inline')");
-    expect(rootSource).toContain("import('./current-parity.motion.css?inline')");
+    expect(rootSource).toContain("import('../src/ui/styles/tokens.css?inline')");
+    expect(rootSource).toContain("import('../src/ui/styles/shell.css?inline')");
     expect(rootSource).toContain('import.meta.env.SSR');
-    expect(rootSource).not.toContain("from './current-parity.home.css?inline'");
-    expect(rootSource).not.toContain("from './current-parity.detail.css?inline'");
-    expect(homeSource).toContain("import('../current-parity.home.css?inline')");
-    expect(homeSource).toContain("import('../current-parity.home-accessibility.css?inline')");
-    expect(articleSource).toContain("import('../current-parity.article.css?inline')");
-    expect(reviewSource).toContain("import('../current-parity.review.css?inline')");
-    expect(memorySource).toContain("import('../current-parity.memory.css?inline')");
+    expect(homeSource).toContain("import('../../src/ui/styles/route-scene.css?inline')");
+    expect(articleSource).toContain("import('../../src/ui/styles/route-article.css?inline')");
+    expect(reviewSource).toContain("import('../../src/ui/styles/route-review.css?inline')");
+    expect(memorySource).toContain("import('../../src/ui/styles/route-memory.css?inline')");
     expect(root.criticalCssForPath('/', cssSources)).toContain('.public-scene');
-    expect(root.criticalCssForPath('/', cssSources)).not.toContain('.press-page');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.press-page');
+    expect(root.criticalCssForPath('/', cssSources)).not.toContain('.reading-sheet');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.reading-sheet');
     expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.article-masthead');
     expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.book-sheet');
     expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).toContain('.book-sheet');
@@ -154,11 +127,11 @@ describe('React Router current-behavior static route contract', () => {
     expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).toContain('.memory-thought');
     expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).not.toContain('.article-masthead');
     expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.public-scene');
-    expect(root.resolveCriticalCssForRender('prelude', 'route', null, 'shared', 'focus', 'motion'))
-      .toBe('sharedpreludefocusroutemotion');
-    expect(root.resolveCriticalCssForRender('', '', 'server-rendered', '', '', ''))
+    expect(root.resolveCriticalCssForRender('route', null, 'tokens', 'shell'))
+      .toBe('tokensshellroute');
+    expect(root.resolveCriticalCssForRender('', 'server-rendered', '', ''))
       .toBe('server-rendered');
-    expect(() => root.resolveCriticalCssForRender('', '', null, '', '', '')).toThrow(
+    expect(() => root.resolveCriticalCssForRender('', null, '', '')).toThrow(
       'Route-scoped critical CSS is unavailable',
     );
     expect(home.links()).toEqual([{

@@ -1,26 +1,20 @@
 import type { PublicRecord } from '@beyondwin/contracts';
-import { type CriticalCssHandle, DocumentMetadata, metadataForRecord, PageFrame } from '../root';
+import { SiteShell } from '../../src/ui/components/SiteShell';
+import { type RouteCriticalCssHandle, DocumentMetadata, metadataForRecord } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [
-  currentParityDetailCss,
-  currentParityArticleCss,
-  currentParityDetailMobileCss,
-  currentParityArticleMobileCss,
-] = import.meta.env.SSR
+const [readingCss, articleCss] = import.meta.env.SSR
   ? await Promise.all([
-      import('../current-parity.detail.css?inline').then((module) => module.default),
-      import('../current-parity.article.css?inline').then((module) => module.default),
-      import('../current-parity.detail-mobile.css?inline').then((module) => module.default),
-      import('../current-parity.article-mobile.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/route-article.css?inline').then((module) => module.default),
     ])
-  : ['', '', '', ''];
+  : ['', ''];
 
 type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
 export interface ArticleData { record: ArticleRecord }
 
-export const handle: CriticalCssHandle = {
-  currentParityCss: `${currentParityDetailCss}${currentParityArticleCss}${currentParityDetailMobileCss}${currentParityArticleMobileCss}`,
+export const handle: RouteCriticalCssHandle = {
+  criticalCss: `${readingCss}${articleCss}`,
 };
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ArticleData> {
@@ -47,8 +41,8 @@ export function ArticlePresentation({ data }: { data: ArticleData }) {
         description={data.record.description}
         title={`${data.record.title} · beyondwin`}
       />
-      <PageFrame currentPath={data.record.href} pageClass="press-page">
-      <article className="press-sheet article-sheet">
+      <SiteShell mode="reading" currentSection="articles">
+      <article className="reading-sheet article-sheet">
         <header className="article-masthead">
           <p className="article-kicker">에세이</p>
           <h1>{data.record.title}</h1>
@@ -58,7 +52,7 @@ export function ArticlePresentation({ data }: { data: ArticleData }) {
           <div className="prose article-prose" dangerouslySetInnerHTML={{ __html: incumbentBodyHtml }} />
         </div>
       </article>
-      </PageFrame>
+      </SiteShell>
     </>
   );
 }

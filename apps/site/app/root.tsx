@@ -3,80 +3,61 @@ import { Links, Meta, Outlet, Scripts as ReactRouterScripts, useMatches } from '
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 
-const [currentParitySharedCss, currentParityFocusCss, currentParityMotionCss] = import.meta.env.SSR
+const [tokensCss, shellCss] = import.meta.env.SSR
   ? await Promise.all([
-      import('./current-parity.shared.css?inline').then((module) => module.default),
-      import('./current-parity.focus.css?inline').then((module) => module.default),
-      import('./current-parity.motion.css?inline').then((module) => module.default),
+      import('../src/ui/styles/tokens.css?inline').then((module) => module.default),
+      import('../src/ui/styles/shell.css?inline').then((module) => module.default),
     ])
-  : ['', '', ''];
+  : ['', ''];
 
 interface CriticalCssSources {
   article: string;
-  articleMobile: string;
-  detail: string;
-  detailMobile: string;
-  home: string;
-  homeAccessibility: string;
+  reading: string;
+  scene: string;
   memory: string;
-  motion: string;
-  focus: string;
   review: string;
-  reviewMobile: string;
-  shared: string;
+  shell: string;
+  tokens: string;
 }
 
 export function criticalCssForPath(
   pathname: string,
   sources: CriticalCssSources,
 ): string {
-  let routeCss = `${sources.detail}${sources.detailMobile}`;
-  let routePreludeCss = '';
+  let routeCss = sources.reading;
   if (pathname === '/') {
-    routePreludeCss = sources.homeAccessibility;
-    routeCss = sources.home;
-  }
-  else if (pathname.startsWith('/articles/')) {
-    routeCss = `${sources.detail}${sources.article}${sources.detailMobile}${sources.articleMobile}`;
+    routeCss = sources.scene;
+  } else if (pathname.startsWith('/articles/')) {
+    routeCss = `${sources.reading}${sources.article}`;
   } else if (pathname.startsWith('/reviews/')) {
-    routeCss = `${sources.detail}${sources.review}${sources.detailMobile}${sources.reviewMobile}`;
+    routeCss = `${sources.reading}${sources.review}`;
   } else if (pathname.startsWith('/memory/')) {
-    routeCss = `${sources.detail}${sources.memory}${sources.detailMobile}`;
+    routeCss = `${sources.reading}${sources.memory}`;
   }
-  return `${sources.shared}${routePreludeCss}${sources.focus}${routeCss}${sources.motion}`;
+  return `${sources.tokens}${sources.shell}${routeCss}`;
 }
 
-export interface CriticalCssHandle {
-  currentParityCss: string;
-  currentParityPreludeCss?: string;
+export interface RouteCriticalCssHandle {
+  criticalCss: string;
 }
 
 export function resolveCriticalCssForRender(
-  routePreludeCss: string,
   routeCss: string,
   existingCss: string | null,
-  sharedCss: string,
-  focusCss: string,
-  motionCss: string,
+  sharedTokensCss: string,
+  sharedShellCss: string,
 ): string {
-  if (routeCss) return `${sharedCss}${routePreludeCss}${focusCss}${routeCss}${motionCss}`;
+  if (routeCss) return `${sharedTokensCss}${sharedShellCss}${routeCss}`;
   if (existingCss) return existingCss;
   throw new Error('Route-scoped critical CSS is unavailable');
 }
 
-function isCriticalCssHandle(handle: unknown): handle is CriticalCssHandle {
+function isCriticalCssHandle(handle: unknown): handle is RouteCriticalCssHandle {
   return typeof handle === 'object'
     && handle !== null
-    && 'currentParityCss' in handle
-    && typeof handle.currentParityCss === 'string';
+    && 'criticalCss' in handle
+    && typeof handle.criticalCss === 'string';
 }
-
-const PUBLIC_NAV = [
-  { href: '/', label: '장면' },
-  { href: '/articles/', label: '글' },
-  { href: '/reviews/', label: '책' },
-  { href: '/search/', label: '찾기' },
-] as const;
 
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 
@@ -106,18 +87,16 @@ export function CriticalStyles() {
   }
   const existingCss = typeof document === 'undefined'
     ? null
-    : document.querySelector<HTMLStyleElement>('style[data-current-parity]')?.textContent ?? null;
+    : document.querySelector<HTMLStyleElement>('style[data-critical-css]')?.textContent ?? null;
   return (
     <style
-      data-current-parity
+      data-critical-css
       dangerouslySetInnerHTML={{
         __html: resolveCriticalCssForRender(
-          routeMatch.handle.currentParityPreludeCss ?? '',
-          routeMatch.handle.currentParityCss,
+          routeMatch.handle.criticalCss,
           existingCss,
-          currentParitySharedCss,
-          currentParityFocusCss,
-          currentParityMotionCss,
+          tokensCss,
+          shellCss,
         ),
       }}
     />
@@ -181,67 +160,6 @@ export function ResponsivePicture({
         decoding="async"
       />
     </picture>
-  );
-}
-
-function isCurrent(currentPath: string, href: string): boolean {
-  return href === '/' ? currentPath === href : currentPath.startsWith(href);
-}
-
-export function SiteHeader({ currentPath }: { currentPath: string }) {
-  return (
-    <header className="site-header">
-      <div className="shell site-header__inner">
-        <div className="site-header__lead">
-          <a className="brand" href="/" aria-label="beyondwin home">
-            <span className="brand__mark" aria-hidden="true" />
-            <span className="brand__text">beyondwin</span>
-          </a>
-        </div>
-        <nav className="nav" aria-label="Primary navigation">
-          {PUBLIC_NAV.map((item) => (
-            <a key={item.href} href={item.href} aria-current={isCurrent(currentPath, item.href) ? 'page' : undefined}>
-              {item.label}
-            </a>
-          ))}
-        </nav>
-        <details className="nav-drawer">
-          <summary aria-label="메뉴"><span aria-hidden="true" /></summary>
-          <nav aria-label="모바일 주 탐색">
-            {PUBLIC_NAV.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}
-          </nav>
-        </details>
-      </div>
-    </header>
-  );
-}
-
-export function SiteFooter() {
-  return (
-    <footer className="site-footer">
-      <span>© beyondwin</span>
-      <nav aria-label="하단 탐색">
-        {PUBLIC_NAV.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}
-      </nav>
-    </footer>
-  );
-}
-
-export function PageFrame({
-  currentPath,
-  pageClass,
-  children,
-}: {
-  currentPath: string;
-  pageClass: 'press-page' | 'storyworld-page';
-  children: ReactNode;
-}) {
-  return (
-    <div className={`page-frame ${pageClass}`}>
-      <SiteHeader currentPath={currentPath} />
-      <main className="site-main">{children}</main>
-      <SiteFooter />
-    </div>
   );
 }
 

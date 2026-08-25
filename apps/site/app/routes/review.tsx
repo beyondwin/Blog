@@ -1,34 +1,27 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import {
-  type CriticalCssHandle,
+  type RouteCriticalCssHandle,
   DocumentMetadata,
   metadataForRecord,
-  PageFrame,
   ResponsivePicture,
 } from '../root';
+import { SiteShell } from '../../src/ui/components/SiteShell';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [
-  currentParityDetailCss,
-  currentParityReviewCss,
-  currentParityDetailMobileCss,
-  currentParityReviewMobileCss,
-] = import.meta.env.SSR
+const [readingCss, reviewCss] = import.meta.env.SSR
   ? await Promise.all([
-      import('../current-parity.detail.css?inline').then((module) => module.default),
-      import('../current-parity.review.css?inline').then((module) => module.default),
-      import('../current-parity.detail-mobile.css?inline').then((module) => module.default),
-      import('../current-parity.review-mobile.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/route-review.css?inline').then((module) => module.default),
     ])
-  : ['', '', '', ''];
+  : ['', ''];
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 export interface ReviewData { record: ReviewRecord; coverAsset?: ReleaseAsset }
 
-export const handle: CriticalCssHandle = {
-  currentParityCss: `${currentParityDetailCss}${currentParityReviewCss}${currentParityDetailMobileCss}${currentParityReviewMobileCss}`,
+export const handle: RouteCriticalCssHandle = {
+  criticalCss: `${readingCss}${reviewCss}`,
 };
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ReviewData> {
@@ -76,13 +69,13 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
         description={data.record.description}
         title={`${data.record.title} · beyondwin`}
       />
-      <PageFrame currentPath={data.record.href} pageClass="press-page">
+      <SiteShell mode="reading" currentSection="reviews">
       <span className="book-cover-remnant" aria-hidden="true">
         {data.coverAsset
           ? <ResponsivePicture asset={data.coverAsset} alt="" className="book-cover" sizes="28px" />
           : cover}
       </span>
-      <article className="press-sheet book-sheet">
+      <article className="reading-sheet book-sheet">
         <aside className="book-object" aria-label="책">
           <figure className="book-object__cover">{cover}</figure>
           {whisper && <p className="book-object__whisper">{whisper}</p>}
@@ -97,7 +90,7 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
           <div className="prose book-prose" dangerouslySetInnerHTML={{ __html: data.record.bodyHtml }} />
         </div>
       </article>
-      </PageFrame>
+      </SiteShell>
     </>
   );
 }

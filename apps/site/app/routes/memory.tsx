@@ -1,24 +1,20 @@
 import type { PublicRecord } from '@beyondwin/contracts';
-import { type CriticalCssHandle, DocumentMetadata, metadataForRecord, PageFrame } from '../root';
+import { SiteShell } from '../../src/ui/components/SiteShell';
+import { type RouteCriticalCssHandle, DocumentMetadata, metadataForRecord } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [
-  currentParityDetailCss,
-  currentParityMemoryCss,
-  currentParityDetailMobileCss,
-] = import.meta.env.SSR
+const [readingCss, memoryCss] = import.meta.env.SSR
   ? await Promise.all([
-      import('../current-parity.detail.css?inline').then((module) => module.default),
-      import('../current-parity.memory.css?inline').then((module) => module.default),
-      import('../current-parity.detail-mobile.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/route-memory.css?inline').then((module) => module.default),
     ])
-  : ['', '', ''];
+  : ['', ''];
 
 type MemoryRecord = Extract<PublicRecord, { collection: 'memory' }>;
 export interface MemoryData { record: MemoryRecord }
 
-export const handle: CriticalCssHandle = {
-  currentParityCss: `${currentParityDetailCss}${currentParityMemoryCss}${currentParityDetailMobileCss}`,
+export const handle: RouteCriticalCssHandle = {
+  criticalCss: `${readingCss}${memoryCss}`,
 };
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<MemoryData> {
@@ -41,11 +37,11 @@ export function MemoryPresentation({ data }: { data: MemoryData }) {
         description={data.record.description}
         title={`${data.record.title} · beyondwin`}
       />
-      <PageFrame currentPath={data.record.href} pageClass="press-page">
-      <article className="press-sheet memory-thought">
+      <SiteShell mode="reading" currentSection={null}>
+      <article className="reading-sheet memory-thought">
         <h1>{data.record.claimKo}</h1>
         {data.record.claimEn && <p className="memory-thought__en">{data.record.claimEn}</p>}
-        <div className="press-prose memory-thought__body" dangerouslySetInnerHTML={{ __html: data.record.bodyHtml }} />
+        <div className="reading-prose memory-thought__body" dangerouslySetInnerHTML={{ __html: data.record.bodyHtml }} />
         {data.record.sources.length > 0 && (
           <section className="memory-thought__sources">
             <h2>이 문장이 나온 글</h2>
@@ -59,7 +55,7 @@ export function MemoryPresentation({ data }: { data: MemoryData }) {
           </section>
         )}
       </article>
-      </PageFrame>
+      </SiteShell>
     </>
   );
 }

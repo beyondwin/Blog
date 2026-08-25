@@ -1,15 +1,13 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import type { LinksFunction } from 'react-router';
-import { type CriticalCssHandle, PageFrame, ResponsivePicture } from '../root';
+import { SiteShell } from '../../src/ui/components/SiteShell';
+import { type RouteCriticalCssHandle, ResponsivePicture } from '../root';
 import { loadVerifiedRelease } from '../release.server';
 
-const [currentParityHomeAccessibilityCss, currentParityHomeCss] = import.meta.env.SSR
-  ? await Promise.all([
-      import('../current-parity.home-accessibility.css?inline').then((module) => module.default),
-      import('../current-parity.home.css?inline').then((module) => module.default),
-    ])
-  : ['', ''];
+const sceneCss = import.meta.env.SSR
+  ? await import('../../src/ui/styles/route-scene.css?inline').then((module) => module.default)
+  : '';
 
 const ARTICLE_ID = 'why-i-read-in-the-ai-era';
 const REVIEW_ID = 'black-swan';
@@ -20,9 +18,8 @@ type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 
-export const handle: CriticalCssHandle = {
-  currentParityPreludeCss: currentParityHomeAccessibilityCss,
-  currentParityCss: currentParityHomeCss,
+export const handle: RouteCriticalCssHandle = {
+  criticalCss: sceneCss,
 };
 
 export interface HomeData {
@@ -158,7 +155,7 @@ function ReviewSceneObject({
 export function HomePresentation({ data }: { data: HomeData }) {
   const titleBreak = data.article.title.match(/^(.+?,)\s+(.+)$/u);
   return (
-    <PageFrame currentPath="/" pageClass="storyworld-page">
+    <SiteShell mode="scene" currentSection="scene">
       <section className="public-scene" data-scene-id="judgment" data-scene-version="2026-08-22">
         <header className="scene-heading">
           <p className="visually-hidden">판단</p>
@@ -195,7 +192,7 @@ export function HomePresentation({ data }: { data: HomeData }) {
         </aside>
         <p className="scene-swipe-cue">좌우로 스와이프</p>
       </section>
-    </PageFrame>
+    </SiteShell>
   );
 }
 

@@ -57,7 +57,7 @@ describe('React Router emitted critical output', () => {
     const routeHtml = [homeHtml, articleHtml, reviewHtml, memoryHtml];
     const routeCss = routeHtml.map((html) => {
       const styles = [...html.matchAll(
-        /<style data-current-parity="true">([\s\S]*?)<\/style>/gu,
+        /<style data-critical-css="true">([\s\S]*?)<\/style>/gu,
       )];
       expect(styles).toHaveLength(1);
       expect(html).not.toContain('rel="stylesheet"');
@@ -72,21 +72,21 @@ describe('React Router emitted critical output', () => {
       expect(modules[0]?.[1]).toContain('window.__reactRouterRouteModules');
       expect(modules[0]?.[1]).toMatch(/import\("\/assets\/entry\.client-[^"]+\.js"\);/u);
       expect(styles[0]?.[1]).toContain('.site-header__inner');
-      expect(styles[0]?.[1]).toContain(':where(a,button,summary):focus-visible');
+      expect(styles[0]?.[1]).toContain(':where(a,button):focus-visible');
       expect(styles[0]?.[1]).toContain('@media (prefers-reduced-motion:reduce)');
       return styles[0]?.[1] ?? '';
     });
 
-    expect(routeCss[0]).not.toContain('.press-page');
+    expect(routeCss[0]).not.toContain('.reading-sheet');
     expect(routeCss[0]).not.toContain('.book-sheet');
     expect(routeCss[0]).toContain('.public-scene');
     expect(routeCss[0]).toContain('.visually-hidden');
     for (const detailCss of routeCss.slice(1)) {
       expect(detailCss).not.toContain('.storyworld-page');
       expect(detailCss).not.toContain('.public-scene');
-      expect(detailCss).not.toContain('.visually-hidden');
-      expect(detailCss).toContain('.press-page');
-      expect(detailCss).toContain('.press-sheet');
+      expect(detailCss).toContain('.visually-hidden');
+      expect(detailCss).toContain('[data-surface-mode=reading]');
+      expect(detailCss).toContain('.reading-sheet');
     }
     expect(routeCss[1]).toContain('.article-masthead');
     expect(routeCss[1]).not.toContain('.book-sheet');
@@ -111,7 +111,7 @@ describe('React Router emitted critical output', () => {
       file,
       source: await readFile(join(assetRoot, file), 'utf8'),
     })));
-    const rootAssets = assets.filter(({ source }) => source.includes('data-current-parity'));
+    const rootAssets = assets.filter(({ source }) => source.includes('data-critical-css'));
 
     expect(rootAssets).toHaveLength(1);
     expect(rootAssets[0]?.source).not.toContain('.site-header__inner{');

@@ -1,4 +1,0 @@
-@media (max-width:720px) {
-  .content-figure figcaption { flex-direction:column; }
-  .content-figure figcaption small { text-align:left; }
-}

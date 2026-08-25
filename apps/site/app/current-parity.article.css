@@ -1,8 +1,0 @@
-.article-masthead { max-width: 42em; margin-bottom: clamp(28px,4vw,40px); }
-.article-kicker { margin: 0 0 .7em; color: var(--soft); font-size: .92rem; }
-.article-judgment { max-width: 38em; margin: 0; font-size: 17px; line-height: 1.8; }
-.article-read, .article-prose { max-width: 42em; }
-.content-figure { margin: 2em 0; }
-.content-figure picture, .content-figure img { display: block; width: 100%; height: auto; }
-.content-figure figcaption { display: flex; justify-content: space-between; gap: 12px; margin-top: .65em; color: var(--soft); font-size: 12px; line-height: 1.5; }
-.content-figure figcaption small { text-align: right; }

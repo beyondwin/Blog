@@ -5,6 +5,7 @@ export default {
       '**/dist/**',
       '**/.worktrees/**',
       'spikes/rejected/**',
+      'tests/e2e/**',
     ],
   },
 };

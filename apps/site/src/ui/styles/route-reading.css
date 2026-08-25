@@ -1,0 +1,14 @@
+[data-surface-mode="reading"] { min-height: 100vh; background: var(--bw-mineral); color: var(--bw-ink); }
+[data-surface-mode="reading"] .site-main { padding: 28px 0 80px; }
+[data-surface-mode="reading"] .site-footer { margin-top: 28px; }
+.reading-sheet { width: min(68rem, calc(100% - 48px)); margin-inline: auto; padding: clamp(28px, 4.2vw, 52px) clamp(20px, 4vw, 48px); background: var(--bw-white); color: var(--bw-ink); }
+.reading-prose, [data-surface-mode="reading"] .prose { max-width: 42em; color: var(--bw-ink); font-size: 17px; line-height: 1.9; }
+[data-surface-mode="reading"] :is(h1, h2, h3, h4) { color: var(--bw-ink); word-break: keep-all; text-wrap: balance; }
+[data-surface-mode="reading"] h1 { margin: 0 0 .55em; font-size: clamp(1.75rem, 3.2vw, 2.4rem); line-height: 1.25; }
+[data-surface-mode="reading"] .prose h2 { margin: 2.2em 0 .6em; font-size: 1.28rem; line-height: 1.35; }
+.reading-prose :where(p, ul, ol, blockquote, pre), [data-surface-mode="reading"] .prose :where(p, ul, ol, blockquote, pre) { margin: 0 0 1.25em; }
+
+@media (max-width: 720px) {
+  .reading-sheet { width: calc(100% - 24px); }
+  [data-surface-mode="reading"] .prose, .reading-prose { font-size: 16px; }
+}
