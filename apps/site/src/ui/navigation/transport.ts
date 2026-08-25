@@ -279,6 +279,7 @@ export function bootstrapReadingOrigin(browser: OriginBootstrapBrowser): Reading
   const tokens = exactValues(url.searchParams, '__bw_token');
   const token = tokens.length === 1 && ORIGIN_TOKEN_PATTERN.test(tokens[0]) ? tokens[0] : null;
   let stored: StoredOrigin | null = null;
+  let tokenDeleted = false;
 
   if (token !== null && browser.sessionStorage !== undefined) {
     try {
@@ -289,8 +290,9 @@ export function bootstrapReadingOrigin(browser: OriginBootstrapBrowser): Reading
     } finally {
       try {
         browser.sessionStorage.removeItem(ORIGIN_STORAGE_PREFIX + token);
+        tokenDeleted = true;
       } catch {
-        // A denied delete cannot make an otherwise invalid attempt eligible.
+        stored = null;
       }
     }
   }
@@ -298,6 +300,7 @@ export function bootstrapReadingOrigin(browser: OriginBootstrapBrowser): Reading
   const age = stored === null ? Number.NaN : browser.now() - stored.issuedAt;
   const valid = origin !== null
     && stored !== null
+    && tokenDeleted
     && originsEqual(origin, stored.origin)
     && stored.targetPath === url.pathname
     && age >= 0

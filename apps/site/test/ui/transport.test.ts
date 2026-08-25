@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { OriginLink } from '../../src/ui/navigation/OriginLink';
+import { navigateToReadingOrigin } from '../../src/ui/navigation/fallback';
 import {
   bootstrapReadingOrigin,
   enhanceOriginClick,
@@ -83,8 +84,11 @@ function bootstrapBrowser(options: {
   state?: unknown;
   referrer?: string;
   getDenied?: boolean;
+  removeDenied?: boolean;
 } = {}) {
-  const removeItem = vi.fn();
+  const removeItem = vi.fn(() => {
+    if (options.removeDenied) throw new Error('denied');
+  });
   const getItem = vi.fn(() => {
     if (options.getDenied) throw new Error('denied');
     return options.stored === undefined
@@ -186,6 +190,26 @@ describe('detail origin bootstrap', () => {
   ])('accepts valid proof with %s', (_name, options) => {
     const fixture = bootstrapBrowser(options);
     expect(bootstrapReadingOrigin(fixture.browser)).toEqual(ORIGIN);
+  });
+
+  it('fails closed on token deletion denial and uses the safe collection fallback', () => {
+    const fixture = bootstrapBrowser({ removeDenied: true });
+    expect(bootstrapReadingOrigin(fixture.browser)).toBeNull();
+    expect(fixture.removeItem).toHaveBeenCalledOnce();
+    expect(fixture.replaceState).toHaveBeenCalledWith(
+      { keep: 'state' },
+      '',
+      '/articles/safe/?keep=1#body',
+    );
+
+    const cleanedState = fixture.replaceState.mock.calls[0]?.[0];
+    const back = vi.fn();
+    const assign = vi.fn();
+    expect(navigateToReadingOrigin({ history: { state: cleanedState, back }, location: { assign } }, 'articles'))
+      .toBe('fallback');
+    expect(back).not.toHaveBeenCalled();
+    expect(assign).toHaveBeenCalledWith('/articles/');
+    expect(JSON.stringify(fixture.replaceState.mock.calls[0])).not.toMatch(/__bw_|bwOrigin|bwHistoryReturnEligible/u);
   });
 
   it.each([
