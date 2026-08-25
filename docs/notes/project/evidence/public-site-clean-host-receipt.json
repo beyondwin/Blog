@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
-  "implementation_commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
-  "created_at": "2026-08-25T20:38:28.975Z",
-  "completed_at": "2026-08-25T20:38:56.364Z",
+  "implementation_commit": "f0d0e990f1ecb2c068ea98813e20da141010d257",
+  "created_at": "2026-08-25T21:35:13.956Z",
+  "completed_at": "2026-08-25T21:35:38.127Z",
   "eligible": true,
-  "archive_hash": "sha256:d6044dcce2c104fd7be56415a81645d64cdab0bda56ee5c3355921ff4f54863e",
-  "archive_inventory_hash": "sha256:82c13d2f6813bceba470dcbfdcd45ac166465413a153433b5231566bcec955c1",
-  "archive_inventory_count": 633,
+  "archive_hash": "sha256:a48e2b624682679569b2f35a66f294893984b00cb3c4ac448bf102513862cd19",
+  "archive_inventory_hash": "sha256:f5885a595f7cc1d2538333e1c63ab1dfa894fc23ed5797bd911296269c687561",
+  "archive_inventory_count": 634,
   "archive_inventory": [
     ".agents/",
     ".agents/skills/",
@@ -252,6 +252,7 @@
     "packages/content/",
     "packages/content/package.json",
     "packages/content/src/",
+    "packages/content/src/allowlisted-source-file.ts",
     "packages/content/src/cli.ts",
     "packages/content/src/mdx/",
     "packages/content/src/mdx/components.tsx",
@@ -649,27 +650,27 @@
     "top_level_private_memory": true
   },
   "controller": {
-    "pid": 43296,
-    "ppid": 43295,
-    "pgid": 43286,
+    "pid": 60580,
+    "ppid": 60579,
+    "pgid": 60570,
     "argv": [
       "/opt/homebrew/Cellar/node@24/24.18.0/bin/node",
       "/Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/scripts/cutover/verify-clean-host.mts",
       "--commit",
-      "78e0907f5be86c6aeb8480516165f11c15ba2069",
+      "f0d0e990f1ecb2c068ea98813e20da141010d257",
       "--output",
       "docs/notes/project/evidence/public-site-clean-host-receipt.json"
     ],
-    "start_identity": "Wed Aug 26 05:38:28 2026",
+    "start_identity": "Wed Aug 26 06:35:13 2026",
     "observed": {
-      "pid": 43296,
-      "ppid": 43295,
-      "pgid": 43286,
-      "start_identity": "Wed Aug 26 05:38:28 2026",
-      "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/verify-clean-host.mts --commit 78e0907f5be86c6aeb8480516165f11c15ba2069 --output docs/notes/project/evidence/public-site-clean-host-receipt.json"
+      "pid": 60580,
+      "ppid": 60579,
+      "pgid": 60570,
+      "start_identity": "Wed Aug 26 06:35:13 2026",
+      "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/verify-clean-host.mts --commit f0d0e990f1ecb2c068ea98813e20da141010d257 --output docs/notes/project/evidence/public-site-clean-host-receipt.json"
     },
     "signal_handlers": {
-      "installed_at": "2026-08-25T20:38:28.976Z",
+      "installed_at": "2026-08-25T21:35:13.957Z",
       "signals": [
         "SIGINT",
         "SIGTERM"
@@ -677,7 +678,7 @@
       "active": false,
       "handled_signal": null,
       "cleanup_completed": true,
-      "removed_at": "2026-08-25T20:38:56.364Z"
+      "removed_at": "2026-08-25T21:35:38.127Z"
     }
   },
   "environment": {
@@ -709,8 +710,8 @@
         "git",
         "archive",
         "--format=tar",
-        "--output=/tmp/beyondwin-clean-host.9VZD8X/source.tar",
-        "78e0907f5be86c6aeb8480516165f11c15ba2069",
+        "--output=/tmp/beyondwin-clean-host.ebhLFy/source.tar",
+        "f0d0e990f1ecb2c068ea98813e20da141010d257",
         "--",
         ".",
         ":(exclude)memory",
@@ -720,46 +721,46 @@
         ":(exclude).env",
         ":(exclude).env.*"
       ],
-      "expected_command_line": "git archive --format=tar --output=/tmp/beyondwin-clean-host.9VZD8X/source.tar 78e0907f5be86c6aeb8480516165f11c15ba2069 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*",
-      "root_pid": 43418,
-      "root_ppid": 43296,
-      "root_pgid": 43418,
-      "start_identity": "Wed Aug 26 05:38:28 2026",
+      "expected_command_line": "git archive --format=tar --output=/tmp/beyondwin-clean-host.ebhLFy/source.tar f0d0e990f1ecb2c068ea98813e20da141010d257 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*",
+      "root_pid": 60665,
+      "root_ppid": 60580,
+      "root_pgid": 60665,
+      "start_identity": "Wed Aug 26 06:35:13 2026",
       "observed": {
-        "pid": 43418,
-        "ppid": 43296,
-        "pgid": 43418,
-        "start_identity": "Wed Aug 26 05:38:28 2026",
-        "command_line": "git archive --format=tar --output=/tmp/beyondwin-clean-host.9VZD8X/source.tar 78e0907f5be86c6aeb8480516165f11c15ba2069 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*"
+        "pid": 60665,
+        "ppid": 60580,
+        "pgid": 60665,
+        "start_identity": "Wed Aug 26 06:35:13 2026",
+        "command_line": "git archive --format=tar --output=/tmp/beyondwin-clean-host.ebhLFy/source.tar f0d0e990f1ecb2c068ea98813e20da141010d257 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*"
       },
-      "started_at": "2026-08-25T20:38:28.984Z",
+      "started_at": "2026-08-25T21:35:13.964Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:38:28.989Z",
+        "completed_at": "2026-08-25T21:35:13.968Z",
         "polls": 1,
         "observed_commands": [
-          "git archive --format=tar --output=/tmp/beyondwin-clean-host.9VZD8X/source.tar 78e0907f5be86c6aeb8480516165f11c15ba2069 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*"
+          "git archive --format=tar --output=/tmp/beyondwin-clean-host.ebhLFy/source.tar f0d0e990f1ecb2c068ea98813e20da141010d257 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*"
         ]
       },
       "pre_term_identity": null,
       "term_sent_at": null,
       "root_exit": {
-        "exited_at": "2026-08-25T20:38:29.190Z",
+        "exited_at": "2026-08-25T21:35:14.108Z",
         "exit_code": 0,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 43418,
-            "ppid": 43296,
-            "pgid": 43418,
-            "command_line": "/Applications/Xcode.app/Contents/Developer/usr/bin/git archive --format=tar --output=/tmp/beyondwin-clean-host.9VZD8X/source.tar 78e0907f5be86c6aeb8480516165f11c15ba2069 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*",
-            "start_identity": "Wed Aug 26 05:38:28 2026"
+            "pid": 60665,
+            "ppid": 60580,
+            "pgid": 60665,
+            "command_line": "/Applications/Xcode.app/Contents/Developer/usr/bin/git archive --format=tar --output=/tmp/beyondwin-clean-host.ebhLFy/source.tar f0d0e990f1ecb2c068ea98813e20da141010d257 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*",
+            "start_identity": "Wed Aug 26 06:35:13 2026"
           }
         ],
         "group_empty": true,
         "polls": 1,
-        "completed_at": "2026-08-25T20:38:29.229Z"
+        "completed_at": "2026-08-25T21:35:14.141Z"
       },
       "stopped": true,
       "phase": "install",
@@ -784,50 +785,50 @@
       "argv": [
         "tar",
         "-xf",
-        "/tmp/beyondwin-clean-host.9VZD8X/source.tar",
+        "/tmp/beyondwin-clean-host.ebhLFy/source.tar",
         "-C",
-        "/tmp/beyondwin-clean-host.9VZD8X/repository"
+        "/tmp/beyondwin-clean-host.ebhLFy/repository"
       ],
-      "expected_command_line": "tar -xf /tmp/beyondwin-clean-host.9VZD8X/source.tar -C /tmp/beyondwin-clean-host.9VZD8X/repository",
-      "root_pid": 43561,
-      "root_ppid": 43296,
-      "root_pgid": 43561,
-      "start_identity": "Wed Aug 26 05:38:29 2026",
+      "expected_command_line": "tar -xf /tmp/beyondwin-clean-host.ebhLFy/source.tar -C /tmp/beyondwin-clean-host.ebhLFy/repository",
+      "root_pid": 60772,
+      "root_ppid": 60580,
+      "root_pgid": 60772,
+      "start_identity": "Wed Aug 26 06:35:14 2026",
       "observed": {
-        "pid": 43561,
-        "ppid": 43296,
-        "pgid": 43561,
-        "start_identity": "Wed Aug 26 05:38:29 2026",
-        "command_line": "tar -xf /tmp/beyondwin-clean-host.9VZD8X/source.tar -C /tmp/beyondwin-clean-host.9VZD8X/repository"
+        "pid": 60772,
+        "ppid": 60580,
+        "pgid": 60772,
+        "start_identity": "Wed Aug 26 06:35:14 2026",
+        "command_line": "tar -xf /tmp/beyondwin-clean-host.ebhLFy/source.tar -C /tmp/beyondwin-clean-host.ebhLFy/repository"
       },
-      "started_at": "2026-08-25T20:38:29.248Z",
+      "started_at": "2026-08-25T21:35:14.159Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:38:29.253Z",
+        "completed_at": "2026-08-25T21:35:14.163Z",
         "polls": 1,
         "observed_commands": [
-          "tar -xf /tmp/beyondwin-clean-host.9VZD8X/source.tar -C /tmp/beyondwin-clean-host.9VZD8X/repository"
+          "tar -xf /tmp/beyondwin-clean-host.ebhLFy/source.tar -C /tmp/beyondwin-clean-host.ebhLFy/repository"
         ]
       },
       "pre_term_identity": null,
       "term_sent_at": null,
       "root_exit": {
-        "exited_at": "2026-08-25T20:38:29.320Z",
+        "exited_at": "2026-08-25T21:35:14.221Z",
         "exit_code": 0,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 43561,
-            "ppid": 43296,
-            "pgid": 43561,
-            "command_line": "tar -xf /tmp/beyondwin-clean-host.9VZD8X/source.tar -C /tmp/beyondwin-clean-host.9VZD8X/repository",
-            "start_identity": "Wed Aug 26 05:38:29 2026"
+            "pid": 60772,
+            "ppid": 60580,
+            "pgid": 60772,
+            "command_line": "tar -xf /tmp/beyondwin-clean-host.ebhLFy/source.tar -C /tmp/beyondwin-clean-host.ebhLFy/repository",
+            "start_identity": "Wed Aug 26 06:35:14 2026"
           }
         ],
         "group_empty": true,
         "polls": 1,
-        "completed_at": "2026-08-25T20:38:29.356Z"
+        "completed_at": "2026-08-25T21:35:14.255Z"
       },
       "stopped": true,
       "phase": "install",
@@ -854,20 +855,20 @@
         "ci"
       ],
       "expected_command_line": "npm ci",
-      "root_pid": 43648,
-      "root_ppid": 43296,
-      "root_pgid": 43648,
-      "start_identity": "Wed Aug 26 05:38:29 2026",
+      "root_pid": 60858,
+      "root_ppid": 60580,
+      "root_pgid": 60858,
+      "start_identity": "Wed Aug 26 06:35:14 2026",
       "observed": {
-        "pid": 43648,
-        "ppid": 43296,
-        "pgid": 43648,
-        "start_identity": "Wed Aug 26 05:38:29 2026",
+        "pid": 60858,
+        "ppid": 60580,
+        "pgid": 60858,
+        "start_identity": "Wed Aug 26 06:35:14 2026",
         "command_line": "npm ci"
       },
-      "started_at": "2026-08-25T20:38:29.356Z",
+      "started_at": "2026-08-25T21:35:14.255Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:38:29.466Z",
+        "completed_at": "2026-08-25T21:35:14.364Z",
         "polls": 2,
         "observed_commands": [
           "node /opt/homebrew/opt/node@24/bin/npm ci",
@@ -877,23 +878,30 @@
       "pre_term_identity": null,
       "term_sent_at": null,
       "root_exit": {
-        "exited_at": "2026-08-25T20:38:35.933Z",
+        "exited_at": "2026-08-25T21:35:17.827Z",
         "exit_code": 0,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 43648,
-            "ppid": 43296,
-            "pgid": 43648,
+            "pid": 60858,
+            "ppid": 60580,
+            "pgid": 60858,
             "command_line": "npm ci",
-            "start_identity": "Wed Aug 26 05:38:29 2026"
+            "start_identity": "Wed Aug 26 06:35:14 2026"
+          },
+          {
+            "pid": 61077,
+            "ppid": 1,
+            "pgid": 60858,
+            "command_line": "/usr/bin/curl --disable --cookie /dev/null --globoff --user-agent Homebrew/6.0.19-9-g533246d (Macintosh; arm64 Mac OS X 26.5.2) curl/8.7.1 --header Accept-Language: en --fail --progress-bar --silent --retry 3 --max-time 3 --header Authorization: Token iVdsgJ_OjvTYGAA79gOfWlA_fX0QCuj4eYUNdb-qVUTrC3tp3JTWCADVNE9HxV0kp2ZjIK9tuthy_teX4szr9A== --header Content-Type: text/plain; charset=utf-8 --header Accept: application/json --data-binary command_run,command=--env,ci=true,devcmdrun=true,developer=false options=\"--plain\" 1787693717 --silent --output /dev/null https://eu-central-1-1.aws.cloud2.influxdata.com/api/v2/write?bucket=analytics&precision=s",
+            "start_identity": "Wed Aug 26 06:35:17 2026"
           }
         ],
         "group_empty": true,
-        "polls": 1,
-        "completed_at": "2026-08-25T20:38:35.968Z"
+        "polls": 2,
+        "completed_at": "2026-08-25T21:35:18.005Z"
       },
       "stopped": true,
       "phase": "install",
@@ -921,20 +929,20 @@
         "public-release:build"
       ],
       "expected_command_line": "npm run public-release:build",
-      "root_pid": 44308,
-      "root_ppid": 43296,
-      "root_pgid": 44308,
-      "start_identity": "Wed Aug 26 05:38:35 2026",
+      "root_pid": 61190,
+      "root_ppid": 60580,
+      "root_pgid": 61190,
+      "start_identity": "Wed Aug 26 06:35:18 2026",
       "observed": {
-        "pid": 44308,
-        "ppid": 43296,
-        "pgid": 44308,
-        "start_identity": "Wed Aug 26 05:38:35 2026",
+        "pid": 61190,
+        "ppid": 60580,
+        "pgid": 61190,
+        "start_identity": "Wed Aug 26 06:35:18 2026",
         "command_line": "npm run public-release:build"
       },
-      "started_at": "2026-08-25T20:38:35.968Z",
+      "started_at": "2026-08-25T21:35:18.005Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:38:36.079Z",
+        "completed_at": "2026-08-25T21:35:18.114Z",
         "polls": 2,
         "observed_commands": [
           "node /opt/homebrew/opt/node@24/bin/npm run public-release:build",
@@ -944,30 +952,30 @@
       "pre_term_identity": null,
       "term_sent_at": null,
       "root_exit": {
-        "exited_at": "2026-08-25T20:38:50.467Z",
+        "exited_at": "2026-08-25T21:35:32.144Z",
         "exit_code": 0,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 44308,
-            "ppid": 43296,
-            "pgid": 44308,
+            "pid": 61190,
+            "ppid": 60580,
+            "pgid": 61190,
             "command_line": "npm run public-release:build",
-            "start_identity": "Wed Aug 26 05:38:35 2026"
+            "start_identity": "Wed Aug 26 06:35:18 2026"
           },
           {
-            "pid": 44374,
-            "ppid": 44308,
-            "pgid": 44308,
-            "command_line": "/usr/bin/env node /private/tmp/beyondwin-clean-host.9VZD8X/repository/node_modules/.bin/tsx packages/content/src/cli.ts build",
-            "start_identity": "Wed Aug 26 05:38:36 2026"
+            "pid": 61285,
+            "ppid": 61190,
+            "pgid": 61190,
+            "command_line": "/usr/bin/env node /private/tmp/beyondwin-clean-host.ebhLFy/repository/node_modules/.bin/tsx packages/content/src/cli.ts build",
+            "start_identity": "Wed Aug 26 06:35:18 2026"
           }
         ],
         "group_empty": true,
         "polls": 1,
-        "completed_at": "2026-08-25T20:38:50.499Z"
+        "completed_at": "2026-08-25T21:35:32.175Z"
       },
       "stopped": true,
       "phase": "build",
@@ -996,20 +1004,20 @@
         "public-release:verify"
       ],
       "expected_command_line": "npm run public-release:verify",
-      "root_pid": 44805,
-      "root_ppid": 43296,
-      "root_pgid": 44805,
-      "start_identity": "Wed Aug 26 05:38:50 2026",
+      "root_pid": 61599,
+      "root_ppid": 60580,
+      "root_pgid": 61599,
+      "start_identity": "Wed Aug 26 06:35:32 2026",
       "observed": {
-        "pid": 44805,
-        "ppid": 43296,
-        "pgid": 44805,
-        "start_identity": "Wed Aug 26 05:38:50 2026",
+        "pid": 61599,
+        "ppid": 60580,
+        "pgid": 61599,
+        "start_identity": "Wed Aug 26 06:35:32 2026",
         "command_line": "npm run public-release:verify"
       },
-      "started_at": "2026-08-25T20:38:50.499Z",
+      "started_at": "2026-08-25T21:35:32.175Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:38:50.609Z",
+        "completed_at": "2026-08-25T21:35:32.285Z",
         "polls": 2,
         "observed_commands": [
           "node /opt/homebrew/opt/node@24/bin/npm run public-release:verify",
@@ -1019,30 +1027,30 @@
       "pre_term_identity": null,
       "term_sent_at": null,
       "root_exit": {
-        "exited_at": "2026-08-25T20:38:51.098Z",
+        "exited_at": "2026-08-25T21:35:32.763Z",
         "exit_code": 0,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 44805,
-            "ppid": 43296,
-            "pgid": 44805,
+            "pid": 61599,
+            "ppid": 60580,
+            "pgid": 61599,
             "command_line": "npm run public-release:verify",
-            "start_identity": "Wed Aug 26 05:38:50 2026"
+            "start_identity": "Wed Aug 26 06:35:32 2026"
           },
           {
-            "pid": 44849,
-            "ppid": 44805,
-            "pgid": 44805,
-            "command_line": "node /private/tmp/beyondwin-clean-host.9VZD8X/repository/node_modules/.bin/tsx packages/content/src/cli.ts verify",
-            "start_identity": "Wed Aug 26 05:38:50 2026"
+            "pid": 61659,
+            "ppid": 61599,
+            "pgid": 61599,
+            "command_line": "node /private/tmp/beyondwin-clean-host.ebhLFy/repository/node_modules/.bin/tsx packages/content/src/cli.ts verify",
+            "start_identity": "Wed Aug 26 06:35:32 2026"
           }
         ],
         "group_empty": true,
         "polls": 1,
-        "completed_at": "2026-08-25T20:38:51.132Z"
+        "completed_at": "2026-08-25T21:35:32.796Z"
       },
       "stopped": true,
       "phase": "build",
@@ -1071,20 +1079,20 @@
         "site:build"
       ],
       "expected_command_line": "npm run site:build",
-      "root_pid": 44953,
-      "root_ppid": 43296,
-      "root_pgid": 44953,
-      "start_identity": "Wed Aug 26 05:38:51 2026",
+      "root_pid": 61773,
+      "root_ppid": 60580,
+      "root_pgid": 61773,
+      "start_identity": "Wed Aug 26 06:35:32 2026",
       "observed": {
-        "pid": 44953,
-        "ppid": 43296,
-        "pgid": 44953,
-        "start_identity": "Wed Aug 26 05:38:51 2026",
+        "pid": 61773,
+        "ppid": 60580,
+        "pgid": 61773,
+        "start_identity": "Wed Aug 26 06:35:32 2026",
         "command_line": "npm run site:build"
       },
-      "started_at": "2026-08-25T20:38:51.132Z",
+      "started_at": "2026-08-25T21:35:32.796Z",
       "stabilization": {
-        "completed_at": "2026-08-25T20:38:51.241Z",
+        "completed_at": "2026-08-25T21:35:32.906Z",
         "polls": 2,
         "observed_commands": [
           "node /opt/homebrew/opt/node@24/bin/npm run site:build",
@@ -1094,30 +1102,30 @@
       "pre_term_identity": null,
       "term_sent_at": null,
       "root_exit": {
-        "exited_at": "2026-08-25T20:38:54.885Z",
+        "exited_at": "2026-08-25T21:35:36.548Z",
         "exit_code": 0,
         "signal": null
       },
       "group_lifecycle": {
         "members_observed": [
           {
-            "pid": 44953,
-            "ppid": 43296,
-            "pgid": 44953,
+            "pid": 61773,
+            "ppid": 60580,
+            "pgid": 61773,
             "command_line": "npm run site:build",
-            "start_identity": "Wed Aug 26 05:38:51 2026"
+            "start_identity": "Wed Aug 26 06:35:32 2026"
           },
           {
-            "pid": 44997,
-            "ppid": 44953,
-            "pgid": 44953,
+            "pid": 61817,
+            "ppid": 61773,
+            "pgid": 61773,
             "command_line": "node /opt/homebrew/opt/node@24/bin/npm run build --workspace @beyondwin/site",
-            "start_identity": "Wed Aug 26 05:38:51 2026"
+            "start_identity": "Wed Aug 26 06:35:32 2026"
           }
         ],
         "group_empty": true,
         "polls": 1,
-        "completed_at": "2026-08-25T20:38:54.919Z"
+        "completed_at": "2026-08-25T21:35:36.579Z"
       },
       "stopped": true,
       "phase": "build",
@@ -1145,7 +1153,7 @@
     "manifest_hash": "sha256:5462764b984aa492eb6f4194988ddad035a25c9ef751a2857f4b6571ac978195",
     "artifact_hash": "sha256:38829f0d35c78c5777f1b094a1196fd17146c615c1d5982387c7b2a153c95a08"
   },
-  "selected_build_hash": "sha256:601a874e6b655c09b6b99bdb0a2eca24bb0545f4b71670219c9687a9bdc72aee",
+  "selected_build_hash": "sha256:45fcdfbd64e990ccec5bf297fdace3cff4c54c8dc74988f22af572b0aee4d04c",
   "route_count": 80,
   "inventory_hash": "sha256:1dda2a3b837dcbbab650358cf145481cc81210470a6d5677c7b1958b7c275f18",
   "smoke": [
@@ -1162,7 +1170,7 @@
     {
       "path": "/articles/",
       "status": 200,
-      "body_hash": "sha256:efd0d98fc9e4ef28b1152c61d5fb1236e612cf147b9730fe277b3e38e368b5fe"
+      "body_hash": "sha256:babc7c12c5f8b02d0bb983e9e8f6f089970543713ea3f788ac24549e23eeff15"
     },
     {
       "path": "/articles/ai-design-references/",
@@ -1282,7 +1290,7 @@
     {
       "path": "/reviews/",
       "status": 200,
-      "body_hash": "sha256:944a60fdd3b050f259ba6e3f8f68eb23b81b5699fe6f0513ca4e893391c8147f"
+      "body_hash": "sha256:d384c94ff8ee29cef261c5a611eeabd47c6f6d7ff53405a08b7df399fde83ff7"
     },
     {
       "path": "/reviews/art-thief/",
@@ -1552,11 +1560,11 @@
   ],
   "temp_root": {
     "pattern": "/tmp/beyondwin-clean-host.*",
-    "path": "/tmp/beyondwin-clean-host.9VZD8X",
-    "realpath": "/private/tmp/beyondwin-clean-host.9VZD8X",
+    "path": "/tmp/beyondwin-clean-host.ebhLFy",
+    "realpath": "/private/tmp/beyondwin-clean-host.ebhLFy",
     "realpath_validated": true,
     "removed": true,
-    "preview_port": 60346
+    "preview_port": 64467
   },
   "errors": []
 }
