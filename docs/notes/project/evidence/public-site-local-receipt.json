@@ -1,4 +1,16 @@
 {
   "schema_version": 2,
-  "status": "not_measured"
+  "status": "blocked",
+  "implementation_commit": "b981faab70b2264b85032439401772503e96410b",
+  "reason": "No complete replacement drill receipt was produced within the bounded safety-fix loop.",
+  "dynamic_crawl": "not_measured",
+  "attempts": [
+    { "commit": "b8ed8fd914a468f11108509761857d694c5e44cb", "refusal": "npm command title not stable; orphan PID 49587 identified and stopped" },
+    { "commit": "63797edeeaa92f5ea24151d7250b29191970971f", "refusal": "npm command title not stable; owned group cleanup passed" },
+    { "commit": "2b1fd17807c6b88982764dec8508e3d39e6d31bc", "refusal": "listener PPID ancestry did not prove owned detached group" },
+    { "commit": "2177e158a7db478b4d58c2742b02c609d6c201f3", "refusal": "empty lsof row parsed as PID zero before crawl" }
+  ],
+  "processes_cleaned": true,
+  "ports_free_after": true,
+  "temp_removed": true
 }

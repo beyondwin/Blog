@@ -1,13 +1,65 @@
 {
   "schema_version": 2,
-  "implementation_commit": "",
-  "release": null,
-  "builds": null,
+  "implementation_commit": "b981faab70b2264b85032439401772503e96410b",
+  "release": {
+    "release_id": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+    "active_pointer_hash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
+    "manifest_hash": "sha256:5462764b984aa492eb6f4194988ddad035a25c9ef751a2857f4b6571ac978195",
+    "artifact_hash": "sha256:38829f0d35c78c5777f1b094a1196fd17146c615c1d5982387c7b2a153c95a08"
+  },
+  "builds": {
+    "react_root": "apps/site/build/client",
+    "react_hash": "sha256:601a874e6b655c09b6b99bdb0a2eca24bb0545f4b71670219c9687a9bdc72aee",
+    "astro_root": "dist",
+    "astro_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37",
+    "rollback_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37"
+  },
   "route_parity": null,
-  "task14": null,
+  "task14": {
+    "eligible": true,
+    "report_path": ".superpowers/sdd/public-reading-continuity-implementation-plan/task-14-report.md",
+    "report_hash": "sha256:48f98a9c96068e25ea2a4fb40280ea45b77cbb0e2c330f051bd6990e97f0fee1",
+    "performance_receipt_path": "docs/notes/project/evidence/public-site-review-performance.json",
+    "performance_receipt_hash": "sha256:c86f576974669516ae4d750ab726538bcb6d3002a524b1da2b1c6bc4f8f44081",
+    "performance_commit": "b8ed8fd914a468f11108509761857d694c5e44cb",
+    "route_source_hashes": {
+      "/": "sha256:9b19555f7bbeb3fed0e96ece7fd72eef44d8688fc7de14eab1cfad1a965f21be",
+      "/articles/why-i-read-in-the-ai-era/": "sha256:ba8768b43ef81d5a3b5e2fb302031e577d616fbd5f89225b2b9676e06dc8a017",
+      "/reviews/black-swan/": "sha256:4902af6e0e1844453c9fc6e53e9114331232f4b1d2965c0916f738295f652817",
+      "/memory/agent-harnesses-are-operating-systems/": "sha256:357c7276f7025c4c28dd6862c1719a40b5330d3c739697616aebf9ed13c13929"
+    },
+    "metric_summary": [
+      { "route": "/", "viewport": "1440×960", "lcp_median_ms": 24, "cls_median": 0, "initial_js_gzip_bytes": 110390, "image_bytes": 143129, "mandatory_issues": 0 },
+      { "route": "/", "viewport": "390×844", "lcp_median_ms": 20, "cls_median": 0, "initial_js_gzip_bytes": 110390, "image_bytes": 95632, "mandatory_issues": 0 },
+      { "route": "/articles/why-i-read-in-the-ai-era/", "viewport": "1440×960", "lcp_median_ms": 28, "cls_median": 0, "initial_js_gzip_bytes": 109003, "image_bytes": 264494, "mandatory_issues": 0 },
+      { "route": "/articles/why-i-read-in-the-ai-era/", "viewport": "390×844", "lcp_median_ms": 24, "cls_median": 0, "initial_js_gzip_bytes": 109003, "image_bytes": 114763, "mandatory_issues": 0 },
+      { "route": "/reviews/black-swan/", "viewport": "1440×960", "lcp_median_ms": 24, "cls_median": 0, "initial_js_gzip_bytes": 108250, "image_bytes": 45902, "mandatory_issues": 0 },
+      { "route": "/reviews/black-swan/", "viewport": "390×844", "lcp_median_ms": 20, "cls_median": 0, "initial_js_gzip_bytes": 108250, "image_bytes": 45902, "mandatory_issues": 0 },
+      { "route": "/memory/agent-harnesses-are-operating-systems/", "viewport": "1440×960", "lcp_median_ms": 20, "cls_median": 0, "initial_js_gzip_bytes": 105474, "image_bytes": 0, "mandatory_issues": 0 },
+      { "route": "/memory/agent-harnesses-are-operating-systems/", "viewport": "390×844", "lcp_median_ms": 20, "cls_median": 0, "initial_js_gzip_bytes": 105474, "image_bytes": 0, "mandatory_issues": 0 }
+    ]
+  },
   "local_proxy": null,
   "clean_host": null,
-  "execution_log": [],
+  "execution_log": [
+    {
+      "schema_version": 1,
+      "event_kind": "changed_surface_performance",
+      "commit": "b8ed8fd914a468f11108509761857d694c5e44cb",
+      "route": "/reviews/black-swan/",
+      "status": "passed",
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "local_cutover_blocked",
+      "commit": "b981faab70b2264b85032439401772503e96410b",
+      "attempt_count": 4,
+      "dynamic_crawl": "not_measured",
+      "clean_host": "not_measured",
+      "production": false
+    }
+  ],
   "production_host": null,
   "production_cutover_authorized": false,
   "production_cutover_at": null,

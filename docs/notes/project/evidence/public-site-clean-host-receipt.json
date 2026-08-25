@@ -1,4 +1,6 @@
 {
   "schema_version": 2,
-  "status": "not_measured"
+  "status": "not_measured",
+  "implementation_commit": "b981faab70b2264b85032439401772503e96410b",
+  "reason": "The prerequisite replacement local drill did not complete."
 }

@@ -1,4 +1,622 @@
 {
-  "schema_version": 1,
-  "status": "not_measured"
+  "version": 2,
+  "renderer": "react-router",
+  "measuredAt": "2026-08-25T19:16:38.666Z",
+  "releaseId": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+  "repositoryHead": "b8ed8fd914a468f11108509761857d694c5e44cb",
+  "selection": {
+    "selector": "review",
+    "routeNames": [
+      "review"
+    ],
+    "selectedRoutes": [
+      "/reviews/black-swan/"
+    ]
+  },
+  "sourceHashes": {
+    "routes": {
+      "/reviews/black-swan/": "sha256:4902af6e0e1844453c9fc6e53e9114331232f4b1d2965c0916f738295f652817"
+    },
+    "measurementImplementation": "sha256:3d1e4c99b3eb55415033bc964bcbe10b341bccaad5a768a2f27752611654fefb",
+    "harness": "sha256:3d5a07ca7dc13d73c4df8d0961f4cf43b63b19108703d74bb20a0f628e61f93b",
+    "config": "sha256:678eb1a42b927c4cd0d20fdfe6b3992d6a1f15b7c4e88f7a5fa89512251cfdff",
+    "releaseManifest": "sha256:8d20696a61ee4479b37a23b146f9473a20fb51852c7b3203ca89f3d9415c3f9d"
+  },
+  "protocol": {
+    "routes": [
+      "/reviews/black-swan/"
+    ],
+    "viewports": [
+      "desktop",
+      "mobile"
+    ],
+    "warmups": 1,
+    "coldSamplesPerCell": 5,
+    "freshContextPerSample": true,
+    "clearedHttpCachePerSample": true
+  },
+  "budgets": {
+    "clsMax": 0.05,
+    "lcpAstroMultiplier": 1.1,
+    "detailInitialJsGzipBytesMax": 112640
+  },
+  "baseline": [
+    {
+      "path": "/",
+      "measurements": [
+        {
+          "viewport": "desktop",
+          "median": {
+            "lcpMs": 24,
+            "cls": 0,
+            "jsGzipBytes": 1763,
+            "imageBytes": 232382
+          },
+          "mad": {
+            "lcpMs": 0,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          }
+        },
+        {
+          "viewport": "mobile",
+          "median": {
+            "lcpMs": 20,
+            "cls": 0,
+            "jsGzipBytes": 1763,
+            "imageBytes": 232382
+          },
+          "mad": {
+            "lcpMs": 0,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          }
+        }
+      ]
+    },
+    {
+      "path": "/articles/why-i-read-in-the-ai-era/",
+      "measurements": [
+        {
+          "viewport": "desktop",
+          "median": {
+            "lcpMs": 28,
+            "cls": 0,
+            "jsGzipBytes": 197,
+            "imageBytes": 80718
+          },
+          "mad": {
+            "lcpMs": 4,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          }
+        },
+        {
+          "viewport": "mobile",
+          "median": {
+            "lcpMs": 24,
+            "cls": 0,
+            "jsGzipBytes": 197,
+            "imageBytes": 80718
+          },
+          "mad": {
+            "lcpMs": 0,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          }
+        }
+      ]
+    },
+    {
+      "path": "/reviews/black-swan/",
+      "measurements": [
+        {
+          "viewport": "desktop",
+          "median": {
+            "lcpMs": 24,
+            "cls": 0,
+            "jsGzipBytes": 230,
+            "imageBytes": 58350
+          },
+          "mad": {
+            "lcpMs": 0,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          }
+        },
+        {
+          "viewport": "mobile",
+          "median": {
+            "lcpMs": 20,
+            "cls": 0,
+            "jsGzipBytes": 230,
+            "imageBytes": 58350
+          },
+          "mad": {
+            "lcpMs": 0,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          }
+        }
+      ]
+    },
+    {
+      "path": "/memory/agent-harnesses-are-operating-systems/",
+      "measurements": [
+        {
+          "viewport": "desktop",
+          "median": {
+            "lcpMs": 20,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          },
+          "mad": {
+            "lcpMs": 0,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          }
+        },
+        {
+          "viewport": "mobile",
+          "median": {
+            "lcpMs": 20,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          },
+          "mad": {
+            "lcpMs": 0,
+            "cls": 0,
+            "jsGzipBytes": 0,
+            "imageBytes": 0
+          }
+        }
+      ]
+    }
+  ],
+  "measurements": [
+    {
+      "path": "/reviews/black-swan/",
+      "viewport": "desktop",
+      "measurement": {
+        "viewport": "desktop",
+        "size": {
+          "width": 1440,
+          "height": 960
+        },
+        "warmupDiscarded": 1,
+        "sampleCount": 5,
+        "samples": [
+          {
+            "cls": 0,
+            "lcpMs": 28,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 144,
+                "displayedHeight": 216,
+                "naturalWidth": 144,
+                "naturalHeight": 210,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 1440,
+              "actualScrollWidth": 1440,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          },
+          {
+            "cls": 0,
+            "lcpMs": 24,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 144,
+                "displayedHeight": 216,
+                "naturalWidth": 144,
+                "naturalHeight": 210,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 1440,
+              "actualScrollWidth": 1440,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          },
+          {
+            "cls": 0,
+            "lcpMs": 24,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 144,
+                "displayedHeight": 216,
+                "naturalWidth": 144,
+                "naturalHeight": 210,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 1440,
+              "actualScrollWidth": 1440,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          },
+          {
+            "cls": 0,
+            "lcpMs": 24,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 144,
+                "displayedHeight": 216,
+                "naturalWidth": 144,
+                "naturalHeight": 210,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 1440,
+              "actualScrollWidth": 1440,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          },
+          {
+            "cls": 0,
+            "lcpMs": 24,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 144,
+                "displayedHeight": 216,
+                "naturalWidth": 144,
+                "naturalHeight": 210,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 1440,
+              "actualScrollWidth": 1440,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          }
+        ],
+        "median": {
+          "lcpMs": 24,
+          "cls": 0,
+          "jsGzipBytes": 108250,
+          "imageBytes": 45902
+        },
+        "mad": {
+          "lcpMs": 0,
+          "cls": 0,
+          "jsGzipBytes": 0,
+          "imageBytes": 0
+        },
+        "consoleErrors": [],
+        "hydrationErrors": [],
+        "axeSeriousOrCritical": [],
+        "imageFailures": [],
+        "overflow": {
+          "expectedMaxWidth": 1440,
+          "actualScrollWidth": 1440,
+          "overflow": false
+        },
+        "privateBoundaryHits": []
+      }
+    },
+    {
+      "path": "/reviews/black-swan/",
+      "viewport": "mobile",
+      "measurement": {
+        "viewport": "mobile",
+        "size": {
+          "width": 390,
+          "height": 844
+        },
+        "warmupDiscarded": 1,
+        "sampleCount": 5,
+        "samples": [
+          {
+            "cls": 0,
+            "lcpMs": 20,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 112,
+                "displayedHeight": 168,
+                "naturalWidth": 117,
+                "naturalHeight": 171,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 390,
+              "actualScrollWidth": 390,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          },
+          {
+            "cls": 0,
+            "lcpMs": 20,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 112,
+                "displayedHeight": 168,
+                "naturalWidth": 117,
+                "naturalHeight": 171,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 390,
+              "actualScrollWidth": 390,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          },
+          {
+            "cls": 0,
+            "lcpMs": 20,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 112,
+                "displayedHeight": 168,
+                "naturalWidth": 117,
+                "naturalHeight": 171,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 390,
+              "actualScrollWidth": 390,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          },
+          {
+            "cls": 0,
+            "lcpMs": 24,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 112,
+                "displayedHeight": 168,
+                "naturalWidth": 117,
+                "naturalHeight": 171,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 390,
+              "actualScrollWidth": 390,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          },
+          {
+            "cls": 0,
+            "lcpMs": 20,
+            "lcpElement": {
+              "provenance": "largest-contentful-paint",
+              "tagName": "",
+              "id": "",
+              "className": "",
+              "url": "",
+              "text": ""
+            },
+            "jsGzipBytes": 108250,
+            "imageBytes": 45902,
+            "renderedImages": [
+              {
+                "source": "/assets/content/reviews/black-swan/cover-458w.avif",
+                "displayedWidth": 112,
+                "displayedHeight": 168,
+                "naturalWidth": 117,
+                "naturalHeight": 171,
+                "declaredWidth": 458,
+                "declaredHeight": 671,
+                "format": "image/avif"
+              }
+            ],
+            "imageFailures": [],
+            "consoleErrors": [],
+            "hydrationErrors": [],
+            "axeSeriousOrCritical": [],
+            "overflow": {
+              "expectedMaxWidth": 390,
+              "actualScrollWidth": 390,
+              "overflow": false
+            },
+            "privateBoundaryHits": []
+          }
+        ],
+        "median": {
+          "lcpMs": 20,
+          "cls": 0,
+          "jsGzipBytes": 108250,
+          "imageBytes": 45902
+        },
+        "mad": {
+          "lcpMs": 0,
+          "cls": 0,
+          "jsGzipBytes": 0,
+          "imageBytes": 0
+        },
+        "consoleErrors": [],
+        "hydrationErrors": [],
+        "axeSeriousOrCritical": [],
+        "imageFailures": [],
+        "overflow": {
+          "expectedMaxWidth": 390,
+          "actualScrollWidth": 390,
+          "overflow": false
+        },
+        "privateBoundaryHits": []
+      }
+    }
+  ],
+  "failures": []
 }
