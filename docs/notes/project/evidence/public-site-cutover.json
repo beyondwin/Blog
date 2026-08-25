@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "implementation_commit": "",
+  "release": null,
+  "builds": null,
+  "route_parity": null,
+  "task14": null,
+  "local_proxy": null,
+  "clean_host": null,
+  "execution_log": [],
+  "production_cutover_authorized": false,
+  "production_cutover_at": null,
+  "rollback_drill_at": null,
+  "observation_started_at": null,
+  "observation_completed_at": null,
+  "observation_errors": null,
+  "astro_removal_ready": false
+}

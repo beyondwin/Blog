@@ -181,6 +181,7 @@ describe('React Router current-behavior static route contract', () => {
     const articleData = await article.loader({ params: { slug: ARTICLE_ID } });
     const reviewData = await review.loader({ params: { slug: REVIEW_ID } });
     const memoryData = await memory.loader({ params: { slug: MEMORY_ID } });
+    const verdictReviewData = await review.loader({ params: { slug: 'art-thief' } });
 
     expect(home.meta({ data: homeData })).toEqual([
       { title: '판단 · beyondwin' },
@@ -192,6 +193,9 @@ describe('React Router current-behavior static route contract', () => {
     });
     expect(review.meta({ data: reviewData })).toContainEqual({
       tagName: 'link', rel: 'canonical', href: `/reviews/${REVIEW_ID}/`,
+    });
+    expect(review.meta({ data: verdictReviewData })).toContainEqual({
+      name: 'description', content: '예술 도둑은 중독에 관한 기록이다.',
     });
     expect(memory.meta({ data: memoryData })).toContainEqual({
       tagName: 'link', rel: 'canonical', href: `/memory/${MEMORY_ID}/`,

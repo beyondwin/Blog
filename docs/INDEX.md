@@ -24,6 +24,7 @@
 | Public reading continuity 상세 설계 | project | product-design | ko | organized | [docs/notes/project/public-reading-continuity-design.md](notes/project/public-reading-continuity-design.md) |
 | Public reading continuity React migration 구현 계획 | project | implementation-plan | ko | organized | [docs/notes/project/public-reading-continuity-implementation-plan.md](notes/project/public-reading-continuity-implementation-plan.md) |
 | Public renderer comparison and promotion evidence | project | evidence | en | organized | [docs/notes/project/evidence/public-renderer-comparison.md](notes/project/evidence/public-renderer-comparison.md) |
+| Public site cutover, rollback, and restore evidence | project | evidence | en | organized | [docs/notes/project/evidence/public-site-cutover.md](notes/project/evidence/public-site-cutover.md) |
 | Public Atlas Visual Storyworld vertical slice 설계 | project | product-design | ko | organized | [docs/notes/project/visual-storyworld-public-atlas-design.md](notes/project/visual-storyworld-public-atlas-design.md) |
 | 리뷰 verdict 검토 패킷 | project | workflow | ko | organized | [docs/notes/content-migration/review-verdicts.md](notes/content-migration/review-verdicts.md) |
 | 아키텍처 레퍼런스 | project | reference | ko | organized | [docs/notes/project/architecture-reference.md](notes/project/architecture-reference.md) |

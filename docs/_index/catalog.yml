@@ -203,6 +203,16 @@
   source: ADR-0005
   updated: 2026-08-25
 
+- title: Public site cutover, rollback, and restore evidence
+  path: docs/notes/project/evidence/public-site-cutover.md
+  topic: project
+  type: evidence
+  language: en
+  status: organized
+  summary: Records source-bound local React-to-Astro rollback, safe proxy lifecycle, clean-host restore, production observation boundaries, and the fail-closed Astro-removal gate.
+  source: ADR-0005 and ADR-0006
+  updated: 2026-08-26
+
 - title: Public Atlas Visual Storyworld vertical slice 설계
   path: docs/notes/project/visual-storyworld-public-atlas-design.md
   topic: project
