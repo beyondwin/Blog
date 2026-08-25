@@ -10,6 +10,7 @@ import {
   assertDynamicCrawl,
   assertLocalReceiptMaterialGroups,
   deriveChangedSurfacePerformance,
+  tsxObservedCommandLine,
 } from './evidence-contracts.mts';
 import { hashFile, hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
 import { parseTask14Metrics, verifyStaticCutoverContract, type Task14Metric } from './verify-rollback.mts';
@@ -226,7 +227,16 @@ export async function verifyPublicSiteEvidence(evidence: PublicSiteEvidence, opt
   exactKeys(localSummary, ['receipt_path', 'receipt_hash', 'transitions', 'processes_cleaned', 'ports_free_after'], 'local proxy summary');
   if (await hashFile(localPath) !== localSummary.receipt_hash) throw new Error('local receipt hash changed');
   const local = await readJson<Record<string, unknown>>(localPath);
-  assertLocalReceiptMaterialGroups(local, { implementationCommit: evidence.implementation_commit, representatives: representativeRoutes });
+  const localControllerArgv = [
+    process.execPath, join(root, 'scripts/cutover/verify-rollback.mts'),
+    '--implementation-commit', evidence.implementation_commit,
+    '--performance-receipt', task14.performance_receipt_path,
+    '--output', localSummary.receipt_path,
+  ];
+  assertLocalReceiptMaterialGroups(local, {
+    implementationCommit: evidence.implementation_commit, representatives: representativeRoutes,
+    controllerArgv: localControllerArgv, controllerObservedCommandLine: tsxObservedCommandLine(localControllerArgv, root),
+  });
   verifyHistoricalProcesses(local);
   const dynamic = (local.dynamic_crawl as { routes: unknown[] }).routes;
   assertDynamicCrawl(dynamic, baseline.routes.map((route) => ({
@@ -256,7 +266,14 @@ export async function verifyPublicSiteEvidence(evidence: PublicSiteEvidence, opt
   exactKeys(cleanSummary, ['receipt_path', 'receipt_hash', 'eligible', 'implementation_commit', 'archive_hash', 'temp_removed'], 'clean-host summary');
   if (await hashFile(cleanPath) !== cleanSummary.receipt_hash) throw new Error('clean-host receipt hash changed');
   const clean = await readJson<Record<string, unknown>>(cleanPath);
-  assertCleanHostReceiptMaterialGroups(clean, { implementationCommit: evidence.implementation_commit });
+  const cleanControllerArgv = [
+    process.execPath, join(root, 'scripts/cutover/verify-clean-host.mts'),
+    '--commit', evidence.implementation_commit, '--output', cleanSummary.receipt_path,
+  ];
+  assertCleanHostReceiptMaterialGroups(clean, {
+    implementationCommit: evidence.implementation_commit,
+    controllerArgv: cleanControllerArgv, controllerObservedCommandLine: tsxObservedCommandLine(cleanControllerArgv, root),
+  });
   await verifyArchive(root, evidence.implementation_commit, clean);
   const allowedKeys = ['CI', 'NODE_ENV', 'NO_COLOR', 'NPM_CONFIG_AUDIT', 'NPM_CONFIG_CACHE', 'NPM_CONFIG_FUND', 'NPM_CONFIG_GLOBALCONFIG', 'NPM_CONFIG_UPDATE_NOTIFIER', 'NPM_CONFIG_USERCONFIG', 'PATH', 'TMPDIR', 'TZ', 'XDG_CACHE_HOME', 'XDG_CONFIG_HOME'].sort();
   const environment = clean.environment as Record<string, unknown>;
@@ -264,12 +281,6 @@ export async function verifyPublicSiteEvidence(evidence: PublicSiteEvidence, opt
     || environment.npm_userconfig_hash !== sha256('') || environment.npm_globalconfig_hash !== sha256('')
     || environment.config_inventory_hash !== sha256('5:npmrc:0:12:npmrc-global:0:')
     || environment.cache_inventory_hash_before !== sha256('')) throw new Error('clean-host explicit environment/config roots do not recompute');
-  const expectedCommands = [
-    ['git', 'archive'], ['tar', '-xf'], ['npm', 'ci'], ['npm', 'run', 'public-release:build'],
-    ['npm', 'run', 'public-release:verify'], ['npm', 'run', 'site:build'],
-  ];
-  const commands = clean.commands as Array<Record<string, unknown>>;
-  if (commands.length !== expectedCommands.length || commands.some((entry, index) => !(entry.argv as string[]).slice(0, expectedCommands[index]!.length).every((value, part) => value === expectedCommands[index]![part]))) throw new Error('clean-host command sequence drifted');
   if (JSON.stringify(clean.release) !== JSON.stringify(release) || clean.selected_build_hash !== builds.react_hash || clean.route_count !== 80 || clean.inventory_hash !== recomputedStatic.inventory_hash) throw new Error('clean-host release/build/inventory drifted');
   const smoke = clean.smoke as Array<{ path: string; status: number; body_hash: string }>;
   if (JSON.stringify(smoke.map(({ path }) => path)) !== JSON.stringify(expectedRoutes)) throw new Error('clean-host smoke exact route set drifted');

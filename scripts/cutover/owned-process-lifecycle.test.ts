@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   registerOwnedProcess,
+  runOwnedCleanupSteps,
   stabilizeOwnedProcess,
   terminateOwnedProcess,
   type OwnedProcessEvidence,
@@ -15,7 +16,7 @@ const rootSnapshot = (overrides: Partial<ProcessSnapshot> = {}): ProcessSnapshot
 
 async function readyEntry(): Promise<OwnedProcessEvidence> {
   const registry: OwnedProcessEvidence[] = [];
-  const entry = registerOwnedProcess(registry, { role: 'react', argv, rootPid: 101, controllerPid: 99, startedAt: '2026-08-26T00:00:00.000Z' });
+  const entry = registerOwnedProcess(registry, { role: 'react', argv, expectedCommand: observedCommand, rootPid: 101, controllerPid: 99, startedAt: '2026-08-26T00:00:00.000Z' });
   await stabilizeOwnedProcess(entry, async () => rootSnapshot(), observedCommand);
   return entry;
 }
@@ -23,14 +24,14 @@ async function readyEntry(): Promise<OwnedProcessEvidence> {
 describe('owned process lifecycle', () => {
   it('registers the process group synchronously before any stabilization proof', () => {
     const registry: OwnedProcessEvidence[] = [];
-    const entry = registerOwnedProcess(registry, { role: 'react', argv, rootPid: 101, controllerPid: 99, startedAt: '2026-08-26T00:00:00.000Z' });
+    const entry = registerOwnedProcess(registry, { role: 'react', argv, expectedCommand: observedCommand, rootPid: 101, controllerPid: 99, startedAt: '2026-08-26T00:00:00.000Z' });
     expect(registry).toEqual([entry]);
     expect(entry).toMatchObject({ root_pid: 101, root_ppid: 99, root_pgid: 101, observed: null, stopped: false });
   });
 
   it('retains enough identity to clean an immediate command-title stabilization failure', async () => {
     const registry: OwnedProcessEvidence[] = [];
-    const entry = registerOwnedProcess(registry, { role: 'react', argv, rootPid: 101, controllerPid: 99, startedAt: '2026-08-26T00:00:00.000Z' });
+    const entry = registerOwnedProcess(registry, { role: 'react', argv, expectedCommand: observedCommand, rootPid: 101, controllerPid: 99, startedAt: '2026-08-26T00:00:00.000Z' });
     const initial = rootSnapshot({ command_line: 'node /opt/homebrew/opt/node@24/bin/npm run site:preview' });
     await expect(stabilizeOwnedProcess(entry, async () => initial, observedCommand, { maxPolls: 1, pause: async () => {} }))
       .rejects.toThrow(/stabilize/iu);
@@ -43,6 +44,49 @@ describe('owned process lifecycle', () => {
       pause: async () => {},
     });
     expect(entry.stopped).toBe(true);
+  });
+
+  it('terminates a just-spawned owned group before the first stabilization snapshot', async () => {
+    const registry: OwnedProcessEvidence[] = [];
+    const entry = registerOwnedProcess(registry, {
+      role: 'react', argv, expectedCommand: observedCommand, rootPid: 101, controllerPid: 99,
+      startedAt: '2026-08-26T00:00:00.000Z',
+    });
+    let signalled = false;
+    let polls = 0;
+    await terminateOwnedProcess(entry, {
+      snapshot: async () => rootSnapshot(),
+      groupMembers: async () => ++polls === 1 ? [rootSnapshot()] : [],
+      signalGroup: () => { signalled = true; },
+      waitForRootExit: async () => ({ exited_at: '2026-08-26T00:01:00.000Z', exit_code: null, signal: 'SIGTERM' }),
+      pause: async () => {},
+    });
+    expect(signalled).toBe(true);
+    expect(entry).toMatchObject({ start_identity: 'start-a', observed: rootSnapshot(), stopped: true });
+
+    const foreign = registerOwnedProcess([], {
+      role: 'react', argv, expectedCommand: observedCommand, rootPid: 101, controllerPid: 99,
+    });
+    signalled = false;
+    await expect(terminateOwnedProcess(foreign, {
+      snapshot: async () => rootSnapshot({ command_line: 'npm run foreign' }),
+      groupMembers: async () => [rootSnapshot({ command_line: 'npm run foreign' })],
+      signalGroup: () => { signalled = true; },
+      waitForRootExit: async () => ({ exited_at: '2026-08-26T00:01:00.000Z', exit_code: null, signal: 'SIGTERM' }),
+      pause: async () => {},
+    })).rejects.toThrow(/command/iu);
+    expect(signalled).toBe(false);
+  });
+
+  it('runs every best-effort cleanup step even when an earlier step rejects', async () => {
+    const order: string[] = [];
+    const errors = await runOwnedCleanupSteps([
+      ['first', async () => { order.push('first'); throw new Error('first failed'); }],
+      ['second', async () => { order.push('second'); }],
+      ['third', async () => { order.push('third'); throw new Error('third failed'); }],
+    ]);
+    expect(order).toEqual(['first', 'second', 'third']);
+    expect(errors).toEqual(['first: Error: first failed', 'third: Error: third failed']);
   });
 
   it('refuses command replacement, foreign PID/group, and controller mismatch before TERM', async () => {

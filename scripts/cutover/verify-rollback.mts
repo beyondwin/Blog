@@ -1,6 +1,8 @@
 import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { mkdtempSync, realpathSync } from 'node:fs';
 import { arch, platform, release as osRelease } from 'node:os';
-import { access, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -10,65 +12,21 @@ import { readActiveRelease } from '../../packages/content/src/release/read-relea
 import { buildHtmlContract, type AstroBaseline } from '../../tools/parity/src/html-contract.ts';
 import { hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
 import { checkExactDrillPorts, prepareStateFile, writeProxyTarget, type ProxyTarget } from './local-proxy.mts';
-import { assertDynamicCrawl, deriveChangedSurfacePerformance, npmObservedCommandLine, sealChangedSurfacePerformance, validateOwnedProcessIdentity } from './evidence-contracts.mts';
+import { assertDynamicCrawl, deriveChangedSurfacePerformance, npmObservedCommandLine, sealChangedSurfacePerformance, tsxObservedCommandLine, validateOwnedProcessIdentity, type DynamicRouteExpectation } from './evidence-contracts.mts';
 import {
   installOwnedSignalHandlers,
   registerOwnedProcess,
+  runOwnedCleanupSteps,
   stabilizeOwnedProcess,
   terminateOwnedProcess,
   type OwnedProcessEvidence,
+  type OwnedSignalEvidence,
   type ProcessSnapshot,
   type SignalTarget,
 } from './owned-process-lifecycle.mts';
 import type { ProxyTransition } from './verify-public-site.mts';
 
 const execFileAsync = promisify(execFile);
-
-export interface LocalCutoverReceipt {
-  schema_version: 1;
-  implementation_commit: string;
-  created_at: string;
-  finalized_at: string | null;
-  environment: {
-    node: string;
-    npm: string;
-    os: string;
-    playwright: string;
-    chromium: string;
-  };
-  release: {
-    release_id: string;
-    active_pointer_hash: string;
-    manifest_hash: string;
-    artifact_hash: string;
-  };
-  builds: {
-    react_root: string;
-    react_hash: string;
-    astro_root: string;
-    astro_hash: string;
-    rollback_hash: string;
-  };
-  route_count: number;
-  inventory_hash: string;
-  metadata_checked: number;
-  redirects_checked: number;
-  scoped_routes_checked: number;
-  failures: string[];
-  task14: {
-    eligible: boolean;
-    report_path: string;
-    report_hash: string;
-    route_source_hashes: Record<string, string>;
-    metric_summary: Task14Metric[];
-  };
-  ports: { proxy: 4390; react: 4391; astro: 4392 };
-  transitions: ProxyTransition[];
-  processes: Array<{ role: 'react' | 'astro' | 'proxy'; pid: number; command: string; stopped: boolean }>;
-  commands: string[];
-  processes_cleaned: boolean;
-  ports_free_after: boolean;
-}
 
 export interface Task14Metric {
   route: string;
@@ -342,7 +300,9 @@ async function smokeTransition(base: string, target: ProxyTarget): Promise<Proxy
 interface DrillArguments {
   implementationCommit: string;
   performanceReceipt: string;
+  performanceReceiptArgument: string;
   output: string;
+  outputArgument: string;
 }
 
 function parseDrillArguments(argv: readonly string[]): DrillArguments {
@@ -362,10 +322,12 @@ function parseDrillArguments(argv: readonly string[]): DrillArguments {
     if (!value) throw new Error(`missing ${key}`);
     return value;
   };
+  const performanceReceiptArgument = required('--performance-receipt');
+  const outputArgument = required('--output');
   return {
     implementationCommit: required('--implementation-commit'),
-    performanceReceipt: resolve(required('--performance-receipt')),
-    output: resolve(required('--output')),
+    performanceReceipt: resolve(performanceReceiptArgument), performanceReceiptArgument,
+    output: resolve(outputArgument), outputArgument,
   };
 }
 
@@ -400,16 +362,17 @@ async function spawnedProcess(
   const startedAt = new Date().toISOString();
   const child = spawn(argv[0]!, argv.slice(1), { cwd: root, env: process.env, stdio: ['ignore', 'pipe', 'pipe'], shell: false, detached: true });
   if (!child.pid) throw new Error(`failed to start owned ${role} process`);
-  const evidence = registerOwnedProcess(evidenceRegistry, { role, argv, rootPid: child.pid, controllerPid: process.pid, startedAt });
+  const expectedCommand = npmObservedCommandLine(argv);
+  const evidence = registerOwnedProcess(evidenceRegistry, { role, argv, expectedCommand, rootPid: child.pid, controllerPid: process.pid, startedAt });
   const exit = new Promise<{ exited_at: string; exit_code: number | null; signal: NodeJS.Signals | null }>((resolveExit) => {
     child.once('exit', (exitCode, signal) => resolveExit({ exited_at: new Date().toISOString(), exit_code: exitCode, signal }));
   });
   const runtime = { evidence, child, exit };
   runtimeRegistry.push(runtime);
   child.stdout?.pipe(process.stdout); child.stderr?.pipe(process.stderr);
-  await stabilizeOwnedProcess(evidence, () => processSnapshot(child.pid!), npmObservedCommandLine(argv));
+  await stabilizeOwnedProcess(evidence, () => processSnapshot(child.pid!), expectedCommand);
   validateOwnedProcessIdentity(evidence, {
-    controllerPid: process.pid, expectedArgv: argv, expectedObservedCommandLine: npmObservedCommandLine(argv),
+    controllerPid: process.pid, expectedRole: role, expectedArgv: argv, expectedObservedCommandLine: expectedCommand,
   });
   return runtime;
 }
@@ -448,12 +411,29 @@ async function stopOwned(entry: RuntimeOwnedProcess): Promise<void> {
   });
 }
 
-async function dynamicCrawl(baseUrl: string, expectedRoutes: readonly string[]): Promise<Array<Record<string, unknown>>> {
+interface ExpectedUrlPage {
+  url(): string;
+  waitForURL(predicate: (url: URL) => boolean, options: { timeout: number; waitUntil: 'networkidle' }): Promise<unknown>;
+}
+
+export async function waitForExpectedFinalUrl(page: ExpectedUrlPage, expected: DynamicRouteExpectation): Promise<void> {
+  if (!expected.redirected) return;
+  const expectedOrigin = new URL(page.url()).origin;
+  const isExpected = (url: URL): boolean => url.origin === expectedOrigin && url.pathname === expected.finalUrl && url.search === '' && url.hash === '';
+  await page.waitForURL(isExpected, { timeout: 5_000, waitUntil: 'networkidle' });
+  if (!isExpected(new URL(page.url()))) throw new Error(`${expected.path} did not reach its expected final URL ${expected.finalUrl}`);
+}
+
+async function dynamicCrawl(
+  baseUrl: string,
+  expectedRoutes: readonly DynamicRouteExpectation[],
+  results: Array<Record<string, unknown>> = [],
+): Promise<Array<Record<string, unknown>>> {
   const browser = await chromium.launch({ headless: true });
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, serviceWorkers: 'block' });
-    const results: Array<Record<string, unknown>> = [];
-    for (const path of expectedRoutes) {
+    for (const expected of expectedRoutes) {
+      const { path } = expected;
       const page = await context.newPage();
       const consoleErrors: string[] = []; const pageErrors: string[] = []; const hydrationErrors: string[] = [];
       page.on('console', (message) => {
@@ -466,6 +446,7 @@ async function dynamicCrawl(baseUrl: string, expectedRoutes: readonly string[]):
         if (/hydration|did not match|server rendered html/iu.test(error.message)) hydrationErrors.push(error.message);
       });
       const response = await page.goto(new URL(path, baseUrl).href, { waitUntil: 'networkidle' });
+      await waitForExpectedFinalUrl(page, expected);
       await page.evaluate(async () => { await document.fonts.ready; await new Promise<void>((resolveReady) => requestAnimationFrame(() => requestAnimationFrame(() => resolveReady()))); });
       const content = await page.content();
       const axe = await new AxeBuilder({ page }).analyze();
@@ -483,6 +464,35 @@ async function dynamicCrawl(baseUrl: string, expectedRoutes: readonly string[]):
     await context.close();
     return results;
   } finally { await browser.close(); }
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.stack ?? error.message : String(error);
+}
+
+async function writeJsonAtomic(output: string, value: unknown): Promise<void> {
+  await mkdir(dirname(output), { recursive: true });
+  const temporary = join(dirname(output), `.${basename(output)}.${process.pid}.${randomUUID()}.tmp`);
+  try {
+    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    await rename(temporary, output);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
+export async function persistDrillReceipt<T extends Record<string, unknown>>(
+  output: string,
+  accumulated: T,
+  failure?: unknown,
+  options: { rethrow?: boolean } = {},
+): Promise<T & { eligible: boolean; errors: string[] }> {
+  const existingErrors = Array.isArray(accumulated.errors) ? accumulated.errors.map(String) : [];
+  const errors = failure === undefined ? existingErrors : [...existingErrors, errorText(failure)];
+  const receipt = { ...accumulated, eligible: failure === undefined && errors.length === 0, errors } as T & { eligible: boolean; errors: string[] };
+  await writeJsonAtomic(output, receipt);
+  if (!receipt.eligible && options.rethrow !== false) throw new Error(`local cutover drill failed; ineligible receipt: ${output}`, failure === undefined ? undefined : { cause: failure });
+  return receipt;
 }
 
 async function runDrill(options: DrillArguments): Promise<void> {
@@ -521,20 +531,35 @@ async function runDrill(options: DrillArguments): Promise<void> {
     releaseManifestHash: await hashFiles(root, ['build/public-releases/active.json', `build/public-releases/${active.manifest.releaseId}/manifest.json`]),
   }, await readJson(join(root, 'tests/fixtures/parity/astro-renderer-baseline.json')));
   if (!performance.eligible) throw new Error('changed-surface review performance is not eligible; local drill refused');
+  const staticEvidence = {
+    ...staticContract,
+    environment: { node: process.version, npm: execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(), os: `${platform()} ${osRelease()} ${arch()}`, playwright: packageLock.packages['node_modules/@playwright/test']?.version ?? 'unknown', chromium: browsers.browsers.find(({ name }) => name === 'chromium')?.browserVersion ?? 'unknown' },
+    release: { release_id: active.manifest.releaseId, active_pointer_hash: active.activePointerHash, manifest_hash: active.manifestHash, artifact_hash: active.artifactHash },
+    builds: { react_root: 'apps/site/build/client', react_hash: await hashTree(reactRoot), astro_root: 'dist', astro_hash: await hashTree(astroRoot), rollback_hash: await hashTree(astroRoot) },
+    task14: { eligible: performance.eligible, performance_commit: performanceCommit, route_source_hashes: routeSourceHashes, metric_summary: performance.metrics },
+  };
 
-  const tempRoot = await mkdtemp('/tmp/beyondwin-cutover.');
-  const expectedRealPath = join(await realpath('/tmp'), basename(tempRoot));
-  if (await realpath(tempRoot) !== expectedRealPath) throw new Error('cutover temp realpath is invalid');
-  const statePath = join(tempRoot, 'target'); const pidPath = join(tempRoot, 'proxy.pid');
-  await prepareStateFile(statePath);
-
-  const processEvidence: OwnedProcessEvidence[] = [];
-  const processes: RuntimeOwnedProcess[] = [];
   const controllerObserved = await processSnapshot(process.pid);
+  const controllerArgv = [
+    process.execPath, join(root, 'scripts/cutover/verify-rollback.mts'),
+    '--implementation-commit', options.implementationCommit,
+    '--performance-receipt', options.performanceReceiptArgument,
+    '--output', options.outputArgument,
+  ];
+  const controllerCommand = tsxObservedCommandLine(controllerArgv, root);
+  if (JSON.stringify(process.argv) !== JSON.stringify(controllerArgv) || controllerObserved.command_line !== controllerCommand) {
+    throw new Error('local cutover controller command does not match its exact verifier invocation');
+  }
   const controller = {
-    pid: process.pid, ppid: process.ppid, pgid: controllerObserved.pgid, argv: [...process.argv],
+    pid: process.pid, ppid: process.ppid, pgid: controllerObserved.pgid, argv: controllerArgv,
     start_identity: controllerObserved.start_identity, observed: controllerObserved,
   };
+  const tempRoot = mkdtempSync('/tmp/beyondwin-cutover.');
+  const expectedRealPath = join(realpathSync('/tmp'), basename(tempRoot));
+  if (realpathSync(tempRoot) !== expectedRealPath) throw new Error('cutover temp realpath is invalid');
+  const statePath = join(tempRoot, 'target'); const pidPath = join(tempRoot, 'proxy.pid');
+  const processEvidence: OwnedProcessEvidence[] = [];
+  const processes: RuntimeOwnedProcess[] = [];
   let cleanupPromise: Promise<void> | null = null;
   const cleanup = async (): Promise<void> => {
     if (cleanupPromise) return cleanupPromise;
@@ -547,11 +572,54 @@ async function runDrill(options: DrillArguments): Promise<void> {
     })();
     return cleanupPromise;
   };
-  const signalHandlers = installOwnedSignalHandlers(process as unknown as SignalTarget, cleanup, (code) => process.exit(code));
   let proxyWorker: Record<string, unknown> | null = null; let transitions: ProxyTransition[] = []; let crawl: Array<Record<string, unknown>> = [];
   let ownersWhileRunning: Array<{ port: number; pids: number[]; root_pid: number; owned_by_group: boolean }> = [];
-  let runError: unknown;
+  let runError: unknown; let tempRemoved = false; let portsFreeAfter = false; const receiptErrors: string[] = [];
+  let cleanupAllPromise: Promise<void> | null = null;
+  const cleanupAll = async (): Promise<void> => {
+    if (cleanupAllPromise) return cleanupAllPromise;
+    cleanupAllPromise = (async () => {
+      const errors = await runOwnedCleanupSteps([
+        ['owned process cleanup', cleanup],
+        ['proxy worker cleanup', async () => {
+          if (!proxyWorker) return;
+          const workerPid = Number(proxyWorker.pid);
+          const stopped = await processSnapshot(workerPid).then(() => false, () => true);
+          proxyWorker.stopped = stopped;
+          if (!stopped) throw new Error('proxy worker remained after owned proxy root stopped');
+        }],
+        ['drill port cleanup', async () => { await checkExactDrillPorts(); portsFreeAfter = true; }],
+        ['cutover temp cleanup', async () => {
+          if (tempRemoved) return;
+          if (await realpath(tempRoot) !== expectedRealPath) throw new Error('cutover temp realpath changed before cleanup');
+          await rm(tempRoot, { recursive: true }); tempRemoved = true;
+        }],
+      ]);
+      receiptErrors.push(...errors);
+      if (errors.length > 0) runError ??= new Error(errors.join('\n'));
+    })();
+    return cleanupAllPromise;
+  };
+  const buildReceipt = (signalEvidence: OwnedSignalEvidence) => ({
+    schema_version: 3, implementation_commit: head, eligible: false, errors: receiptErrors,
+    ports: { proxy: 4390, react: 4391, astro: 4392 }, representatives: [...representativeRoutes], transitions,
+    controller: { ...controller, signal_handlers: signalEvidence },
+    processes: processEvidence, proxy_worker: proxyWorker,
+    port_lifecycle: { before_free: [4390, 4391, 4392], during_owned: [4390, 4391, 4392], owners_while_running: ownersWhileRunning, after_free: portsFreeAfter ? [4390, 4391, 4392] : [] },
+    temp_root: { pattern: '/tmp/beyondwin-cutover.*', path: tempRoot, realpath: expectedRealPath, realpath_validated: true, removed: tempRemoved },
+    dynamic_crawl: { route_count: crawl.length, failures: runError === undefined ? [] : [errorText(runError)], routes: crawl },
+    static_contract: staticEvidence,
+  });
+  const signalHandlers = installOwnedSignalHandlers(process as unknown as SignalTarget, async (signal) => {
+    runError ??= new Error(`local cutover drill interrupted by ${signal}`);
+    await cleanupAll();
+  }, (code) => process.exit(code), {
+    beforeExit: async (_signal, evidence) => {
+      await persistDrillReceipt(options.output, buildReceipt(evidence), runError, { rethrow: false });
+    },
+  });
   try {
+    await prepareStateFile(statePath);
     const react = await spawnedProcess('react', exactCommands.react, root, processEvidence, processes);
     const astro = await spawnedProcess('astro', exactCommands.astro, root, processEvidence, processes);
     await waitFor(async () => (await fetch('http://127.0.0.1:4391/')).status === 200, 'React preview');
@@ -577,12 +645,13 @@ async function runDrill(options: DrillArguments): Promise<void> {
     }
     await writeProxyTarget(statePath, 'react');
     const baseline = await readJson<AstroBaseline>(baselinePath);
-    crawl = await dynamicCrawl('http://127.0.0.1:4390', baseline.routes.map(({ path }) => path));
-    assertDynamicCrawl(crawl, baseline.routes.map((route) => ({
+    const dynamicExpectations = baseline.routes.map((route) => ({
       path: route.path,
       finalUrl: route.title.startsWith('Redirecting to:') ? route.canonical : route.path,
       redirected: route.title.startsWith('Redirecting to:'),
-    })));
+    }));
+    crawl = await dynamicCrawl('http://127.0.0.1:4390', dynamicExpectations, crawl);
+    assertDynamicCrawl(crawl, dynamicExpectations);
     const dynamicFailures = crawl.flatMap((entry) => [
       ...(entry.status === 200 ? [] : [`${String(entry.path)} status ${String(entry.status)}`]),
       ...['console_errors', 'page_errors', 'hydration_errors', 'axe_serious_or_critical', 'private_boundary_hits'].flatMap((key) => (entry[key] as unknown[]).map((value) => `${String(entry.path)} ${key}: ${String(value)}`)),
@@ -591,35 +660,9 @@ async function runDrill(options: DrillArguments): Promise<void> {
     if (dynamicFailures.length > 0) throw new Error(`dynamic crawl failed:\n${dynamicFailures.join('\n')}`);
   } catch (error) { runError = error; }
   finally {
-    try { await cleanup(); signalHandlers.complete(); } catch (error) { runError ??= error; }
-    if (proxyWorker) {
-      const workerPid = Number(proxyWorker.pid);
-      const stopped = await processSnapshot(workerPid).then(() => false, () => true);
-      proxyWorker.stopped = stopped;
-      if (!stopped) runError ??= new Error('proxy worker remained after owned proxy root stopped');
-    }
-    try { await checkExactDrillPorts(); } catch (error) { runError ??= error; }
-    if (await realpath(tempRoot) !== expectedRealPath) runError ??= new Error('cutover temp realpath changed before cleanup');
-    await rm(tempRoot, { recursive: true });
+    await cleanupAll(); signalHandlers.complete();
   }
-  if (runError) throw runError;
-  const receipt = {
-    schema_version: 2, implementation_commit: head,
-    ports: { proxy: 4390, react: 4391, astro: 4392 }, representatives: [...representativeRoutes], transitions,
-    controller: { ...controller, signal_handlers: signalHandlers.evidence() },
-    processes: processEvidence, proxy_worker: proxyWorker,
-    port_lifecycle: { before_free: [4390, 4391, 4392], during_owned: [4390, 4391, 4392], owners_while_running: ownersWhileRunning, after_free: [4390, 4391, 4392] },
-    temp_root: { pattern: '/tmp/beyondwin-cutover.*', path: tempRoot, realpath: expectedRealPath, realpath_validated: true, removed: true },
-    dynamic_crawl: { route_count: crawl.length, failures: [], routes: crawl },
-    static_contract: {
-      ...staticContract,
-      environment: { node: process.version, npm: execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(), os: `${platform()} ${osRelease()} ${arch()}`, playwright: packageLock.packages['node_modules/@playwright/test']?.version ?? 'unknown', chromium: browsers.browsers.find(({ name }) => name === 'chromium')?.browserVersion ?? 'unknown' },
-      release: { release_id: active.manifest.releaseId, active_pointer_hash: active.activePointerHash, manifest_hash: active.manifestHash, artifact_hash: active.artifactHash },
-      builds: { react_root: 'apps/site/build/client', react_hash: await hashTree(reactRoot), astro_root: 'dist', astro_hash: await hashTree(astroRoot), rollback_hash: await hashTree(astroRoot) },
-      task14: { eligible: performance.eligible, performance_commit: performanceCommit, route_source_hashes: routeSourceHashes, metric_summary: performance.metrics },
-    },
-  };
-  await mkdir(dirname(options.output), { recursive: true }); await writeFile(options.output, `${JSON.stringify(receipt, null, 2)}\n`);
+  await persistDrillReceipt(options.output, buildReceipt(signalHandlers.evidence()), runError);
   process.stdout.write(`${JSON.stringify({ routeCount: staticContract.route_count, dynamicRoutes: crawl.length, transitions: ['react', 'astro', 'react'], output: options.output })}\n`);
 }
 

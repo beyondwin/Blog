@@ -1,21 +1,25 @@
 import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { mkdtempSync, realpathSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
-import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import { readActiveRelease } from '../../packages/content/src/release/read-release.ts';
 import type { AstroBaseline } from '../../tools/parity/src/html-contract.ts';
 import { hashFile, hashTree, readJson, sha256 } from './cutover-evidence.mts';
-import { npmObservedCommandLine } from './evidence-contracts.mts';
+import { npmObservedCommandLine, tsxObservedCommandLine, validateOwnedProcessIdentity } from './evidence-contracts.mts';
 import {
   completeOwnedProcess,
   installOwnedSignalHandlers,
   observeOwnedGroup,
   registerOwnedProcess,
+  runOwnedCleanupSteps,
   stabilizeOwnedProcess,
   terminateOwnedProcess,
   type OwnedProcessEvidence,
+  type OwnedSignalEvidence,
   type ProcessSnapshot,
   type SignalTarget,
 } from './owned-process-lifecycle.mts';
@@ -74,7 +78,7 @@ export function cleanHostCommandEnvironment(
   };
 }
 
-function parseArguments(argv: readonly string[]): { commit: string; output: string } {
+function parseArguments(argv: readonly string[]): { commit: string; output: string; outputArgument: string } {
   const values = new Map<string, string>();
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index]; const value = argv[index + 1];
@@ -84,7 +88,7 @@ function parseArguments(argv: readonly string[]): { commit: string; output: stri
   }
   const commit = values.get('--commit'); const output = values.get('--output');
   if (!commit || !/^[a-f0-9]{40}$/u.test(commit) || !output) throw new Error('usage: --commit <immutable-sha> --output <receipt>');
-  return { commit, output: resolve(output) };
+  return { commit, output: resolve(output), outputArgument: output };
 }
 
 interface RuntimeCommand { evidence: CommandEvidence; child: ChildProcess; exit: Promise<{ exited_at: string; exit_code: number | null; signal: NodeJS.Signals | null }> }
@@ -136,14 +140,19 @@ async function runCommand(
   const startedAt = new Date().toISOString();
   const child = spawn(argv[0]!, argv.slice(1), { cwd, env: environment, stdio: 'inherit', shell: false, detached: true });
   if (!child.pid) throw new Error(`failed to create command: ${argv.join(' ')}`);
-  const base = registerOwnedProcess(records, { role: `${phase}:${argv[0]}`, argv, rootPid: child.pid, controllerPid: process.pid, startedAt }) as CommandEvidence;
+  const expectedCommand = expectedObservedCommand(argv);
+  const base = registerOwnedProcess(records, { role: `${phase}:${argv[0]}`, argv, expectedCommand, rootPid: child.pid, controllerPid: process.pid, startedAt }) as CommandEvidence;
   base.phase = phase; base.environment_keys = Object.keys(environment).sort();
   const exit = new Promise<{ exited_at: string; exit_code: number | null; signal: NodeJS.Signals | null }>((resolveExit, reject) => {
     child.once('error', reject);
     child.once('exit', (exitCode, signal) => resolveExit({ exited_at: new Date().toISOString(), exit_code: exitCode, signal }));
   });
   const runtime = { evidence: base, child, exit }; runtimes.push(runtime);
-  await stabilizeOwnedProcess(base, () => processSnapshot(child.pid!), expectedObservedCommand(argv));
+  await stabilizeOwnedProcess(base, () => processSnapshot(child.pid!), expectedCommand);
+  validateOwnedProcessIdentity(base, {
+    controllerPid: process.pid, expectedRole: `${phase}:${argv[0]}`, expectedArgv: argv,
+    expectedObservedCommandLine: expectedCommand,
+  });
   observeOwnedGroup(base, await processGroupSnapshots(base.root_pgid));
   const result = await exit;
   await completeOwnedProcess(base, result, { groupMembers: processGroupSnapshots });
@@ -198,6 +207,17 @@ async function closeServer(server: Server): Promise<void> {
   await new Promise<void>((resolveClose, reject) => server.close((error) => error ? reject(error) : resolveClose()));
 }
 
+async function writeReceiptAtomic(output: string, receipt: CleanHostReceipt): Promise<void> {
+  await mkdir(dirname(output), { recursive: true });
+  const temporary = join(dirname(output), `.${basename(output)}.${process.pid}.${randomUUID()}.tmp`);
+  try {
+    await writeFile(temporary, `${JSON.stringify(receipt, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+    await rename(temporary, output);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
 async function main(): Promise<void> {
   const cli = parseArguments(process.argv.slice(2));
   if (process.version.split('.')[0] !== 'v24') throw new Error(`clean-host proof requires Node 24, got ${process.version}`);
@@ -208,23 +228,22 @@ async function main(): Promise<void> {
   const dirty = execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], { cwd: root, encoding: 'utf8' });
   if (dirty) throw new Error(`clean-host proof requires a clean tracked worktree:\n${dirty}`);
 
-  const tempRoot = await mkdtemp('/tmp/beyondwin-clean-host.'); await assertCleanHostRoot(tempRoot);
+  const controllerObserved = await processSnapshot(process.pid);
+  const controllerArgv = [process.execPath, join(root, 'scripts/cutover/verify-clean-host.mts'), '--commit', cli.commit, '--output', cli.outputArgument];
+  const controllerCommand = tsxObservedCommandLine(controllerArgv, root);
+  if (JSON.stringify(process.argv) !== JSON.stringify(controllerArgv) || controllerObserved.command_line !== controllerCommand) {
+    throw new Error('clean-host controller command does not match its exact verifier invocation');
+  }
+  const controller = {
+    pid: process.pid, ppid: process.ppid, pgid: controllerObserved.pgid, argv: controllerArgv,
+    start_identity: controllerObserved.start_identity, observed: controllerObserved,
+  };
+  const tempRoot = mkdtempSync('/tmp/beyondwin-clean-host.');
   const archivePath = join(tempRoot, 'source.tar'); const extractedRoot = join(tempRoot, 'repository');
   const configRoot = join(tempRoot, 'config'); const cacheRoot = join(tempRoot, 'cache');
-  await Promise.all([
-    mkdir(join(tempRoot, 'tmp'), { recursive: true }), mkdir(join(configRoot, 'xdg'), { recursive: true }),
-    mkdir(join(cacheRoot, 'xdg'), { recursive: true }), mkdir(join(cacheRoot, 'npm'), { recursive: true }),
-  ]);
-  await writeFile(join(configRoot, 'npmrc'), '', { mode: 0o600 });
-  await writeFile(join(configRoot, 'npmrc-global'), '', { mode: 0o600 });
   const installEnvironment = cleanHostCommandEnvironment(process.env, { tempRoot, phase: 'install' });
   const buildEnvironment = cleanHostCommandEnvironment(process.env, { tempRoot, phase: 'build' });
   const commands: CommandEvidence[] = []; const runtimes: RuntimeCommand[] = []; let server: Server | undefined;
-  const controllerObserved = await processSnapshot(process.pid);
-  const controller = {
-    pid: process.pid, ppid: process.ppid, pgid: controllerObserved.pgid, argv: [...process.argv],
-    start_identity: controllerObserved.start_identity, observed: controllerObserved,
-  };
   let cleanupPromise: Promise<void> | null = null;
   const cleanupProcesses = async (): Promise<void> => {
     if (cleanupPromise) return cleanupPromise;
@@ -241,26 +260,59 @@ async function main(): Promise<void> {
     })();
     return cleanupPromise;
   };
-  const signalHandlers = installOwnedSignalHandlers(process as unknown as SignalTarget, async () => {
-    await cleanupProcesses();
-    if (server) { await closeServer(server); server = undefined; }
-    await assertCleanHostRoot(tempRoot); await rm(tempRoot, { recursive: true });
-  }, (code) => process.exit(code));
   const receipt: CleanHostReceipt = {
     schema_version: 2, implementation_commit: cli.commit, created_at: new Date().toISOString(), completed_at: '', eligible: false,
     archive_hash: '', archive_inventory_hash: '', archive_inventory_count: 0, archive_inventory: [],
     exclusions: { dependencies: true, generated_output: true, secrets_and_environment: true, top_level_private_memory: true },
-    controller: { ...controller, signal_handlers: signalHandlers.evidence() },
+    controller: { ...controller, signal_handlers: null },
     environment: {
       allowed_keys: [...new Set([...Object.keys(installEnvironment), ...Object.keys(buildEnvironment)])].sort(),
-      npm_userconfig_hash: await hashFile(join(configRoot, 'npmrc')),
-      npm_globalconfig_hash: await hashFile(join(configRoot, 'npmrc-global')),
-      config_inventory_hash: await hashTree(configRoot), cache_inventory_hash_before: await hashTree(cacheRoot),
+      npm_userconfig_hash: '', npm_globalconfig_hash: '', config_inventory_hash: '', cache_inventory_hash_before: '',
     },
     commands, release: null, selected_build_hash: null, route_count: 0, inventory_hash: '', smoke: [],
-    temp_root: { pattern: '/tmp/beyondwin-clean-host.*', path: tempRoot, realpath: await realpath(tempRoot), realpath_validated: true, removed: false, preview_port: null }, errors: [],
+    temp_root: { pattern: '/tmp/beyondwin-clean-host.*', path: tempRoot, realpath: realpathSync(tempRoot), realpath_validated: true, removed: false, preview_port: null }, errors: [],
   };
+  let cleanupAllPromise: Promise<void> | null = null;
+  const cleanupAll = async (): Promise<void> => {
+    if (cleanupAllPromise) return cleanupAllPromise;
+    cleanupAllPromise = (async () => {
+      const errors = await runOwnedCleanupSteps([
+        ['preview server cleanup', async () => { if (server) { await closeServer(server); server = undefined; } }],
+        ['owned process cleanup', cleanupProcesses],
+        ['clean-host temp cleanup', async () => {
+          if (receipt.temp_root.removed) return;
+          await assertCleanHostRoot(tempRoot); await rm(tempRoot, { recursive: true }); receipt.temp_root.removed = true;
+        }],
+      ]);
+      receipt.errors.push(...errors);
+    })();
+    return cleanupAllPromise;
+  };
+  const finalizeReceipt = async (signalEvidence: OwnedSignalEvidence): Promise<void> => {
+    receipt.eligible = receipt.eligible && receipt.errors.length === 0 && receipt.temp_root.removed;
+    receipt.controller = { ...controller, signal_handlers: signalEvidence };
+    receipt.completed_at = new Date().toISOString();
+    await writeReceiptAtomic(cli.output, receipt);
+  };
+  const signalHandlers = installOwnedSignalHandlers(process as unknown as SignalTarget, async (signal) => {
+    receipt.eligible = false; receipt.errors.push(`clean-host proof interrupted by ${signal}`);
+    await cleanupAll();
+  }, (code) => process.exit(code), {
+    beforeExit: async (_signal, evidence) => { await finalizeReceipt(evidence); },
+  });
+  receipt.controller = { ...controller, signal_handlers: signalHandlers.evidence() };
   try {
+    await assertCleanHostRoot(tempRoot);
+    await Promise.all([
+      mkdir(join(tempRoot, 'tmp'), { recursive: true }), mkdir(join(configRoot, 'xdg'), { recursive: true }),
+      mkdir(join(cacheRoot, 'xdg'), { recursive: true }), mkdir(join(cacheRoot, 'npm'), { recursive: true }),
+    ]);
+    await writeFile(join(configRoot, 'npmrc'), '', { mode: 0o600 });
+    await writeFile(join(configRoot, 'npmrc-global'), '', { mode: 0o600 });
+    receipt.environment.npm_userconfig_hash = await hashFile(join(configRoot, 'npmrc'));
+    receipt.environment.npm_globalconfig_hash = await hashFile(join(configRoot, 'npmrc-global'));
+    receipt.environment.config_inventory_hash = await hashTree(configRoot);
+    receipt.environment.cache_inventory_hash_before = await hashTree(cacheRoot);
     await runCommand(['git', 'archive', '--format=tar', `--output=${archivePath}`, cli.commit, '--', '.',
       ':(exclude)memory', ':(exclude)build', ':(exclude)output', ':(exclude).superpowers', ':(exclude).env', ':(exclude).env.*'], root, tempRoot, 'install', commands, runtimes);
     receipt.archive_hash = await hashFile(archivePath);
@@ -291,12 +343,7 @@ async function main(): Promise<void> {
     await closeServer(server); server = undefined; receipt.eligible = routes.length === 80 && receipt.smoke.length === 80;
   } catch (error) { receipt.errors.push(error instanceof Error ? error.stack ?? error.message : String(error)); }
   finally {
-    if (server) try { await closeServer(server); } catch (error) { receipt.errors.push(`server cleanup: ${String(error)}`); }
-    try { await cleanupProcesses(); signalHandlers.complete(); } catch (error) { receipt.errors.push(`owned process cleanup: ${String(error)}`); }
-    receipt.controller = { ...controller, signal_handlers: signalHandlers.evidence() };
-    await assertCleanHostRoot(tempRoot); await rm(tempRoot, { recursive: true }); receipt.temp_root.removed = true;
-    receipt.completed_at = new Date().toISOString(); await mkdir(dirname(cli.output), { recursive: true });
-    await writeFile(cli.output, `${JSON.stringify(receipt, null, 2)}\n`);
+    await cleanupAll(); signalHandlers.complete(); await finalizeReceipt(signalHandlers.evidence());
   }
   if (!receipt.eligible || receipt.errors.length > 0) throw new Error(`clean-host proof failed; receipt: ${cli.output}`);
   process.stdout.write(`${JSON.stringify({ eligible: true, commit: cli.commit, routes: receipt.route_count, tempRemoved: true, output: cli.output })}\n`);

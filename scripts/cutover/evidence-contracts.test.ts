@@ -18,19 +18,25 @@ const RELEASE = 'c'.repeat(64);
 const ROUTE = '/reviews/black-swan/';
 const REPRESENTATIVES = ['/', '/articles/a/', ROUTE, '/memory/a/', '/search/', '/tags/AI/', '/reviews/redirect/'];
 const AT = '2026-08-26T00:00:00.000Z';
+const LOCAL_TEMP = '/tmp/beyondwin-cutover.test';
+const CLEAN_TEMP = '/tmp/beyondwin-clean-host.test';
+const LOCAL_CONTROLLER_ARGV = ['/node24', '/repo/scripts/cutover/verify-rollback.mts', '--implementation-commit', COMMIT, '--performance-receipt', '/repo/performance.json', '--output', '/repo/local.json'];
+const CLEAN_CONTROLLER_ARGV = ['/node24', '/repo/scripts/cutover/verify-clean-host.mts', '--commit', COMMIT, '--output', '/repo/clean.json'];
+const LOCAL_CONTROLLER_COMMAND = `tsx:${LOCAL_CONTROLLER_ARGV.join(' ')}`;
+const CLEAN_CONTROLLER_COMMAND = `tsx:${CLEAN_CONTROLLER_ARGV.join(' ')}`;
 
-function controllerEvidence() {
-  const observed = { pid: 99, ppid: 88, pgid: 77, start_identity: 'controller-start', command_line: 'node controller.mts' };
+function controllerEvidence(argv: string[], commandLine: string) {
+  const observed = { pid: 99, ppid: 88, pgid: 77, start_identity: 'controller-start', command_line: commandLine };
   return {
-    pid: 99, ppid: 88, pgid: 77, argv: ['node', 'controller.mts'], start_identity: 'controller-start', observed,
+    pid: 99, ppid: 88, pgid: 77, argv, start_identity: 'controller-start', observed,
     signal_handlers: { installed_at: AT, signals: ['SIGINT', 'SIGTERM'], active: false, handled_signal: null, cleanup_completed: true, removed_at: AT },
   };
 }
 
-function ownedProcess(role: string, rootPid: number, requireTerm: boolean, extras: Record<string, unknown> = {}) {
-  const observed = { pid: rootPid, ppid: 99, pgid: rootPid, start_identity: `${role}-start`, command_line: `npm run ${role}` };
+function ownedProcess(role: string, rootPid: number, requireTerm: boolean, argv: string[], commandLine: string, extras: Record<string, unknown> = {}) {
+  const observed = { pid: rootPid, ppid: 99, pgid: rootPid, start_identity: `${role}-start`, command_line: commandLine };
   return {
-    role, argv: ['npm', 'run', role], root_pid: rootPid, root_ppid: 99, root_pgid: rootPid,
+    role, argv, expected_command_line: commandLine, root_pid: rootPid, root_ppid: 99, root_pgid: rootPid,
     start_identity: `${role}-start`, observed, started_at: AT,
     stabilization: { completed_at: AT, polls: 1, observed_commands: [observed.command_line] },
     pre_term_identity: requireTerm ? observed : null, term_sent_at: requireTerm ? AT : null,
@@ -159,16 +165,18 @@ describe('source-bound cutover evidence contracts', () => {
     const identity = {
       role: 'react', root_pid: 101, root_ppid: 99, root_pgid: 101, start_identity: 'start-a',
       argv: ['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1', '--port', '4391'],
+      expected_command_line: 'npm run site:preview -- --host 127.0.0.1 --port 4391',
       observed: { pid: 101, ppid: 99, pgid: 101, start_identity: 'start-a', command_line: 'npm run site:preview -- --host 127.0.0.1 --port 4391' },
     };
-    expect(() => validateOwnedProcessIdentity(identity, { controllerPid: 99, expectedArgv: identity.argv })).not.toThrow();
+    const expected = { controllerPid: 99, expectedRole: 'react', expectedArgv: identity.argv };
+    expect(() => validateOwnedProcessIdentity(identity, expected)).not.toThrow();
     for (const changed of [
       { ...identity, root_pid: 102 },
       { ...identity, root_ppid: 1, observed: { ...identity.observed, ppid: 1 } },
       { ...identity, root_pgid: 777, observed: { ...identity.observed, pgid: 777 } },
       { ...identity, observed: { ...identity.observed, start_identity: 'replacement' } },
       { ...identity, observed: { ...identity.observed, command_line: 'npm run foreign' } },
-    ]) expect(() => validateOwnedProcessIdentity(changed, { controllerPid: 99, expectedArgv: identity.argv })).toThrow();
+    ]) expect(() => validateOwnedProcessIdentity(changed, expected)).toThrow();
     expect(npmObservedCommandLine(['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1']))
       .toBe('npm run site:preview --host 127.0.0.1');
     expect(ownedCommandLineReady(
@@ -217,10 +225,18 @@ describe('source-bound cutover evidence contracts', () => {
         removeListener: (name) => { listeners.delete(name); return target; },
       };
       const order: string[] = [];
-      const installed = installOwnedSignalHandlers(target, async () => { order.push('cleanup'); }, (code) => { order.push(`exit:${code}`); });
+      const installed = installOwnedSignalHandlers(
+        target,
+        async () => { order.push('cleanup'); },
+        (code) => { order.push(`exit:${code}`); },
+        { beforeExit: async (_handled, evidence) => {
+          expect(evidence).toMatchObject({ active: false, handled_signal: signal, cleanup_completed: true });
+          order.push('persist-blocked-receipt');
+        } },
+      );
       listeners.get(signal)!();
       await installed.completion();
-      expect(order).toEqual(['cleanup', `exit:${signal === 'SIGINT' ? 130 : 143}`]);
+      expect(order).toEqual(['cleanup', 'persist-blocked-receipt', `exit:${signal === 'SIGINT' ? 130 : 143}`]);
       expect(installed.evidence()).toMatchObject({ active: false, handled_signal: signal, cleanup_completed: true });
     }
   });
@@ -231,20 +247,28 @@ describe('source-bound cutover evidence contracts', () => {
   });
 
   it('rejects tampering in every material local receipt group', () => {
+    const reactArgv = ['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1', '--port', '4391'];
+    const astroArgv = ['npm', 'run', 'legacy:preview', '--', '--host', '127.0.0.1', '--port', '4392'];
+    const proxyArgv = ['npm', 'run', 'cutover:proxy', '--', '--listen', '127.0.0.1:4390', '--react', 'http://127.0.0.1:4391', '--astro', 'http://127.0.0.1:4392', '--state', `${LOCAL_TEMP}/target`, '--pid-file', `${LOCAL_TEMP}/proxy.pid`];
     const receipt = {
-      schema_version: 2, implementation_commit: COMMIT,
+      schema_version: 3, implementation_commit: COMMIT, eligible: true, errors: [],
       ports: { proxy: 4390, react: 4391, astro: 4392 },
       representatives: REPRESENTATIVES,
       transitions: ['react', 'astro', 'react'].map((target) => ({ target, routes: REPRESENTATIVES.map((path) => ({ path, status: 200, target_header: target, body_hash: HASH })) })),
-      controller: controllerEvidence(),
-      processes: [ownedProcess('react', 101, true), ownedProcess('astro', 102, true), ownedProcess('proxy', 103, true)],
+      controller: controllerEvidence(LOCAL_CONTROLLER_ARGV, LOCAL_CONTROLLER_COMMAND),
+      processes: [
+        ownedProcess('react', 101, true, reactArgv, npmObservedCommandLine(reactArgv)),
+        ownedProcess('astro', 102, true, astroArgv, npmObservedCommandLine(astroArgv)),
+        ownedProcess('proxy', 103, true, proxyArgv, npmObservedCommandLine(proxyArgv)),
+      ],
       proxy_worker: { descendant_of_proxy: true, stopped: true },
       port_lifecycle: { before_free: [4390, 4391, 4392], during_owned: [4390, 4391, 4392], after_free: [4390, 4391, 4392] },
-      temp_root: { pattern: '/tmp/beyondwin-cutover.*', realpath_validated: true, removed: true },
+      temp_root: { pattern: '/tmp/beyondwin-cutover.*', path: LOCAL_TEMP, realpath: LOCAL_TEMP, realpath_validated: true, removed: true },
       dynamic_crawl: { route_count: 80, failures: [] },
       static_contract: { route_count: 80, inventory_hash: HASH, failures: [] },
     };
-    expect(() => assertLocalReceiptMaterialGroups(receipt, { implementationCommit: COMMIT, representatives: REPRESENTATIVES })).not.toThrow();
+    const expected = { implementationCommit: COMMIT, representatives: REPRESENTATIVES, controllerArgv: LOCAL_CONTROLLER_ARGV, controllerObservedCommandLine: LOCAL_CONTROLLER_COMMAND };
+    expect(() => assertLocalReceiptMaterialGroups(receipt, expected)).not.toThrow();
     for (const mutate of [
       (x: any) => { x.ports.proxy = 4400; },
       (x: any) => { x.transitions[1].target = 'react'; },
@@ -252,32 +276,45 @@ describe('source-bound cutover evidence contracts', () => {
       (x: any) => { x.processes[0].stopped = false; },
       (x: any) => { x.processes[0].group_lifecycle.group_empty = false; },
       (x: any) => { x.processes[0].root_ppid = 1; },
+      (x: any) => { x.processes[0].argv = ['npm', 'run', 'foreign']; x.processes[0].observed.command_line = 'npm run foreign'; x.processes[0].expected_command_line = 'npm run foreign'; x.processes[0].stabilization.observed_commands = ['npm run foreign']; x.processes[0].pre_term_identity.command_line = 'npm run foreign'; x.processes[0].group_lifecycle.members_observed[0].command_line = 'npm run foreign'; },
+      (x: any) => { x.controller.argv = ['/node24', '/repo/foreign.mts']; x.controller.observed.command_line = 'tsx:/node24 /repo/foreign.mts'; },
       (x: any) => { x.controller.signal_handlers.active = true; },
       (x: any) => { x.proxy_worker.descendant_of_proxy = false; },
       (x: any) => { x.temp_root.removed = false; },
       (x: any) => { x.dynamic_crawl.failures.push('error'); },
+      (x: any) => { x.eligible = false; },
+      (x: any) => { x.errors.push('failure'); },
       (x: any) => { x.extra = true; },
     ]) {
       const changed = structuredClone(receipt); mutate(changed);
-      expect(() => assertLocalReceiptMaterialGroups(changed, { implementationCommit: COMMIT, representatives: REPRESENTATIVES })).toThrow();
+      expect(() => assertLocalReceiptMaterialGroups(changed, expected)).toThrow();
     }
   });
 
   it('rejects tampering in every material clean-host receipt group', () => {
+    const archiveArgv = ['git', 'archive', '--format=tar', `--output=${CLEAN_TEMP}/source.tar`, COMMIT, '--', '.', ':(exclude)memory', ':(exclude)build', ':(exclude)output', ':(exclude).superpowers', ':(exclude).env', ':(exclude).env.*'];
     const receipt = {
       schema_version: 2, implementation_commit: COMMIT, created_at: AT, completed_at: AT, eligible: true,
       archive_hash: HASH, archive_inventory_hash: '', archive_inventory_count: 2,
       archive_inventory: ['a', 'b'], exclusions: { dependencies: true, generated_output: true, secrets_and_environment: true, top_level_private_memory: true },
-      controller: controllerEvidence(),
+      controller: controllerEvidence(CLEAN_CONTROLLER_ARGV, CLEAN_CONTROLLER_COMMAND),
       environment: { allowed_keys: ['PATH'], npm_userconfig_hash: HASH, npm_globalconfig_hash: HASH, config_inventory_hash: HASH, cache_inventory_hash_before: HASH },
-      commands: [ownedProcess('install:npm', 201, false, { phase: 'install', environment_keys: ['PATH'] })],
+      commands: [
+        ownedProcess('install:git', 201, false, archiveArgv, archiveArgv.join(' '), { phase: 'install', environment_keys: ['PATH'] }),
+        ownedProcess('install:tar', 202, false, ['tar', '-xf', `${CLEAN_TEMP}/source.tar`, '-C', `${CLEAN_TEMP}/repository`], `tar -xf ${CLEAN_TEMP}/source.tar -C ${CLEAN_TEMP}/repository`, { phase: 'install', environment_keys: ['PATH'] }),
+        ownedProcess('install:npm', 203, false, ['npm', 'ci'], 'npm ci', { phase: 'install', environment_keys: ['PATH'] }),
+        ownedProcess('build:npm', 204, false, ['npm', 'run', 'public-release:build'], 'npm run public-release:build', { phase: 'build', environment_keys: ['NODE_ENV', 'PATH'] }),
+        ownedProcess('build:npm', 205, false, ['npm', 'run', 'public-release:verify'], 'npm run public-release:verify', { phase: 'build', environment_keys: ['NODE_ENV', 'PATH'] }),
+        ownedProcess('build:npm', 206, false, ['npm', 'run', 'site:build'], 'npm run site:build', { phase: 'build', environment_keys: ['NODE_ENV', 'PATH'] }),
+      ],
       release: { release_id: RELEASE, active_pointer_hash: HASH, manifest_hash: HASH, artifact_hash: HASH },
       selected_build_hash: HASH, route_count: 80, inventory_hash: HASH,
       smoke: Array.from({ length: 80 }, (_, index) => ({ path: `/route-${index}/`, status: 200, body_hash: HASH })),
-      temp_root: { pattern: '/tmp/beyondwin-clean-host.*', realpath_validated: true, removed: true }, errors: [],
+      temp_root: { pattern: '/tmp/beyondwin-clean-host.*', path: CLEAN_TEMP, realpath: CLEAN_TEMP, realpath_validated: true, removed: true, preview_port: 49152 }, errors: [],
     };
     receipt.archive_inventory_hash = `sha256:${createHash('sha256').update('a\nb\n').digest('hex')}`;
-    expect(() => assertCleanHostReceiptMaterialGroups(receipt, { implementationCommit: COMMIT })).not.toThrow();
+    const expected = { implementationCommit: COMMIT, controllerArgv: CLEAN_CONTROLLER_ARGV, controllerObservedCommandLine: CLEAN_CONTROLLER_COMMAND };
+    expect(() => assertCleanHostReceiptMaterialGroups(receipt, expected)).not.toThrow();
     for (const mutate of [
       (x: any) => { x.archive_hash = ''; },
       (x: any) => { x.archive_inventory.push('node_modules/a'); },
@@ -286,6 +323,8 @@ describe('source-bound cutover evidence contracts', () => {
       (x: any) => { x.environment.npm_globalconfig_hash = ''; },
       (x: any) => { x.controller.signal_handlers.cleanup_completed = false; },
       (x: any) => { x.commands[0].root_exit.exit_code = 1; x.commands[0].stopped = false; },
+      (x: any) => { x.commands[0].argv = ['git', 'status']; x.commands[0].observed.command_line = 'git status'; x.commands[0].expected_command_line = 'git status'; x.commands[0].stabilization.observed_commands = ['git status']; x.commands[0].group_lifecycle.members_observed[0].command_line = 'git status'; },
+      (x: any) => { x.controller.argv = ['/node24', '/repo/foreign.mts']; x.controller.observed.command_line = 'tsx:/node24 /repo/foreign.mts'; },
       (x: any) => { x.release.release_id = ''; },
       (x: any) => { x.smoke.pop(); },
       (x: any) => { x.temp_root.removed = false; },
@@ -293,7 +332,7 @@ describe('source-bound cutover evidence contracts', () => {
       (x: any) => { x.extra = true; },
     ]) {
       const changed = structuredClone(receipt); mutate(changed);
-      expect(() => assertCleanHostReceiptMaterialGroups(changed, { implementationCommit: COMMIT })).toThrow();
+      expect(() => assertCleanHostReceiptMaterialGroups(changed, expected)).toThrow();
     }
   });
 });

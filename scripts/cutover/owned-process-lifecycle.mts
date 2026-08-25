@@ -14,6 +14,7 @@ export interface ProcessSnapshot {
 export interface OwnedProcessEvidence {
   role: string;
   argv: string[];
+  expected_command_line: string;
   root_pid: number;
   root_ppid: number;
   root_pgid: number;
@@ -30,11 +31,12 @@ export interface OwnedProcessEvidence {
 
 export function registerOwnedProcess(
   registry: OwnedProcessEvidence[],
-  options: { role: string; argv: readonly string[]; rootPid: number; controllerPid: number; startedAt?: string },
+  options: { role: string; argv: readonly string[]; expectedCommand: string; rootPid: number; controllerPid: number; startedAt?: string },
 ): OwnedProcessEvidence {
   if (!Number.isSafeInteger(options.rootPid) || options.rootPid <= 1) throw new Error('owned process PID is invalid');
   const entry: OwnedProcessEvidence = {
-    role: options.role, argv: [...options.argv], root_pid: options.rootPid, root_ppid: options.controllerPid, root_pgid: options.rootPid,
+    role: options.role, argv: [...options.argv], expected_command_line: options.expectedCommand,
+    root_pid: options.rootPid, root_ppid: options.controllerPid, root_pgid: options.rootPid,
     start_identity: null, observed: null, started_at: options.startedAt ?? new Date().toISOString(),
     stabilization: { completed_at: null, polls: 0, observed_commands: [] }, pre_term_identity: null, term_sent_at: null, root_exit: null,
     group_lifecycle: { members_observed: [], group_empty: false, polls: 0, completed_at: null }, stopped: false,
@@ -57,6 +59,7 @@ export async function stabilizeOwnedProcess(
   expectedCommand: string,
   options: { pause?: () => Promise<void>; maxPolls?: number } = {},
 ): Promise<void> {
+  if (expectedCommand !== entry.expected_command_line) throw new Error('owned process expected command binding changed');
   const pause = options.pause ?? (() => new Promise<void>((resolve) => setTimeout(resolve, 100)));
   const maximum = options.maxPolls ?? 300;
   for (let poll = 1; poll <= maximum; poll += 1) {
@@ -121,9 +124,17 @@ export interface TerminateOwnedOptions {
 }
 
 export async function terminateOwnedProcess(entry: OwnedProcessEvidence, options: TerminateOwnedOptions): Promise<void> {
-  if (!entry.observed || !entry.start_identity) throw new Error('owned process never captured an identity observation');
   const beforeTerm = await options.snapshot(entry.root_pid);
-  validateRootSnapshot(entry, beforeTerm, entry.stabilization.completed_at !== null);
+  if (!entry.observed || !entry.start_identity) {
+    validateRootSnapshot(entry, beforeTerm, false);
+    if (beforeTerm.command_line !== entry.expected_command_line) {
+      throw new Error('owned unobserved process command does not match its immutable spawn binding');
+    }
+    entry.start_identity = beforeTerm.start_identity;
+    entry.observed = beforeTerm;
+  } else {
+    validateRootSnapshot(entry, beforeTerm, entry.stabilization.completed_at !== null);
+  }
   const beforeMembers = await options.groupMembers(entry.root_pgid);
   if (!beforeMembers.some(({ pid, start_identity }) => pid === entry.root_pid && start_identity === entry.start_identity)) throw new Error('owned root is absent from its process group');
   mergeMembers(entry.group_lifecycle.members_observed, beforeMembers, entry.root_pgid);
@@ -148,6 +159,20 @@ export async function terminateOwnedProcess(entry: OwnedProcessEvidence, options
   throw new Error(`owned ${entry.role} process group extinction could not be proven; members remain`);
 }
 
+export async function runOwnedCleanupSteps(
+  steps: ReadonlyArray<readonly [label: string, cleanup: () => Promise<void>]>,
+): Promise<string[]> {
+  const errors: string[] = [];
+  for (const [label, cleanup] of steps) {
+    try {
+      await cleanup();
+    } catch (error) {
+      errors.push(`${label}: ${String(error)}`);
+    }
+  }
+  return errors;
+}
+
 export interface OwnedSignalEvidence {
   installed_at: string;
   signals: ['SIGINT', 'SIGTERM'];
@@ -159,8 +184,9 @@ export interface OwnedSignalEvidence {
 
 export function installOwnedSignalHandlers(
   target: SignalTarget,
-  cleanup: () => Promise<void>,
+  cleanup: (signal: NodeJS.Signals) => Promise<void>,
   exit: (code: number) => void,
+  options: { beforeExit?: (signal: NodeJS.Signals, evidence: OwnedSignalEvidence) => Promise<void> } = {},
 ): { evidence: () => OwnedSignalEvidence; completion: () => Promise<void>; remove: () => void; complete: () => void } {
   const state: OwnedSignalEvidence = {
     installed_at: new Date().toISOString(), signals: ['SIGINT', 'SIGTERM'], active: true,
@@ -177,11 +203,12 @@ export function installOwnedSignalHandlers(
     const handler = (): void => {
       if (state.handled_signal) return;
       state.handled_signal = signal;
-      completion = cleanup().then(() => {
+      completion = cleanup(signal).then(async () => {
         state.cleanup_completed = true;
         remove();
+        await options.beforeExit?.(signal, { ...state });
         exit(signal === 'SIGINT' ? 130 : 143);
-      }, () => {
+      }).catch(() => {
         remove();
         exit(1);
       });

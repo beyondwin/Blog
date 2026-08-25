@@ -1,4 +1,6 @@
 import { median, medianAbsoluteDeviation } from '../../tools/parity/src/measure-browser.ts';
+import { join, relative } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { sha256 } from './cutover-evidence.mts';
 
 type UnknownRecord = Record<string, unknown>;
@@ -324,15 +326,16 @@ export function deriveChangedSurfacePerformance(
 
 export function validateOwnedProcessIdentity(
   value: any,
-  options: { controllerPid: number; expectedArgv: readonly string[]; expectedObservedCommandLine?: string },
+  options: { controllerPid: number; expectedRole: string; expectedArgv: readonly string[]; expectedObservedCommandLine?: string },
 ): void {
+  if (value.role !== options.expectedRole) throw new Error('owned process role drifted');
   if (value.root_pid !== value.observed?.pid) throw new Error('owned process PID was replaced');
   if (value.root_ppid !== options.controllerPid || value.observed?.ppid !== options.controllerPid) throw new Error('owned process has a foreign parent');
   if (value.root_pgid !== value.root_pid || value.observed?.pgid !== value.root_pid) throw new Error('owned process escaped its dedicated process group');
   if (value.start_identity !== value.observed?.start_identity) throw new Error('owned process start identity changed');
   if (JSON.stringify(value.argv) !== JSON.stringify(options.expectedArgv)) throw new Error('owned process argv drifted');
   const expectedCommand = options.expectedObservedCommandLine ?? options.expectedArgv.join(' ');
-  if (value.observed?.command_line !== expectedCommand) throw new Error('owned process observed command was tampered');
+  if (value.expected_command_line !== expectedCommand || value.observed?.command_line !== expectedCommand) throw new Error('owned process observed command was tampered');
 }
 
 function exactProcessSnapshot(value: unknown, label: string): UnknownRecord {
@@ -342,24 +345,41 @@ function exactProcessSnapshot(value: unknown, label: string): UnknownRecord {
   return snapshot;
 }
 
-export function assertControllerEvidence(value: unknown): UnknownRecord {
+export function assertControllerEvidence(
+  value: unknown,
+  expected: { argv: readonly string[]; observedCommandLine: string },
+): UnknownRecord {
   const controller = exactKeys(value, ['pid', 'ppid', 'pgid', 'argv', 'start_identity', 'observed', 'signal_handlers'], 'owned controller');
   const observed = exactProcessSnapshot(controller.observed, 'owned controller observation');
   if (controller.pid !== observed.pid || controller.ppid !== observed.ppid || controller.pgid !== observed.pgid || controller.start_identity !== observed.start_identity) throw new Error('owned controller identity was forged');
   strings(controller.argv, 'owned controller argv');
+  if (JSON.stringify(controller.argv) !== JSON.stringify(expected.argv) || observed.command_line !== expected.observedCommandLine) {
+    throw new Error('owned controller command binding drifted');
+  }
   const handlers = exactKeys(controller.signal_handlers, ['installed_at', 'signals', 'active', 'handled_signal', 'cleanup_completed', 'removed_at'], 'owned controller signal handlers');
   if (JSON.stringify(handlers.signals) !== '["SIGINT","SIGTERM"]' || handlers.active !== false || handlers.handled_signal !== null || handlers.cleanup_completed !== true) throw new Error('owned controller signal cleanup is incomplete');
   for (const [key, value] of [['installed_at', handlers.installed_at], ['removed_at', handlers.removed_at]] as const) if (!value || Number.isNaN(Date.parse(String(value)))) throw new Error(`owned controller ${key} is invalid`);
   return controller;
 }
 
-export function assertOwnedProcessEvidence(value: unknown, options: { controllerPid: number; requireTerm: boolean; extraKeys?: readonly string[] }): UnknownRecord {
+export function assertOwnedProcessEvidence(value: unknown, options: {
+  controllerPid: number;
+  requireTerm: boolean;
+  expectedRole: string;
+  expectedArgv: readonly string[];
+  expectedObservedCommandLine: string;
+  extraKeys?: readonly string[];
+}): UnknownRecord {
   const process = exactKeys(value, [
-    'role', 'argv', 'root_pid', 'root_ppid', 'root_pgid', 'start_identity', 'observed', 'started_at', 'stabilization',
+    'role', 'argv', 'expected_command_line', 'root_pid', 'root_ppid', 'root_pgid', 'start_identity', 'observed', 'started_at', 'stabilization',
     'pre_term_identity', 'term_sent_at', 'root_exit', 'group_lifecycle', 'stopped', ...(options.extraKeys ?? []),
   ], 'owned process');
   string(process.role, 'owned process role'); strings(process.argv, 'owned process argv'); string(process.start_identity, 'owned process start identity');
   const observed = exactProcessSnapshot(process.observed, 'owned process observation');
+  if (process.role !== options.expectedRole || JSON.stringify(process.argv) !== JSON.stringify(options.expectedArgv)
+    || process.expected_command_line !== options.expectedObservedCommandLine || observed.command_line !== options.expectedObservedCommandLine) {
+    throw new Error('owned process role/argv/observed-command binding drifted');
+  }
   if (process.root_pid !== observed.pid || process.root_ppid !== options.controllerPid || process.root_ppid !== observed.ppid || process.root_pgid !== process.root_pid || process.root_pgid !== observed.pgid || process.start_identity !== observed.start_identity) throw new Error('owned process controller/PID/group identity was forged');
   const stabilization = exactKeys(process.stabilization, ['completed_at', 'polls', 'observed_commands'], 'owned process stabilization');
   const observedCommands = strings(stabilization.observed_commands, 'owned process stabilization commands');
@@ -379,6 +399,16 @@ export function assertOwnedProcessEvidence(value: unknown, options: { controller
 export function npmObservedCommandLine(argv: readonly string[]): string {
   if (argv[0] !== 'npm') throw new Error('owned preview command must use npm');
   return argv.filter((argument) => argument !== '--').join(' ');
+}
+
+export function tsxObservedCommandLine(argv: readonly string[], root: string): string {
+  if (argv.length < 2) throw new Error('tsx controller argv is incomplete');
+  const script = relative(root, argv[1]!);
+  if (!script || script.startsWith('..')) throw new Error('tsx controller script is outside the repository root');
+  return [
+    argv[0], '--require', join(root, 'node_modules/tsx/dist/preflight.cjs'), '--import',
+    pathToFileURL(join(root, 'node_modules/tsx/dist/loader.mjs')).href, script, ...argv.slice(2),
+  ].join(' ');
 }
 
 export function ownedCommandLineReady(actual: string, argv: readonly string[]): boolean {
@@ -409,9 +439,14 @@ export function assertDynamicCrawl(value: unknown, expectedRoutes: readonly Dyna
   }
 }
 
-export function assertLocalReceiptMaterialGroups(input: unknown, expected: { implementationCommit: string; representatives: readonly string[] }): void {
-  const root = exactKeys(input, ['schema_version', 'implementation_commit', 'ports', 'representatives', 'transitions', 'controller', 'processes', 'proxy_worker', 'port_lifecycle', 'temp_root', 'dynamic_crawl', 'static_contract'], 'local receipt');
-  if (root.schema_version !== 2 || root.implementation_commit !== expected.implementationCommit) throw new Error('local receipt commit/schema drifted');
+export function assertLocalReceiptMaterialGroups(input: unknown, expected: {
+  implementationCommit: string;
+  representatives: readonly string[];
+  controllerArgv: readonly string[];
+  controllerObservedCommandLine: string;
+}): void {
+  const root = exactKeys(input, ['schema_version', 'implementation_commit', 'eligible', 'errors', 'ports', 'representatives', 'transitions', 'controller', 'processes', 'proxy_worker', 'port_lifecycle', 'temp_root', 'dynamic_crawl', 'static_contract'], 'local receipt');
+  if (root.schema_version !== 3 || root.implementation_commit !== expected.implementationCommit || root.eligible !== true || array(root.errors, 'local errors').length > 0) throw new Error('local receipt commit/schema/eligibility drifted');
   const ports = exactKeys(root.ports, ['proxy', 'react', 'astro'], 'local ports');
   if (ports.proxy !== 4390 || ports.react !== 4391 || ports.astro !== 4392) throw new Error('local ports drifted');
   if (JSON.stringify(root.representatives) !== JSON.stringify(expected.representatives)) throw new Error('local representative routes drifted');
@@ -420,14 +455,29 @@ export function assertLocalReceiptMaterialGroups(input: unknown, expected: { imp
   for (const transition of transitions) {
     if (JSON.stringify(array(transition.routes, 'transition routes').map((entry) => record(entry, 'transition route').path)) !== JSON.stringify(expected.representatives)) throw new Error('local transition representative routes drifted');
   }
-  const controller = assertControllerEvidence(root.controller);
-  const processes = array(root.processes, 'local processes').map((entry) => assertOwnedProcessEvidence(entry, { controllerPid: Number(controller.pid), requireTerm: true }));
+  const controller = assertControllerEvidence(root.controller, { argv: expected.controllerArgv, observedCommandLine: expected.controllerObservedCommandLine });
+  const temp = exactKeys(root.temp_root, ['pattern', 'path', 'realpath', 'realpath_validated', 'removed'], 'local temp root');
+  const tempPath = string(temp.path, 'local temp path');
+  if (temp.realpath !== tempPath || !/^\/tmp\/beyondwin-cutover\.[A-Za-z0-9_-]+$/u.test(tempPath)) throw new Error('local temp path/realpath binding drifted');
+  const processExpectations = [
+    { role: 'react', argv: ['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1', '--port', '4391'] },
+    { role: 'astro', argv: ['npm', 'run', 'legacy:preview', '--', '--host', '127.0.0.1', '--port', '4392'] },
+    { role: 'proxy', argv: ['npm', 'run', 'cutover:proxy', '--', '--listen', '127.0.0.1:4390', '--react', 'http://127.0.0.1:4391', '--astro', 'http://127.0.0.1:4392', '--state', `${tempPath}/target`, '--pid-file', `${tempPath}/proxy.pid`] },
+  ] as const;
+  const rawProcesses = array(root.processes, 'local processes');
+  if (rawProcesses.length !== processExpectations.length) throw new Error('local owned process count drifted');
+  const processes = rawProcesses.map((entry, index) => {
+    const processExpected = processExpectations[index]!;
+    return assertOwnedProcessEvidence(entry, {
+      controllerPid: Number(controller.pid), requireTerm: true, expectedRole: processExpected.role,
+      expectedArgv: processExpected.argv, expectedObservedCommandLine: npmObservedCommandLine(processExpected.argv),
+    });
+  });
   if (JSON.stringify(processes.map(({ role }) => role)) !== '["react","astro","proxy"]' || processes.some(({ stopped }) => stopped !== true)) throw new Error('local owned process cleanup drifted');
   const worker = record(root.proxy_worker, 'proxy worker');
   if (worker.descendant_of_proxy !== true || worker.stopped !== true) throw new Error('proxy worker ownership/cleanup drifted');
   const lifecycle = record(root.port_lifecycle, 'port lifecycle');
   for (const key of ['before_free', 'during_owned', 'after_free']) if (JSON.stringify(lifecycle[key]) !== '[4390,4391,4392]') throw new Error('port lifecycle drifted');
-  const temp = record(root.temp_root, 'local temp root');
   if (temp.pattern !== '/tmp/beyondwin-cutover.*' || temp.realpath_validated !== true || temp.removed !== true) throw new Error('local temp cleanup drifted');
   const dynamic = record(root.dynamic_crawl, 'dynamic crawl summary');
   if (dynamic.route_count !== 80 || array(dynamic.failures, 'dynamic failures').length > 0) throw new Error('dynamic crawl summary failed');
@@ -441,7 +491,11 @@ function archiveInventoryRejected(path: string): boolean {
     || path === '.superpowers/' || path.startsWith('.superpowers/') || path.split('/').some((part) => part === '.env' || part.startsWith('.env.'));
 }
 
-export function assertCleanHostReceiptMaterialGroups(input: unknown, expected: { implementationCommit: string }): void {
+export function assertCleanHostReceiptMaterialGroups(input: unknown, expected: {
+  implementationCommit: string;
+  controllerArgv: readonly string[];
+  controllerObservedCommandLine: string;
+}): void {
   const root = exactKeys(input, ['schema_version', 'implementation_commit', 'created_at', 'completed_at', 'eligible', 'archive_hash', 'archive_inventory_hash', 'archive_inventory_count', 'archive_inventory', 'exclusions', 'controller', 'environment', 'commands', 'release', 'selected_build_hash', 'route_count', 'inventory_hash', 'smoke', 'temp_root', 'errors'], 'clean-host receipt');
   if (root.schema_version !== 2 || root.implementation_commit !== expected.implementationCommit || root.eligible !== true) throw new Error('clean-host commit/schema/eligibility drifted');
   assertHash(root.archive_hash, 'clean-host archive hash'); assertHash(root.archive_inventory_hash, 'clean-host inventory hash');
@@ -452,12 +506,34 @@ export function assertCleanHostReceiptMaterialGroups(input: unknown, expected: {
   if (inventory.some(archiveInventoryRejected)) throw new Error('clean-host archive contains excluded paths');
   const exclusions = exactKeys(root.exclusions, ['dependencies', 'generated_output', 'secrets_and_environment', 'top_level_private_memory'], 'clean-host exclusions');
   if (Object.values(exclusions).some((value) => value !== true)) throw new Error('clean-host exclusions are incomplete');
-  const controller = assertControllerEvidence(root.controller);
+  const controller = assertControllerEvidence(root.controller, { argv: expected.controllerArgv, observedCommandLine: expected.controllerObservedCommandLine });
   const environment = exactKeys(root.environment, ['allowed_keys', 'npm_userconfig_hash', 'npm_globalconfig_hash', 'config_inventory_hash', 'cache_inventory_hash_before'], 'clean-host environment');
   for (const key of ['npm_userconfig_hash', 'npm_globalconfig_hash', 'config_inventory_hash', 'cache_inventory_hash_before']) assertHash(environment[key], `clean-host ${key}`);
   const allowed = strings(environment.allowed_keys, 'clean-host allowed keys');
   if (allowed.some((key) => /token|auth|proxy|api|secret/iu.test(key))) throw new Error('clean-host environment contains a secret/proxy key');
-  const commands = array(root.commands, 'clean-host commands').map((entry) => assertOwnedProcessEvidence(entry, { controllerPid: Number(controller.pid), requireTerm: false, extraKeys: ['phase', 'environment_keys'] }));
+  const temp = exactKeys(root.temp_root, ['pattern', 'path', 'realpath', 'realpath_validated', 'removed', 'preview_port'], 'clean-host temp root');
+  const tempPath = string(temp.path, 'clean-host temp path');
+  if (temp.realpath !== tempPath || !/^\/tmp\/beyondwin-clean-host\.[A-Za-z0-9_-]+$/u.test(tempPath)) throw new Error('clean-host temp path/realpath binding drifted');
+  const cleanCommandExpectations = [
+    { role: 'install:git', phase: 'install', argv: ['git', 'archive', '--format=tar', `--output=${tempPath}/source.tar`, expected.implementationCommit, '--', '.', ':(exclude)memory', ':(exclude)build', ':(exclude)output', ':(exclude).superpowers', ':(exclude).env', ':(exclude).env.*'] },
+    { role: 'install:tar', phase: 'install', argv: ['tar', '-xf', `${tempPath}/source.tar`, '-C', `${tempPath}/repository`] },
+    { role: 'install:npm', phase: 'install', argv: ['npm', 'ci'] },
+    { role: 'build:npm', phase: 'build', argv: ['npm', 'run', 'public-release:build'] },
+    { role: 'build:npm', phase: 'build', argv: ['npm', 'run', 'public-release:verify'] },
+    { role: 'build:npm', phase: 'build', argv: ['npm', 'run', 'site:build'] },
+  ] as const;
+  const rawCommands = array(root.commands, 'clean-host commands');
+  if (rawCommands.length !== cleanCommandExpectations.length) throw new Error('clean-host command sequence drifted');
+  const commands = rawCommands.map((entry, index) => {
+    const commandExpected = cleanCommandExpectations[index]!;
+    const observed = commandExpected.argv[0] === 'npm' ? npmObservedCommandLine(commandExpected.argv) : commandExpected.argv.join(' ');
+    const command = assertOwnedProcessEvidence(entry, {
+      controllerPid: Number(controller.pid), requireTerm: false, expectedRole: commandExpected.role,
+      expectedArgv: commandExpected.argv, expectedObservedCommandLine: observed, extraKeys: ['phase', 'environment_keys'],
+    });
+    if (command.phase !== commandExpected.phase) throw new Error('clean-host command phase drifted');
+    return command;
+  });
   if (commands.length === 0 || commands.some((entry) => record(entry.root_exit, 'clean-host command root exit').exit_code !== 0 || entry.stopped !== true)) throw new Error('clean-host commands failed or remained running');
   for (const command of commands) {
     if (command.phase !== 'install' && command.phase !== 'build') throw new Error('clean-host command phase drifted');
@@ -468,7 +544,6 @@ export function assertCleanHostReceiptMaterialGroups(input: unknown, expected: {
   for (const key of ['active_pointer_hash', 'manifest_hash', 'artifact_hash']) assertHash(release[key], `clean-host release ${key}`);
   assertHash(root.selected_build_hash, 'clean-host selected build'); assertHash(root.inventory_hash, 'clean-host route inventory');
   if (root.route_count !== 80 || array(root.smoke, 'clean-host smoke').length !== 80) throw new Error('clean-host exact 80 smoke is incomplete');
-  const temp = record(root.temp_root, 'clean-host temp root');
   if (temp.pattern !== '/tmp/beyondwin-clean-host.*' || temp.realpath_validated !== true || temp.removed !== true) throw new Error('clean-host temp cleanup drifted');
   if (array(root.errors, 'clean-host errors').length > 0) throw new Error('clean-host errors are present');
 }
