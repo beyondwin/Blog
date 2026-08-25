@@ -6,6 +6,8 @@ import {
   checkExactDrillPorts,
   parseProxyArguments,
   prepareStateFile,
+  proxyCheckPayload,
+  writeProxyTarget,
 } from './local-proxy.mts';
 
 const createdRoots: string[] = [];
@@ -76,5 +78,17 @@ describe('local cutover proxy safety', () => {
       return port !== 4391;
     })).rejects.toThrow('4391');
     expect(visited).toEqual([4390, 4391, 4392]);
+  });
+
+  it('reports the actual existing valid state during check mode', async () => {
+    const root = await cutoverRoot();
+    const state = join(root, 'target');
+    await prepareStateFile(state);
+    await writeProxyTarget(state, 'astro');
+    expect(proxyCheckPayload(await prepareStateFile(state))).toEqual({
+      check: 'passed',
+      ports: [4390, 4391, 4392],
+      state: 'astro',
+    });
   });
 });

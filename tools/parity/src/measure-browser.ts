@@ -263,9 +263,20 @@ async function measureSample(
         __bwParityPerformance?: { cls: number; lcpMs: number };
       }).__bwParityPerformance;
       const largestPaint = performance.getEntriesByType('largest-contentful-paint').at(-1);
+      const lcp = largestPaint as (PerformanceEntry & { element?: Element; url?: string }) | undefined;
+      const element = lcp?.element;
+      const imageUrl = element instanceof HTMLImageElement ? element.currentSrc || element.src : '';
       return {
         cls: state?.cls ?? 0,
         lcpMs: Math.max(state?.lcpMs ?? 0, largestPaint?.startTime ?? 0),
+        lcpElement: {
+          provenance: 'largest-contentful-paint' as const,
+          tagName: element?.tagName ?? '',
+          id: element?.id ?? '',
+          className: element?.getAttribute('class') ?? '',
+          url: lcp?.url || imageUrl,
+          text: element instanceof HTMLImageElement ? element.alt : (element?.textContent ?? '').trim().slice(0, 200),
+        },
       };
     });
     const overflow = await page.evaluate((expectedMaxWidth): OverflowEvidence => ({

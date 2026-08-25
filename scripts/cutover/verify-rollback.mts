@@ -1,13 +1,16 @@
-import { execFile, execFileSync } from 'node:child_process';
+import { execFile, execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { arch, platform, release as osRelease } from 'node:os';
-import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { access, mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
+import AxeBuilder from '@axe-core/playwright';
+import { chromium } from '@playwright/test';
 import { readActiveRelease } from '../../packages/content/src/release/read-release.ts';
 import { buildHtmlContract, type AstroBaseline } from '../../tools/parity/src/html-contract.ts';
-import { hashFile, hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
-import { checkExactDrillPorts, writeProxyTarget, type ProxyTarget } from './local-proxy.mts';
+import { hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
+import { checkExactDrillPorts, prepareStateFile, writeProxyTarget, type ProxyTarget } from './local-proxy.mts';
+import { deriveChangedSurfacePerformance, sealChangedSurfacePerformance, validateOwnedProcessIdentity } from './evidence-contracts.mts';
 import type { ProxyTransition } from './verify-public-site.mts';
 
 const execFileAsync = promisify(execFile);
@@ -182,7 +185,7 @@ async function htmlRouteInventory(root: string, directory = root): Promise<strin
   return routes.sort((left, right) => left.localeCompare(right));
 }
 
-function parseTask14Metrics(report: string): Task14Metric[] {
+export function parseTask14Metrics(report: string): Task14Metric[] {
   const metrics = report.split('\n').filter((line) => line.startsWith('| `/' )).map((line) => {
     const columns = line.split('|').slice(1, -1).map((column) => column.trim());
     const route = columns[0]?.replaceAll('`', '') ?? '';
@@ -279,11 +282,16 @@ export async function verifyStaticCutoverContract(options: {
   };
 }
 
-async function processCommand(pid: number): Promise<string> {
-  const result = await execFileAsync('ps', ['-p', String(pid), '-o', 'command=']);
-  const command = result.stdout.trim();
-  if (!command) throw new Error(`created process ${pid} is not running`);
-  return command;
+interface ProcessSnapshot { pid: number; ppid: number; start_identity: string; command_line: string }
+
+async function processSnapshot(pid: number): Promise<ProcessSnapshot> {
+  const [identity, start] = await Promise.all([
+    execFileAsync('ps', ['-p', String(pid), '-o', 'pid=,ppid=,command=']),
+    execFileAsync('ps', ['-p', String(pid), '-o', 'lstart=']),
+  ]);
+  const match = identity.stdout.trim().match(/^([0-9]+)\s+([0-9]+)\s+(.+)$/u);
+  if (!match || !start.stdout.trim()) throw new Error(`created process ${pid} is not running`);
+  return { pid: Number(match[1]), ppid: Number(match[2]), start_identity: start.stdout.trim(), command_line: match[3]! };
 }
 
 async function smokeTransition(base: string, target: ProxyTarget): Promise<ProxyTransition> {
@@ -309,39 +317,19 @@ async function smokeTransition(base: string, target: ProxyTarget): Promise<Proxy
   return { target, routes };
 }
 
-function parseProcess(value: string): { role: 'react' | 'astro' | 'proxy'; pid: number } {
-  const match = value.match(/^(react|astro|proxy):([1-9][0-9]*)$/u);
-  if (!match) throw new Error('--process requires role:pid');
-  return { role: match[1] as 'react' | 'astro' | 'proxy', pid: Number(match[2]) };
-}
-
 interface DrillArguments {
   implementationCommit: string;
-  reactRoot: string;
-  astroRoot: string;
-  baselinePath: string;
-  statePath: string;
-  proxyBase: string;
+  performanceReceipt: string;
   output: string;
-  processes: Array<{ role: 'react' | 'astro' | 'proxy'; pid: number }>;
 }
 
-function parseDrillArguments(argv: readonly string[]): DrillArguments | { finalize: string } {
-  if (argv[0] === '--finalize') {
-    if (argv.length !== 2) throw new Error('usage: --finalize <receipt>');
-    return { finalize: resolve(argv[1]!) };
-  }
+function parseDrillArguments(argv: readonly string[]): DrillArguments {
   const values = new Map<string, string>();
-  const processes: DrillArguments['processes'] = [];
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index];
     const value = argv[index + 1];
     if (!key || !value) throw new Error('cutover drill arguments require key/value pairs');
-    if (key === '--process') {
-      processes.push(parseProcess(value));
-      continue;
-    }
-    if (!['--implementation-commit', '--react-root', '--astro-root', '--baseline', '--state', '--proxy', '--output'].includes(key)) {
+    if (!['--implementation-commit', '--performance-receipt', '--output'].includes(key)) {
       throw new Error(`unknown argument: ${key}`);
     }
     if (values.has(key)) throw new Error(`duplicate argument: ${key}`);
@@ -352,40 +340,114 @@ function parseDrillArguments(argv: readonly string[]): DrillArguments | { finali
     if (!value) throw new Error(`missing ${key}`);
     return value;
   };
-  if (processes.length !== 3 || new Set(processes.map(({ role }) => role)).size !== 3) {
-    throw new Error('exactly one react, astro, and proxy process is required');
-  }
-  const proxyBase = required('--proxy');
-  if (proxyBase !== 'http://127.0.0.1:4390') throw new Error('proxy base must be exact local drill origin');
   return {
     implementationCommit: required('--implementation-commit'),
-    reactRoot: resolve(required('--react-root')),
-    astroRoot: resolve(required('--astro-root')),
-    baselinePath: resolve(required('--baseline')),
-    statePath: resolve(required('--state')),
-    proxyBase,
+    performanceReceipt: resolve(required('--performance-receipt')),
     output: resolve(required('--output')),
-    processes,
   };
 }
 
-async function finalizeReceipt(path: string): Promise<void> {
-  const receipt = await readJson<LocalCutoverReceipt>(path);
-  for (const processEntry of receipt.processes) {
-    try {
-      process.kill(processEntry.pid, 0);
-      throw new Error(`created process ${processEntry.pid} is still running`);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
-    }
-    processEntry.stopped = true;
+const exactCommands = {
+  react: ['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1', '--port', '4391'],
+  astro: ['npm', 'run', 'legacy:preview', '--', '--host', '127.0.0.1', '--port', '4392'],
+  proxy: ['npm', 'run', 'cutover:proxy', '--', '--listen', '127.0.0.1:4390', '--react', 'http://127.0.0.1:4391', '--astro', 'http://127.0.0.1:4392'],
+} as const;
+
+async function waitFor(check: () => Promise<boolean>, label: string): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if (await check().catch(() => false)) return;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
   }
-  await checkExactDrillPorts();
-  receipt.processes_cleaned = true;
-  receipt.ports_free_after = true;
-  receipt.finalized_at = new Date().toISOString();
-  await writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`);
-  process.stdout.write(`${JSON.stringify({ finalized: true, pids: receipt.processes.map(({ pid }) => pid), ports: 'free' })}\n`);
+  throw new Error(`timed out waiting for ${label}`);
+}
+
+async function spawnedProcess(role: keyof typeof exactCommands, argv: readonly string[], root: string): Promise<{
+  role: keyof typeof exactCommands; child: ChildProcess; argv: string[]; root_pid: number; root_ppid: number;
+  start_identity: string; observed: ProcessSnapshot; started_at: string; term_sent_at: string | null;
+  exited_at: string | null; exit_code: number | null; signal: NodeJS.Signals | null; stopped: boolean;
+}> {
+  const startedAt = new Date().toISOString();
+  const child = spawn(argv[0]!, argv.slice(1), { cwd: root, env: process.env, stdio: ['ignore', 'pipe', 'pipe'], shell: false, detached: true });
+  if (!child.pid) throw new Error(`failed to start owned ${role} process`);
+  child.stdout?.pipe(process.stdout); child.stderr?.pipe(process.stderr);
+  const observed = await processSnapshot(child.pid);
+  const result = {
+    role, child, argv: [...argv], root_pid: child.pid, root_ppid: process.pid,
+    start_identity: observed.start_identity, observed, started_at: startedAt, term_sent_at: null,
+    exited_at: null, exit_code: null, signal: null, stopped: false,
+  };
+  validateOwnedProcessIdentity(result, { controllerPid: process.pid, expectedArgv: argv });
+  return result;
+}
+
+async function descendantOf(pid: number, ancestor: number): Promise<boolean> {
+  let current = pid;
+  for (let depth = 0; depth < 20; depth += 1) {
+    const snapshot = await processSnapshot(current).catch(() => null);
+    if (!snapshot) return false;
+    if (snapshot.ppid === ancestor) return true;
+    if (snapshot.ppid <= 1 || snapshot.ppid === current) return false;
+    current = snapshot.ppid;
+  }
+  return false;
+}
+
+async function portOwnerPids(port: number): Promise<number[]> {
+  const result = await execFileAsync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t']).catch(() => ({ stdout: '' }));
+  return [...new Set(result.stdout.split('\n').map(Number).filter(Number.isInteger))].sort((left, right) => left - right);
+}
+
+async function stopOwned(entry: Awaited<ReturnType<typeof spawnedProcess>>): Promise<void> {
+  const beforeTerm = await processSnapshot(entry.root_pid);
+  validateOwnedProcessIdentity({ ...entry, observed: beforeTerm }, { controllerPid: process.pid, expectedArgv: entry.argv });
+  entry.observed = beforeTerm; entry.term_sent_at = new Date().toISOString();
+  const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolveExit) => {
+    entry.child.once('exit', (code, signal) => resolveExit({ code, signal }));
+  });
+  process.kill(-entry.root_pid, 'SIGTERM');
+  const result = await Promise.race([
+    exited,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`owned ${entry.role} process did not exit after TERM`)), 15_000)),
+  ]);
+  entry.exited_at = new Date().toISOString(); entry.exit_code = result.code; entry.signal = result.signal; entry.stopped = true;
+}
+
+async function dynamicCrawl(baseUrl: string, expectedRoutes: readonly string[]): Promise<Array<Record<string, unknown>>> {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, serviceWorkers: 'block' });
+    const results: Array<Record<string, unknown>> = [];
+    for (const path of expectedRoutes) {
+      const page = await context.newPage();
+      const consoleErrors: string[] = []; const pageErrors: string[] = []; const hydrationErrors: string[] = [];
+      page.on('console', (message) => {
+        const text = message.text();
+        if (message.type() === 'error') consoleErrors.push(text);
+        if (/hydration|did not match|server rendered html/iu.test(text)) hydrationErrors.push(text);
+      });
+      page.on('pageerror', (error) => {
+        pageErrors.push(error.message);
+        if (/hydration|did not match|server rendered html/iu.test(error.message)) hydrationErrors.push(error.message);
+      });
+      const response = await page.goto(new URL(path, baseUrl).href, { waitUntil: 'networkidle' });
+      await page.evaluate(async () => { await document.fonts.ready; await new Promise<void>((resolveReady) => requestAnimationFrame(() => requestAnimationFrame(() => resolveReady()))); });
+      const content = await page.content();
+      const axe = await new AxeBuilder({ page }).analyze();
+      const overflow = await page.evaluate(() => ({ expected_max_width: 1440, actual_scroll_width: document.documentElement.scrollWidth, overflow: document.documentElement.scrollWidth > 1440 }));
+      results.push({
+        path, status: response?.status() ?? 0, final_url: new URL(page.url()).pathname,
+        redirected: new URL(page.url()).pathname !== path,
+        console_errors: [...new Set(consoleErrors)].sort(), page_errors: [...new Set(pageErrors)].sort(), hydration_errors: [...new Set(hydrationErrors)].sort(),
+        axe_serious_or_critical: axe.violations.filter(({ impact }) => impact === 'serious' || impact === 'critical').map(({ id, impact }) => `${id}: ${String(impact)}`).sort(),
+        overflow,
+        private_boundary_hits: [...new Set(content.match(/\/Users\/[^\s"'<>]+|\/home\/[^\s"'<>]+|[A-Za-z]:\\Users\\[^\s"'<>]+|memory\/thoughts\/[^\s"'<>]+/gu) ?? [])].sort(),
+      });
+      await page.close();
+    }
+    await context.close();
+    return results;
+  } finally { await browser.close(); }
 }
 
 async function runDrill(options: DrillArguments): Promise<void> {
@@ -394,98 +456,111 @@ async function runDrill(options: DrillArguments): Promise<void> {
   if (head !== options.implementationCommit) throw new Error('drill must run from the exact implementation commit');
   const status = execFileSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], { cwd: root, encoding: 'utf8' });
   if (status) throw new Error(`drill requires a clean tracked worktree:\n${status}`);
-  const processEvidence = await Promise.all(options.processes.map(async ({ role, pid }) => ({
-    role,
-    pid,
-    command: await processCommand(pid),
-    stopped: false,
-  })));
-  const expectedCommands = {
-    react: 'site:preview',
-    astro: 'legacy:preview',
-    proxy: 'cutover:proxy',
-  } as const;
-  for (const entry of processEvidence) {
-    if (!entry.command.includes(expectedCommands[entry.role])) {
-      throw new Error(`${entry.role} PID ${entry.pid} command does not match the created drill process`);
-    }
-  }
-
+  await checkExactDrillPorts();
+  const reactRoot = join(root, 'apps/site/build/client'); const astroRoot = join(root, 'dist');
+  const baselinePath = join(root, 'tests/fixtures/parity/astro-public-baseline.json');
   const staticContract = await verifyStaticCutoverContract({
-    root,
-    reactRoot: options.reactRoot,
-    astroRoot: options.astroRoot,
-    baselinePath: options.baselinePath,
+    root, reactRoot, astroRoot, baselinePath,
   });
   if (staticContract.failures.length > 0) throw new Error(`static cutover contract failed:\n${staticContract.failures.join('\n')}`);
-  const transitions: ProxyTransition[] = [];
-  for (const target of ['react', 'astro', 'react'] as const) {
-    await writeProxyTarget(options.statePath, target);
-    transitions.push(await smokeTransition(options.proxyBase, target));
-  }
-
   const active = await readActiveRelease(join(root, 'build/public-releases'));
   const packageLock = await readJson<{ packages: Record<string, { version?: string }>; }>(join(root, 'package-lock.json'));
   const browsers = await readJson<{ browsers: Array<{ name: string; browserVersion: string }>; }>(join(root, 'node_modules/playwright-core/browsers.json'));
-  const task14Path = join(root, '.superpowers/sdd/public-reading-continuity-implementation-plan/task-14-report.md');
-  const task14Report = await readFile(task14Path, 'utf8');
   const routeSourceHashes = Object.fromEntries(await Promise.all(
     Object.entries(task14RoutePaths).map(async ([route, paths]) => [route, await hashFiles(root, paths)]),
   ));
-  const receipt: LocalCutoverReceipt = {
-    schema_version: 1,
-    implementation_commit: head,
-    created_at: new Date().toISOString(),
-    finalized_at: null,
-    environment: {
-      node: process.version,
-      npm: execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(),
-      os: `${platform()} ${osRelease()} ${arch()}`,
-      playwright: packageLock.packages['node_modules/@playwright/test']?.version ?? 'unknown',
-      chromium: browsers.browsers.find(({ name }) => name === 'chromium')?.browserVersion ?? 'unknown',
+  const performanceReport = sealChangedSurfacePerformance(await readJson(options.performanceReceipt));
+  const performance = deriveChangedSurfacePerformance(performanceReport, {
+    implementationCommit: head, releaseId: active.manifest.releaseId,
+    routeSourceHash: routeSourceHashes['/reviews/black-swan/']!,
+    measurementImplementationHash: await hashFiles(root, ['tools/parity/src/compare-contracts.ts', 'tools/parity/src/measure-browser.ts', 'tests/fixtures/parity/astro-renderer-baseline.json']),
+    harnessHash: await hashFiles(root, ['tests/e2e/performance-selection.ts', 'tests/e2e/performance.spec.ts']),
+    configHash: await hashFiles(root, ['package-lock.json', 'package.json', 'playwright.config.ts', 'tests/e2e/support.ts']),
+    releaseManifestHash: await hashFiles(root, ['build/public-releases/active.json', `build/public-releases/${active.manifest.releaseId}/manifest.json`]),
+  });
+  if (!performance.eligible) throw new Error('changed-surface review performance is not eligible; local drill refused');
+
+  const tempRoot = await mkdtemp('/tmp/beyondwin-cutover.');
+  const expectedRealPath = join(await realpath('/tmp'), basename(tempRoot));
+  if (await realpath(tempRoot) !== expectedRealPath) throw new Error('cutover temp realpath is invalid');
+  const statePath = join(tempRoot, 'target'); const pidPath = join(tempRoot, 'proxy.pid');
+  await prepareStateFile(statePath);
+
+  const processes: Array<Awaited<ReturnType<typeof spawnedProcess>>> = [];
+  let proxyWorker: Record<string, unknown> | null = null; let transitions: ProxyTransition[] = []; let crawl: Array<Record<string, unknown>> = [];
+  let ownersWhileRunning: Array<{ port: number; pids: number[]; root_pid: number; owned_by_root: boolean }> = [];
+  let runError: unknown;
+  try {
+    const react = await spawnedProcess('react', exactCommands.react, root); processes.push(react);
+    const astro = await spawnedProcess('astro', exactCommands.astro, root); processes.push(astro);
+    await waitFor(async () => (await fetch('http://127.0.0.1:4391/')).status === 200, 'React preview');
+    await waitFor(async () => (await fetch('http://127.0.0.1:4392/')).status === 200, 'Astro preview');
+    const proxyArgv = [...exactCommands.proxy, '--state', statePath, '--pid-file', pidPath];
+    const proxy = await spawnedProcess('proxy', proxyArgv, root); processes.push(proxy);
+    await waitFor(async () => access(pidPath).then(() => true, () => false), 'proxy PID file');
+    const workerPid = Number((await readFile(pidPath, 'utf8')).trim());
+    const workerSnapshot = await processSnapshot(workerPid);
+    proxyWorker = { ...workerSnapshot, root_pid: proxy.root_pid, descendant_of_proxy: await descendantOf(workerPid, proxy.root_pid), stopped: false };
+    if (!proxyWorker.descendant_of_proxy) throw new Error('proxy PID-file worker is not a descendant of the owned proxy root');
+    await waitFor(async () => (await fetch('http://127.0.0.1:4390/')).status === 200, 'local proxy');
+    const rootsByPort = new Map([[4390, proxy.root_pid], [4391, react.root_pid], [4392, astro.root_pid]]);
+    ownersWhileRunning = await Promise.all([4390, 4391, 4392].map(async (port) => {
+      const pids = await portOwnerPids(port); const ownedRoot = rootsByPort.get(port)!;
+      const owned = (await Promise.all(pids.map(async (pid) => pid === ownedRoot || await descendantOf(pid, ownedRoot)))).every(Boolean);
+      return { port, pids, root_pid: ownedRoot, owned_by_root: owned };
+    }));
+    if (ownersWhileRunning.some(({ pids }) => pids.length === 0)) throw new Error('one or more drill ports has no observed owned listener');
+    if (ownersWhileRunning.some(({ owned_by_root }) => !owned_by_root)) throw new Error('one or more drill listeners is not descended from its created root');
+    for (const target of ['react', 'astro', 'react'] as const) {
+      await writeProxyTarget(statePath, target); transitions.push(await smokeTransition('http://127.0.0.1:4390', target));
+    }
+    await writeProxyTarget(statePath, 'react');
+    const baseline = await readJson<AstroBaseline>(baselinePath);
+    crawl = await dynamicCrawl('http://127.0.0.1:4390', baseline.routes.map(({ path }) => path));
+    const dynamicFailures = crawl.flatMap((entry) => [
+      ...(entry.status === 200 ? [] : [`${String(entry.path)} status ${String(entry.status)}`]),
+      ...['console_errors', 'page_errors', 'hydration_errors', 'axe_serious_or_critical', 'private_boundary_hits'].flatMap((key) => (entry[key] as unknown[]).map((value) => `${String(entry.path)} ${key}: ${String(value)}`)),
+      ...((entry.overflow as { overflow: boolean }).overflow ? [`${String(entry.path)} overflow`] : []),
+    ]);
+    if (dynamicFailures.length > 0) throw new Error(`dynamic crawl failed:\n${dynamicFailures.join('\n')}`);
+  } catch (error) { runError = error; }
+  finally {
+    for (const entry of [...processes].reverse()) if (!entry.stopped) {
+      try { await stopOwned(entry); } catch (error) { runError ??= error; }
+    }
+    if (proxyWorker) {
+      const workerPid = Number(proxyWorker.pid);
+      const stopped = await processSnapshot(workerPid).then(() => false, () => true);
+      proxyWorker.stopped = stopped;
+      if (!stopped) runError ??= new Error('proxy worker remained after owned proxy root stopped');
+    }
+    try { await checkExactDrillPorts(); } catch (error) { runError ??= error; }
+    if (await realpath(tempRoot) !== expectedRealPath) runError ??= new Error('cutover temp realpath changed before cleanup');
+    await rm(tempRoot, { recursive: true });
+  }
+  if (runError) throw runError;
+  const receipt = {
+    schema_version: 2, implementation_commit: head,
+    ports: { proxy: 4390, react: 4391, astro: 4392 }, representatives: [...representativeRoutes], transitions,
+    processes: processes.map(({ child: _child, ...entry }) => entry), proxy_worker: proxyWorker,
+    port_lifecycle: { before_free: [4390, 4391, 4392], during_owned: [4390, 4391, 4392], owners_while_running: ownersWhileRunning, after_free: [4390, 4391, 4392] },
+    temp_root: { pattern: '/tmp/beyondwin-cutover.*', path: tempRoot, realpath: expectedRealPath, realpath_validated: true, removed: true },
+    dynamic_crawl: { route_count: crawl.length, failures: [], routes: crawl },
+    static_contract: {
+      ...staticContract,
+      environment: { node: process.version, npm: execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim(), os: `${platform()} ${osRelease()} ${arch()}`, playwright: packageLock.packages['node_modules/@playwright/test']?.version ?? 'unknown', chromium: browsers.browsers.find(({ name }) => name === 'chromium')?.browserVersion ?? 'unknown' },
+      release: { release_id: active.manifest.releaseId, active_pointer_hash: active.activePointerHash, manifest_hash: active.manifestHash, artifact_hash: active.artifactHash },
+      builds: { react_root: 'apps/site/build/client', react_hash: await hashTree(reactRoot), astro_root: 'dist', astro_hash: await hashTree(astroRoot), rollback_hash: await hashTree(astroRoot) },
+      task14: { eligible: performance.eligible, route_source_hashes: routeSourceHashes, metric_summary: performance.metrics },
     },
-    release: {
-      release_id: active.manifest.releaseId,
-      active_pointer_hash: active.activePointerHash,
-      manifest_hash: active.manifestHash,
-      artifact_hash: active.artifactHash,
-    },
-    builds: {
-      react_root: 'apps/site/build/client',
-      react_hash: await hashTree(options.reactRoot),
-      astro_root: 'dist',
-      astro_hash: await hashTree(options.astroRoot),
-      rollback_hash: await hashTree(options.astroRoot),
-    },
-    ...staticContract,
-    task14: {
-      eligible: !task14Report.includes('Task 15 changed-surface status: **BLOCKED**'),
-      report_path: '.superpowers/sdd/public-reading-continuity-implementation-plan/task-14-report.md',
-      report_hash: await hashFile(task14Path),
-      route_source_hashes: routeSourceHashes,
-      metric_summary: parseTask14Metrics(task14Report),
-    },
-    ports: { proxy: 4390, react: 4391, astro: 4392 },
-    transitions,
-    processes: processEvidence,
-    commands: [
-      'npm run cutover:proxy -- --check --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state <validated-temp>/target',
-      'npm run site:preview -- --host 127.0.0.1 --port 4391',
-      'npm run legacy:preview -- --host 127.0.0.1 --port 4392',
-      'npm run cutover:proxy -- --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state <validated-temp>/target --pid-file <validated-temp>/proxy.pid',
-    ],
-    processes_cleaned: false,
-    ports_free_after: false,
   };
-  await mkdir(dirname(options.output), { recursive: true });
-  await writeFile(options.output, `${JSON.stringify(receipt, null, 2)}\n`);
-  process.stdout.write(`${JSON.stringify({ routeCount: receipt.route_count, transitions: ['react', 'astro', 'react'], output: options.output })}\n`);
+  await mkdir(dirname(options.output), { recursive: true }); await writeFile(options.output, `${JSON.stringify(receipt, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ routeCount: staticContract.route_count, dynamicRoutes: crawl.length, transitions: ['react', 'astro', 'react'], output: options.output })}\n`);
 }
 
 async function main(): Promise<void> {
   const options = parseDrillArguments(process.argv.slice(2));
-  if ('finalize' in options) await finalizeReceipt(options.finalize);
-  else await runDrill(options);
+  await runDrill(options);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

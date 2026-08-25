@@ -180,6 +180,7 @@ describe('React Router current-behavior static route contract', () => {
     const homeData = await home.loader();
     const articleData = await article.loader({ params: { slug: ARTICLE_ID } });
     const reviewData = await review.loader({ params: { slug: REVIEW_ID } });
+    const coverlessReviewData = await review.loader({ params: { slug: 'devotion-of-suspect-x' } });
     const memoryData = await memory.loader({ params: { slug: MEMORY_ID } });
     const verdictReviewData = await review.loader({ params: { slug: 'art-thief' } });
 
@@ -197,6 +198,16 @@ describe('React Router current-behavior static route contract', () => {
     expect(review.meta({ data: verdictReviewData })).toContainEqual({
       name: 'description', content: '예술 도둑은 중독에 관한 기록이다.',
     });
+    expect(review.reviewCoverPreload(reviewData.coverAsset)).toEqual({
+      rel: 'preload',
+      as: 'image',
+      href: '/assets/content/reviews/black-swan/cover-458w.avif',
+      type: 'image/avif',
+      imageSrcSet: '/assets/content/reviews/black-swan/cover-458w.avif 458w',
+      imageSizes: '(max-width: 720px) 30vw, 9rem',
+      fetchPriority: 'high',
+    });
+    expect(review.reviewCoverPreload(coverlessReviewData.coverAsset)).toBeNull();
     expect(memory.meta({ data: memoryData })).toContainEqual({
       tagName: 'link', rel: 'canonical', href: `/memory/${MEMORY_ID}/`,
     });

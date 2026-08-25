@@ -136,6 +136,27 @@ describe('React Router emitted critical output', () => {
     }
   });
 
+  it('preloads only the verified review AVIF candidates declared by its exact picture sizes', async () => {
+    const imagePreload = reviewHtml.match(
+      /<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u,
+    )?.[0];
+    const picture = reviewHtml.match(/<picture>[\s\S]*?<\/picture>/u)?.[0];
+    const avifSource = picture?.match(/<source\b[^>]*type="image\/avif"[^>]*>/u)?.[0];
+
+    expect(imagePreload).toBeDefined();
+    expect(avifSource).toBeDefined();
+    expect(attribute(imagePreload ?? '', 'imageSizes')).toBe('(max-width: 720px) 30vw, 9rem');
+    expect(attribute(imagePreload ?? '', 'imageSizes')).toBe(attribute(avifSource ?? '', 'sizes'));
+    const preloadCandidates = srcSetCandidates(attribute(imagePreload ?? '', 'imageSrcSet'));
+    const pictureCandidates = srcSetCandidates(attribute(avifSource ?? '', 'srcSet'));
+    expect(preloadCandidates).toEqual(pictureCandidates);
+    expect(preloadCandidates).toContain(attribute(imagePreload ?? '', 'href'));
+    for (const candidate of preloadCandidates) {
+      await expect(access(join(candidateRoot, 'build/client', candidate.replace(/^\//u, ''))))
+        .resolves.toBeUndefined();
+    }
+  });
+
   it('keeps inlined critical CSS out of the hydration chunks', async () => {
     const assetRoot = join(candidateRoot, 'build/client/assets');
     const javascriptAssets = (await readdir(assetRoot)).filter((file) => file.endsWith('.js'));

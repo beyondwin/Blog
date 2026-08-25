@@ -151,6 +151,10 @@ describe('renderer capture harness', () => {
       expect(result.sampleCount).toBe(1);
       expect(result.samples).toHaveLength(1);
       expect(result.samples[0].lcpMs).toBeGreaterThanOrEqual(0);
+      expect(result.samples[0].lcpElement).toMatchObject({
+        provenance: 'largest-contentful-paint',
+        tagName: expect.any(String),
+      });
       expect(result.samples[0].jsGzipBytes).toBe(
         gzipSync(firstScript, { level: 9 }).byteLength + gzipSync(secondScript, { level: 9 }).byteLength,
       );

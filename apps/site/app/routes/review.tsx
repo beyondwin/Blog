@@ -20,6 +20,7 @@ const [routeReadingCss, readingCss, reviewCss] = import.meta.env.SSR
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
+const REVIEW_COVER_SIZES = '(max-width: 720px) 30vw, 9rem';
 export interface ReviewData {
   record: ReviewRecord;
   coverAsset?: ReleaseAsset;
@@ -32,6 +33,21 @@ export const handle: RouteCriticalCssHandle = {
 
 function reviewDescription(record: ReviewRecord): string {
   return record.verdict ?? record.description;
+}
+
+export function reviewCoverPreload(asset: ReleaseAsset | undefined) {
+  const candidates = asset?.sources.find(({ type }) => type === 'image/avif')?.candidates ?? [];
+  const href = candidates.at(-1)?.src;
+  if (!href) return null;
+  return {
+    rel: 'preload' as const,
+    as: 'image' as const,
+    href,
+    type: 'image/avif',
+    imageSrcSet: candidates.map((candidate) => `${candidate.src} ${candidate.width}w`).join(', '),
+    imageSizes: REVIEW_COVER_SIZES,
+    fetchPriority: 'high' as const,
+  };
 }
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ReviewData> {
@@ -60,17 +76,19 @@ export function meta({ data }: { data?: ReviewData }) {
 }
 
 export function ReviewPresentation({ data }: { data: ReviewData }) {
+  const preload = reviewCoverPreload(data.coverAsset);
   const cover = data.coverAsset ? (
     <ResponsivePicture
       asset={data.coverAsset}
       alt={data.coverAsset.alt}
       className="reading-threshold__media-image reading-threshold__media-image--review"
       eager
-      sizes="(max-width: 720px) 30vw, 9rem"
+      sizes={REVIEW_COVER_SIZES}
     />
   ) : undefined;
   return (
     <>
+      {preload ? <link {...preload} /> : null}
       <DocumentMetadata
         canonical={data.record.href}
         description={reviewDescription(data.record)}

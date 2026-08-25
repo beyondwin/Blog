@@ -200,6 +200,14 @@ export async function checkExactDrillPorts(
   if (occupied.length > 0) throw new Error(`cutover drill port occupied: ${occupied.join(', ')}`);
 }
 
+export function proxyCheckPayload(state: ProxyTarget): {
+  check: 'passed';
+  ports: [4390, 4391, 4392];
+  state: ProxyTarget;
+} {
+  return { check: 'passed', ports: [4390, 4391, 4392], state };
+}
+
 function filteredHeaders(headers: IncomingHttpHeaders): IncomingHttpHeaders {
   const connectionTokens = new Set((headers.connection ?? '').split(',').map((value) => value.trim().toLowerCase()));
   return Object.fromEntries(Object.entries(headers).filter(([name, value]) => (
@@ -298,10 +306,10 @@ export async function createProxyServer(options: ProxyArguments): Promise<Server
 
 async function main(): Promise<void> {
   const options = parseProxyArguments(process.argv.slice(2));
-  await prepareStateFile(options.statePath);
+  const state = await prepareStateFile(options.statePath);
   if (options.check) {
     await checkExactDrillPorts();
-    process.stdout.write(`${JSON.stringify({ check: 'passed', ports: [4390, 4391, 4392], state: 'react' })}\n`);
+    process.stdout.write(`${JSON.stringify(proxyCheckPayload(state))}\n`);
     return;
   }
   const server = await createProxyServer(options);

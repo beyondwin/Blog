@@ -31,6 +31,7 @@
     "cutover:proxy": "tsx scripts/cutover/local-proxy.mts",
     "cutover:rollback": "tsx scripts/cutover/verify-rollback.mts",
     "cutover:clean-host": "tsx scripts/cutover/verify-clean-host.mts",
+    "cutover:seal-performance": "tsx scripts/cutover/seal-performance-receipt.mts",
     "cutover:verify": "tsx scripts/cutover/verify-public-site.mts",
     "test": "vitest run",
     "test:workspaces": "vitest run tests/workspace-contract.test.ts packages/contracts/test packages/content/test tools/parity/test",

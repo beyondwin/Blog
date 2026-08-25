@@ -82,6 +82,14 @@ export interface OverflowEvidence {
 }
 
 export interface BrowserSample extends BrowserMetricValues {
+  lcpElement?: {
+    provenance: 'largest-contentful-paint';
+    tagName: string;
+    id: string;
+    className: string;
+    url: string;
+    text: string;
+  };
   renderedImages: Array<{
     source: string;
     displayedWidth: number;
