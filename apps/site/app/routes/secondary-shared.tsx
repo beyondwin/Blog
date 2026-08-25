@@ -1,8 +1,9 @@
 import type { PublicRecord } from '@beyondwin/contracts';
+import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { CollectionPage } from '../../src/ui/collections/CollectionPage';
 import { SecondaryReadingPage } from '../../src/ui/reading/SecondaryReadingPage';
-import { DocumentMetadata } from '../root';
+import { DocumentMetadata, ResponsivePicture } from '../root';
 
 export type SecondaryCollection = 'analysis' | 'ideas' | 'travel';
 type SecondaryRecord = Extract<PublicRecord, { collection: SecondaryCollection }>;
@@ -14,7 +15,10 @@ export const SECONDARY_COPY = {
 } as const;
 
 export interface SecondaryIndexData { records: import('../../src/ui/collections/RecordRow').RecordSummary[] }
-export interface SecondaryDetailData { record: SecondaryRecord }
+export interface SecondaryDetailData {
+  record: SecondaryRecord;
+  mediaAsset?: PublicReleaseManifest['assets'][string];
+}
 
 export function SecondaryIndexPresentation({
   collection,
@@ -28,5 +32,6 @@ export function SecondaryIndexPresentation({
 }
 
 export function SecondaryDetailPresentation({ data }: { data: SecondaryDetailData }) {
-  return <><DocumentMetadata canonical={data.record.href} description={data.record.description} title={`${data.record.title} · beyondwin`} /><SiteShell mode="reading" currentSection={null}><SecondaryReadingPage record={data.record} /></SiteShell></>;
+  const media = data.mediaAsset ? <ResponsivePicture asset={data.mediaAsset} alt={data.mediaAsset.alt} className="reading-threshold__media-image" eager sizes="(max-width: 720px) 30vw, 9rem" /> : undefined;
+  return <><DocumentMetadata canonical={data.record.href} description={data.record.description} title={`${data.record.title} · beyondwin`} /><SiteShell mode="reading" currentSection={null}><SecondaryReadingPage record={data.record} media={media} /></SiteShell></>;
 }

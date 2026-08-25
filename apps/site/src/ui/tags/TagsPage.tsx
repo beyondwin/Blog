@@ -2,16 +2,19 @@ import { RecordRow, type RecordSummary } from '../collections/RecordRow';
 
 export interface PublicTag { label: string; href: string; count: number }
 
-export function TagsPage({
-  records = [],
-  selectedTag,
-  tags,
-}: {
+type TagsPageProps = {
   records?: readonly RecordSummary[];
-  selectedTag?: string;
+  selectedTag: string;
+  tags?: never;
+} | {
+  records?: never;
+  selectedTag?: never;
   tags: readonly PublicTag[];
-}) {
-  if (selectedTag !== undefined) {
+};
+
+export function TagsPage(props: TagsPageProps) {
+  if (props.selectedTag !== undefined) {
+    const { records = [], selectedTag } = props;
     return (
       <section className="reading-sheet tags-page tags-page--detail" aria-labelledby="tag-title">
         <header className="collection-page__header">
@@ -27,6 +30,7 @@ export function TagsPage({
       </section>
     );
   }
+  const { tags } = props;
   return (
     <section className="reading-sheet tags-page" aria-labelledby="tags-title">
       <header className="collection-page__header">

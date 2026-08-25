@@ -1,14 +1,15 @@
 import type { PublicRecord } from '@beyondwin/contracts';
+import type { ReactNode } from 'react';
 import { ReadingThreshold } from './ReadingThreshold';
 
 type SecondaryRecord = Extract<PublicRecord, { collection: 'analysis' | 'ideas' | 'travel' }>;
 
 const KIND_LABELS = { analysis: '조사', ideas: '아이디어', travel: '여행' } as const;
 
-export function SecondaryReadingPage({ record }: { record: SecondaryRecord }) {
+export function SecondaryReadingPage({ media, record }: { media?: ReactNode; record: SecondaryRecord }) {
   return (
     <article className={`reading-sheet reading-detail secondary-reading-page secondary-reading-page--${record.collection}`}>
-      <ReadingThreshold collection={record.collection} kindLabel={KIND_LABELS[record.collection]} title={record.title} />
+      <ReadingThreshold collection={record.collection} kindLabel={KIND_LABELS[record.collection]} media={media} title={record.title} />
       <div className="reading-detail__body">
         <p className="reading-detail__summary">{record.description}</p>
         {record.collection === 'analysis' && (

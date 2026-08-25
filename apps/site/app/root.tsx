@@ -33,7 +33,7 @@ export function criticalCssForPath(
   } else if (pathname.startsWith('/reviews/')) {
     routeCss = `${sources.reading}${sources.readingSurface}${sources.review}`;
   } else if (pathname.startsWith('/memory/')) {
-    routeCss = `${sources.reading}${sources.memory}`;
+    routeCss = `${sources.reading}${sources.readingSurface}${sources.memory}`;
   }
   return `${sources.tokens}${sources.shell}${routeCss}`;
 }

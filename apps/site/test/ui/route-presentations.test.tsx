@@ -5,6 +5,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readActiveRelease, type VerifiedActivePublicRelease } from '@beyondwin/content/release';
+import { parsePublicRecord } from '@beyondwin/contracts';
 
 const candidateRoot = resolve(import.meta.dirname, '../..');
 const repositoryRoot = resolve(candidateRoot, '../..');
@@ -91,7 +92,6 @@ describe('full public route expansion', () => {
     const tagsHtml = renderToStaticMarkup(createElement(TagsPage, {
       records: [article],
       selectedTag: 'AI',
-      tags: releaseModule.exactPublicTags(active),
     }));
     expect(releaseModule.exactPublicTags(active)).toContainEqual(expect.objectContaining({ label: 'AI', href: '/tags/AI/' }));
     expect(tagsHtml).toContain(`href="${article.href}"`);
@@ -147,5 +147,103 @@ describe('full public route expansion', () => {
     expect(html).toContain('Primary source');
     expect(html).toContain('research-report');
     expect(mapRoute.loader().headers.get('Location')).toBe('/memory/');
+  });
+
+  it('loads every secondary detail adapter from one verified record and resolves applicable media', async () => {
+    const common = {
+      description: 'Verified secondary fixture.',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      tags: ['fixture'],
+      media: [],
+      relationships: [],
+      memoryLinks: [],
+      bodyHtml: '<p>Verified body</p>',
+    };
+    const records = [
+      parsePublicRecord({ collection: 'analysis', id: 'analysis-fixture', href: '/analysis/analysis-fixture/', title: 'Analysis fixture', sourceTitle: 'Primary source', sourceUrl: 'https://example.com/source', comment: 'Verified fixture', format: 'research-report', ...common }),
+      parsePublicRecord({ collection: 'ideas', id: 'idea-fixture', href: '/ideas/idea-fixture/', title: 'Idea fixture', maturity: 'proposal', ...common }),
+      parsePublicRecord({ collection: 'travel', id: 'travel-fixture', href: '/travel/travel-fixture/', title: 'Travel fixture', location: 'Seoul', leadMedia: 'lead', ...common }),
+    ];
+    const leadAsset = { id: 'lead', alt: 'Verified place', fallback: { src: '/assets/content/travel/travel-fixture/lead.webp', candidates: [] }, sources: [], width: 10, height: 10 };
+    const release = { releasePath: '/verified', manifest: {
+      records: Object.fromEntries(records.map((record) => [`${record.collection}/${record.id}`, record])),
+      assets: { 'travel/travel-fixture/lead': leadAsset },
+    } };
+    const adapters = [
+      ['app/routes/analysis.tsx', 'analysis-fixture'],
+      ['app/routes/idea.tsx', 'idea-fixture'],
+      ['app/routes/travel.tsx', 'travel-fixture'],
+    ] as const;
+
+    for (const [path, slug] of adapters) {
+      const adapter = await candidateModule<any>(path);
+      const data = adapter.loadDetail(release, slug);
+      expect(data.record.id).toBe(slug);
+      expect(adapter.meta({ data })).toContainEqual({ tagName: 'link', rel: 'canonical', href: data.record.href });
+      expect(() => adapter.loadDetail(release, 'missing')).toThrow();
+    }
+    expect((await candidateModule<any>('app/routes/travel.tsx')).loadDetail(release, 'travel-fixture').mediaAsset)
+      .toBe(leadAsset);
+    const fixtureRoutes = (await candidateModule<any>('app/routes.ts')).routeConfigForRelease(release);
+    expect(fixtureRoutes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'analysis/:slug', file: './routes/analysis.tsx' }),
+      expect.objectContaining({ path: 'ideas/:slug', file: './routes/idea.tsx' }),
+      expect.objectContaining({ path: 'travel/:slug', file: './routes/travel.tsx' }),
+    ]));
+  });
+
+  it('preserves raw search typing, keeps topic links clean, and detects safe tag-anchor collisions', async () => {
+    const search = await candidateModule<any>('src/ui/search/SearchPage.tsx');
+    const anchors = await candidateModule<any>('src/ui/navigation/search-anchor.ts');
+    const topic = { id: 'tag/AI 설계', anchorId: 'tag-safe', href: '/tags/AI%20%EC%84%A4%EA%B3%84/', kind: 'topic', title: 'AI 설계', description: 'topic', topics: ['AI 설계'] };
+    const html = renderToStaticMarkup(createElement(search.SearchPage, { initialQuery: 'AI 설계 ', inventory: [topic] }));
+
+    expect(html).toContain('value="AI 설계 "');
+    expect(search.boundedSearchQuery('AI 설계 ')).toBe('AI 설계');
+    expect(search.searchOriginForItem(topic, 'AI 설계 ')).toBeNull();
+    expect(anchors.safeSearchAnchor('AI 설계')).toMatch(/^tag-[a-f0-9]{16}$/u);
+    expect(anchors.safeSearchAnchor('AI 설계')).not.toBe(anchors.safeSearchAnchor('ai 설계'));
+    expect(() => anchors.safeSearchAnchors(['한국어', 'space label'], () => 'tag-collision'))
+      .toThrow(/collision/iu);
+  });
+
+  it('restores only verified memory compatibility targets for query and legacy hash prefixes', async () => {
+    const memory = await candidateModule<any>('src/ui/memory/MemoryIndexPage.tsx');
+    const slugs = ['known-memory'];
+
+    expect(memory.memoryCompatibilityTarget({ search: '?thought=known-memory', hash: '' }, slugs))
+      .toBe('/memory/known-memory/');
+    for (const prefix of ['map-', 'relation-', 'memory-detail-']) {
+      expect(memory.memoryCompatibilityTarget({ search: '', hash: `#${prefix}known-memory` }, slugs))
+        .toBe('/memory/known-memory/');
+    }
+    expect(memory.memoryCompatibilityTarget({ search: '?thought=unknown-memory', hash: '' }, slugs)).toBeNull();
+    expect(memory.memoryCompatibilityTarget({ search: '?thought=../private', hash: '' }, slugs)).toBeNull();
+  });
+
+  it('keeps selected-tag payloads narrow and restores sealed index metadata', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const active = await releaseModule.loadVerifiedRelease();
+    const tagRoute = await candidateModule<any>('app/routes/tag.tsx');
+    const tagData = await tagRoute.loader({ params: { tag: 'AI' } });
+    expect(Object.keys(tagData).sort()).toEqual(['records', 'tag']);
+
+    const cases = [
+      ['app/routes/memory-index.tsx', 'MemoryIndexPresentation', '<title>문장 · beyondwin</title>', '글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.'],
+      ['app/routes/search.tsx', 'SearchPresentation', '<title>찾기 · beyondwin</title>', '글, 책, 문장을 찾습니다.'],
+      ['app/routes/tags-index.tsx', 'TagsIndexPresentation', '<title>beyondwin</title>', '찾기로 이어진 단어들.'],
+    ] as const;
+    for (const [path, presentationName, title, description] of cases) {
+      const route = await candidateModule<any>(path);
+      const data = path.includes('memory-index')
+        ? { records: releaseModule.summariesForCollection(active, 'memory') }
+        : path.includes('search')
+          ? { inventory: releaseModule.searchInventory(active) }
+          : { tags: releaseModule.exactPublicTags(active) };
+      const html = renderToStaticMarkup(createElement(route[presentationName], { data }));
+      expect(html).toContain(title);
+      expect(html).toContain(`content="${description}"`);
+    }
   });
 });

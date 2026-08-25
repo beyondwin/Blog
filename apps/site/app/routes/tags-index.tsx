@@ -10,6 +10,6 @@ const [readingCss, collectionsCss] = import.meta.env.SSR ? await Promise.all([
 export const handle: RouteCriticalCssHandle = { criticalCss: `${readingCss}${collectionsCss}` };
 export async function loader() { return { tags: exactPublicTags(await loadVerifiedRelease()) }; }
 export function TagsIndexPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {
-  return <><DocumentMetadata canonical="/tags/" description="찾기로 이어진 단어들." title="이어진 단어 · beyondwin" /><SiteShell mode="reading" currentSection="search"><TagsPage tags={data.tags} /></SiteShell></>;
+  return <><DocumentMetadata canonical="/tags/" description="찾기로 이어진 단어들." title="beyondwin" /><SiteShell mode="reading" currentSection="search"><TagsPage tags={data.tags} /></SiteShell></>;
 }
 export default function TagsIndexRoute({ loaderData }: { loaderData: Awaited<ReturnType<typeof loader>> }) { return <TagsIndexPresentation data={loaderData} />; }

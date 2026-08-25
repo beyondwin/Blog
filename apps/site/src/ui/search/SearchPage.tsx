@@ -21,13 +21,13 @@ const GROUP_LABELS: Record<SearchKind, string> = {
   topic: '주제와 태그',
 };
 
-function boundedQuery(value: string): string {
+export function boundedSearchQuery(value: string): string {
   const query = value.trim();
   return query.length > 0 && Array.from(query).length <= ORIGIN_QUERY_MAX_LENGTH ? query : '';
 }
 
 export function matchSearchItem(item: SearchInventoryItem, rawQuery: string): string | null {
-  const query = boundedQuery(rawQuery).toLocaleLowerCase('ko');
+  const query = boundedSearchQuery(rawQuery).toLocaleLowerCase('ko');
   if (!query) return null;
   if (item.title.toLocaleLowerCase('ko').includes(query)) return '검색어와 제목이 일치합니다';
   const topic = item.topics.find((value) => value.toLocaleLowerCase('ko').includes(query));
@@ -43,11 +43,12 @@ export function SearchPage({
   initialQuery?: string;
   inventory: readonly SearchInventoryItem[];
 }) {
-  const [query, setQuery] = useState(() => boundedQuery(initialQuery ?? ''));
+  const [inputValue, setInputValue] = useState(initialQuery ?? '');
+  const query = boundedSearchQuery(inputValue);
 
   useEffect(() => {
     if (initialQuery !== undefined) return;
-    setQuery(boundedQuery(new URLSearchParams(window.location.search).get('q') ?? ''));
+    setInputValue(new URLSearchParams(window.location.search).get('q') ?? '');
   }, [initialQuery]);
 
   const groups = useMemo(() => {
@@ -78,10 +79,10 @@ export function SearchPage({
             id="public-search"
             name="q"
             type="search"
-            value={query}
+            value={inputValue}
             autoComplete="off"
             maxLength={ORIGIN_QUERY_MAX_LENGTH}
-            onChange={(event) => setQuery(boundedQuery(event.currentTarget.value))}
+            onChange={(event) => setInputValue(event.currentTarget.value)}
           />
           <button type="submit">검색</button>
         </div>
@@ -91,7 +92,7 @@ export function SearchPage({
           <h2 id={`search-${group.kind}`}>{group.label}</h2>
           <ol>
             {group.matches.map(({ item, reason }) => {
-              const origin = parseOrigin({ kind: 'search', query, anchorId: item.anchorId });
+              const origin = searchOriginForItem(item, query);
               const content = <><strong>{item.title}</strong>{reason && <span>{reason}</span>}</>;
               return (
                 <li id={item.anchorId} key={item.id}>
@@ -105,4 +106,9 @@ export function SearchPage({
       {matchCount === 0 && <p className="search-page__empty">일치하는 글이 없습니다.</p>}
     </section>
   );
+}
+
+export function searchOriginForItem(item: SearchInventoryItem, rawQuery: string) {
+  if (item.kind === 'topic') return null;
+  return parseOrigin({ kind: 'search', query: boundedSearchQuery(rawQuery), anchorId: item.anchorId });
 }

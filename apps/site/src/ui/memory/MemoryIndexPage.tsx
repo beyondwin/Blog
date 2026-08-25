@@ -1,6 +1,30 @@
+import { useEffect } from 'react';
 import type { RecordSummary } from '../collections/RecordRow';
 
+const SAFE_MEMORY_SLUG = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/u;
+const LEGACY_HASH = /^#(?:map|relation|memory-detail)-(.+)$/u;
+
+export function memoryCompatibilityTarget(
+  location: { search: string; hash: string },
+  verifiedSlugs: readonly string[],
+): string | null {
+  const thought = new URLSearchParams(location.search).get('thought');
+  const hashMatch = LEGACY_HASH.exec(location.hash);
+  let hashSlug: string | null = null;
+  if (hashMatch?.[1]) {
+    try { hashSlug = decodeURIComponent(hashMatch[1]); } catch { hashSlug = null; }
+  }
+  const slug = thought || hashSlug;
+  if (!slug || !SAFE_MEMORY_SLUG.test(slug) || !verifiedSlugs.includes(slug)) return null;
+  return `/memory/${slug}/`;
+}
+
 export function MemoryIndexPage({ records }: { records: readonly RecordSummary[] }) {
+  useEffect(() => {
+    const target = memoryCompatibilityTarget(window.location, records.map((record) => record.id));
+    if (target !== null) window.location.replace(target);
+  }, [records]);
+
   return (
     <section className="reading-sheet memory-index" aria-labelledby="memory-index-title">
       <header className="collection-page__header">

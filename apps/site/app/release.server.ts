@@ -14,6 +14,7 @@ import type { RecordSummary } from '../src/ui/collections/RecordRow';
 import type { SearchInventoryItem, SearchKind } from '../src/ui/search/SearchPage';
 import type { PublicTag } from '../src/ui/tags/TagsPage';
 import { recordAnchor as createRecordAnchor } from '../src/ui/navigation/record-anchor';
+import { safeSearchAnchors } from '../src/ui/navigation/search-anchor';
 
 export type CandidateRelease = Pick<VerifiedActivePublicRelease, 'manifest' | 'releasePath'>;
 export type CandidateCollection = PublicCollection;
@@ -166,9 +167,11 @@ export function searchInventory(release: CandidateRelease): SearchInventoryItem[
         ? [...record.topics, ...record.theses, ...record.tags]
         : [...record.tags],
     }));
-  const topics = exactPublicTags(release).map((tag): SearchInventoryItem => ({
+  const tags = exactPublicTags(release);
+  const tagAnchors = safeSearchAnchors(tags.map((tag) => tag.label));
+  const topics = tags.map((tag): SearchInventoryItem => ({
     id: `tag/${tag.label}`,
-    anchorId: recordAnchor('articles', `tag-${tag.label}`),
+    anchorId: tagAnchors.get(tag.label)!,
     href: tag.href,
     kind: 'topic',
     title: tag.label,

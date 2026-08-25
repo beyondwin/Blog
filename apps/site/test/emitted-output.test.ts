@@ -95,7 +95,8 @@ describe('React Router emitted critical output', () => {
     expect(routeCss[2]).toContain('.review-reading-page .content-figure');
     expect(routeCss[2]).not.toContain('.memory-thought');
     expect(routeCss[3]).toContain('.memory-thought');
-    expect(routeCss[3]).not.toContain('.reading-threshold');
+    expect(routeCss[3]).toContain('.reading-threshold');
+    expect(routeCss[3]).toContain('.context-return');
     expect(routeCss[0].length).toBeLessThan(10_000);
     for (const detailCss of routeCss.slice(1)) expect(detailCss.length).toBeLessThan(8_000);
     expect(homeHtml).toContain(
@@ -117,12 +118,14 @@ describe('React Router emitted critical output', () => {
     expect(rootAssets[0]?.source).not.toContain('.public-scene');
     expect(rootAssets[0]?.source).not.toContain('.reading-threshold{');
     expect(rootAssets[0]?.source).not.toContain('.memory-thought');
+    expect(rootAssets[0]?.source).not.toContain('.context-return{');
 
     const bundledCriticalCss = [
       '.site-header__inner{',
       '.public-scene{',
       '.reading-threshold{',
       '.memory-thought{',
+      '.context-return{',
     ];
     const bundledJavascript = assets.map(({ source }) => source).join('\n');
     for (const pattern of bundledCriticalCss) {
