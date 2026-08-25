@@ -10,7 +10,16 @@ import { readActiveRelease } from '../../packages/content/src/release/read-relea
 import { buildHtmlContract, type AstroBaseline } from '../../tools/parity/src/html-contract.ts';
 import { hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
 import { checkExactDrillPorts, prepareStateFile, writeProxyTarget, type ProxyTarget } from './local-proxy.mts';
-import { deriveChangedSurfacePerformance, npmObservedCommandLine, ownedCommandLineReady, sealChangedSurfacePerformance, validateOwnedProcessIdentity } from './evidence-contracts.mts';
+import { assertDynamicCrawl, deriveChangedSurfacePerformance, npmObservedCommandLine, sealChangedSurfacePerformance, validateOwnedProcessIdentity } from './evidence-contracts.mts';
+import {
+  installOwnedSignalHandlers,
+  registerOwnedProcess,
+  stabilizeOwnedProcess,
+  terminateOwnedProcess,
+  type OwnedProcessEvidence,
+  type ProcessSnapshot,
+  type SignalTarget,
+} from './owned-process-lifecycle.mts';
 import type { ProxyTransition } from './verify-public-site.mts';
 
 const execFileAsync = promisify(execFile);
@@ -282,8 +291,6 @@ export async function verifyStaticCutoverContract(options: {
   };
 }
 
-interface ProcessSnapshot { pid: number; ppid: number; pgid: number; start_identity: string; command_line: string }
-
 async function processSnapshot(pid: number): Promise<ProcessSnapshot> {
   const [identity, start] = await Promise.all([
     execFileAsync('ps', ['-p', String(pid), '-o', 'pid=,ppid=,pgid=,command=']),
@@ -292,6 +299,21 @@ async function processSnapshot(pid: number): Promise<ProcessSnapshot> {
   const match = identity.stdout.trim().match(/^([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+(.+)$/u);
   if (!match || !start.stdout.trim()) throw new Error(`created process ${pid} is not running`);
   return { pid: Number(match[1]), ppid: Number(match[2]), pgid: Number(match[3]), start_identity: start.stdout.trim(), command_line: match[4]! };
+}
+
+async function processGroupSnapshots(pgid: number): Promise<ProcessSnapshot[]> {
+  const result = await execFileAsync('ps', ['-axo', 'pid=,ppid=,pgid=,command=']);
+  const identities = result.stdout.split('\n').flatMap((line) => {
+    const match = line.trim().match(/^([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+(.+)$/u);
+    if (!match || Number(match[3]) !== pgid) return [];
+    return [{ pid: Number(match[1]), ppid: Number(match[2]), pgid: Number(match[3]), command_line: match[4]! }];
+  });
+  const snapshots = await Promise.all(identities.map(async (identity) => {
+    const start = await execFileAsync('ps', ['-p', String(identity.pid), '-o', 'lstart=']).catch(() => null);
+    if (!start?.stdout.trim()) return null;
+    return { ...identity, start_identity: start.stdout.trim() };
+  }));
+  return snapshots.filter((snapshot): snapshot is ProcessSnapshot => snapshot !== null).sort((left, right) => left.pid - right.pid);
 }
 
 async function smokeTransition(base: string, target: ProxyTarget): Promise<ProxyTransition> {
@@ -362,43 +384,34 @@ async function waitFor(check: () => Promise<boolean>, label: string): Promise<vo
   throw new Error(`timed out waiting for ${label}`);
 }
 
-async function spawnedProcess(role: keyof typeof exactCommands, argv: readonly string[], root: string): Promise<{
-  role: keyof typeof exactCommands; child: ChildProcess; argv: string[]; root_pid: number; root_ppid: number; root_pgid: number;
-  start_identity: string; observed: ProcessSnapshot; started_at: string; term_sent_at: string | null;
-  exited_at: string | null; exit_code: number | null; signal: NodeJS.Signals | null; stopped: boolean;
-}> {
+interface RuntimeOwnedProcess {
+  evidence: OwnedProcessEvidence;
+  child: ChildProcess;
+  exit: Promise<{ exited_at: string; exit_code: number | null; signal: NodeJS.Signals | null }>;
+}
+
+async function spawnedProcess(
+  role: keyof typeof exactCommands,
+  argv: readonly string[],
+  root: string,
+  evidenceRegistry: OwnedProcessEvidence[],
+  runtimeRegistry: RuntimeOwnedProcess[],
+): Promise<RuntimeOwnedProcess> {
   const startedAt = new Date().toISOString();
   const child = spawn(argv[0]!, argv.slice(1), { cwd: root, env: process.env, stdio: ['ignore', 'pipe', 'pipe'], shell: false, detached: true });
   if (!child.pid) throw new Error(`failed to start owned ${role} process`);
+  const evidence = registerOwnedProcess(evidenceRegistry, { role, argv, rootPid: child.pid, controllerPid: process.pid, startedAt });
+  const exit = new Promise<{ exited_at: string; exit_code: number | null; signal: NodeJS.Signals | null }>((resolveExit) => {
+    child.once('exit', (exitCode, signal) => resolveExit({ exited_at: new Date().toISOString(), exit_code: exitCode, signal }));
+  });
+  const runtime = { evidence, child, exit };
+  runtimeRegistry.push(runtime);
   child.stdout?.pipe(process.stdout); child.stderr?.pipe(process.stderr);
-  let observed = await processSnapshot(child.pid);
-  const result = {
-    role, child, argv: [...argv], root_pid: child.pid, root_ppid: process.pid, root_pgid: child.pid,
-    start_identity: observed.start_identity, observed, started_at: startedAt, term_sent_at: null,
-    exited_at: null, exit_code: null, signal: null, stopped: false,
-  };
-  try {
-    await waitFor(async () => {
-      const candidate = await processSnapshot(child.pid!);
-      if (candidate.pid !== child.pid || candidate.ppid !== process.pid || candidate.pgid !== child.pid || candidate.start_identity !== result.start_identity) {
-        throw new Error(`owned ${role} process identity changed while waiting for stable command title`);
-      }
-      observed = candidate;
-      return ownedCommandLineReady(candidate.command_line, argv);
-    }, `owned ${role} npm command title`);
-    result.observed = observed;
-    validateOwnedProcessIdentity(result, {
-      controllerPid: process.pid,
-      expectedArgv: argv,
-      expectedObservedCommandLine: npmObservedCommandLine(argv),
-    });
-  } catch (error) {
-    const exited = new Promise<void>((resolveExit) => child.once('exit', () => resolveExit()));
-    process.kill(-child.pid, 'SIGTERM');
-    await Promise.race([exited, new Promise<void>((resolveWait) => setTimeout(resolveWait, 5_000))]);
-    throw error;
-  }
-  return result;
+  await stabilizeOwnedProcess(evidence, () => processSnapshot(child.pid!), npmObservedCommandLine(argv));
+  validateOwnedProcessIdentity(evidence, {
+    controllerPid: process.pid, expectedArgv: argv, expectedObservedCommandLine: npmObservedCommandLine(argv),
+  });
+  return runtime;
 }
 
 async function descendantOf(pid: number, ancestor: number): Promise<boolean> {
@@ -423,23 +436,16 @@ export function parsePortOwnerPids(stdout: string): number[] {
     .sort((left, right) => left - right);
 }
 
-async function stopOwned(entry: Awaited<ReturnType<typeof spawnedProcess>>): Promise<void> {
-  const beforeTerm = await processSnapshot(entry.root_pid);
-  validateOwnedProcessIdentity({ ...entry, observed: beforeTerm }, {
-    controllerPid: process.pid,
-    expectedArgv: entry.argv,
-    expectedObservedCommandLine: npmObservedCommandLine(entry.argv),
+async function stopOwned(entry: RuntimeOwnedProcess): Promise<void> {
+  await terminateOwnedProcess(entry.evidence, {
+    snapshot: processSnapshot,
+    groupMembers: processGroupSnapshots,
+    signalGroup: (pgid, signal) => process.kill(-pgid, signal),
+    waitForRootExit: () => Promise.race([
+      entry.exit,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`owned ${entry.evidence.role} root did not exit after TERM`)), 15_000)),
+    ]),
   });
-  entry.observed = beforeTerm; entry.term_sent_at = new Date().toISOString();
-  const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolveExit) => {
-    entry.child.once('exit', (code, signal) => resolveExit({ code, signal }));
-  });
-  process.kill(-entry.root_pid, 'SIGTERM');
-  const result = await Promise.race([
-    exited,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`owned ${entry.role} process did not exit after TERM`)), 15_000)),
-  ]);
-  entry.exited_at = new Date().toISOString(); entry.exit_code = result.code; entry.signal = result.signal; entry.stopped = true;
 }
 
 async function dynamicCrawl(baseUrl: string, expectedRoutes: readonly string[]): Promise<Array<Record<string, unknown>>> {
@@ -513,7 +519,7 @@ async function runDrill(options: DrillArguments): Promise<void> {
     harnessHash: await hashFiles(root, ['tests/e2e/performance-selection.ts', 'tests/e2e/performance.spec.ts']),
     configHash: await hashFiles(root, ['package-lock.json', 'package.json', 'playwright.config.ts', 'tests/e2e/support.ts']),
     releaseManifestHash: await hashFiles(root, ['build/public-releases/active.json', `build/public-releases/${active.manifest.releaseId}/manifest.json`]),
-  });
+  }, await readJson(join(root, 'tests/fixtures/parity/astro-renderer-baseline.json')));
   if (!performance.eligible) throw new Error('changed-surface review performance is not eligible; local drill refused');
 
   const tempRoot = await mkdtemp('/tmp/beyondwin-cutover.');
@@ -522,24 +528,43 @@ async function runDrill(options: DrillArguments): Promise<void> {
   const statePath = join(tempRoot, 'target'); const pidPath = join(tempRoot, 'proxy.pid');
   await prepareStateFile(statePath);
 
-  const processes: Array<Awaited<ReturnType<typeof spawnedProcess>>> = [];
+  const processEvidence: OwnedProcessEvidence[] = [];
+  const processes: RuntimeOwnedProcess[] = [];
+  const controllerObserved = await processSnapshot(process.pid);
+  const controller = {
+    pid: process.pid, ppid: process.ppid, pgid: controllerObserved.pgid, argv: [...process.argv],
+    start_identity: controllerObserved.start_identity, observed: controllerObserved,
+  };
+  let cleanupPromise: Promise<void> | null = null;
+  const cleanup = async (): Promise<void> => {
+    if (cleanupPromise) return cleanupPromise;
+    cleanupPromise = (async () => {
+      let cleanupError: unknown;
+      for (const entry of [...processes].reverse()) if (!entry.evidence.stopped) {
+        try { await stopOwned(entry); } catch (error) { cleanupError ??= error; }
+      }
+      if (cleanupError) throw cleanupError;
+    })();
+    return cleanupPromise;
+  };
+  const signalHandlers = installOwnedSignalHandlers(process as unknown as SignalTarget, cleanup, (code) => process.exit(code));
   let proxyWorker: Record<string, unknown> | null = null; let transitions: ProxyTransition[] = []; let crawl: Array<Record<string, unknown>> = [];
   let ownersWhileRunning: Array<{ port: number; pids: number[]; root_pid: number; owned_by_group: boolean }> = [];
   let runError: unknown;
   try {
-    const react = await spawnedProcess('react', exactCommands.react, root); processes.push(react);
-    const astro = await spawnedProcess('astro', exactCommands.astro, root); processes.push(astro);
+    const react = await spawnedProcess('react', exactCommands.react, root, processEvidence, processes);
+    const astro = await spawnedProcess('astro', exactCommands.astro, root, processEvidence, processes);
     await waitFor(async () => (await fetch('http://127.0.0.1:4391/')).status === 200, 'React preview');
     await waitFor(async () => (await fetch('http://127.0.0.1:4392/')).status === 200, 'Astro preview');
     const proxyArgv = [...exactCommands.proxy, '--state', statePath, '--pid-file', pidPath];
-    const proxy = await spawnedProcess('proxy', proxyArgv, root); processes.push(proxy);
+    const proxy = await spawnedProcess('proxy', proxyArgv, root, processEvidence, processes);
     await waitFor(async () => access(pidPath).then(() => true, () => false), 'proxy PID file');
     const workerPid = Number((await readFile(pidPath, 'utf8')).trim());
     const workerSnapshot = await processSnapshot(workerPid);
-    proxyWorker = { ...workerSnapshot, root_pid: proxy.root_pid, descendant_of_proxy: await descendantOf(workerPid, proxy.root_pid), process_group_owned: workerSnapshot.pgid === proxy.root_pid, stopped: false };
+    proxyWorker = { ...workerSnapshot, root_pid: proxy.evidence.root_pid, descendant_of_proxy: await descendantOf(workerPid, proxy.evidence.root_pid), process_group_owned: workerSnapshot.pgid === proxy.evidence.root_pid, stopped: false };
     if (!proxyWorker.descendant_of_proxy) throw new Error('proxy PID-file worker is not a descendant of the owned proxy root');
     await waitFor(async () => (await fetch('http://127.0.0.1:4390/')).status === 200, 'local proxy');
-    const rootsByPort = new Map([[4390, proxy.root_pid], [4391, react.root_pid], [4392, astro.root_pid]]);
+    const rootsByPort = new Map([[4390, proxy.evidence.root_pid], [4391, react.evidence.root_pid], [4392, astro.evidence.root_pid]]);
     ownersWhileRunning = await Promise.all([4390, 4391, 4392].map(async (port) => {
       const pids = await portOwnerPids(port); const ownedRoot = rootsByPort.get(port)!;
       const owned = (await Promise.all(pids.map(async (pid) => (await processSnapshot(pid)).pgid === ownedRoot))).every(Boolean);
@@ -553,6 +578,11 @@ async function runDrill(options: DrillArguments): Promise<void> {
     await writeProxyTarget(statePath, 'react');
     const baseline = await readJson<AstroBaseline>(baselinePath);
     crawl = await dynamicCrawl('http://127.0.0.1:4390', baseline.routes.map(({ path }) => path));
+    assertDynamicCrawl(crawl, baseline.routes.map((route) => ({
+      path: route.path,
+      finalUrl: route.title.startsWith('Redirecting to:') ? route.canonical : route.path,
+      redirected: route.title.startsWith('Redirecting to:'),
+    })));
     const dynamicFailures = crawl.flatMap((entry) => [
       ...(entry.status === 200 ? [] : [`${String(entry.path)} status ${String(entry.status)}`]),
       ...['console_errors', 'page_errors', 'hydration_errors', 'axe_serious_or_critical', 'private_boundary_hits'].flatMap((key) => (entry[key] as unknown[]).map((value) => `${String(entry.path)} ${key}: ${String(value)}`)),
@@ -561,9 +591,7 @@ async function runDrill(options: DrillArguments): Promise<void> {
     if (dynamicFailures.length > 0) throw new Error(`dynamic crawl failed:\n${dynamicFailures.join('\n')}`);
   } catch (error) { runError = error; }
   finally {
-    for (const entry of [...processes].reverse()) if (!entry.stopped) {
-      try { await stopOwned(entry); } catch (error) { runError ??= error; }
-    }
+    try { await cleanup(); signalHandlers.complete(); } catch (error) { runError ??= error; }
     if (proxyWorker) {
       const workerPid = Number(proxyWorker.pid);
       const stopped = await processSnapshot(workerPid).then(() => false, () => true);
@@ -578,7 +606,8 @@ async function runDrill(options: DrillArguments): Promise<void> {
   const receipt = {
     schema_version: 2, implementation_commit: head,
     ports: { proxy: 4390, react: 4391, astro: 4392 }, representatives: [...representativeRoutes], transitions,
-    processes: processes.map(({ child: _child, ...entry }) => entry), proxy_worker: proxyWorker,
+    controller: { ...controller, signal_handlers: signalHandlers.evidence() },
+    processes: processEvidence, proxy_worker: proxyWorker,
     port_lifecycle: { before_free: [4390, 4391, 4392], during_owned: [4390, 4391, 4392], owners_while_running: ownersWhileRunning, after_free: [4390, 4391, 4392] },
     temp_root: { pattern: '/tmp/beyondwin-cutover.*', path: tempRoot, realpath: expectedRealPath, realpath_validated: true, removed: true },
     dynamic_crawl: { route_count: crawl.length, failures: [], routes: crawl },

@@ -9,6 +9,7 @@ import {
   ownedCommandLineReady,
   validateOwnedProcessIdentity,
 } from './evidence-contracts.mts';
+import { installOwnedSignalHandlers, type SignalTarget } from './owned-process-lifecycle.mts';
 import { parsePortOwnerPids } from './verify-rollback.mts';
 
 const HASH = `sha256:${'a'.repeat(64)}`;
@@ -16,8 +17,30 @@ const COMMIT = 'b'.repeat(40);
 const RELEASE = 'c'.repeat(64);
 const ROUTE = '/reviews/black-swan/';
 const REPRESENTATIVES = ['/', '/articles/a/', ROUTE, '/memory/a/', '/search/', '/tags/AI/', '/reviews/redirect/'];
+const AT = '2026-08-26T00:00:00.000Z';
 
-function sample(lcpMs: number) {
+function controllerEvidence() {
+  const observed = { pid: 99, ppid: 88, pgid: 77, start_identity: 'controller-start', command_line: 'node controller.mts' };
+  return {
+    pid: 99, ppid: 88, pgid: 77, argv: ['node', 'controller.mts'], start_identity: 'controller-start', observed,
+    signal_handlers: { installed_at: AT, signals: ['SIGINT', 'SIGTERM'], active: false, handled_signal: null, cleanup_completed: true, removed_at: AT },
+  };
+}
+
+function ownedProcess(role: string, rootPid: number, requireTerm: boolean, extras: Record<string, unknown> = {}) {
+  const observed = { pid: rootPid, ppid: 99, pgid: rootPid, start_identity: `${role}-start`, command_line: `npm run ${role}` };
+  return {
+    role, argv: ['npm', 'run', role], root_pid: rootPid, root_ppid: 99, root_pgid: rootPid,
+    start_identity: `${role}-start`, observed, started_at: AT,
+    stabilization: { completed_at: AT, polls: 1, observed_commands: [observed.command_line] },
+    pre_term_identity: requireTerm ? observed : null, term_sent_at: requireTerm ? AT : null,
+    root_exit: { exited_at: AT, exit_code: requireTerm ? null : 0, signal: requireTerm ? 'SIGTERM' : null },
+    group_lifecycle: { members_observed: [observed], group_empty: true, polls: 1, completed_at: AT }, stopped: true,
+    ...extras,
+  };
+}
+
+function sample(lcpMs: number, expectedMaxWidth: number) {
   return {
     lcpMs,
     cls: 0,
@@ -29,7 +52,7 @@ function sample(lcpMs: number) {
     consoleErrors: [],
     hydrationErrors: [],
     axeSeriousOrCritical: [],
-    overflow: { expectedMaxWidth: 390, actualScrollWidth: 390, overflow: false },
+    overflow: { expectedMaxWidth, actualScrollWidth: expectedMaxWidth, overflow: false },
     privateBoundaryHits: [],
   };
 }
@@ -43,7 +66,7 @@ function performanceReceipt() {
       size: viewport === 'desktop' ? { width: 1440, height: 960 } : { width: 390, height: 844 },
       warmupDiscarded: 1,
       sampleCount: 5,
-      samples: [20, 20, 20, 24, 24].map(sample),
+      samples: [20, 20, 20, 24, 24].map((lcpMs) => sample(lcpMs, viewport === 'desktop' ? 1440 : 390)),
       median: { lcpMs: 20, cls: 0, jsGzipBytes: 100_000, imageBytes: 10_000 },
       mad: { lcpMs: 0, cls: 0, jsGzipBytes: 0, imageBytes: 0 },
       consoleErrors: [], hydrationErrors: [], axeSeriousOrCritical: [], imageFailures: [],
@@ -61,27 +84,61 @@ function performanceReceipt() {
     sourceHashes: { routes: { [ROUTE]: HASH }, measurementImplementation: HASH, harness: HASH, config: HASH, releaseManifest: HASH },
     protocol: { routes: [ROUTE], viewports: ['desktop', 'mobile'], warmups: 1, coldSamplesPerCell: 5, freshContextPerSample: true, clearedHttpCachePerSample: true },
     budgets: { clsMax: 0.05, lcpAstroMultiplier: 1.1, detailInitialJsGzipBytesMax: 112_640 },
-    baseline: [{ path: ROUTE, measurements: [{ viewport: 'desktop', median: { lcpMs: 20 } }, { viewport: 'mobile', median: { lcpMs: 20 } }] }],
+    baseline: [{ path: ROUTE, measurements: [
+      { viewport: 'desktop', median: { lcpMs: 20, cls: 0, jsGzipBytes: 230, imageBytes: 58_350 }, mad: { lcpMs: 0, cls: 0, jsGzipBytes: 0, imageBytes: 0 } },
+      { viewport: 'mobile', median: { lcpMs: 20, cls: 0, jsGzipBytes: 230, imageBytes: 58_350 }, mad: { lcpMs: 0, cls: 0, jsGzipBytes: 0, imageBytes: 0 } },
+    ] }],
     measurements: [measurement('desktop'), measurement('mobile')],
     failures: [],
   };
 }
 
+function rendererBaseline() {
+  const measurement = (viewport: 'desktop' | 'mobile') => ({
+    viewport,
+    size: viewport === 'desktop' ? { width: 1440, height: 960 } : { width: 390, height: 844 },
+    warmupDiscarded: 1,
+    sampleCount: 5,
+    samples: [20, 20, 20, 24, 24].map((lcpMs) => ({
+      cls: 0, lcpMs, jsGzipBytes: 230, imageBytes: 58_350, renderedImages: [], imageFailures: [],
+      consoleErrors: [], hydrationErrors: [], axeSeriousOrCritical: [],
+      overflow: { expectedMaxWidth: viewport === 'desktop' ? 1440 : 390, actualScrollWidth: viewport === 'desktop' ? 1440 : 390, overflow: false },
+      privateBoundaryHits: [],
+    })),
+    median: { lcpMs: 20, cls: 0, jsGzipBytes: 230, imageBytes: 58_350 },
+    mad: { lcpMs: 0, cls: 0, jsGzipBytes: 0, imageBytes: 0 },
+    consoleErrors: [], hydrationErrors: [], axeSeriousOrCritical: [], imageFailures: [],
+    overflow: { expectedMaxWidth: viewport === 'desktop' ? 1440 : 390, actualScrollWidth: viewport === 'desktop' ? 1440 : 390, overflow: false },
+    privateBoundaryHits: [],
+  });
+  return { routes: [{ path: ROUTE, measurements: [measurement('desktop'), measurement('mobile')] }] };
+}
+
+const bindings = {
+  implementationCommit: COMMIT,
+  releaseId: RELEASE,
+  routeSourceHash: HASH,
+  measurementImplementationHash: HASH,
+  harnessHash: HASH,
+  configHash: HASH,
+  releaseManifestHash: HASH,
+};
+
 describe('source-bound cutover evidence contracts', () => {
   it('derives changed-surface medians and rejects raw, issue, source, release, and summary tampering', () => {
     const receipt = performanceReceipt();
-    expect(deriveChangedSurfacePerformance(receipt, {
-      implementationCommit: COMMIT,
-      releaseId: RELEASE,
-      routeSourceHash: HASH,
-      measurementImplementationHash: HASH,
-      harnessHash: HASH,
-      configHash: HASH,
-      releaseManifestHash: HASH,
-    })).toMatchObject({ eligible: true, metrics: [{ lcp_median_ms: 20 }, { lcp_median_ms: 20 }] });
+    const baseline = rendererBaseline();
+    expect(deriveChangedSurfacePerformance(receipt, bindings, baseline))
+      .toMatchObject({ eligible: true, metrics: [{ lcp_median_ms: 20 }, { lcp_median_ms: 20 }] });
 
     const mutations: Array<(value: any) => void> = [
       (value) => { value.measurements[0].measurement.median.lcpMs = 1; },
+      (value) => { value.measurements[0].measurement.mad.lcpMs = 999; },
+      (value) => { value.measurements[0].measurement.size.width = 390; },
+      (value) => { value.measurements[0].measurement.samples = value.measurements[0].measurement.samples.map((sample: any) => ({ ...sample, lcpMs: 80 })); value.measurements[0].measurement.median.lcpMs = 80; },
+      (value) => { value.measurements[0].path = '/reviews/other/'; },
+      (value) => { value.measurements[0].viewport = 'mobile'; },
+      (value) => { value.baseline.find((entry: any) => entry.path === ROUTE).measurements[0].median.lcpMs = 999; },
       (value) => { value.measurements[0].measurement.samples[0].consoleErrors.push('forged'); },
       (value) => { value.sourceHashes.routes[ROUTE] = `sha256:${'d'.repeat(64)}`; },
       (value) => { value.releaseId = 'e'.repeat(64); },
@@ -91,16 +148,11 @@ describe('source-bound cutover evidence contracts', () => {
     for (const mutate of mutations) {
       const changed = structuredClone(receipt);
       mutate(changed);
-      expect(() => deriveChangedSurfacePerformance(changed, {
-        implementationCommit: COMMIT,
-        releaseId: RELEASE,
-        routeSourceHash: HASH,
-        measurementImplementationHash: HASH,
-        harnessHash: HASH,
-        configHash: HASH,
-        releaseManifestHash: HASH,
-      })).toThrow();
+      expect(() => deriveChangedSurfacePerformance(changed, bindings, baseline)).toThrow();
     }
+    const forgedBaseline = structuredClone(baseline);
+    forgedBaseline.routes[0].measurements[0].median.lcpMs = 999;
+    expect(() => deriveChangedSurfacePerformance(receipt, bindings, forgedBaseline)).toThrow();
   });
 
   it('rejects replacement, foreign-parent, PID, and observed-command mismatches', () => {
@@ -131,17 +183,46 @@ describe('source-bound cutover evidence contracts', () => {
 
   it('requires the exact 80 dynamic route set with zero mandatory issues', () => {
     const routes = Array.from({ length: 80 }, (_, index) => `/route-${index}/`);
+    const expected = routes.map((path) => ({ path, finalUrl: path, redirected: false }));
     const crawl = routes.map((path) => ({
       path, status: 200, final_url: path, redirected: false,
       console_errors: [], page_errors: [], hydration_errors: [], axe_serious_or_critical: [],
       overflow: { expected_max_width: 1440, actual_scroll_width: 1440, overflow: false },
       private_boundary_hits: [],
     }));
-    expect(() => assertDynamicCrawl(crawl, routes)).not.toThrow();
-    expect(() => assertDynamicCrawl([...crawl, crawl[0]], routes)).toThrow(/duplicate|exact/iu);
+    expect(() => assertDynamicCrawl(crawl, expected)).not.toThrow();
+    expect(() => assertDynamicCrawl([...crawl, crawl[0]], expected)).toThrow(/duplicate|exact/iu);
     const issue: Array<any> = structuredClone(crawl);
     issue[3].hydration_errors.push('mismatch');
-    expect(() => assertDynamicCrawl(issue, routes)).toThrow(/mandatory|hydration/iu);
+    expect(() => assertDynamicCrawl(issue, expected)).toThrow(/mandatory|hydration/iu);
+    for (const mutate of [
+      (value: any[]) => { delete value[0].overflow.overflow; },
+      (value: any[]) => { value[0].overflow.actual_scroll_width = Number.MAX_SAFE_INTEGER + 1; },
+      (value: any[]) => { value[0].overflow.actual_scroll_width = 1441; value[0].overflow.overflow = false; },
+      (value: any[]) => { value[0].overflow.extra = true; },
+      (value: any[]) => { value[0].extra = true; },
+      (value: any[]) => { value[0].final_url = '/wrong/'; },
+      (value: any[]) => { value[0].redirected = 'false'; },
+    ]) {
+      const changed = structuredClone(crawl); mutate(changed);
+      expect(() => assertDynamicCrawl(changed, expected)).toThrow();
+    }
+  });
+
+  it('runs the same asynchronous owned cleanup for SIGINT and SIGTERM before exit', async () => {
+    for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+      const listeners = new Map<string, (...args: any[]) => void>();
+      const target: SignalTarget = {
+        once: (name, handler) => { listeners.set(name, handler); return target; },
+        removeListener: (name) => { listeners.delete(name); return target; },
+      };
+      const order: string[] = [];
+      const installed = installOwnedSignalHandlers(target, async () => { order.push('cleanup'); }, (code) => { order.push(`exit:${code}`); });
+      listeners.get(signal)!();
+      await installed.completion();
+      expect(order).toEqual(['cleanup', `exit:${signal === 'SIGINT' ? 130 : 143}`]);
+      expect(installed.evidence()).toMatchObject({ active: false, handled_signal: signal, cleanup_completed: true });
+    }
   });
 
   it('never turns an empty lsof row into PID zero', () => {
@@ -155,7 +236,8 @@ describe('source-bound cutover evidence contracts', () => {
       ports: { proxy: 4390, react: 4391, astro: 4392 },
       representatives: REPRESENTATIVES,
       transitions: ['react', 'astro', 'react'].map((target) => ({ target, routes: REPRESENTATIVES.map((path) => ({ path, status: 200, target_header: target, body_hash: HASH })) })),
-      processes: [{ role: 'react', stopped: true }, { role: 'astro', stopped: true }, { role: 'proxy', stopped: true }],
+      controller: controllerEvidence(),
+      processes: [ownedProcess('react', 101, true), ownedProcess('astro', 102, true), ownedProcess('proxy', 103, true)],
       proxy_worker: { descendant_of_proxy: true, stopped: true },
       port_lifecycle: { before_free: [4390, 4391, 4392], during_owned: [4390, 4391, 4392], after_free: [4390, 4391, 4392] },
       temp_root: { pattern: '/tmp/beyondwin-cutover.*', realpath_validated: true, removed: true },
@@ -168,6 +250,9 @@ describe('source-bound cutover evidence contracts', () => {
       (x: any) => { x.transitions[1].target = 'react'; },
       (x: any) => { x.representatives.pop(); },
       (x: any) => { x.processes[0].stopped = false; },
+      (x: any) => { x.processes[0].group_lifecycle.group_empty = false; },
+      (x: any) => { x.processes[0].root_ppid = 1; },
+      (x: any) => { x.controller.signal_handlers.active = true; },
       (x: any) => { x.proxy_worker.descendant_of_proxy = false; },
       (x: any) => { x.temp_root.removed = false; },
       (x: any) => { x.dynamic_crawl.failures.push('error'); },
@@ -180,11 +265,12 @@ describe('source-bound cutover evidence contracts', () => {
 
   it('rejects tampering in every material clean-host receipt group', () => {
     const receipt = {
-      schema_version: 2, implementation_commit: COMMIT, eligible: true,
+      schema_version: 2, implementation_commit: COMMIT, created_at: AT, completed_at: AT, eligible: true,
       archive_hash: HASH, archive_inventory_hash: '', archive_inventory_count: 2,
       archive_inventory: ['a', 'b'], exclusions: { dependencies: true, generated_output: true, secrets_and_environment: true, top_level_private_memory: true },
-      environment: { allowed_keys: ['PATH'], npm_userconfig_hash: HASH, config_inventory_hash: HASH, cache_inventory_hash_before: HASH },
-      commands: [{ phase: 'install', argv: ['npm', 'ci'], exit_code: 0, stopped: true }],
+      controller: controllerEvidence(),
+      environment: { allowed_keys: ['PATH'], npm_userconfig_hash: HASH, npm_globalconfig_hash: HASH, config_inventory_hash: HASH, cache_inventory_hash_before: HASH },
+      commands: [ownedProcess('install:npm', 201, false, { phase: 'install', environment_keys: ['PATH'] })],
       release: { release_id: RELEASE, active_pointer_hash: HASH, manifest_hash: HASH, artifact_hash: HASH },
       selected_build_hash: HASH, route_count: 80, inventory_hash: HASH,
       smoke: Array.from({ length: 80 }, (_, index) => ({ path: `/route-${index}/`, status: 200, body_hash: HASH })),
@@ -197,7 +283,9 @@ describe('source-bound cutover evidence contracts', () => {
       (x: any) => { x.archive_inventory.push('node_modules/a'); },
       (x: any) => { x.exclusions.dependencies = false; },
       (x: any) => { x.environment.allowed_keys.push('NPM_TOKEN'); },
-      (x: any) => { x.commands[0].exit_code = 1; },
+      (x: any) => { x.environment.npm_globalconfig_hash = ''; },
+      (x: any) => { x.controller.signal_handlers.cleanup_completed = false; },
+      (x: any) => { x.commands[0].root_exit.exit_code = 1; x.commands[0].stopped = false; },
       (x: any) => { x.release.release_id = ''; },
       (x: any) => { x.smoke.pop(); },
       (x: any) => { x.temp_root.removed = false; },

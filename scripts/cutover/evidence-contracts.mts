@@ -1,4 +1,4 @@
-import { median } from '../../tools/parity/src/measure-browser.ts';
+import { median, medianAbsoluteDeviation } from '../../tools/parity/src/measure-browser.ts';
 import { sha256 } from './cutover-evidence.mts';
 
 type UnknownRecord = Record<string, unknown>;
@@ -64,6 +64,98 @@ export interface ChangedSurfaceBindings {
   releaseManifestHash: string;
 }
 
+const viewportSizes = {
+  desktop: { width: 1440, height: 960 },
+  mobile: { width: 390, height: 844 },
+} as const;
+
+type Viewport = keyof typeof viewportSizes;
+
+function safeMetric(value: unknown, label: string): number {
+  const metric = number(value, label);
+  if (metric < 0) throw new Error(`${label} must be non-negative`);
+  return metric;
+}
+
+function assertOverflow(value: unknown, width: number, label: string): UnknownRecord {
+  const overflow = exactKeys(value, ['expectedMaxWidth', 'actualScrollWidth', 'overflow'], label);
+  if (overflow.expectedMaxWidth !== width) throw new Error(`${label} expected width drifted`);
+  const actual = number(overflow.actualScrollWidth, `${label}.actualScrollWidth`);
+  if (!Number.isSafeInteger(actual) || actual < 0) throw new Error(`${label} actual width is invalid`);
+  if (boolean(overflow.overflow, `${label}.overflow`) !== (actual > width)) throw new Error(`${label} boolean is not derived from widths`);
+  return overflow;
+}
+
+function metricValues(value: unknown, label: string): Record<'lcpMs' | 'cls' | 'jsGzipBytes' | 'imageBytes', number> {
+  const metrics = exactKeys(value, ['lcpMs', 'cls', 'jsGzipBytes', 'imageBytes'], label);
+  return {
+    lcpMs: safeMetric(metrics.lcpMs, `${label}.lcpMs`),
+    cls: safeMetric(metrics.cls, `${label}.cls`),
+    jsGzipBytes: safeMetric(metrics.jsGzipBytes, `${label}.jsGzipBytes`),
+    imageBytes: safeMetric(metrics.imageBytes, `${label}.imageBytes`),
+  };
+}
+
+function deriveRawMetrics(samples: Array<Record<'lcp' | 'cls' | 'js' | 'image', number>>): {
+  median: Record<'lcpMs' | 'cls' | 'jsGzipBytes' | 'imageBytes', number>;
+  mad: Record<'lcpMs' | 'cls' | 'jsGzipBytes' | 'imageBytes', number>;
+} {
+  const series = {
+    lcpMs: samples.map(({ lcp }) => lcp), cls: samples.map(({ cls }) => cls),
+    jsGzipBytes: samples.map(({ js }) => js), imageBytes: samples.map(({ image }) => image),
+  };
+  return {
+    median: Object.fromEntries(Object.entries(series).map(([key, values]) => [key, median(values)])) as any,
+    mad: Object.fromEntries(Object.entries(series).map(([key, values]) => [key, medianAbsoluteDeviation(values)])) as any,
+  };
+}
+
+function assertDerivedValues(reported: unknown, derived: Record<string, number>, label: string): void {
+  const values = metricValues(reported, label);
+  for (const [key, value] of Object.entries(derived)) if (values[key as keyof typeof values] !== value) throw new Error(`${label} ${key} is forged`);
+}
+
+function trackedReviewBaseline(input: unknown): Map<Viewport, { median: Record<'lcpMs' | 'cls' | 'jsGzipBytes' | 'imageBytes', number>; mad: Record<'lcpMs' | 'cls' | 'jsGzipBytes' | 'imageBytes', number> }> {
+  const root = record(input, 'tracked Astro renderer baseline');
+  const routes = array(root.routes, 'tracked Astro renderer routes').map((entry) => record(entry, 'tracked Astro route'));
+  const reviewRoutes = routes.filter(({ path }) => path === REVIEW_ROUTE);
+  if (reviewRoutes.length !== 1) throw new Error('tracked Astro review baseline is missing or duplicated');
+  const measurements = array(reviewRoutes[0]!.measurements, 'tracked Astro review measurements');
+  if (measurements.length !== 2) throw new Error('tracked Astro review baseline must contain two cells');
+  const result = new Map<Viewport, { median: Record<'lcpMs' | 'cls' | 'jsGzipBytes' | 'imageBytes', number>; mad: Record<'lcpMs' | 'cls' | 'jsGzipBytes' | 'imageBytes', number> }>();
+  for (const entry of measurements) {
+    const cell = exactKeys(entry, [
+      'viewport', 'size', 'warmupDiscarded', 'sampleCount', 'samples', 'median', 'mad',
+      'consoleErrors', 'hydrationErrors', 'axeSeriousOrCritical', 'imageFailures', 'overflow', 'privateBoundaryHits',
+    ], 'tracked Astro review cell');
+    if (cell.viewport !== 'desktop' && cell.viewport !== 'mobile') throw new Error('tracked Astro review viewport drifted');
+    const viewport = cell.viewport;
+    if (result.has(viewport)) throw new Error('tracked Astro review viewport duplicated');
+    if (JSON.stringify(exactKeys(cell.size, ['width', 'height'], 'tracked Astro review size')) !== JSON.stringify(viewportSizes[viewport])) throw new Error('tracked Astro review size drifted');
+    if (cell.warmupDiscarded !== 1 || cell.sampleCount !== 5) throw new Error('tracked Astro review protocol drifted');
+    const samples = array(cell.samples, 'tracked Astro review samples');
+    if (samples.length !== 5) throw new Error('tracked Astro review raw sample count drifted');
+    const raw = samples.map((sampleValue) => {
+      const sample = exactKeys(sampleValue, [
+        'cls', 'lcpMs', 'jsGzipBytes', 'imageBytes', 'renderedImages', 'imageFailures', 'consoleErrors',
+        'hydrationErrors', 'axeSeriousOrCritical', 'overflow', 'privateBoundaryHits',
+      ], 'tracked Astro review sample');
+      array(sample.renderedImages, 'tracked Astro rendered images');
+      for (const key of ['imageFailures', 'consoleErrors', 'hydrationErrors', 'axeSeriousOrCritical', 'privateBoundaryHits']) strings(sample[key], `tracked Astro sample.${key}`);
+      assertOverflow(sample.overflow, viewportSizes[viewport].width, 'tracked Astro sample overflow');
+      return { lcp: safeMetric(sample.lcpMs, 'tracked Astro sample LCP'), cls: safeMetric(sample.cls, 'tracked Astro sample CLS'), js: safeMetric(sample.jsGzipBytes, 'tracked Astro sample JS'), image: safeMetric(sample.imageBytes, 'tracked Astro sample image') };
+    });
+    const derived = deriveRawMetrics(raw);
+    assertDerivedValues(cell.median, derived.median, 'tracked Astro median');
+    assertDerivedValues(cell.mad, derived.mad, 'tracked Astro MAD');
+    const widest = raw.length > 0 ? (samples as UnknownRecord[]).map((sample) => record(sample.overflow, 'tracked Astro overflow')).reduce((left, right) => Number(right.actualScrollWidth) > Number(left.actualScrollWidth) ? right : left) : null;
+    if (!widest || JSON.stringify(cell.overflow) !== JSON.stringify(widest)) throw new Error('tracked Astro overflow summary is forged');
+    for (const key of ['consoleErrors', 'hydrationErrors', 'axeSeriousOrCritical', 'imageFailures', 'privateBoundaryHits']) strings(cell[key], `tracked Astro measurement.${key}`);
+    result.set(viewport, derived);
+  }
+  return result;
+}
+
 function issueUnion(sample: UnknownRecord): string[] {
   const issues = ['consoleErrors', 'hydrationErrors', 'axeSeriousOrCritical', 'imageFailures', 'privateBoundaryHits']
     .flatMap((key) => strings(sample[key], `sample.${key}`));
@@ -113,6 +205,7 @@ export function sealChangedSurfacePerformance(input: unknown): UnknownRecord {
 export function deriveChangedSurfacePerformance(
   input: unknown,
   expected: ChangedSurfaceBindings,
+  trackedBaseline: unknown,
 ): { eligible: boolean; metrics: Array<{ viewport: string; lcp_median_ms: number; cls_median: number; initial_js_gzip_bytes: number; image_bytes: number; mandatory_issues: number }> } {
   const root = exactKeys(input, [
     'version', 'renderer', 'measuredAt', 'releaseId', 'repositoryHead', 'selection', 'sourceHashes',
@@ -149,13 +242,24 @@ export function deriveChangedSurfacePerformance(
   if (budgets.clsMax !== 0.05 || budgets.lcpAstroMultiplier !== 1.1 || budgets.detailInitialJsGzipBytesMax !== 112_640) {
     throw new Error('changed-surface budgets drifted');
   }
-  const baselineRoot = array(root.baseline, 'changed-surface baseline');
-  const baseline = baselineRoot.find((entry) => record(entry, 'baseline cell').path === REVIEW_ROUTE) as UnknownRecord | undefined;
-  if (!baseline) throw new Error('changed-surface review baseline is missing');
-  const baselineByViewport = new Map(array(baseline.measurements, 'baseline measurements').map((entry) => {
-    const cell = record(entry, 'baseline measurement');
-    return [string(cell.viewport, 'baseline viewport'), number(record(cell.median, 'baseline median').lcpMs, 'baseline LCP')] as const;
-  }));
+  const baselineByViewport = trackedReviewBaseline(trackedBaseline);
+  const embeddedRoutes = array(root.baseline, 'changed-surface baseline').map((entry) => exactKeys(entry, ['path', 'measurements'], 'changed-surface baseline route'));
+  assertNoDuplicates(embeddedRoutes.map(({ path }) => string(path, 'changed-surface baseline path')), 'changed-surface baseline route');
+  const embeddedReview = embeddedRoutes.find(({ path }) => path === REVIEW_ROUTE);
+  if (!embeddedReview) throw new Error('changed-surface embedded review baseline is missing');
+  const embeddedCells = array(embeddedReview.measurements, 'changed-surface embedded review measurements').map((entry) => {
+    const cell = exactKeys(entry, ['viewport', 'median', 'mad'], 'changed-surface embedded review cell');
+    if (cell.viewport !== 'desktop' && cell.viewport !== 'mobile') throw new Error('changed-surface embedded baseline viewport drifted');
+    metricValues(cell.median, 'changed-surface embedded baseline median');
+    metricValues(cell.mad, 'changed-surface embedded baseline MAD');
+    return cell;
+  });
+  if (embeddedCells.length !== 2 || JSON.stringify(embeddedCells.map(({ viewport }) => viewport).sort()) !== '["desktop","mobile"]') throw new Error('changed-surface embedded baseline cells drifted');
+  for (const cell of embeddedCells) {
+    const tracked = baselineByViewport.get(cell.viewport as Viewport);
+    if (!tracked || JSON.stringify(metricValues(cell.median, 'changed-surface embedded baseline median')) !== JSON.stringify(tracked.median)
+      || JSON.stringify(metricValues(cell.mad, 'changed-surface embedded baseline MAD')) !== JSON.stringify(tracked.mad)) throw new Error('changed-surface embedded baseline is not bound to tracked Astro baseline');
+  }
   const cells = array(root.measurements, 'changed-surface measurements');
   if (cells.length !== 2) throw new Error('changed-surface measurements must have two cells');
   const metrics = cells.map((entry) => {
@@ -166,6 +270,8 @@ export function deriveChangedSurfacePerformance(
       'consoleErrors', 'hydrationErrors', 'axeSeriousOrCritical', 'imageFailures', 'overflow', 'privateBoundaryHits',
     ], 'changed-surface measurement');
     if (measurement.viewport !== cell.viewport || measurement.warmupDiscarded !== 1 || measurement.sampleCount !== 5) throw new Error('changed-surface cell protocol drifted');
+    const viewport = cell.viewport as Viewport;
+    if (JSON.stringify(exactKeys(measurement.size, ['width', 'height'], 'changed-surface size')) !== JSON.stringify(viewportSizes[viewport])) throw new Error('changed-surface viewport size drifted');
     const samples = array(measurement.samples, 'changed-surface samples');
     if (samples.length !== 5) throw new Error('changed-surface cell requires five raw samples');
     const sampleMetrics = samples.map((raw) => {
@@ -176,27 +282,27 @@ export function deriveChangedSurfacePerformance(
       const lcpElement = exactKeys(sample.lcpElement, ['provenance', 'tagName', 'id', 'className', 'url', 'text'], 'sample LCP element');
       if (lcpElement.provenance !== 'largest-contentful-paint') throw new Error('sample LCP provenance is missing');
       for (const key of ['tagName', 'id', 'className', 'url', 'text']) string(lcpElement[key], `sample LCP ${key}`);
+      array(sample.renderedImages, 'sample renderedImages');
+      assertOverflow(sample.overflow, viewportSizes[viewport].width, 'sample overflow');
       return {
         lcp: number(sample.lcpMs, 'sample LCP'), cls: number(sample.cls, 'sample CLS'),
         js: number(sample.jsGzipBytes, 'sample JS'), image: number(sample.imageBytes, 'sample image'),
         issues: issueUnion(sample),
       };
     });
-    const derived = {
-      lcpMs: median(sampleMetrics.map(({ lcp }) => lcp)),
-      cls: median(sampleMetrics.map(({ cls }) => cls)),
-      jsGzipBytes: median(sampleMetrics.map(({ js }) => js)),
-      imageBytes: median(sampleMetrics.map(({ image }) => image)),
-    };
-    const reported = exactKeys(measurement.median, ['lcpMs', 'cls', 'jsGzipBytes', 'imageBytes'], 'changed-surface reported median');
-    for (const [key, value] of Object.entries(derived)) if (reported[key] !== value) throw new Error(`changed-surface forged median ${key}`);
+    const derivedValues = deriveRawMetrics(sampleMetrics);
+    const derived = derivedValues.median;
+    assertDerivedValues(measurement.median, derivedValues.median, 'changed-surface median');
+    assertDerivedValues(measurement.mad, derivedValues.mad, 'changed-surface MAD');
     const summaryIssues = ['consoleErrors', 'hydrationErrors', 'axeSeriousOrCritical', 'imageFailures', 'privateBoundaryHits']
       .flatMap((key) => strings(measurement[key], `measurement.${key}`));
     const rawIssues = [...new Set(sampleMetrics.flatMap(({ issues }) => issues))].sort();
-    const overflow = record(measurement.overflow, 'measurement overflow');
+    const overflow = assertOverflow(measurement.overflow, viewportSizes[viewport].width, 'measurement overflow');
+    const widest = (samples as UnknownRecord[]).map((sample) => record(sample.overflow, 'sample overflow')).reduce((left, right) => Number(right.actualScrollWidth) > Number(left.actualScrollWidth) ? right : left);
+    if (JSON.stringify(overflow) !== JSON.stringify(widest)) throw new Error('changed-surface overflow summary is forged');
     if (overflow.overflow === true) summaryIssues.push('horizontal-overflow');
     if (JSON.stringify([...new Set(summaryIssues)].sort()) !== JSON.stringify(rawIssues)) throw new Error('changed-surface issue summary does not derive from raw samples');
-    const baselineLcp = baselineByViewport.get(String(cell.viewport));
+    const baselineLcp = baselineByViewport.get(viewport)?.median.lcpMs;
     if (baselineLcp === undefined) throw new Error('changed-surface baseline cell is missing');
     const eligible = rawIssues.length === 0 && derived.cls <= 0.05 && derived.jsGzipBytes <= 112_640 && derived.lcpMs <= baselineLcp * 1.1;
     return {
@@ -229,6 +335,47 @@ export function validateOwnedProcessIdentity(
   if (value.observed?.command_line !== expectedCommand) throw new Error('owned process observed command was tampered');
 }
 
+function exactProcessSnapshot(value: unknown, label: string): UnknownRecord {
+  const snapshot = exactKeys(value, ['pid', 'ppid', 'pgid', 'start_identity', 'command_line'], label);
+  for (const key of ['pid', 'ppid', 'pgid']) if (!Number.isSafeInteger(snapshot[key]) || Number(snapshot[key]) <= 0) throw new Error(`${label}.${key} is invalid`);
+  string(snapshot.start_identity, `${label}.start_identity`); string(snapshot.command_line, `${label}.command_line`);
+  return snapshot;
+}
+
+export function assertControllerEvidence(value: unknown): UnknownRecord {
+  const controller = exactKeys(value, ['pid', 'ppid', 'pgid', 'argv', 'start_identity', 'observed', 'signal_handlers'], 'owned controller');
+  const observed = exactProcessSnapshot(controller.observed, 'owned controller observation');
+  if (controller.pid !== observed.pid || controller.ppid !== observed.ppid || controller.pgid !== observed.pgid || controller.start_identity !== observed.start_identity) throw new Error('owned controller identity was forged');
+  strings(controller.argv, 'owned controller argv');
+  const handlers = exactKeys(controller.signal_handlers, ['installed_at', 'signals', 'active', 'handled_signal', 'cleanup_completed', 'removed_at'], 'owned controller signal handlers');
+  if (JSON.stringify(handlers.signals) !== '["SIGINT","SIGTERM"]' || handlers.active !== false || handlers.handled_signal !== null || handlers.cleanup_completed !== true) throw new Error('owned controller signal cleanup is incomplete');
+  for (const [key, value] of [['installed_at', handlers.installed_at], ['removed_at', handlers.removed_at]] as const) if (!value || Number.isNaN(Date.parse(String(value)))) throw new Error(`owned controller ${key} is invalid`);
+  return controller;
+}
+
+export function assertOwnedProcessEvidence(value: unknown, options: { controllerPid: number; requireTerm: boolean; extraKeys?: readonly string[] }): UnknownRecord {
+  const process = exactKeys(value, [
+    'role', 'argv', 'root_pid', 'root_ppid', 'root_pgid', 'start_identity', 'observed', 'started_at', 'stabilization',
+    'pre_term_identity', 'term_sent_at', 'root_exit', 'group_lifecycle', 'stopped', ...(options.extraKeys ?? []),
+  ], 'owned process');
+  string(process.role, 'owned process role'); strings(process.argv, 'owned process argv'); string(process.start_identity, 'owned process start identity');
+  const observed = exactProcessSnapshot(process.observed, 'owned process observation');
+  if (process.root_pid !== observed.pid || process.root_ppid !== options.controllerPid || process.root_ppid !== observed.ppid || process.root_pgid !== process.root_pid || process.root_pgid !== observed.pgid || process.start_identity !== observed.start_identity) throw new Error('owned process controller/PID/group identity was forged');
+  const stabilization = exactKeys(process.stabilization, ['completed_at', 'polls', 'observed_commands'], 'owned process stabilization');
+  const observedCommands = strings(stabilization.observed_commands, 'owned process stabilization commands');
+  if (!Number.isSafeInteger(stabilization.polls) || Number(stabilization.polls) < 1 || observedCommands.length < 1 || observedCommands.at(-1) !== observed.command_line || Number.isNaN(Date.parse(String(stabilization.completed_at)))) throw new Error('owned process stabilization evidence is invalid');
+  const rootExit = exactKeys(process.root_exit, ['exited_at', 'exit_code', 'signal'], 'owned process root exit');
+  if (Number.isNaN(Date.parse(String(process.started_at))) || Number.isNaN(Date.parse(String(rootExit.exited_at)))) throw new Error('owned process timestamps are invalid');
+  const group = exactKeys(process.group_lifecycle, ['members_observed', 'group_empty', 'polls', 'completed_at'], 'owned process group lifecycle');
+  const members = array(group.members_observed, 'owned process group members').map((member) => exactProcessSnapshot(member, 'owned process group member'));
+  if (!members.some(({ pid, start_identity }) => pid === process.root_pid && start_identity === process.start_identity) || members.some(({ pgid }) => pgid !== process.root_pgid) || group.group_empty !== true || !Number.isSafeInteger(group.polls) || Number(group.polls) < 1 || Number.isNaN(Date.parse(String(group.completed_at))) || process.stopped !== true) throw new Error('owned process complete group extinction is not proven');
+  if (options.requireTerm) {
+    const preTerm = exactProcessSnapshot(process.pre_term_identity, 'owned process pre-TERM identity');
+    if (JSON.stringify(preTerm) !== JSON.stringify(observed) || !process.term_sent_at || Number.isNaN(Date.parse(String(process.term_sent_at)))) throw new Error('owned process pre-TERM identity is invalid');
+  } else if (process.pre_term_identity !== null || process.term_sent_at !== null) throw new Error('naturally completed command contains forged TERM evidence');
+  return process;
+}
+
 export function npmObservedCommandLine(argv: readonly string[]): string {
   if (argv[0] !== 'npm') throw new Error('owned preview command must use npm');
   return argv.filter((argument) => argument !== '--').join(' ');
@@ -238,22 +385,32 @@ export function ownedCommandLineReady(actual: string, argv: readonly string[]): 
   return actual === npmObservedCommandLine(argv);
 }
 
-export function assertDynamicCrawl(value: unknown, expectedRoutes: readonly string[]): void {
+export interface DynamicRouteExpectation { path: string; finalUrl: string; redirected: boolean }
+
+export function assertDynamicCrawl(value: unknown, expectedRoutes: readonly DynamicRouteExpectation[]): void {
+  if (expectedRoutes.length !== 80) throw new Error('dynamic crawl expected route inventory must contain exactly 80 routes');
   const crawl = array(value, 'dynamic crawl').map((entry, index) => record(entry, `dynamic crawl[${index}]`));
   const paths = crawl.map((entry) => string(entry.path, 'dynamic crawl path'));
   assertNoDuplicates(paths, 'dynamic crawl route set');
-  if (JSON.stringify([...paths].sort()) !== JSON.stringify([...expectedRoutes].sort())) throw new Error('dynamic crawl does not contain the exact route set');
+  if (JSON.stringify([...paths].sort()) !== JSON.stringify(expectedRoutes.map(({ path }) => path).sort())) throw new Error('dynamic crawl does not contain the exact route set');
   for (const entry of crawl) {
+    exactKeys(entry, ['path', 'status', 'final_url', 'redirected', 'console_errors', 'page_errors', 'hydration_errors', 'axe_serious_or_critical', 'overflow', 'private_boundary_hits'], `dynamic route ${String(entry.path)}`);
+    const expected = expectedRoutes.find(({ path }) => path === entry.path)!;
     if (entry.status !== 200) throw new Error(`${String(entry.path)} dynamic status failed`);
+    if (string(entry.final_url, 'dynamic final URL') !== expected.finalUrl || boolean(entry.redirected, 'dynamic redirected') !== expected.redirected) throw new Error(`${String(entry.path)} dynamic final URL/redirect drifted`);
     for (const key of ['console_errors', 'page_errors', 'hydration_errors', 'axe_serious_or_critical', 'private_boundary_hits']) {
       if (array(entry[key], `dynamic ${key}`).length > 0) throw new Error(`${String(entry.path)} dynamic mandatory ${key} failed`);
     }
-    if (record(entry.overflow, 'dynamic overflow').overflow === true) throw new Error(`${String(entry.path)} dynamic mandatory overflow failed`);
+    const overflow = exactKeys(entry.overflow, ['expected_max_width', 'actual_scroll_width', 'overflow'], 'dynamic overflow');
+    if (overflow.expected_max_width !== 1440) throw new Error(`${String(entry.path)} dynamic expected width drifted`);
+    const actual = number(overflow.actual_scroll_width, 'dynamic actual width');
+    if (!Number.isSafeInteger(actual) || actual < 0 || boolean(overflow.overflow, 'dynamic overflow boolean') !== (actual > 1440)) throw new Error(`${String(entry.path)} dynamic overflow derivation failed`);
+    if (overflow.overflow === true) throw new Error(`${String(entry.path)} dynamic mandatory overflow failed`);
   }
 }
 
 export function assertLocalReceiptMaterialGroups(input: unknown, expected: { implementationCommit: string; representatives: readonly string[] }): void {
-  const root = exactKeys(input, ['schema_version', 'implementation_commit', 'ports', 'representatives', 'transitions', 'processes', 'proxy_worker', 'port_lifecycle', 'temp_root', 'dynamic_crawl', 'static_contract'], 'local receipt');
+  const root = exactKeys(input, ['schema_version', 'implementation_commit', 'ports', 'representatives', 'transitions', 'controller', 'processes', 'proxy_worker', 'port_lifecycle', 'temp_root', 'dynamic_crawl', 'static_contract'], 'local receipt');
   if (root.schema_version !== 2 || root.implementation_commit !== expected.implementationCommit) throw new Error('local receipt commit/schema drifted');
   const ports = exactKeys(root.ports, ['proxy', 'react', 'astro'], 'local ports');
   if (ports.proxy !== 4390 || ports.react !== 4391 || ports.astro !== 4392) throw new Error('local ports drifted');
@@ -263,7 +420,8 @@ export function assertLocalReceiptMaterialGroups(input: unknown, expected: { imp
   for (const transition of transitions) {
     if (JSON.stringify(array(transition.routes, 'transition routes').map((entry) => record(entry, 'transition route').path)) !== JSON.stringify(expected.representatives)) throw new Error('local transition representative routes drifted');
   }
-  const processes = array(root.processes, 'local processes').map((entry) => record(entry, 'local process'));
+  const controller = assertControllerEvidence(root.controller);
+  const processes = array(root.processes, 'local processes').map((entry) => assertOwnedProcessEvidence(entry, { controllerPid: Number(controller.pid), requireTerm: true }));
   if (JSON.stringify(processes.map(({ role }) => role)) !== '["react","astro","proxy"]' || processes.some(({ stopped }) => stopped !== true)) throw new Error('local owned process cleanup drifted');
   const worker = record(root.proxy_worker, 'proxy worker');
   if (worker.descendant_of_proxy !== true || worker.stopped !== true) throw new Error('proxy worker ownership/cleanup drifted');
@@ -284,7 +442,7 @@ function archiveInventoryRejected(path: string): boolean {
 }
 
 export function assertCleanHostReceiptMaterialGroups(input: unknown, expected: { implementationCommit: string }): void {
-  const root = exactKeys(input, ['schema_version', 'implementation_commit', 'eligible', 'archive_hash', 'archive_inventory_hash', 'archive_inventory_count', 'archive_inventory', 'exclusions', 'environment', 'commands', 'release', 'selected_build_hash', 'route_count', 'inventory_hash', 'smoke', 'temp_root', 'errors'], 'clean-host receipt');
+  const root = exactKeys(input, ['schema_version', 'implementation_commit', 'created_at', 'completed_at', 'eligible', 'archive_hash', 'archive_inventory_hash', 'archive_inventory_count', 'archive_inventory', 'exclusions', 'controller', 'environment', 'commands', 'release', 'selected_build_hash', 'route_count', 'inventory_hash', 'smoke', 'temp_root', 'errors'], 'clean-host receipt');
   if (root.schema_version !== 2 || root.implementation_commit !== expected.implementationCommit || root.eligible !== true) throw new Error('clean-host commit/schema/eligibility drifted');
   assertHash(root.archive_hash, 'clean-host archive hash'); assertHash(root.archive_inventory_hash, 'clean-host inventory hash');
   const inventory = strings(root.archive_inventory, 'clean-host inventory');
@@ -294,12 +452,17 @@ export function assertCleanHostReceiptMaterialGroups(input: unknown, expected: {
   if (inventory.some(archiveInventoryRejected)) throw new Error('clean-host archive contains excluded paths');
   const exclusions = exactKeys(root.exclusions, ['dependencies', 'generated_output', 'secrets_and_environment', 'top_level_private_memory'], 'clean-host exclusions');
   if (Object.values(exclusions).some((value) => value !== true)) throw new Error('clean-host exclusions are incomplete');
-  const environment = exactKeys(root.environment, ['allowed_keys', 'npm_userconfig_hash', 'config_inventory_hash', 'cache_inventory_hash_before'], 'clean-host environment');
-  for (const key of ['npm_userconfig_hash', 'config_inventory_hash', 'cache_inventory_hash_before']) assertHash(environment[key], `clean-host ${key}`);
+  const controller = assertControllerEvidence(root.controller);
+  const environment = exactKeys(root.environment, ['allowed_keys', 'npm_userconfig_hash', 'npm_globalconfig_hash', 'config_inventory_hash', 'cache_inventory_hash_before'], 'clean-host environment');
+  for (const key of ['npm_userconfig_hash', 'npm_globalconfig_hash', 'config_inventory_hash', 'cache_inventory_hash_before']) assertHash(environment[key], `clean-host ${key}`);
   const allowed = strings(environment.allowed_keys, 'clean-host allowed keys');
   if (allowed.some((key) => /token|auth|proxy|api|secret/iu.test(key))) throw new Error('clean-host environment contains a secret/proxy key');
-  const commands = array(root.commands, 'clean-host commands').map((entry) => record(entry, 'clean-host command'));
-  if (commands.length === 0 || commands.some((entry) => entry.exit_code !== 0 || entry.stopped !== true)) throw new Error('clean-host commands failed or remained running');
+  const commands = array(root.commands, 'clean-host commands').map((entry) => assertOwnedProcessEvidence(entry, { controllerPid: Number(controller.pid), requireTerm: false, extraKeys: ['phase', 'environment_keys'] }));
+  if (commands.length === 0 || commands.some((entry) => record(entry.root_exit, 'clean-host command root exit').exit_code !== 0 || entry.stopped !== true)) throw new Error('clean-host commands failed or remained running');
+  for (const command of commands) {
+    if (command.phase !== 'install' && command.phase !== 'build') throw new Error('clean-host command phase drifted');
+    strings(command.environment_keys, 'clean-host command environment keys');
+  }
   const release = record(root.release, 'clean-host release');
   string(release.release_id, 'clean-host release id', releasePattern);
   for (const key of ['active_pointer_hash', 'manifest_hash', 'artifact_hash']) assertHash(release[key], `clean-host release ${key}`);

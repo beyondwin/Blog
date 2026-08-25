@@ -46,11 +46,12 @@ describe('public cutover evidence refusal gate', () => {
     });
     expect(Object.keys(environment).sort()).toEqual([
       'CI', 'NO_COLOR', 'NPM_CONFIG_AUDIT', 'NPM_CONFIG_CACHE', 'NPM_CONFIG_FUND',
-      'NPM_CONFIG_UPDATE_NOTIFIER', 'NPM_CONFIG_USERCONFIG', 'PATH', 'TMPDIR', 'TZ',
+      'NPM_CONFIG_GLOBALCONFIG', 'NPM_CONFIG_UPDATE_NOTIFIER', 'NPM_CONFIG_USERCONFIG', 'PATH', 'TMPDIR', 'TZ',
       'XDG_CACHE_HOME', 'XDG_CONFIG_HOME',
     ]);
     expect(environment.PATH).toBe('/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin');
     expect(environment.NPM_CONFIG_USERCONFIG).toBe('/tmp/beyondwin-clean-host.test/config/npmrc');
+    expect(environment.NPM_CONFIG_GLOBALCONFIG).toBe('/tmp/beyondwin-clean-host.test/config/npmrc-global');
     expect(JSON.stringify(environment)).not.toMatch(/secret|proxy|token|api_key|production|omit/iu);
   });
 

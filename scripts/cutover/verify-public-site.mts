@@ -10,7 +10,6 @@ import {
   assertDynamicCrawl,
   assertLocalReceiptMaterialGroups,
   deriveChangedSurfacePerformance,
-  npmObservedCommandLine,
 } from './evidence-contracts.mts';
 import { hashFile, hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
 import { parseTask14Metrics, verifyStaticCutoverContract, type Task14Metric } from './verify-rollback.mts';
@@ -163,15 +162,6 @@ async function verifyArchive(root: string, commit: string, receipt: Record<strin
 }
 
 function verifyHistoricalProcesses(receipt: Record<string, unknown>): void {
-  const processes = receipt.processes as Array<Record<string, unknown>>;
-  for (const process of processes) {
-    exactKeys(process, ['role', 'argv', 'root_pid', 'root_ppid', 'root_pgid', 'start_identity', 'observed', 'started_at', 'term_sent_at', 'exited_at', 'exit_code', 'signal', 'stopped'], 'owned process');
-    const observed = exactKeys(process.observed, ['pid', 'ppid', 'pgid', 'start_identity', 'command_line'], 'owned process observation');
-    if (process.root_pid !== observed.pid || process.root_ppid !== observed.ppid || process.root_pgid !== observed.pgid || process.root_pgid !== process.root_pid || process.start_identity !== observed.start_identity
-      || observed.command_line !== npmObservedCommandLine(process.argv as string[]) || process.stopped !== true) throw new Error('owned process identity/lifecycle was forged');
-    const times = [process.started_at, process.term_sent_at, process.exited_at].map((value) => Date.parse(String(value)));
-    if (times.some(Number.isNaN) || !(times[0]! <= times[1]! && times[1]! <= times[2]!)) throw new Error('owned process timestamps are invalid or unordered');
-  }
   const worker = receipt.proxy_worker as Record<string, unknown>;
   if (worker.descendant_of_proxy !== true || worker.process_group_owned !== true || worker.stopped !== true || typeof worker.pid !== 'number' || typeof worker.root_pid !== 'number') throw new Error('proxy worker descendant/group/cleanup evidence is invalid');
   const lifecycle = receipt.port_lifecycle as Record<string, unknown>;
@@ -226,7 +216,7 @@ export async function verifyPublicSiteEvidence(evidence: PublicSiteEvidence, opt
     harnessHash: await hashFiles(root, ['tests/e2e/performance-selection.ts', 'tests/e2e/performance.spec.ts']),
     configHash: await hashFiles(root, ['package-lock.json', 'package.json', 'playwright.config.ts', 'tests/e2e/support.ts']),
     releaseManifestHash: await hashFiles(root, ['build/public-releases/active.json', `build/public-releases/${active.manifest.releaseId}/manifest.json`]),
-  });
+  }, await readJson(join(root, 'tests/fixtures/parity/astro-renderer-baseline.json')));
   const derivedReportMetrics = reportMetrics.map((metric) => metric.route === reviewRoute
     ? { ...metric, ...performance.metrics.find(({ viewport }) => viewport === (metric.viewport === '1440×960' ? 'desktop' : 'mobile'))!, viewport: metric.viewport }
     : metric);
@@ -239,7 +229,11 @@ export async function verifyPublicSiteEvidence(evidence: PublicSiteEvidence, opt
   assertLocalReceiptMaterialGroups(local, { implementationCommit: evidence.implementation_commit, representatives: representativeRoutes });
   verifyHistoricalProcesses(local);
   const dynamic = (local.dynamic_crawl as { routes: unknown[] }).routes;
-  assertDynamicCrawl(dynamic, expectedRoutes);
+  assertDynamicCrawl(dynamic, baseline.routes.map((route) => ({
+    path: route.path,
+    finalUrl: route.title.startsWith('Redirecting to:') ? route.canonical : route.path,
+    redirected: route.title.startsWith('Redirecting to:'),
+  })));
   for (const entry of dynamic as Array<Record<string, unknown>>) {
     const expected = baseline.routes.find(({ path }) => path === entry.path)!;
     const finalPath = expected.title.startsWith('Redirecting to:') ? expected.canonical : expected.path;
@@ -264,10 +258,11 @@ export async function verifyPublicSiteEvidence(evidence: PublicSiteEvidence, opt
   const clean = await readJson<Record<string, unknown>>(cleanPath);
   assertCleanHostReceiptMaterialGroups(clean, { implementationCommit: evidence.implementation_commit });
   await verifyArchive(root, evidence.implementation_commit, clean);
-  const allowedKeys = ['CI', 'NODE_ENV', 'NO_COLOR', 'NPM_CONFIG_AUDIT', 'NPM_CONFIG_CACHE', 'NPM_CONFIG_FUND', 'NPM_CONFIG_UPDATE_NOTIFIER', 'NPM_CONFIG_USERCONFIG', 'PATH', 'TMPDIR', 'TZ', 'XDG_CACHE_HOME', 'XDG_CONFIG_HOME'].sort();
+  const allowedKeys = ['CI', 'NODE_ENV', 'NO_COLOR', 'NPM_CONFIG_AUDIT', 'NPM_CONFIG_CACHE', 'NPM_CONFIG_FUND', 'NPM_CONFIG_GLOBALCONFIG', 'NPM_CONFIG_UPDATE_NOTIFIER', 'NPM_CONFIG_USERCONFIG', 'PATH', 'TMPDIR', 'TZ', 'XDG_CACHE_HOME', 'XDG_CONFIG_HOME'].sort();
   const environment = clean.environment as Record<string, unknown>;
   if (JSON.stringify(environment.allowed_keys) !== JSON.stringify(allowedKeys)
-    || environment.npm_userconfig_hash !== sha256('') || environment.config_inventory_hash !== sha256('5:npmrc:0:')
+    || environment.npm_userconfig_hash !== sha256('') || environment.npm_globalconfig_hash !== sha256('')
+    || environment.config_inventory_hash !== sha256('5:npmrc:0:12:npmrc-global:0:')
     || environment.cache_inventory_hash_before !== sha256('')) throw new Error('clean-host explicit environment/config roots do not recompute');
   const expectedCommands = [
     ['git', 'archive'], ['tar', '-xf'], ['npm', 'ci'], ['npm', 'run', 'public-release:build'],
