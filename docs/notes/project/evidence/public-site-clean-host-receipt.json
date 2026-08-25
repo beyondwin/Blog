@@ -1,6 +1,1562 @@
 {
   "schema_version": 2,
-  "status": "not_measured",
-  "implementation_commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0",
-  "reason": "The one final local drill failed exact /memory/map/ final URL/redirect validation, so the clean-host prerequisite was not satisfied."
+  "implementation_commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+  "created_at": "2026-08-25T20:38:28.975Z",
+  "completed_at": "2026-08-25T20:38:56.364Z",
+  "eligible": true,
+  "archive_hash": "sha256:d6044dcce2c104fd7be56415a81645d64cdab0bda56ee5c3355921ff4f54863e",
+  "archive_inventory_hash": "sha256:82c13d2f6813bceba470dcbfdcd45ac166465413a153433b5231566bcec955c1",
+  "archive_inventory_count": 633,
+  "archive_inventory": [
+    ".agents/",
+    ".agents/skills/",
+    ".agents/skills/archive-and-memory/",
+    ".agents/skills/archive-and-memory/SKILL.md",
+    ".agents/skills/research-and-publish/",
+    ".agents/skills/research-and-publish/SKILL.md",
+    ".agents/skills/site-change/",
+    ".agents/skills/site-change/SKILL.md",
+    ".gitignore",
+    ".nvmrc",
+    "AGENTS.md",
+    "DESIGN.md",
+    "PRODUCT.md",
+    "README.md",
+    "SYNC.md",
+    "apps/",
+    "apps/site/",
+    "apps/site/.gitignore",
+    "apps/site/app/",
+    "apps/site/app/release.server.ts",
+    "apps/site/app/root.tsx",
+    "apps/site/app/routes.ts",
+    "apps/site/app/routes/",
+    "apps/site/app/routes/analysis-index.tsx",
+    "apps/site/app/routes/analysis.tsx",
+    "apps/site/app/routes/article.tsx",
+    "apps/site/app/routes/articles-index.tsx",
+    "apps/site/app/routes/home.tsx",
+    "apps/site/app/routes/idea.tsx",
+    "apps/site/app/routes/ideas-index.tsx",
+    "apps/site/app/routes/memory-index.tsx",
+    "apps/site/app/routes/memory-map.tsx",
+    "apps/site/app/routes/memory.tsx",
+    "apps/site/app/routes/review-legacy-redirect.tsx",
+    "apps/site/app/routes/review.tsx",
+    "apps/site/app/routes/reviews-index.tsx",
+    "apps/site/app/routes/search.tsx",
+    "apps/site/app/routes/secondary-shared.server.ts",
+    "apps/site/app/routes/secondary-shared.tsx",
+    "apps/site/app/routes/tag.tsx",
+    "apps/site/app/routes/tags-index.tsx",
+    "apps/site/app/routes/travel-index.tsx",
+    "apps/site/app/routes/travel.tsx",
+    "apps/site/build-static-export.ts",
+    "apps/site/package.json",
+    "apps/site/public/",
+    "apps/site/public/favicon.svg",
+    "apps/site/react-router.config.ts",
+    "apps/site/release-binding.ts",
+    "apps/site/src/",
+    "apps/site/src/ui/",
+    "apps/site/src/ui/collections/",
+    "apps/site/src/ui/collections/CollectionPage.tsx",
+    "apps/site/src/ui/collections/RecordRow.tsx",
+    "apps/site/src/ui/components/",
+    "apps/site/src/ui/components/MobileNavigation.tsx",
+    "apps/site/src/ui/components/SiteFooter.tsx",
+    "apps/site/src/ui/components/SiteHeader.tsx",
+    "apps/site/src/ui/components/SiteShell.tsx",
+    "apps/site/src/ui/memory/",
+    "apps/site/src/ui/memory/MemoryDetailPage.tsx",
+    "apps/site/src/ui/memory/MemoryIndexPage.tsx",
+    "apps/site/src/ui/memory/MemoryMapPage.tsx",
+    "apps/site/src/ui/navigation/",
+    "apps/site/src/ui/navigation/OriginLink.tsx",
+    "apps/site/src/ui/navigation/fallback.ts",
+    "apps/site/src/ui/navigation/origin.ts",
+    "apps/site/src/ui/navigation/record-anchor.ts",
+    "apps/site/src/ui/navigation/search-anchor.ts",
+    "apps/site/src/ui/navigation/transport.ts",
+    "apps/site/src/ui/reading/",
+    "apps/site/src/ui/reading/ArticleReadingPage.tsx",
+    "apps/site/src/ui/reading/ContextReturn.tsx",
+    "apps/site/src/ui/reading/ContinueReading.tsx",
+    "apps/site/src/ui/reading/ReadingThreshold.tsx",
+    "apps/site/src/ui/reading/ReviewReadingPage.tsx",
+    "apps/site/src/ui/reading/SecondaryReadingPage.tsx",
+    "apps/site/src/ui/reading/select-continuations.ts",
+    "apps/site/src/ui/scene/",
+    "apps/site/src/ui/scene/SceneObject.tsx",
+    "apps/site/src/ui/scene/ScenePage.tsx",
+    "apps/site/src/ui/scene/scene-state.ts",
+    "apps/site/src/ui/search/",
+    "apps/site/src/ui/search/SearchPage.tsx",
+    "apps/site/src/ui/styles/",
+    "apps/site/src/ui/styles/reading.css",
+    "apps/site/src/ui/styles/route-article.css",
+    "apps/site/src/ui/styles/route-collections.css",
+    "apps/site/src/ui/styles/route-memory.css",
+    "apps/site/src/ui/styles/route-reading.css",
+    "apps/site/src/ui/styles/route-review.css",
+    "apps/site/src/ui/styles/route-scene.css",
+    "apps/site/src/ui/styles/scene.css",
+    "apps/site/src/ui/styles/shell.css",
+    "apps/site/src/ui/styles/tokens.css",
+    "apps/site/src/ui/tags/",
+    "apps/site/src/ui/tags/TagsPage.tsx",
+    "apps/site/test/",
+    "apps/site/test/css-source-accounting.test.ts",
+    "apps/site/test/emitted-output.test.ts",
+    "apps/site/test/routes.test.tsx",
+    "apps/site/test/static-export.test.ts",
+    "apps/site/test/ui/",
+    "apps/site/test/ui/continuations.test.ts",
+    "apps/site/test/ui/fallback.test.ts",
+    "apps/site/test/ui/origin.test.ts",
+    "apps/site/test/ui/reading-threshold.test.tsx",
+    "apps/site/test/ui/route-presentations.test.tsx",
+    "apps/site/test/ui/scene-state.test.ts",
+    "apps/site/test/ui/site-header.test.tsx",
+    "apps/site/test/ui/transport.test.ts",
+    "apps/site/tsconfig.json",
+    "apps/site/vite.config.ts",
+    "astro.config.mjs",
+    "deploy/",
+    "deploy/reverse-proxy/",
+    "deploy/reverse-proxy/public-site-rollback.conf",
+    "deploy/reverse-proxy/public-site.conf",
+    "docs/",
+    "docs/AGENTS.md",
+    "docs/INDEX.md",
+    "docs/README.md",
+    "docs/_index/",
+    "docs/_index/README.md",
+    "docs/_index/catalog.yml",
+    "docs/_index/topics.yml",
+    "docs/implementation/",
+    "docs/implementation/memory-second-brain.md",
+    "docs/notes/",
+    "docs/notes/README.md",
+    "docs/notes/article-factory/",
+    "docs/notes/article-factory/README.md",
+    "docs/notes/article-factory/agents-md-vs-agent-skills-evidence.md",
+    "docs/notes/article-factory/aws-static-frontend-serverless-bff.md",
+    "docs/notes/article-factory/graphify-code-knowledge-graph-deep-dive.md",
+    "docs/notes/article-factory/hermes-agent-persistent-worker-runtime.md",
+    "docs/notes/article-factory/karpathy-delete-everything-keep-graph.md",
+    "docs/notes/article-factory/lazycodex-agent-harness-analysis.md",
+    "docs/notes/article-factory/oh-my-pi-deep-review.md",
+    "docs/notes/article-factory/ponytail-agent-minimalism-analysis.md",
+    "docs/notes/article-factory/shared-ai-conversation-evidence-boundaries.md",
+    "docs/notes/article-factory/uncle-bob-ai-code-review-evidence.md",
+    "docs/notes/backend/",
+    "docs/notes/backend/README.md",
+    "docs/notes/backend/concurrency/",
+    "docs/notes/backend/concurrency/README.md",
+    "docs/notes/backend/concurrency/time-deal-stock-decrement-redis-db_kr.md",
+    "docs/notes/business/",
+    "docs/notes/business/README.md",
+    "docs/notes/business/mobile-apps/",
+    "docs/notes/business/mobile-apps/README.md",
+    "docs/notes/business/mobile-apps/subscription-app-guide-insights_kr.md",
+    "docs/notes/career/",
+    "docs/notes/career/README.md",
+    "docs/notes/career/backend-interviews/",
+    "docs/notes/career/backend-interviews/README.md",
+    "docs/notes/career/backend-interviews/cs-database-interview-questions_kr.md",
+    "docs/notes/career/backend-interviews/distributed-scaling-architecture-interview_kr.md",
+    "docs/notes/content-migration/",
+    "docs/notes/content-migration/review-verdicts.md",
+    "docs/notes/karpathy-graph/",
+    "docs/notes/karpathy-graph/delete-everything-keep-graph.html",
+    "docs/notes/project/",
+    "docs/notes/project/README.md",
+    "docs/notes/project/adr/",
+    "docs/notes/project/adr/0000-adr-governance.md",
+    "docs/notes/project/adr/0001-private-first-knowledge-product.md",
+    "docs/notes/project/adr/0002-consumer-grade-visual-experience.md",
+    "docs/notes/project/adr/0003-visual-storyworld-experience-model.md",
+    "docs/notes/project/adr/0004-staged-aperture-public-composition.md",
+    "docs/notes/project/adr/0005-node-react-modular-monolith.md",
+    "docs/notes/project/adr/0006-unified-public-reading-continuity.md",
+    "docs/notes/project/adr/README.md",
+    "docs/notes/project/agent-runbook.md",
+    "docs/notes/project/architecture-reference.md",
+    "docs/notes/project/assets/",
+    "docs/notes/project/assets/public-atlas/",
+    "docs/notes/project/assets/public-atlas/README.md",
+    "docs/notes/project/assets/public-atlas/provenance.yml",
+    "docs/notes/project/assets/public-atlas/public-atlas-desktop-approved.png",
+    "docs/notes/project/assets/public-atlas/public-atlas-focus-approved.png",
+    "docs/notes/project/assets/public-atlas/public-atlas-mobile-approved.png",
+    "docs/notes/project/design-and-content-rationale.md",
+    "docs/notes/project/evidence/",
+    "docs/notes/project/evidence/next-renderer-report.json",
+    "docs/notes/project/evidence/public-renderer-comparison.md",
+    "docs/notes/project/evidence/public-renderer-report.json",
+    "docs/notes/project/evidence/public-site-clean-host-receipt.json",
+    "docs/notes/project/evidence/public-site-cutover.json",
+    "docs/notes/project/evidence/public-site-cutover.md",
+    "docs/notes/project/evidence/public-site-local-receipt.json",
+    "docs/notes/project/evidence/public-site-review-performance.json",
+    "docs/notes/project/evidence/react-router-renderer-report.json",
+    "docs/notes/project/getting-started.md",
+    "docs/notes/project/node-react-modular-monolith-design.md",
+    "docs/notes/project/public-reading-continuity-design.md",
+    "docs/notes/project/public-reading-continuity-implementation-plan.md",
+    "docs/notes/project/publishing-workflows.md",
+    "docs/notes/project/visual-storyworld-public-atlas-design.md",
+    "docs/notes/skills/",
+    "docs/notes/skills/README.md",
+    "docs/notes/skills/archive-docs-organizer.md",
+    "docs/notes/skills/gstack-superpowers/",
+    "docs/notes/skills/gstack-superpowers/README.md",
+    "docs/notes/skills/gstack-superpowers/gstack-superpowers-analysis.md",
+    "docs/notes/skills/gstack-superpowers/gstack-superpowers-blog.md",
+    "docs/notes/skills/gstack-superpowers/gstack-superpowers-slides.md",
+    "docs/notes/skills/gstack-superpowers/gstack-superpowers-summary.md",
+    "docs/notes/skills/mattpocock-skills-repo-analysis.md",
+    "docs/notes/skills/research-article-workflow.md",
+    "docs/raw/",
+    "docs/raw/README.md",
+    "docs/raw/graphify/",
+    "docs/raw/graphify/graphify_deep_dive_ko.html",
+    "docs/superpowers/",
+    "docs/superpowers/plans/",
+    "docs/superpowers/plans/2026-07-01-blog-agent-docs-runbook.md",
+    "docs/superpowers/plans/2026-07-02-memory-backed-reading.md",
+    "docs/superpowers/plans/2026-07-04-memory-graph-workbench.md",
+    "docs/superpowers/plans/2026-07-05-memory-code-structure.md",
+    "docs/superpowers/plans/2026-07-05-memory-corpus-review-deeplinks.md",
+    "docs/superpowers/plans/2026-07-08-content-memory-links.md",
+    "docs/superpowers/plans/2026-07-09-pgvector-hybrid-search-article.md",
+    "docs/superpowers/plans/2026-07-12-graphify-deep-dive-article.md",
+    "docs/superpowers/plans/2026-07-12-oh-my-pi-deep-review-article.md",
+    "docs/superpowers/specs/",
+    "docs/superpowers/specs/2026-06-30-memory-retrieval-design.md",
+    "docs/superpowers/specs/2026-07-01-blog-agent-docs-runbook-design.md",
+    "docs/superpowers/specs/2026-07-02-memory-backed-reading-design.md",
+    "docs/superpowers/specs/2026-07-04-memory-graph-workbench-design.md",
+    "docs/superpowers/specs/2026-07-05-memory-code-structure-design.md",
+    "docs/superpowers/specs/2026-07-05-memory-corpus-review-deeplinks-design.md",
+    "docs/superpowers/specs/2026-07-08-content-memory-links-design.md",
+    "docs/superpowers/specs/2026-07-09-pgvector-hybrid-search-article-design.md",
+    "docs/superpowers/specs/2026-07-12-graphify-deep-dive-article-design.md",
+    "docs/superpowers/specs/2026-07-12-oh-my-pi-deep-review-article-design.md",
+    "docs/wiki/",
+    "docs/wiki/README.md",
+    "package-lock.json",
+    "package.json",
+    "packages/",
+    "packages/content/",
+    "packages/content/package.json",
+    "packages/content/src/",
+    "packages/content/src/cli.ts",
+    "packages/content/src/mdx/",
+    "packages/content/src/mdx/components.tsx",
+    "packages/content/src/mdx/render.tsx",
+    "packages/content/src/media/",
+    "packages/content/src/media/build-responsive-media.ts",
+    "packages/content/src/release/",
+    "packages/content/src/release/build-release.ts",
+    "packages/content/src/release/read-release.ts",
+    "packages/content/src/schemas.ts",
+    "packages/content/src/source-records.ts",
+    "packages/content/test/",
+    "packages/content/test/build-release.test.ts",
+    "packages/content/test/helpers/",
+    "packages/content/test/helpers/release-fixture.ts",
+    "packages/content/test/mdx-render.test.tsx",
+    "packages/content/test/release-boundary.test.ts",
+    "packages/content/test/source-records.test.ts",
+    "packages/content/tsconfig.json",
+    "packages/contracts/",
+    "packages/contracts/package.json",
+    "packages/contracts/src/",
+    "packages/contracts/src/content.ts",
+    "packages/contracts/src/index.ts",
+    "packages/contracts/src/media.ts",
+    "packages/contracts/src/public-release.ts",
+    "packages/contracts/test/",
+    "packages/contracts/test/content.test.ts",
+    "packages/contracts/test/public-release.test.ts",
+    "packages/contracts/tsconfig.json",
+    "playwright.config.ts",
+    "public/",
+    "public/favicon.svg",
+    "queue.md",
+    "scripts/",
+    "scripts/agent-check.mjs",
+    "scripts/agent-check.test.mjs",
+    "scripts/article-factory.test.mjs",
+    "scripts/article-quality.mjs",
+    "scripts/article-quality.test.mjs",
+    "scripts/content-migration.test.mjs",
+    "scripts/create-article-packet.mjs",
+    "scripts/create-content-entry.mjs",
+    "scripts/create-content-entry.test.mjs",
+    "scripts/cutover/",
+    "scripts/cutover/cutover-evidence.mts",
+    "scripts/cutover/evidence-contracts.mts",
+    "scripts/cutover/evidence-contracts.test.ts",
+    "scripts/cutover/local-proxy.mts",
+    "scripts/cutover/local-proxy.test.ts",
+    "scripts/cutover/owned-process-lifecycle.mts",
+    "scripts/cutover/owned-process-lifecycle.test.ts",
+    "scripts/cutover/seal-performance-receipt.mts",
+    "scripts/cutover/verify-clean-host.mts",
+    "scripts/cutover/verify-public-site.mts",
+    "scripts/cutover/verify-public-site.test.ts",
+    "scripts/cutover/verify-rollback.mts",
+    "scripts/cutover/verify-rollback.test.ts",
+    "scripts/import-naver-reviews.mjs",
+    "scripts/memory.project.test.mjs",
+    "scripts/memory.review.test.mjs",
+    "scripts/memory.schema.test.mjs",
+    "scripts/memory.seed.test.mjs",
+    "scripts/memory/",
+    "scripts/memory/project.mjs",
+    "scripts/memory/review.mjs",
+    "scripts/memory/schema.mjs",
+    "scripts/memory/seed.mjs",
+    "scripts/publication-surfaces.test.mjs",
+    "scripts/queue.mjs",
+    "scripts/queue.test.mjs",
+    "scripts/site-content.test.mjs",
+    "scripts/sync.mjs",
+    "scripts/validate-content.mjs",
+    "scripts/validate-content.test.mjs",
+    "scripts/validate-media.mjs",
+    "scripts/validate-media.test.mjs",
+    "spikes/",
+    "spikes/rejected/",
+    "spikes/rejected/site-next/",
+    "spikes/rejected/site-next/.gitignore",
+    "spikes/rejected/site-next/app/",
+    "spikes/rejected/site-next/app/articles/",
+    "spikes/rejected/site-next/app/articles/[slug]/",
+    "spikes/rejected/site-next/app/articles/[slug]/page.tsx",
+    "spikes/rejected/site-next/app/current-parity.css",
+    "spikes/rejected/site-next/app/layout.tsx",
+    "spikes/rejected/site-next/app/memory/",
+    "spikes/rejected/site-next/app/memory/[slug]/",
+    "spikes/rejected/site-next/app/memory/[slug]/page.tsx",
+    "spikes/rejected/site-next/app/page.tsx",
+    "spikes/rejected/site-next/app/reviews/",
+    "spikes/rejected/site-next/app/reviews/[slug]/",
+    "spikes/rejected/site-next/app/reviews/[slug]/page.tsx",
+    "spikes/rejected/site-next/build-static-export.ts",
+    "spikes/rejected/site-next/next-env.d.ts",
+    "spikes/rejected/site-next/next.config.ts",
+    "spikes/rejected/site-next/package.json",
+    "spikes/rejected/site-next/public/",
+    "spikes/rejected/site-next/public/favicon.svg",
+    "spikes/rejected/site-next/release-binding.ts",
+    "spikes/rejected/site-next/test/",
+    "spikes/rejected/site-next/test/routes.test.tsx",
+    "spikes/rejected/site-next/test/static-export.test.ts",
+    "spikes/rejected/site-next/tsconfig.json",
+    "src/",
+    "src/AGENTS.md",
+    "src/assets/",
+    "src/assets/content/",
+    "src/assets/content/articles/",
+    "src/assets/content/articles/karpathy-delete-everything-keep-graph/",
+    "src/assets/content/articles/karpathy-delete-everything-keep-graph/media.yml",
+    "src/assets/content/articles/pgvector-hybrid-search/",
+    "src/assets/content/articles/pgvector-hybrid-search/architecture.png",
+    "src/assets/content/articles/pgvector-hybrid-search/embedding-flow.png",
+    "src/assets/content/articles/pgvector-hybrid-search/ivfflat-cluster.png",
+    "src/assets/content/articles/pgvector-hybrid-search/media.yml",
+    "src/assets/content/articles/why-i-read-in-the-ai-era/",
+    "src/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale.webp",
+    "src/assets/content/articles/why-i-read-in-the-ai-era/media.yml",
+    "src/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png",
+    "src/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-light.webp",
+    "src/assets/content/articles/why-i-read-in-the-ai-era/shared-reading-table.webp",
+    "src/assets/content/reviews/",
+    "src/assets/content/reviews/art-thief/",
+    "src/assets/content/reviews/art-thief/cover.jpg",
+    "src/assets/content/reviews/art-thief/media.yml",
+    "src/assets/content/reviews/black-swan/",
+    "src/assets/content/reviews/black-swan/cover.jpg",
+    "src/assets/content/reviews/black-swan/media.yml",
+    "src/assets/content/reviews/changing-their-minds/",
+    "src/assets/content/reviews/changing-their-minds/cover.jpg",
+    "src/assets/content/reviews/changing-their-minds/media.yml",
+    "src/assets/content/reviews/convenience-store-woman/",
+    "src/assets/content/reviews/convenience-store-woman/cover.jpg",
+    "src/assets/content/reviews/convenience-store-woman/media.yml",
+    "src/assets/content/reviews/doing-good-better/",
+    "src/assets/content/reviews/doing-good-better/cover.jpg",
+    "src/assets/content/reviews/doing-good-better/media.yml",
+    "src/assets/content/reviews/factfulness/",
+    "src/assets/content/reviews/factfulness/cover.jpg",
+    "src/assets/content/reviews/factfulness/media.yml",
+    "src/assets/content/reviews/future-arrived-first/",
+    "src/assets/content/reviews/future-arrived-first/cover.jpg",
+    "src/assets/content/reviews/future-arrived-first/media.yml",
+    "src/assets/content/reviews/goethe-said-everything/",
+    "src/assets/content/reviews/goethe-said-everything/cover.jpg",
+    "src/assets/content/reviews/goethe-said-everything/media.yml",
+    "src/assets/content/reviews/habitus/",
+    "src/assets/content/reviews/habitus/cover.jpg",
+    "src/assets/content/reviews/habitus/media.yml",
+    "src/assets/content/reviews/how-adam-smith-can-change-your-life/",
+    "src/assets/content/reviews/how-adam-smith-can-change-your-life/cover.jpg",
+    "src/assets/content/reviews/how-adam-smith-can-change-your-life/media.yml",
+    "src/assets/content/reviews/how-we-crossed-winter/",
+    "src/assets/content/reviews/how-we-crossed-winter/cover.jpg",
+    "src/assets/content/reviews/how-we-crossed-winter/media.yml",
+    "src/assets/content/reviews/lolita/",
+    "src/assets/content/reviews/lolita/cover.jpg",
+    "src/assets/content/reviews/lolita/media.yml",
+    "src/assets/content/reviews/lord-of-the-flies/",
+    "src/assets/content/reviews/lord-of-the-flies/cover.jpg",
+    "src/assets/content/reviews/lord-of-the-flies/media.yml",
+    "src/assets/content/reviews/miracles-of-namiya-general-store/",
+    "src/assets/content/reviews/miracles-of-namiya-general-store/cover.jpg",
+    "src/assets/content/reviews/miracles-of-namiya-general-store/media.yml",
+    "src/assets/content/reviews/nevertheless/",
+    "src/assets/content/reviews/nevertheless/cover.jpg",
+    "src/assets/content/reviews/nevertheless/media.yml",
+    "src/assets/content/reviews/poor-charlies-almanack/",
+    "src/assets/content/reviews/poor-charlies-almanack/cover.jpg",
+    "src/assets/content/reviews/poor-charlies-almanack/media.yml",
+    "src/assets/content/reviews/siddhartha/",
+    "src/assets/content/reviews/siddhartha/cover.jpg",
+    "src/assets/content/reviews/siddhartha/media.yml",
+    "src/components/",
+    "src/components/ArticleBriefTable.astro",
+    "src/components/Callout.astro",
+    "src/components/EmptyLane.astro",
+    "src/components/Figure.astro",
+    "src/components/PublicScene.astro",
+    "src/components/PublicSceneObject.astro",
+    "src/components/SiteFooter.astro",
+    "src/components/SiteHeader.astro",
+    "src/content.config.ts",
+    "src/content/",
+    "src/content/AGENTS.md",
+    "src/content/analysis/",
+    "src/content/analysis/.gitkeep",
+    "src/content/analysis/example-url-analysis.mdx",
+    "src/content/articles/",
+    "src/content/articles/.gitkeep",
+    "src/content/articles/agents-md-vs-agent-skills-evidence.mdx",
+    "src/content/articles/ai-design-references.mdx",
+    "src/content/articles/andrej-karpathy-skills-analysis.mdx",
+    "src/content/articles/aws-static-frontend-serverless-bff.mdx",
+    "src/content/articles/codex-ui-mockup-workflow.mdx",
+    "src/content/articles/context-refinement-system-design.mdx",
+    "src/content/articles/example-article.mdx",
+    "src/content/articles/graphify-code-knowledge-graph-deep-dive.mdx",
+    "src/content/articles/hermes-agent-persistent-worker-runtime.mdx",
+    "src/content/articles/karpathy-delete-everything-keep-graph.mdx",
+    "src/content/articles/lazycodex-agent-harness-analysis.mdx",
+    "src/content/articles/oh-my-pi-deep-review.mdx",
+    "src/content/articles/open-design-repo-analysis.mdx",
+    "src/content/articles/pgvector-hybrid-search.mdx",
+    "src/content/articles/ponytail-agent-minimalism-analysis.mdx",
+    "src/content/articles/postgresql-bm25-pg-search.mdx",
+    "src/content/articles/shared-ai-conversation-evidence-boundaries.mdx",
+    "src/content/articles/uncle-bob-ai-code-review-evidence.mdx",
+    "src/content/articles/why-i-read-in-the-ai-era.mdx",
+    "src/content/ideas/",
+    "src/content/ideas/.gitkeep",
+    "src/content/ideas/example-idea.mdx",
+    "src/content/reviews/",
+    "src/content/reviews/.gitkeep",
+    "src/content/reviews/art-thief.mdx",
+    "src/content/reviews/black-swan.mdx",
+    "src/content/reviews/changing-their-minds.mdx",
+    "src/content/reviews/convenience-store-woman.mdx",
+    "src/content/reviews/devotion-of-suspect-x.mdx",
+    "src/content/reviews/doing-good-better.mdx",
+    "src/content/reviews/example-book-review.mdx",
+    "src/content/reviews/factfulness.mdx",
+    "src/content/reviews/future-arrived-first.mdx",
+    "src/content/reviews/goethe-said-everything.mdx",
+    "src/content/reviews/habitus.mdx",
+    "src/content/reviews/how-adam-smith-can-change-your-life.mdx",
+    "src/content/reviews/how-we-crossed-winter.mdx",
+    "src/content/reviews/lolita.mdx",
+    "src/content/reviews/lord-of-the-flies.mdx",
+    "src/content/reviews/miracles-of-namiya-general-store.mdx",
+    "src/content/reviews/nevertheless.mdx",
+    "src/content/reviews/poor-charlies-almanack.mdx",
+    "src/content/reviews/siddhartha.mdx",
+    "src/content/travel/",
+    "src/content/travel/.gitkeep",
+    "src/content/travel/example-travel-note.mdx",
+    "src/data/",
+    "src/data/memory.public.json",
+    "src/layouts/",
+    "src/layouts/AnalysisLayout.astro",
+    "src/layouts/ArticleLayout.astro",
+    "src/layouts/BaseLayout.astro",
+    "src/layouts/ReviewLayout.astro",
+    "src/lib/",
+    "src/lib/bookshelfPresentation.test.mjs",
+    "src/lib/bookshelfPresentation.ts",
+    "src/lib/content.ts",
+    "src/lib/content/",
+    "src/lib/content/contracts.test.ts",
+    "src/lib/content/contracts.ts",
+    "src/lib/content/figureContext.test.ts",
+    "src/lib/content/figureContext.ts",
+    "src/lib/content/figurePresentation.test.ts",
+    "src/lib/content/figurePresentation.ts",
+    "src/lib/content/mediaManifest.d.mts",
+    "src/lib/content/mediaManifest.d.ts",
+    "src/lib/content/mediaManifest.mjs",
+    "src/lib/content/mediaManifest.test.mjs",
+    "src/lib/content/mediaManifest.typecheck.ts",
+    "src/lib/content/mediaRegistry.test.ts",
+    "src/lib/content/mediaRegistry.ts",
+    "src/lib/content/publication.test.ts",
+    "src/lib/content/publication.ts",
+    "src/lib/content/publicationState.ts",
+    "src/lib/content/viewModels.test.ts",
+    "src/lib/content/viewModels.ts",
+    "src/lib/homeData.ts",
+    "src/lib/indexPresentation.test.mjs",
+    "src/lib/indexPresentation.ts",
+    "src/lib/memory/",
+    "src/lib/memory/articleLinks.test.mjs",
+    "src/lib/memory/articleLinks.ts",
+    "src/lib/memory/contentLinks.test.mjs",
+    "src/lib/memory/contentLinks.ts",
+    "src/lib/memory/filters.test.mjs",
+    "src/lib/memory/filters.ts",
+    "src/lib/memory/graphModel.test.mjs",
+    "src/lib/memory/graphModel.ts",
+    "src/lib/memory/index.ts",
+    "src/lib/memory/lookup.test.mjs",
+    "src/lib/memory/lookup.ts",
+    "src/lib/memory/pagePayload.test.mjs",
+    "src/lib/memory/pagePayload.ts",
+    "src/lib/memory/publicData.test.mjs",
+    "src/lib/memory/publicData.ts",
+    "src/lib/memory/reading.test.mjs",
+    "src/lib/memory/reading.ts",
+    "src/lib/memory/testFixture.mjs",
+    "src/lib/memoryData.test.mjs",
+    "src/lib/memoryData.ts",
+    "src/lib/recordsPresentation.test.mjs",
+    "src/lib/recordsPresentation.ts",
+    "src/lib/scenes/",
+    "src/lib/scenes/judgmentScene.ts",
+    "src/lib/scenes/publicScene.test.ts",
+    "src/lib/scenes/publicScene.ts",
+    "src/lib/scenes/sceneState.test.ts",
+    "src/lib/scenes/sceneState.ts",
+    "src/lib/searchData.ts",
+    "src/lib/searchPresentation.test.mjs",
+    "src/lib/searchPresentation.ts",
+    "src/lib/siteChrome.test.ts",
+    "src/lib/siteChrome.ts",
+    "src/pages/",
+    "src/pages/analysis/",
+    "src/pages/analysis/[slug].astro",
+    "src/pages/analysis/index.astro",
+    "src/pages/articles/",
+    "src/pages/articles/[slug].astro",
+    "src/pages/articles/index.astro",
+    "src/pages/ideas/",
+    "src/pages/ideas/[slug].astro",
+    "src/pages/ideas/index.astro",
+    "src/pages/index.astro",
+    "src/pages/memory.astro",
+    "src/pages/memory/",
+    "src/pages/memory/[slug].astro",
+    "src/pages/memory/map.astro",
+    "src/pages/reviews/",
+    "src/pages/reviews/[slug].astro",
+    "src/pages/reviews/index.astro",
+    "src/pages/search/",
+    "src/pages/search/index.astro",
+    "src/pages/tags/",
+    "src/pages/tags/[tag].astro",
+    "src/pages/tags/index.astro",
+    "src/pages/travel/",
+    "src/pages/travel/[slug].astro",
+    "src/pages/travel/index.astro",
+    "src/styles/",
+    "src/styles/global.css",
+    "src/styles/press.css",
+    "src/styles/press.tokens.test.mjs",
+    "src/styles/storyworld.css",
+    "tests/",
+    "tests/e2e/",
+    "tests/e2e/accessibility.spec.ts",
+    "tests/e2e/direct-and-modified-navigation.spec.ts",
+    "tests/e2e/edge-cases.spec.ts",
+    "tests/e2e/mobile-navigation.spec.ts",
+    "tests/e2e/no-js.spec.ts",
+    "tests/e2e/performance-selection.ts",
+    "tests/e2e/performance.spec.ts",
+    "tests/e2e/reading-continuity.spec.ts",
+    "tests/e2e/scene-reading-flow.spec.ts",
+    "tests/e2e/search-return.spec.ts",
+    "tests/e2e/support.ts",
+    "tests/fixtures/",
+    "tests/fixtures/parity/",
+    "tests/fixtures/parity/astro-public-baseline.json",
+    "tests/fixtures/parity/astro-renderer-baseline.json",
+    "tests/fixtures/parity/renderer-report-next-one-win.json",
+    "tests/fixtures/parity/renderer-report-pass.json",
+    "tests/fixtures/public/",
+    "tests/fixtures/public/long-title-record.json",
+    "tests/fixtures/public/no-relations-record.json",
+    "tests/performance-selection.test.ts",
+    "tests/playwright-contract.test.ts",
+    "tests/workspace-contract.test.ts",
+    "tools/",
+    "tools/parity/",
+    "tools/parity/package.json",
+    "tools/parity/src/",
+    "tools/parity/src/capture-astro-baseline.ts",
+    "tools/parity/src/capture-renderer.ts",
+    "tools/parity/src/compare-contracts.ts",
+    "tools/parity/src/html-contract.ts",
+    "tools/parity/src/measure-browser.ts",
+    "tools/parity/src/promotion-contract.ts",
+    "tools/parity/src/renderer-layouts.ts",
+    "tools/parity/src/route-inventory.ts",
+    "tools/parity/src/select-renderer.ts",
+    "tools/parity/src/serve-static.ts",
+    "tools/parity/src/verify-promotion.ts",
+    "tools/parity/test/",
+    "tools/parity/test/compare-contracts.test.ts",
+    "tools/parity/test/html-contract.test.ts",
+    "tools/parity/test/promotion-contract.test.ts",
+    "tools/parity/test/renderer-boundaries.test.ts",
+    "tools/parity/test/renderer-cli.test.ts",
+    "tools/parity/test/renderer-harness.test.ts",
+    "tools/parity/test/route-inventory.test.ts",
+    "tools/parity/test/select-renderer.test.ts",
+    "tools/parity/tsconfig.json",
+    "tsconfig.base.json",
+    "tsconfig.json",
+    "vitest.config.mjs"
+  ],
+  "exclusions": {
+    "dependencies": true,
+    "generated_output": true,
+    "secrets_and_environment": true,
+    "top_level_private_memory": true
+  },
+  "controller": {
+    "pid": 43296,
+    "ppid": 43295,
+    "pgid": 43286,
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.18.0/bin/node",
+      "/Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/scripts/cutover/verify-clean-host.mts",
+      "--commit",
+      "78e0907f5be86c6aeb8480516165f11c15ba2069",
+      "--output",
+      "docs/notes/project/evidence/public-site-clean-host-receipt.json"
+    ],
+    "start_identity": "Wed Aug 26 05:38:28 2026",
+    "observed": {
+      "pid": 43296,
+      "ppid": 43295,
+      "pgid": 43286,
+      "start_identity": "Wed Aug 26 05:38:28 2026",
+      "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/verify-clean-host.mts --commit 78e0907f5be86c6aeb8480516165f11c15ba2069 --output docs/notes/project/evidence/public-site-clean-host-receipt.json"
+    },
+    "signal_handlers": {
+      "installed_at": "2026-08-25T20:38:28.976Z",
+      "signals": [
+        "SIGINT",
+        "SIGTERM"
+      ],
+      "active": false,
+      "handled_signal": null,
+      "cleanup_completed": true,
+      "removed_at": "2026-08-25T20:38:56.364Z"
+    }
+  },
+  "environment": {
+    "allowed_keys": [
+      "CI",
+      "NODE_ENV",
+      "NO_COLOR",
+      "NPM_CONFIG_AUDIT",
+      "NPM_CONFIG_CACHE",
+      "NPM_CONFIG_FUND",
+      "NPM_CONFIG_GLOBALCONFIG",
+      "NPM_CONFIG_UPDATE_NOTIFIER",
+      "NPM_CONFIG_USERCONFIG",
+      "PATH",
+      "TMPDIR",
+      "TZ",
+      "XDG_CACHE_HOME",
+      "XDG_CONFIG_HOME"
+    ],
+    "npm_userconfig_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "npm_globalconfig_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "config_inventory_hash": "sha256:a531f578aa0e3d4bba97228ff389b77a56337283b4b8845a9d4dd30a2166ef2e",
+    "cache_inventory_hash_before": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "commands": [
+    {
+      "role": "install:git",
+      "argv": [
+        "git",
+        "archive",
+        "--format=tar",
+        "--output=/tmp/beyondwin-clean-host.9VZD8X/source.tar",
+        "78e0907f5be86c6aeb8480516165f11c15ba2069",
+        "--",
+        ".",
+        ":(exclude)memory",
+        ":(exclude)build",
+        ":(exclude)output",
+        ":(exclude).superpowers",
+        ":(exclude).env",
+        ":(exclude).env.*"
+      ],
+      "expected_command_line": "git archive --format=tar --output=/tmp/beyondwin-clean-host.9VZD8X/source.tar 78e0907f5be86c6aeb8480516165f11c15ba2069 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*",
+      "root_pid": 43418,
+      "root_ppid": 43296,
+      "root_pgid": 43418,
+      "start_identity": "Wed Aug 26 05:38:28 2026",
+      "observed": {
+        "pid": 43418,
+        "ppid": 43296,
+        "pgid": 43418,
+        "start_identity": "Wed Aug 26 05:38:28 2026",
+        "command_line": "git archive --format=tar --output=/tmp/beyondwin-clean-host.9VZD8X/source.tar 78e0907f5be86c6aeb8480516165f11c15ba2069 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*"
+      },
+      "started_at": "2026-08-25T20:38:28.984Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:38:28.989Z",
+        "polls": 1,
+        "observed_commands": [
+          "git archive --format=tar --output=/tmp/beyondwin-clean-host.9VZD8X/source.tar 78e0907f5be86c6aeb8480516165f11c15ba2069 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*"
+        ]
+      },
+      "pre_term_identity": null,
+      "term_sent_at": null,
+      "root_exit": {
+        "exited_at": "2026-08-25T20:38:29.190Z",
+        "exit_code": 0,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 43418,
+            "ppid": 43296,
+            "pgid": 43418,
+            "command_line": "/Applications/Xcode.app/Contents/Developer/usr/bin/git archive --format=tar --output=/tmp/beyondwin-clean-host.9VZD8X/source.tar 78e0907f5be86c6aeb8480516165f11c15ba2069 -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*",
+            "start_identity": "Wed Aug 26 05:38:28 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 1,
+        "completed_at": "2026-08-25T20:38:29.229Z"
+      },
+      "stopped": true,
+      "phase": "install",
+      "environment_keys": [
+        "CI",
+        "NO_COLOR",
+        "NPM_CONFIG_AUDIT",
+        "NPM_CONFIG_CACHE",
+        "NPM_CONFIG_FUND",
+        "NPM_CONFIG_GLOBALCONFIG",
+        "NPM_CONFIG_UPDATE_NOTIFIER",
+        "NPM_CONFIG_USERCONFIG",
+        "PATH",
+        "TMPDIR",
+        "TZ",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME"
+      ]
+    },
+    {
+      "role": "install:tar",
+      "argv": [
+        "tar",
+        "-xf",
+        "/tmp/beyondwin-clean-host.9VZD8X/source.tar",
+        "-C",
+        "/tmp/beyondwin-clean-host.9VZD8X/repository"
+      ],
+      "expected_command_line": "tar -xf /tmp/beyondwin-clean-host.9VZD8X/source.tar -C /tmp/beyondwin-clean-host.9VZD8X/repository",
+      "root_pid": 43561,
+      "root_ppid": 43296,
+      "root_pgid": 43561,
+      "start_identity": "Wed Aug 26 05:38:29 2026",
+      "observed": {
+        "pid": 43561,
+        "ppid": 43296,
+        "pgid": 43561,
+        "start_identity": "Wed Aug 26 05:38:29 2026",
+        "command_line": "tar -xf /tmp/beyondwin-clean-host.9VZD8X/source.tar -C /tmp/beyondwin-clean-host.9VZD8X/repository"
+      },
+      "started_at": "2026-08-25T20:38:29.248Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:38:29.253Z",
+        "polls": 1,
+        "observed_commands": [
+          "tar -xf /tmp/beyondwin-clean-host.9VZD8X/source.tar -C /tmp/beyondwin-clean-host.9VZD8X/repository"
+        ]
+      },
+      "pre_term_identity": null,
+      "term_sent_at": null,
+      "root_exit": {
+        "exited_at": "2026-08-25T20:38:29.320Z",
+        "exit_code": 0,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 43561,
+            "ppid": 43296,
+            "pgid": 43561,
+            "command_line": "tar -xf /tmp/beyondwin-clean-host.9VZD8X/source.tar -C /tmp/beyondwin-clean-host.9VZD8X/repository",
+            "start_identity": "Wed Aug 26 05:38:29 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 1,
+        "completed_at": "2026-08-25T20:38:29.356Z"
+      },
+      "stopped": true,
+      "phase": "install",
+      "environment_keys": [
+        "CI",
+        "NO_COLOR",
+        "NPM_CONFIG_AUDIT",
+        "NPM_CONFIG_CACHE",
+        "NPM_CONFIG_FUND",
+        "NPM_CONFIG_GLOBALCONFIG",
+        "NPM_CONFIG_UPDATE_NOTIFIER",
+        "NPM_CONFIG_USERCONFIG",
+        "PATH",
+        "TMPDIR",
+        "TZ",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME"
+      ]
+    },
+    {
+      "role": "install:npm",
+      "argv": [
+        "npm",
+        "ci"
+      ],
+      "expected_command_line": "npm ci",
+      "root_pid": 43648,
+      "root_ppid": 43296,
+      "root_pgid": 43648,
+      "start_identity": "Wed Aug 26 05:38:29 2026",
+      "observed": {
+        "pid": 43648,
+        "ppid": 43296,
+        "pgid": 43648,
+        "start_identity": "Wed Aug 26 05:38:29 2026",
+        "command_line": "npm ci"
+      },
+      "started_at": "2026-08-25T20:38:29.356Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:38:29.466Z",
+        "polls": 2,
+        "observed_commands": [
+          "node /opt/homebrew/opt/node@24/bin/npm ci",
+          "npm ci"
+        ]
+      },
+      "pre_term_identity": null,
+      "term_sent_at": null,
+      "root_exit": {
+        "exited_at": "2026-08-25T20:38:35.933Z",
+        "exit_code": 0,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 43648,
+            "ppid": 43296,
+            "pgid": 43648,
+            "command_line": "npm ci",
+            "start_identity": "Wed Aug 26 05:38:29 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 1,
+        "completed_at": "2026-08-25T20:38:35.968Z"
+      },
+      "stopped": true,
+      "phase": "install",
+      "environment_keys": [
+        "CI",
+        "NO_COLOR",
+        "NPM_CONFIG_AUDIT",
+        "NPM_CONFIG_CACHE",
+        "NPM_CONFIG_FUND",
+        "NPM_CONFIG_GLOBALCONFIG",
+        "NPM_CONFIG_UPDATE_NOTIFIER",
+        "NPM_CONFIG_USERCONFIG",
+        "PATH",
+        "TMPDIR",
+        "TZ",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME"
+      ]
+    },
+    {
+      "role": "build:npm",
+      "argv": [
+        "npm",
+        "run",
+        "public-release:build"
+      ],
+      "expected_command_line": "npm run public-release:build",
+      "root_pid": 44308,
+      "root_ppid": 43296,
+      "root_pgid": 44308,
+      "start_identity": "Wed Aug 26 05:38:35 2026",
+      "observed": {
+        "pid": 44308,
+        "ppid": 43296,
+        "pgid": 44308,
+        "start_identity": "Wed Aug 26 05:38:35 2026",
+        "command_line": "npm run public-release:build"
+      },
+      "started_at": "2026-08-25T20:38:35.968Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:38:36.079Z",
+        "polls": 2,
+        "observed_commands": [
+          "node /opt/homebrew/opt/node@24/bin/npm run public-release:build",
+          "npm run public-release:build"
+        ]
+      },
+      "pre_term_identity": null,
+      "term_sent_at": null,
+      "root_exit": {
+        "exited_at": "2026-08-25T20:38:50.467Z",
+        "exit_code": 0,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 44308,
+            "ppid": 43296,
+            "pgid": 44308,
+            "command_line": "npm run public-release:build",
+            "start_identity": "Wed Aug 26 05:38:35 2026"
+          },
+          {
+            "pid": 44374,
+            "ppid": 44308,
+            "pgid": 44308,
+            "command_line": "/usr/bin/env node /private/tmp/beyondwin-clean-host.9VZD8X/repository/node_modules/.bin/tsx packages/content/src/cli.ts build",
+            "start_identity": "Wed Aug 26 05:38:36 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 1,
+        "completed_at": "2026-08-25T20:38:50.499Z"
+      },
+      "stopped": true,
+      "phase": "build",
+      "environment_keys": [
+        "CI",
+        "NODE_ENV",
+        "NO_COLOR",
+        "NPM_CONFIG_AUDIT",
+        "NPM_CONFIG_CACHE",
+        "NPM_CONFIG_FUND",
+        "NPM_CONFIG_GLOBALCONFIG",
+        "NPM_CONFIG_UPDATE_NOTIFIER",
+        "NPM_CONFIG_USERCONFIG",
+        "PATH",
+        "TMPDIR",
+        "TZ",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME"
+      ]
+    },
+    {
+      "role": "build:npm",
+      "argv": [
+        "npm",
+        "run",
+        "public-release:verify"
+      ],
+      "expected_command_line": "npm run public-release:verify",
+      "root_pid": 44805,
+      "root_ppid": 43296,
+      "root_pgid": 44805,
+      "start_identity": "Wed Aug 26 05:38:50 2026",
+      "observed": {
+        "pid": 44805,
+        "ppid": 43296,
+        "pgid": 44805,
+        "start_identity": "Wed Aug 26 05:38:50 2026",
+        "command_line": "npm run public-release:verify"
+      },
+      "started_at": "2026-08-25T20:38:50.499Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:38:50.609Z",
+        "polls": 2,
+        "observed_commands": [
+          "node /opt/homebrew/opt/node@24/bin/npm run public-release:verify",
+          "npm run public-release:verify"
+        ]
+      },
+      "pre_term_identity": null,
+      "term_sent_at": null,
+      "root_exit": {
+        "exited_at": "2026-08-25T20:38:51.098Z",
+        "exit_code": 0,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 44805,
+            "ppid": 43296,
+            "pgid": 44805,
+            "command_line": "npm run public-release:verify",
+            "start_identity": "Wed Aug 26 05:38:50 2026"
+          },
+          {
+            "pid": 44849,
+            "ppid": 44805,
+            "pgid": 44805,
+            "command_line": "node /private/tmp/beyondwin-clean-host.9VZD8X/repository/node_modules/.bin/tsx packages/content/src/cli.ts verify",
+            "start_identity": "Wed Aug 26 05:38:50 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 1,
+        "completed_at": "2026-08-25T20:38:51.132Z"
+      },
+      "stopped": true,
+      "phase": "build",
+      "environment_keys": [
+        "CI",
+        "NODE_ENV",
+        "NO_COLOR",
+        "NPM_CONFIG_AUDIT",
+        "NPM_CONFIG_CACHE",
+        "NPM_CONFIG_FUND",
+        "NPM_CONFIG_GLOBALCONFIG",
+        "NPM_CONFIG_UPDATE_NOTIFIER",
+        "NPM_CONFIG_USERCONFIG",
+        "PATH",
+        "TMPDIR",
+        "TZ",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME"
+      ]
+    },
+    {
+      "role": "build:npm",
+      "argv": [
+        "npm",
+        "run",
+        "site:build"
+      ],
+      "expected_command_line": "npm run site:build",
+      "root_pid": 44953,
+      "root_ppid": 43296,
+      "root_pgid": 44953,
+      "start_identity": "Wed Aug 26 05:38:51 2026",
+      "observed": {
+        "pid": 44953,
+        "ppid": 43296,
+        "pgid": 44953,
+        "start_identity": "Wed Aug 26 05:38:51 2026",
+        "command_line": "npm run site:build"
+      },
+      "started_at": "2026-08-25T20:38:51.132Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:38:51.241Z",
+        "polls": 2,
+        "observed_commands": [
+          "node /opt/homebrew/opt/node@24/bin/npm run site:build",
+          "npm run site:build"
+        ]
+      },
+      "pre_term_identity": null,
+      "term_sent_at": null,
+      "root_exit": {
+        "exited_at": "2026-08-25T20:38:54.885Z",
+        "exit_code": 0,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 44953,
+            "ppid": 43296,
+            "pgid": 44953,
+            "command_line": "npm run site:build",
+            "start_identity": "Wed Aug 26 05:38:51 2026"
+          },
+          {
+            "pid": 44997,
+            "ppid": 44953,
+            "pgid": 44953,
+            "command_line": "node /opt/homebrew/opt/node@24/bin/npm run build --workspace @beyondwin/site",
+            "start_identity": "Wed Aug 26 05:38:51 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 1,
+        "completed_at": "2026-08-25T20:38:54.919Z"
+      },
+      "stopped": true,
+      "phase": "build",
+      "environment_keys": [
+        "CI",
+        "NODE_ENV",
+        "NO_COLOR",
+        "NPM_CONFIG_AUDIT",
+        "NPM_CONFIG_CACHE",
+        "NPM_CONFIG_FUND",
+        "NPM_CONFIG_GLOBALCONFIG",
+        "NPM_CONFIG_UPDATE_NOTIFIER",
+        "NPM_CONFIG_USERCONFIG",
+        "PATH",
+        "TMPDIR",
+        "TZ",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME"
+      ]
+    }
+  ],
+  "release": {
+    "release_id": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+    "active_pointer_hash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
+    "manifest_hash": "sha256:5462764b984aa492eb6f4194988ddad035a25c9ef751a2857f4b6571ac978195",
+    "artifact_hash": "sha256:38829f0d35c78c5777f1b094a1196fd17146c615c1d5982387c7b2a153c95a08"
+  },
+  "selected_build_hash": "sha256:601a874e6b655c09b6b99bdb0a2eca24bb0545f4b71670219c9687a9bdc72aee",
+  "route_count": 80,
+  "inventory_hash": "sha256:1dda2a3b837dcbbab650358cf145481cc81210470a6d5677c7b1958b7c275f18",
+  "smoke": [
+    {
+      "path": "/",
+      "status": 200,
+      "body_hash": "sha256:340a27c997f4db8e0bb1f0907e62fd7cc494fdc0716f0d48e72ec81189135acd"
+    },
+    {
+      "path": "/analysis/",
+      "status": 200,
+      "body_hash": "sha256:1bd05ff5b284b38be0b23f0d79c9a0220e48b8169afe5cc43e6f764e689e8768"
+    },
+    {
+      "path": "/articles/",
+      "status": 200,
+      "body_hash": "sha256:efd0d98fc9e4ef28b1152c61d5fb1236e612cf147b9730fe277b3e38e368b5fe"
+    },
+    {
+      "path": "/articles/ai-design-references/",
+      "status": 200,
+      "body_hash": "sha256:d5e2b77f8fd3ad98b377e61001f59e6de31ec1c8c2e50b742edfed7618b72222"
+    },
+    {
+      "path": "/articles/andrej-karpathy-skills-analysis/",
+      "status": 200,
+      "body_hash": "sha256:d7c3e75f0d6a0ba88df82f644a602908f06f191d04756a171c2d399576b44ae4"
+    },
+    {
+      "path": "/articles/codex-ui-mockup-workflow/",
+      "status": 200,
+      "body_hash": "sha256:c6b533bbc708c16808c5672b97dd05796dd7c8fc14d507f55b50be0e3198879e"
+    },
+    {
+      "path": "/articles/context-refinement-system-design/",
+      "status": 200,
+      "body_hash": "sha256:b5603b9055d3ecf6ed80fd8d7855895d73f33e6a9cb4d718baac5a6ae94107c7"
+    },
+    {
+      "path": "/articles/graphify-code-knowledge-graph-deep-dive/",
+      "status": 200,
+      "body_hash": "sha256:eaa1cc3a7bbf402f2c1edf4d69753d937e24221f3bf6bdf4f094f27959e3aa6a"
+    },
+    {
+      "path": "/articles/hermes-agent-persistent-worker-runtime/",
+      "status": 200,
+      "body_hash": "sha256:040ab4346993684d76f750bcaaf586bf3f78a960a93a30ed7a034ed38c6e761a"
+    },
+    {
+      "path": "/articles/lazycodex-agent-harness-analysis/",
+      "status": 200,
+      "body_hash": "sha256:577c92bb5854a81d19c0b741f7c6f660a36c82ef05fa7d9479fe3ba0a91a1d5a"
+    },
+    {
+      "path": "/articles/oh-my-pi-deep-review/",
+      "status": 200,
+      "body_hash": "sha256:60626583108cb6c081709e0670b0aa1ed281aa107e132059e686cfc157d914d8"
+    },
+    {
+      "path": "/articles/open-design-repo-analysis/",
+      "status": 200,
+      "body_hash": "sha256:d1791e2b0b553e70fcb499c072d79a45570e3ecae0535e105bdc6d143c2f4ea5"
+    },
+    {
+      "path": "/articles/pgvector-hybrid-search/",
+      "status": 200,
+      "body_hash": "sha256:54c551dd6b4982dab6de06a207469391a94fe57c13d25cf535ff65a3f3c41f10"
+    },
+    {
+      "path": "/articles/ponytail-agent-minimalism-analysis/",
+      "status": 200,
+      "body_hash": "sha256:1f3f5499fdb9e3279a8fdc70ccf6c20ce39af277c82db4b560111967c9d5be03"
+    },
+    {
+      "path": "/articles/postgresql-bm25-pg-search/",
+      "status": 200,
+      "body_hash": "sha256:f88a8dcb83ced896b93c9730ae2364df2d82ace56b44f84e3289b878b6be6c3e"
+    },
+    {
+      "path": "/articles/why-i-read-in-the-ai-era/",
+      "status": 200,
+      "body_hash": "sha256:96ac6af6c1659ece69d83964561f854c27f78ae24828eea331ae7af247c3593d"
+    },
+    {
+      "path": "/ideas/",
+      "status": 200,
+      "body_hash": "sha256:5b4ae30da8cc872edc8ba3743bc332327a9f874165c24a65875b7ac2ed393f25"
+    },
+    {
+      "path": "/memory/",
+      "status": 200,
+      "body_hash": "sha256:987875ec05dbfa2628da0e594a5a425c8d3d31dbc1d48fac24db3582c47ecde5"
+    },
+    {
+      "path": "/memory/agent-harnesses-are-operating-systems/",
+      "status": 200,
+      "body_hash": "sha256:87600579ae24a1eec8db021006ddcf551e6d4b659e79103a4156781e2c75240b"
+    },
+    {
+      "path": "/memory/agent-workflows-need-review-gates/",
+      "status": 200,
+      "body_hash": "sha256:2c82ed5a83c45bb0ab5d8c792547e5dc2c84abc98c9c7113d61d080df05786e1"
+    },
+    {
+      "path": "/memory/ai-design-tools-need-judgment-loops/",
+      "status": 200,
+      "body_hash": "sha256:05b1b07fd2f0b49ca434354c9dc8d72bb9950b37a09f69c7530140671d029a36"
+    },
+    {
+      "path": "/memory/context-quality-is-routing-problem/",
+      "status": 200,
+      "body_hash": "sha256:08222d661042fd04f82b84561fdbd2ad28a910c7325cebe870cf5cbaf2b5c9a0"
+    },
+    {
+      "path": "/memory/local-agent-products-are-work-shells/",
+      "status": 200,
+      "body_hash": "sha256:8f0c26940e003edfacbef8af849921978bc39191af0b6a7f6bb97d2153566c13"
+    },
+    {
+      "path": "/memory/map/",
+      "status": 200,
+      "body_hash": "sha256:247f8ac780bf118d59bc30a92b34d9771db28701c3892e8dbf0e5e2d9fe9944e"
+    },
+    {
+      "path": "/memory/memory-needs-retrieval-not-decoration/",
+      "status": 200,
+      "body_hash": "sha256:5c65ef8b3f387d9f6f1f45bfa50bab66959b2c53e84f3a5b7a2223091a745136"
+    },
+    {
+      "path": "/memory/personal-sites-should-show-records-first/",
+      "status": 200,
+      "body_hash": "sha256:bf94dc4311397eb445256fa9191f65b938e7918bde09eaad647e973d35bdb434"
+    },
+    {
+      "path": "/reviews/",
+      "status": 200,
+      "body_hash": "sha256:944a60fdd3b050f259ba6e3f8f68eb23b81b5699fe6f0513ca4e893391c8147f"
+    },
+    {
+      "path": "/reviews/art-thief/",
+      "status": 200,
+      "body_hash": "sha256:b7a640eb7dcd8f2de7279a05646d9a6da41c67ca8d453fb7d1a2cef9a29ecc46"
+    },
+    {
+      "path": "/reviews/black-swan/",
+      "status": 200,
+      "body_hash": "sha256:11d9653f15047f63c09143e528817eb9f8e8f9e9e7952d6a3ab7879bc035ef98"
+    },
+    {
+      "path": "/reviews/changing-their-minds/",
+      "status": 200,
+      "body_hash": "sha256:d7e8214f99d8906e21cbea750f86940de33466edf5b6b47fbde8eab2270ee1d1"
+    },
+    {
+      "path": "/reviews/convenience-store-woman/",
+      "status": 200,
+      "body_hash": "sha256:2b20d8575faa26617cb2936bc81dff4d46c6f4eac6b3f2e58ed49016b8fc24fa"
+    },
+    {
+      "path": "/reviews/devotion-of-suspect-x/",
+      "status": 200,
+      "body_hash": "sha256:6db4c74a7a2330b35667bb9856b3aa6e61189afa426e9013f0cf00598901df54"
+    },
+    {
+      "path": "/reviews/doing-good-better/",
+      "status": 200,
+      "body_hash": "sha256:69a8b0a95bd4c71ef9aebc74290d59fb2d17e585d7953088cca864a2892b52b2"
+    },
+    {
+      "path": "/reviews/factfulness/",
+      "status": 200,
+      "body_hash": "sha256:437fd0a0e52adb47b7bd14dff01f5bad3da7298fedf63c391f4ab4d61992f252"
+    },
+    {
+      "path": "/reviews/future-arrived-first/",
+      "status": 200,
+      "body_hash": "sha256:150ecdc3b50cd5a4ce82c912e632c3ff72279ccb5c49b1d7b7f3075fc4f20db0"
+    },
+    {
+      "path": "/reviews/goethe-said-everything/",
+      "status": 200,
+      "body_hash": "sha256:927939a3822e54638eb2b25e4aac439e2ac158b0cf17b9fbf4e2a7125ce092a4"
+    },
+    {
+      "path": "/reviews/habitus/",
+      "status": 200,
+      "body_hash": "sha256:64d63818a02909055fc722d2fccd3ff5d414d21a917c6c2b9a0e4f7dd6dc1eb8"
+    },
+    {
+      "path": "/reviews/how-adam-smith-can-change-your-life/",
+      "status": 200,
+      "body_hash": "sha256:131d90f95268a9677380235e5da3b08b2e3fb8c5ffe3f019a00663d9548805f4"
+    },
+    {
+      "path": "/reviews/how-we-crossed-winter/",
+      "status": 200,
+      "body_hash": "sha256:669c88723b0e07007f8b1ffa627165d270a569024642e94cd2fd4d2493f317c6"
+    },
+    {
+      "path": "/reviews/lolita/",
+      "status": 200,
+      "body_hash": "sha256:4ff25f0deca87c2a4adba23acb490ed8db06b9cdff350adb00e0e219cc5b34f5"
+    },
+    {
+      "path": "/reviews/lord-of-the-flies/",
+      "status": 200,
+      "body_hash": "sha256:aa785b0a620e2d556734ae8e18f92ef4ba567eb2f103db6696f83013d172f310"
+    },
+    {
+      "path": "/reviews/miracles-of-namiya-general-store/",
+      "status": 200,
+      "body_hash": "sha256:08c63d456c9c105ebf206c766fa5b3f75893a0c2056a6289e83baa186300b048"
+    },
+    {
+      "path": "/reviews/nevertheless/",
+      "status": 200,
+      "body_hash": "sha256:fa8dac7bf119db453ff79723c5bc33f5853d1ea818446425395c474d1d3090b3"
+    },
+    {
+      "path": "/reviews/poor-charlies-almanack/",
+      "status": 200,
+      "body_hash": "sha256:fd15acbcdabf4ffc3ab0f3eef1d43f78f6d19ceb8cabb673206e809ed74d032e"
+    },
+    {
+      "path": "/reviews/siddhartha/",
+      "status": 200,
+      "body_hash": "sha256:4109921bb7ccb770945c173c6023d85181d0c57daf187836d6c932144d52c763"
+    },
+    {
+      "path": "/reviews/the-life-you-can-save/",
+      "status": 200,
+      "body_hash": "sha256:5cb223546a1774ae76580c0880b6d4aa961bac8ec4c3dcc33718dfe4d4df5fbf"
+    },
+    {
+      "path": "/search/",
+      "status": 200,
+      "body_hash": "sha256:2d9263c1bdf0b8ef240bdfb5c961ffa4ac2c898dedddd24429538a45a0bff064"
+    },
+    {
+      "path": "/tags/",
+      "status": 200,
+      "body_hash": "sha256:445390b341a37834d073f5cbdd487f93736d4ba598f95338c24ca2256b2da919"
+    },
+    {
+      "path": "/tags/agent/",
+      "status": 200,
+      "body_hash": "sha256:778331381322aa6a6ea794090eded18f9419da3ce033f3cd4506fdecd64025ea"
+    },
+    {
+      "path": "/tags/AI-agent/",
+      "status": 200,
+      "body_hash": "sha256:07e77bd47bd58fca4be8870910a80ac687cbd00f5df21625f636f9d842feebc4"
+    },
+    {
+      "path": "/tags/AI/",
+      "status": 200,
+      "body_hash": "sha256:59fbb29afaf0878186249b9728e2d3e0754e45443faae77e1a35b14154028c86"
+    },
+    {
+      "path": "/tags/architecture/",
+      "status": 200,
+      "body_hash": "sha256:4c43f57c470cf1d7b9b81a1a13118a6da1f1bbcf200ec84ced512abcf62e0189"
+    },
+    {
+      "path": "/tags/automation/",
+      "status": 200,
+      "body_hash": "sha256:9f0cb2e9474f394181c4de0abf2cd6783c8b53a5dfda3f82433c7b73f782427b"
+    },
+    {
+      "path": "/tags/BM25/",
+      "status": 200,
+      "body_hash": "sha256:dd0a21d55df6f6a6a9e6e96bc7a49497fd8c269a736e1e71c21fbf3f262e1658"
+    },
+    {
+      "path": "/tags/book/",
+      "status": 200,
+      "body_hash": "sha256:91e957de9a4119854162c399d4a09712a18a3b84177a105195732fe80acb834a"
+    },
+    {
+      "path": "/tags/code-search/",
+      "status": 200,
+      "body_hash": "sha256:ba769a943765568c4acedf4ccb702bacb6a50b939323a93004b9a6cc03b27977"
+    },
+    {
+      "path": "/tags/Codex/",
+      "status": 200,
+      "body_hash": "sha256:ef4f41ce5eea3b9720928845ee75368bb10550250e51f5b35644489cab88a30e"
+    },
+    {
+      "path": "/tags/coding/",
+      "status": 200,
+      "body_hash": "sha256:79cc487d951e77eb4f9dd95727a9fec9d8e8a196b5e6c803bc2d4a29ce819aa4"
+    },
+    {
+      "path": "/tags/database/",
+      "status": 200,
+      "body_hash": "sha256:8d8c11e5eb622fbe83b5138860d1e617f547a615f375b9aa795b87fda2dc2d2e"
+    },
+    {
+      "path": "/tags/design/",
+      "status": 200,
+      "body_hash": "sha256:b72cb88c294d104b3c9d240878f5b2104f40adcf384fd6a79e834bf09b5e0437"
+    },
+    {
+      "path": "/tags/developer-tools/",
+      "status": 200,
+      "body_hash": "sha256:a1c59e836cb77f07c00da4ad73fc122c2790777f298fe01aff718e2e01979472"
+    },
+    {
+      "path": "/tags/essay/",
+      "status": 200,
+      "body_hash": "sha256:c74b53e933085380d8e7987c016712ce35ad86d5951b404df5543b68a95ae796"
+    },
+    {
+      "path": "/tags/frontend/",
+      "status": 200,
+      "body_hash": "sha256:d8d2023155a8690df7e48087a3d1f5235f3abd4d8bf2d92a21b846f85bfda698"
+    },
+    {
+      "path": "/tags/Graphify/",
+      "status": 200,
+      "body_hash": "sha256:6e60a769d35693be025f83162da1d63c478ba6a44e0cbdee5d6e0ac5190aface"
+    },
+    {
+      "path": "/tags/judgment/",
+      "status": 200,
+      "body_hash": "sha256:35fc7411d4edb7424ac2581264504d78edb275bbaba31b041037d5f377816097"
+    },
+    {
+      "path": "/tags/knowledge-graph/",
+      "status": 200,
+      "body_hash": "sha256:23f5396c0e670bcddc71499a6d56938678a5b1096623849fefa9ef94a4aa1c8e"
+    },
+    {
+      "path": "/tags/naver-archive/",
+      "status": 200,
+      "body_hash": "sha256:9293b8199ad65f0c1945c41c54fea836b56b81f66ecb149e6b0db41ebd150a31"
+    },
+    {
+      "path": "/tags/ParadeDB/",
+      "status": 200,
+      "body_hash": "sha256:c3dcca53e4e261b46036d24832b6481d9b004954def32b1580efbf7a6b0c9920"
+    },
+    {
+      "path": "/tags/pgvector/",
+      "status": 200,
+      "body_hash": "sha256:84b935f2ad57b6f3c71d7cde2bfab12e4b88e61970a807d04b7eb4dd006cf55d"
+    },
+    {
+      "path": "/tags/PostgreSQL/",
+      "status": 200,
+      "body_hash": "sha256:3e03a6935c61007ec76643cb435064b13f65e3a366e46676f7bfb02f19fabf08"
+    },
+    {
+      "path": "/tags/RAG/",
+      "status": 200,
+      "body_hash": "sha256:3d9d38041906fa04779e3ad6cd120fd853df4d4ba4cdde726268cf3125fd3e4f"
+    },
+    {
+      "path": "/tags/reading/",
+      "status": 200,
+      "body_hash": "sha256:ca3630f350941a64122a06c15e18ba11c63f04ca4ea6d47401f97de5c96791c4"
+    },
+    {
+      "path": "/tags/reference/",
+      "status": 200,
+      "body_hash": "sha256:ac584bd9895004264851c0980dc6c0985b72755c8fd70b279e1d4224935b7995"
+    },
+    {
+      "path": "/tags/review/",
+      "status": 200,
+      "body_hash": "sha256:6fc1f9e1a99f0115cc2e952631e74a9ca6a59b968b1926f0d43423bc2cd58611"
+    },
+    {
+      "path": "/tags/search/",
+      "status": 200,
+      "body_hash": "sha256:57d87f03d2d1f406379ff3f472ea7fa92356f3268e6ef57776fa366255705590"
+    },
+    {
+      "path": "/tags/security/",
+      "status": 200,
+      "body_hash": "sha256:4fec6a8df4271f1a75a5fc7e0583a66df27028382a7fd1688829ded3c6a8e8af"
+    },
+    {
+      "path": "/tags/source-grounded/",
+      "status": 200,
+      "body_hash": "sha256:8d8bf993598d64204cd155eaff0bcb745540200bb2d9b050b776b199c6cfb6d6"
+    },
+    {
+      "path": "/tags/system-design/",
+      "status": 200,
+      "body_hash": "sha256:7d75071f1d3aa2957a8631cfe7aa79b422b076c11e9b0efda7343fc62c9458c7"
+    },
+    {
+      "path": "/tags/workflow/",
+      "status": 200,
+      "body_hash": "sha256:898b81f6d86187073f240c8812d47d3f325946e0ee04d168fe4220eb0647b146"
+    },
+    {
+      "path": "/travel/",
+      "status": 200,
+      "body_hash": "sha256:2c6b3e1babf18b5f02429261168c5c6becba0ffeab0b1d85f220e464b3daa94a"
+    }
+  ],
+  "temp_root": {
+    "pattern": "/tmp/beyondwin-clean-host.*",
+    "path": "/tmp/beyondwin-clean-host.9VZD8X",
+    "realpath": "/private/tmp/beyondwin-clean-host.9VZD8X",
+    "realpath_validated": true,
+    "removed": true,
+    "preview_port": 60346
+  },
+  "errors": []
 }
