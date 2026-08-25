@@ -97,6 +97,43 @@ export const sourceRecordSchema = z.discriminatedUnion('collection', [
       message: 'updatedAt must be on or after createdAt',
     });
   }
+  if (record.collection === 'reviews') {
+    if (
+      record.status === 'published'
+      && (!record.itemAuthor || !record.isbn13 || !record.publisher || !record.verdict || !record.coverState)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['status'],
+        message: 'published review requires itemAuthor, isbn13, publisher, verdict, and coverState',
+      });
+    }
+    if (record.coverState === 'verified' && !record.coverMedia) {
+      context.addIssue({
+        code: 'custom',
+        path: ['coverMedia'],
+        message: 'coverState verified requires coverMedia',
+      });
+    }
+    if (record.coverState === 'hold' && record.coverMedia) {
+      context.addIssue({
+        code: 'custom',
+        path: ['coverMedia'],
+        message: 'coverState hold forbids coverMedia',
+      });
+    }
+  }
+  if (
+    record.collection === 'travel'
+    && record.status === 'published'
+    && (record.privacyReviewed !== true || !record.leadMedia)
+  ) {
+    context.addIssue({
+      code: 'custom',
+      path: ['status'],
+      message: 'published travel requires privacyReviewed true and leadMedia',
+    });
+  }
 });
 
 export type SourceRecord = z.infer<typeof sourceRecordSchema>;

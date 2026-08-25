@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, expectTypeOf, it } from 'vitest';
@@ -10,6 +10,7 @@ import {
   parseSourceRecord,
   resolveSourceMedia,
 } from '../src/source-records';
+import { writeReleaseFixture } from './helpers/release-fixture';
 
 const expectedPublicIds = [
   'articles/ai-design-references',
@@ -276,6 +277,34 @@ describe('source record parsing', () => {
     expect('jobPayload' in parsed).toBe(false);
   });
 
+  it.each([
+    ['review', {
+      collection: 'reviews',
+      id: 'draft-review',
+      title: 'Draft review',
+      description: 'Incomplete review scaffold',
+      createdAt: '2026-08-21',
+      updatedAt: '2026-08-23',
+      status: 'review',
+      draft: true,
+      itemType: 'book',
+      itemTitle: 'Unreviewed book',
+    }],
+    ['travel', {
+      collection: 'travel',
+      id: 'draft-travel',
+      title: 'Draft travel',
+      description: 'Incomplete travel scaffold',
+      createdAt: '2026-08-21',
+      updatedAt: '2026-08-23',
+      status: 'review',
+      draft: true,
+      location: 'Unreviewed place',
+    }],
+  ])('keeps incomplete %s review-state drafts valid', (_collection, input) => {
+    expect(parseSourceRecord(input)).toMatchObject({ status: 'review', draft: true });
+  });
+
   it('rejects an update date before its creation date', () => {
     expect(() => parseSourceRecord({
       collection: 'articles',
@@ -427,5 +456,55 @@ describe('framework-neutral corpus loading', () => {
     await expect(resolveSourceMedia(root, '../../memory' as never, 'private', 'record')).rejects.toThrow(
       'unsupported public collection',
     );
+  });
+});
+
+describe('allowlisted source file containment', () => {
+  it('rejects a symlinked content leaf even when its target is a valid MDX record', async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), 'beyondwin-content-leaf-link-'));
+    const sourcePath = join(fixtureRoot, 'src', 'content', 'articles', 'public-fixture.mdx');
+    const externalPath = join(fixtureRoot, 'external-public-fixture.mdx');
+
+    try {
+      await writeReleaseFixture(fixtureRoot);
+      await rename(sourcePath, externalPath);
+      await symlink(externalPath, sourcePath, 'file');
+
+      await expect(loadSourceRecords(fixtureRoot)).rejects.toThrow(/symbolic link/iu);
+    } finally {
+      await rm(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a symlinked content collection directory', async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), 'beyondwin-content-directory-link-'));
+    const collectionPath = join(fixtureRoot, 'src', 'content', 'articles');
+    const externalPath = join(fixtureRoot, 'external-articles');
+
+    try {
+      await writeReleaseFixture(fixtureRoot);
+      await rename(collectionPath, externalPath);
+      await symlink(externalPath, collectionPath, 'dir');
+
+      await expect(loadSourceRecords(fixtureRoot)).rejects.toThrow(/symbolic link/iu);
+    } finally {
+      await rm(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a symlinked public-memory projection leaf', async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), 'beyondwin-memory-leaf-link-'));
+    const projectionPath = join(fixtureRoot, 'src', 'data', 'memory.public.json');
+    const externalPath = join(fixtureRoot, 'external-memory.public.json');
+
+    try {
+      await writeReleaseFixture(fixtureRoot);
+      await rename(projectionPath, externalPath);
+      await symlink(externalPath, projectionPath, 'file');
+
+      await expect(loadPublicMemoryRecords(fixtureRoot)).rejects.toThrow(/symbolic link/iu);
+    } finally {
+      await rm(fixtureRoot, { recursive: true, force: true });
+    }
   });
 });

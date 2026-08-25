@@ -47,6 +47,47 @@ describe('full public route expansion', () => {
     expect(actual).toContain('/tags/AI/');
   });
 
+  it('keeps the frozen article and review fixtures in incumbent latest-first order', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const active = await releaseModule.loadVerifiedRelease();
+
+    expect(releaseModule.recordsForCollection(active, 'articles').map(({ id }: { id: string }) => id)).toEqual([
+      'why-i-read-in-the-ai-era',
+      'graphify-code-knowledge-graph-deep-dive',
+      'oh-my-pi-deep-review',
+      'pgvector-hybrid-search',
+      'postgresql-bm25-pg-search',
+      'hermes-agent-persistent-worker-runtime',
+      'ponytail-agent-minimalism-analysis',
+      'lazycodex-agent-harness-analysis',
+      'ai-design-references',
+      'andrej-karpathy-skills-analysis',
+      'codex-ui-mockup-workflow',
+      'context-refinement-system-design',
+      'open-design-repo-analysis',
+    ]);
+    expect(releaseModule.recordsForCollection(active, 'reviews').map(({ id }: { id: string }) => id)).toEqual([
+      'changing-their-minds',
+      'lord-of-the-flies',
+      'black-swan',
+      'nevertheless',
+      'goethe-said-everything',
+      'devotion-of-suspect-x',
+      'poor-charlies-almanack',
+      'art-thief',
+      'siddhartha',
+      'habitus',
+      'how-adam-smith-can-change-your-life',
+      'lolita',
+      'future-arrived-first',
+      'how-we-crossed-winter',
+      'convenience-store-woman',
+      'miracles-of-namiya-general-store',
+      'doing-good-better',
+      'factfulness',
+    ]);
+  });
+
   it('uses safe stable collection/id anchors and fails closed when one is overlong', async () => {
     const releaseModule = await candidateModule<any>('app/release.server.ts');
     expect(releaseModule.recordAnchor('articles', 'why-i-read-in-the-ai-era'))

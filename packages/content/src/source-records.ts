@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { extname, join } from 'node:path';
 import {
@@ -8,6 +7,11 @@ import {
   type PublicRecord,
 } from '@beyondwin/contracts';
 import { parse as parseYaml } from 'yaml';
+import {
+  readAllowlistedDirectory,
+  readAllowlistedRegularFile,
+  readAllowlistedTextFile,
+} from './allowlisted-source-file';
 import {
   publicMemoryProjectionSchema,
   sourceCollections,
@@ -41,16 +45,21 @@ export function parseSourceRecord(input: unknown): SourceRecord {
   return sourceRecordSchema.parse({ ...candidate, href });
 }
 
-async function contentFiles(directory: string): Promise<string[]> {
-  const entries = await readdir(directory, { withFileTypes: true });
+async function contentFiles(root: string, relativeDirectory: string): Promise<string[]> {
+  const entries = await readAllowlistedDirectory(root, relativeDirectory);
   const files: string[] = [];
 
   for (const entry of entries) {
-    const fullPath = join(directory, entry.name);
+    const relativePath = `${relativeDirectory}/${entry.name}`;
+    if (entry.isSymbolicLink()) {
+      throw new Error(`${relativePath}: src/content must not contain symbolic links`);
+    }
     if (entry.isDirectory()) {
-      files.push(...await contentFiles(fullPath));
+      files.push(...await contentFiles(root, relativePath));
     } else if (entry.isFile() && /\.mdx?$/.test(entry.name)) {
-      files.push(fullPath);
+      files.push(relativePath);
+    } else if (!entry.isFile()) {
+      throw new Error(`${relativePath}: src/content must contain only directories and regular files`);
     }
   }
 
@@ -59,15 +68,15 @@ async function contentFiles(directory: string): Promise<string[]> {
 
 export async function loadSourceRecords(root: string): Promise<SourceRecord[]> {
   const records: SourceRecord[] = [];
+  const contentRoot = join(root, 'src', 'content');
 
   for (const collection of sourceCollections) {
-    const directory = join(root, 'src', 'content', collection);
-    for (const filePath of await contentFiles(directory)) {
-      const filename = filePath.slice(directory.length + 1).replaceAll('\\', '/');
+    for (const relativePath of await contentFiles(contentRoot, collection)) {
+      const filename = relativePath.slice(collection.length + 1);
       if (filename.includes('/')) {
         throw new Error(`${filename}: nested content IDs are not supported by the public route contract`);
       }
-      const source = await readFile(filePath, 'utf8');
+      const source = await readAllowlistedTextFile(contentRoot, relativePath);
       const parsed = matter(source);
       const id = filename.replace(/\.mdx?$/, '');
       records.push(parseSourceRecord({
@@ -107,7 +116,7 @@ function memoryBodyHtml(body: string): string {
 }
 
 export async function loadPublicMemoryRecords(root: string): Promise<Array<Extract<PublicRecord, { collection: 'memory' }>>> {
-  const source = await readFile(join(root, 'src', 'data', 'memory.public.json'), 'utf8');
+  const source = await readAllowlistedTextFile(join(root, 'src', 'data'), 'memory.public.json');
   const projection = publicMemoryProjectionSchema.parse(JSON.parse(source));
   const generatedAt = projection.generatedAt ?? '1970-01-01T00:00:00.000Z';
   const thoughts = new Map(projection.thoughts.map((thought) => [thought.slug, thought]));
@@ -242,13 +251,16 @@ export async function resolveSourceMedia(
   }
   if (!/^[a-z0-9][a-z0-9-]*$/.test(mediaId)) throw new Error('invalid public media id');
 
-  const directory = join(root, 'src', 'assets', 'content', collection, slug);
-  const manifestPath = join(directory, 'media.yml');
-  const manifest = sourceMediaManifestSchema.parse(parseYaml(await readFile(manifestPath, 'utf8')));
+  const mediaRoot = join(root, 'src', 'assets', 'content');
+  const mediaDirectory = `${collection}/${slug}`;
+  const manifestPath = `${mediaDirectory}/media.yml`;
+  const manifest = sourceMediaManifestSchema.parse(parseYaml(
+    await readAllowlistedTextFile(mediaRoot, manifestPath),
+  ));
   const item = manifest.items.find((candidate) => candidate.id === mediaId);
   if (!item) throw new Error(`${manifestPath}: unknown media id ${mediaId}`);
 
-  const asset = await readFile(join(directory, item.file));
+  const asset = await readAllowlistedRegularFile(mediaRoot, `${mediaDirectory}/${item.file}`);
   const format = extname(item.file).slice(1) as VerifiableSourceInputFormat;
   const actualDimensions = sourceImageDimensions(asset, format);
   const width = item.width ?? actualDimensions.width;

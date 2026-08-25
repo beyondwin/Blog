@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, symlink } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -131,5 +131,106 @@ describe('immutable public release building', () => {
     await symlink(external.releasePath, join(releasesRoot, external.releaseId), 'dir');
 
     await expect(buildPublicRelease({ root: sourceRoot, releasesRoot })).rejects.toThrow(/symbolic link|containment/i);
+  });
+
+  it('rejects a symlinked source-media leaf even when the target bytes match the manifest', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-leaf-link-'));
+    const sourceRoot = join(sandbox, 'source');
+    const assetPath = join(sourceRoot, 'src', 'assets', 'content', 'articles', 'public-fixture', 'hero.png');
+    const externalPath = join(sandbox, 'external-hero.png');
+    await writeReleaseFixture(sourceRoot);
+    await rename(assetPath, externalPath);
+    await symlink(externalPath, assetPath, 'file');
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/symbolic link/iu);
+  });
+
+  it('rejects a symlinked source-media ancestor directory', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-media-directory-link-'));
+    const sourceRoot = join(sandbox, 'source');
+    const mediaPath = join(sourceRoot, 'src', 'assets', 'content', 'articles', 'public-fixture');
+    const externalPath = join(sandbox, 'external-public-fixture-media');
+    await writeReleaseFixture(sourceRoot);
+    await rename(mediaPath, externalPath);
+    await symlink(externalPath, mediaPath, 'dir');
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/symbolic link/iu);
+  });
+
+  it.each([
+    {
+      name: 'published review missing bibliography, verdict, and cover state',
+      collection: 'reviews',
+      slug: 'missing-review-fields',
+      fields: ['itemType: book', 'itemTitle: Missing review fields'],
+      error: 'published review requires itemAuthor, isbn13, publisher, verdict, and coverState',
+    },
+    {
+      name: 'published verified review missing cover media',
+      collection: 'reviews',
+      slug: 'verified-without-cover',
+      fields: [
+        'itemType: book',
+        'itemTitle: Verified without cover',
+        'itemAuthor: Author',
+        'isbn13: "9788990247674"',
+        'publisher: Publisher',
+        'verdict: Verdict',
+        'coverState: verified',
+      ],
+      error: 'coverState verified requires coverMedia',
+    },
+    {
+      name: 'published hold review with cover media',
+      collection: 'reviews',
+      slug: 'hold-with-cover',
+      fields: [
+        'itemType: book',
+        'itemTitle: Hold with cover',
+        'itemAuthor: Author',
+        'isbn13: "9788990247674"',
+        'publisher: Publisher',
+        'verdict: Verdict',
+        'coverState: hold',
+        'coverMedia: cover',
+      ],
+      error: 'coverState hold forbids coverMedia',
+    },
+    {
+      name: 'published travel without privacy review and lead media',
+      collection: 'travel',
+      slug: 'unreviewed-travel',
+      fields: ['location: Seoul', 'privacyReviewed: false'],
+      error: 'published travel requires privacyReviewed true and leadMedia',
+    },
+  ])('rejects $name at the release-builder boundary', async ({ collection, slug, fields, error }) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-published-rule-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeFile(join(sourceRoot, 'src', 'content', collection, `${slug}.mdx`), [
+      '---',
+      `title: ${slug}`,
+      'description: Invalid published fixture',
+      'createdAt: "2026-08-23"',
+      'updatedAt: "2026-08-23"',
+      'status: published',
+      'draft: false',
+      ...fields,
+      '---',
+      '',
+      'Invalid published fixture.',
+      '',
+    ].join('\n'));
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(error);
   });
 });

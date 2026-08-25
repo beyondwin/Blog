@@ -68,6 +68,17 @@ function hasPublicPublicationState(record: PublicRecord): boolean {
   return isPublicRecord({ status: state.status, draft: state.draft });
 }
 
+function incumbentRecordDate(record: PublicRecord): string {
+  if (record.collection === 'reviews' && record.completedAt) return record.completedAt;
+  if (record.collection === 'travel' && record.visitedAt) return record.visitedAt;
+  return record.createdAt;
+}
+
+function compareIncumbentLatestFirst(left: PublicRecord, right: PublicRecord): number {
+  const dateOrder = Date.parse(incumbentRecordDate(right)) - Date.parse(incumbentRecordDate(left));
+  return dateOrder || left.id.localeCompare(right.id);
+}
+
 export function recordsForCollection<C extends CandidateCollection>(
   release: CandidateRelease,
   collection: C,
@@ -76,7 +87,7 @@ export function recordsForCollection<C extends CandidateCollection>(
     .filter((record) => record.collection === collection)
     .filter(hasPublicPublicationState)
     .filter((record) => record.href === `/${collection}/${record.id}/`)
-    .sort((left, right) => left.id.localeCompare(right.id));
+    .sort(compareIncumbentLatestFirst);
   return records as Array<CandidateRecord<C>>;
 }
 

@@ -1,9 +1,13 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
 import type { PublicMedia } from '@beyondwin/contracts';
 import sharp from 'sharp';
 import { parse as parseYaml } from 'yaml';
+import {
+  readAllowlistedRegularFile,
+  readAllowlistedTextFile,
+} from '../allowlisted-source-file';
 import { sourceMediaManifestSchema, type VerifiableSourceInputFormat } from '../schemas';
 import { resolveSourceMedia } from '../source-records';
 
@@ -51,7 +55,8 @@ export interface SourceMediaBuildInput {
   recordId: string;
   role: ResponsiveMediaRole;
   provenanceUrl: string;
-  sourceFilePath: string;
+  sourceRoot: string;
+  sourceRelativePath: string;
 }
 
 function checksum(buffer: Buffer): string {
@@ -108,9 +113,10 @@ export async function loadSourceMediaBuildInput(
   role: ResponsiveMediaRole,
 ): Promise<SourceMediaBuildInput> {
   const publicMedia = await resolveSourceMedia(root, collection, recordId, mediaId);
-  const mediaDirectory = join(root, 'src', 'assets', 'content', collection, recordId);
+  const sourceRoot = join(root, 'src', 'assets', 'content');
+  const mediaDirectory = `${collection}/${recordId}`;
   const manifest = sourceMediaManifestSchema.parse(parseYaml(
-    await readFile(join(mediaDirectory, 'media.yml'), 'utf8'),
+    await readAllowlistedTextFile(sourceRoot, `${mediaDirectory}/media.yml`),
   ));
   const item = manifest.items.find((candidate) => candidate.id === mediaId);
   if (!item) throw new Error(`unknown public media ${collection}/${recordId}/${mediaId}`);
@@ -121,7 +127,8 @@ export async function loadSourceMediaBuildInput(
     recordId,
     role,
     provenanceUrl: item.sourceUrl ?? `/${collection}/${recordId}/`,
-    sourceFilePath: join(mediaDirectory, item.file),
+    sourceRoot,
+    sourceRelativePath: `${mediaDirectory}/${item.file}`,
   };
 }
 
@@ -137,7 +144,7 @@ export async function buildResponsiveMedia(
   input: SourceMediaBuildInput,
   releaseRoot: string,
 ): Promise<ReleaseMediaAsset> {
-  const sourceBytes = await readFile(input.sourceFilePath);
+  const sourceBytes = await readAllowlistedRegularFile(input.sourceRoot, input.sourceRelativePath);
   if (checksum(sourceBytes) !== input.publicMedia.checksum) {
     throw new Error(`${input.collection}/${input.recordId}/${input.publicMedia.id}: source checksum changed`);
   }
