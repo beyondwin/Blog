@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "implementation_commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0",
+  "implementation_commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
   "release": {
     "release_id": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
     "active_pointer_hash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
@@ -14,7 +14,13 @@
     "astro_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37",
     "rollback_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37"
   },
-  "route_parity": null,
+  "route_parity": {
+    "receipt_path": "docs/notes/project/evidence/public-site-local-receipt.json",
+    "receipt_hash": "sha256:c1391d32c41186186da248cbd69d0e8758ac2098d8e7032fd2d57c8a57cc0f2a",
+    "inventory_hash": "sha256:1dda2a3b837dcbbab650358cf145481cc81210470a6d5677c7b1958b7c275f18",
+    "route_count": 80,
+    "failures": []
+  },
   "task14": {
     "eligible": true,
     "report_path": ".superpowers/sdd/public-reading-continuity-implementation-plan/task-14-report.md",
@@ -39,8 +45,58 @@
       { "route": "/memory/agent-harnesses-are-operating-systems/", "viewport": "390×844", "lcp_median_ms": 20, "cls_median": 0, "initial_js_gzip_bytes": 105474, "image_bytes": 0, "mandatory_issues": 0 }
     ]
   },
-  "local_proxy": null,
-  "clean_host": null,
+  "local_proxy": {
+    "receipt_path": "docs/notes/project/evidence/public-site-local-receipt.json",
+    "receipt_hash": "sha256:c1391d32c41186186da248cbd69d0e8758ac2098d8e7032fd2d57c8a57cc0f2a",
+    "transitions": [
+      {
+        "target": "react",
+        "routes": [
+          { "path": "/", "status": 200, "target_header": "react", "body_hash": "sha256:340a27c997f4db8e0bb1f0907e62fd7cc494fdc0716f0d48e72ec81189135acd" },
+          { "path": "/articles/why-i-read-in-the-ai-era/", "status": 200, "target_header": "react", "body_hash": "sha256:96ac6af6c1659ece69d83964561f854c27f78ae24828eea331ae7af247c3593d" },
+          { "path": "/reviews/black-swan/", "status": 200, "target_header": "react", "body_hash": "sha256:11d9653f15047f63c09143e528817eb9f8e8f9e9e7952d6a3ab7879bc035ef98" },
+          { "path": "/memory/agent-harnesses-are-operating-systems/", "status": 200, "target_header": "react", "body_hash": "sha256:87600579ae24a1eec8db021006ddcf551e6d4b659e79103a4156781e2c75240b" },
+          { "path": "/search/", "status": 200, "target_header": "react", "body_hash": "sha256:2d9263c1bdf0b8ef240bdfb5c961ffa4ac2c898dedddd24429538a45a0bff064" },
+          { "path": "/tags/AI/", "status": 200, "target_header": "react", "body_hash": "sha256:59fbb29afaf0878186249b9728e2d3e0754e45443faae77e1a35b14154028c86" },
+          { "path": "/reviews/the-life-you-can-save/", "status": 200, "target_header": "react", "body_hash": "sha256:5cb223546a1774ae76580c0880b6d4aa961bac8ec4c3dcc33718dfe4d4df5fbf" }
+        ]
+      },
+      {
+        "target": "astro",
+        "routes": [
+          { "path": "/", "status": 200, "target_header": "astro", "body_hash": "sha256:a1720671f1d3cbcd1a45bd5b106f0b4d098fec4df7f112b1cffe2e3558b9181c" },
+          { "path": "/articles/why-i-read-in-the-ai-era/", "status": 200, "target_header": "astro", "body_hash": "sha256:b1365d3b7085f1ed0dccd6e320bb1a470af8319b2815736b27dab187188c7d70" },
+          { "path": "/reviews/black-swan/", "status": 200, "target_header": "astro", "body_hash": "sha256:8d2f0c544e6a691e1179a6770d4537e3e197d67336a3767a23b3d2a268643f9b" },
+          { "path": "/memory/agent-harnesses-are-operating-systems/", "status": 200, "target_header": "astro", "body_hash": "sha256:5de2c15f8938f29061955d1bb1232b50dd2507688beda191ced3203e3909aa8d" },
+          { "path": "/search/", "status": 200, "target_header": "astro", "body_hash": "sha256:82b5fe8388401f6c81c9be0150a5a8c57574f1956ca6c47365bf7a98631d9595" },
+          { "path": "/tags/AI/", "status": 200, "target_header": "astro", "body_hash": "sha256:c35ba08bd75a5b95fd80a39a866c3aa9707870821ffaea1873ca518897f6c725" },
+          { "path": "/reviews/the-life-you-can-save/", "status": 200, "target_header": "astro", "body_hash": "sha256:e7bcc1c44c2d814f9f9c4437c2c8b1be35504f34b31abcf36bcc46d1dbefb5ca" }
+        ]
+      },
+      {
+        "target": "react",
+        "routes": [
+          { "path": "/", "status": 200, "target_header": "react", "body_hash": "sha256:340a27c997f4db8e0bb1f0907e62fd7cc494fdc0716f0d48e72ec81189135acd" },
+          { "path": "/articles/why-i-read-in-the-ai-era/", "status": 200, "target_header": "react", "body_hash": "sha256:96ac6af6c1659ece69d83964561f854c27f78ae24828eea331ae7af247c3593d" },
+          { "path": "/reviews/black-swan/", "status": 200, "target_header": "react", "body_hash": "sha256:11d9653f15047f63c09143e528817eb9f8e8f9e9e7952d6a3ab7879bc035ef98" },
+          { "path": "/memory/agent-harnesses-are-operating-systems/", "status": 200, "target_header": "react", "body_hash": "sha256:87600579ae24a1eec8db021006ddcf551e6d4b659e79103a4156781e2c75240b" },
+          { "path": "/search/", "status": 200, "target_header": "react", "body_hash": "sha256:2d9263c1bdf0b8ef240bdfb5c961ffa4ac2c898dedddd24429538a45a0bff064" },
+          { "path": "/tags/AI/", "status": 200, "target_header": "react", "body_hash": "sha256:59fbb29afaf0878186249b9728e2d3e0754e45443faae77e1a35b14154028c86" },
+          { "path": "/reviews/the-life-you-can-save/", "status": 200, "target_header": "react", "body_hash": "sha256:5cb223546a1774ae76580c0880b6d4aa961bac8ec4c3dcc33718dfe4d4df5fbf" }
+        ]
+      }
+    ],
+    "processes_cleaned": true,
+    "ports_free_after": true
+  },
+  "clean_host": {
+    "receipt_path": "docs/notes/project/evidence/public-site-clean-host-receipt.json",
+    "receipt_hash": "sha256:91274c388009cb7aa0cfcc400bdf0db5d7bf321374cd698ab20ad9e7f8809a9d",
+    "eligible": true,
+    "implementation_commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+    "archive_hash": "sha256:d6044dcce2c104fd7be56415a81645d64cdab0bda56ee5c3355921ff4f54863e",
+    "temp_removed": true
+  },
   "execution_log": [
     {
       "schema_version": 1,
@@ -49,6 +105,7 @@
       "route": "/reviews/black-swan/",
       "status": "passed",
       "machine_environment_provenance": "not_measured",
+      "machine_exact_command_provenance": "not_measured",
       "production": false
     },
     {
@@ -71,6 +128,51 @@
       "failed_route": "/memory/map/",
       "failure": "dynamic final URL/redirect drifted",
       "clean_host": "not_measured",
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "local_cutover_passed",
+      "commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+      "receipt_hash": "sha256:c1391d32c41186186da248cbd69d0e8758ac2098d8e7032fd2d57c8a57cc0f2a",
+      "transitions": ["react", "astro", "react"],
+      "dynamic_routes": 80,
+      "mandatory_failures": 0,
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "clean_host_preflight_refused",
+      "commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+      "reason": "dirty_worktree_local_receipt",
+      "proof_lifecycle_started": false,
+      "archive_started": false,
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "clean_host_preflight_refused",
+      "commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+      "reason": "head_mismatch_after_local_receipt_commit",
+      "proof_lifecycle_started": false,
+      "archive_started": false,
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "clean_host_passed",
+      "commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+      "receipt_hash": "sha256:91274c388009cb7aa0cfcc400bdf0db5d7bf321374cd698ab20ad9e7f8809a9d",
+      "detached_exact_head": true,
+      "proof_run_count": 1,
+      "route_count": 80,
+      "errors": [],
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "task_16_blocked",
+      "reason": "production authorization and observation are absent",
       "production": false
     }
   ],
