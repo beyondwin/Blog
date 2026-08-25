@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "implementation_commit": "b981faab70b2264b85032439401772503e96410b",
+  "implementation_commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0",
   "release": {
     "release_id": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
     "active_pointer_hash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
@@ -18,7 +18,7 @@
   "task14": {
     "eligible": true,
     "report_path": ".superpowers/sdd/public-reading-continuity-implementation-plan/task-14-report.md",
-    "report_hash": "sha256:48f98a9c96068e25ea2a4fb40280ea45b77cbb0e2c330f051bd6990e97f0fee1",
+    "report_hash": "sha256:5e40ba0b247f498ad549e7d80669ea20b88edd0c350b72aa7716bacc991374fe",
     "performance_receipt_path": "docs/notes/project/evidence/public-site-review-performance.json",
     "performance_receipt_hash": "sha256:c86f576974669516ae4d750ab726538bcb6d3002a524b1da2b1c6bc4f8f44081",
     "performance_commit": "b8ed8fd914a468f11108509761857d694c5e44cb",
@@ -48,6 +48,7 @@
       "commit": "b8ed8fd914a468f11108509761857d694c5e44cb",
       "route": "/reviews/black-swan/",
       "status": "passed",
+      "machine_environment_provenance": "not_measured",
       "production": false
     },
     {
@@ -56,6 +57,19 @@
       "commit": "b981faab70b2264b85032439401772503e96410b",
       "attempt_count": 4,
       "dynamic_crawl": "not_measured",
+      "clean_host": "not_measured",
+      "production": false
+    },
+    {
+      "schema_version": 1,
+      "event_kind": "local_cutover_blocked",
+      "commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0",
+      "attempt_count": 1,
+      "transitions": "not_measured_unsealed",
+      "dynamic_routes_visited": 80,
+      "dynamic_receipt": "not_written",
+      "failed_route": "/memory/map/",
+      "failure": "dynamic final URL/redirect drifted",
       "clean_host": "not_measured",
       "production": false
     }

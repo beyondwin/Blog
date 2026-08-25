@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
   "status": "not_measured",
-  "implementation_commit": "b981faab70b2264b85032439401772503e96410b",
-  "reason": "The prerequisite replacement local drill did not complete."
+  "implementation_commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0",
+  "reason": "The one final local drill failed exact /memory/map/ final URL/redirect validation, so the clean-host prerequisite was not satisfied."
 }

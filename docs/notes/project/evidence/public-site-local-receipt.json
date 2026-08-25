@@ -1,14 +1,15 @@
 {
   "schema_version": 2,
   "status": "blocked",
-  "implementation_commit": "b981faab70b2264b85032439401772503e96410b",
-  "reason": "No complete replacement drill receipt was produced within the bounded safety-fix loop.",
-  "dynamic_crawl": "not_measured",
+  "implementation_commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0",
+  "reason": "The one final drill visited the 80-route inventory but failed exact final URL/redirect validation at /memory/map/ before a raw receipt was written.",
+  "dynamic_crawl": "not_measured_unsealed",
   "attempts": [
     { "commit": "b8ed8fd914a468f11108509761857d694c5e44cb", "refusal": "npm command title not stable; orphan PID 49587 identified and stopped" },
     { "commit": "63797edeeaa92f5ea24151d7250b29191970971f", "refusal": "npm command title not stable; owned group cleanup passed" },
     { "commit": "2b1fd17807c6b88982764dec8508e3d39e6d31bc", "refusal": "listener PPID ancestry did not prove owned detached group" },
-    { "commit": "2177e158a7db478b4d58c2742b02c609d6c201f3", "refusal": "empty lsof row parsed as PID zero before crawl" }
+    { "commit": "2177e158a7db478b4d58c2742b02c609d6c201f3", "refusal": "empty lsof row parsed as PID zero before crawl" },
+    { "commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0", "refusal": "one final drill failed exact final URL/redirect validation at /memory/map/; no receipt or retry" }
   ],
   "processes_cleaned": true,
   "ports_free_after": true,
