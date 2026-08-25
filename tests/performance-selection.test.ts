@@ -36,4 +36,11 @@ describe('Task 14 performance route selection', () => {
   ])('rejects %j as an %s selector', (selector, reason) => {
     expect(() => selectPerformanceRoutes(selector)).toThrow(reason);
   });
+
+  it.each(['constructor', 'toString', '__proto__'])(
+    'rejects inherited Object prototype selector %j as unknown',
+    (selector) => {
+      expect(() => selectPerformanceRoutes(selector)).toThrow('unknown selector');
+    },
+  );
 });

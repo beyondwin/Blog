@@ -39,7 +39,7 @@ export function selectPerformanceRoutes(selector: string | undefined): Performan
     throw new Error(`${PERFORMANCE_ROUTE_SELECTOR_ENV} contains an empty selector`);
   }
   for (const name of names) {
-    if (!(name in ROUTES_BY_NAME)) {
+    if (!Object.hasOwn(ROUTES_BY_NAME, name)) {
       throw new Error(`${PERFORMANCE_ROUTE_SELECTOR_ENV} contains unknown selector: ${name}`);
     }
   }
