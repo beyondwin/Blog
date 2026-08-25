@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { extname, join } from 'node:path';
+import { extname } from 'node:path';
 import {
   parsePublicRecord,
   publicMediaSchema,
@@ -45,8 +45,8 @@ export function parseSourceRecord(input: unknown): SourceRecord {
   return sourceRecordSchema.parse({ ...candidate, href });
 }
 
-async function contentFiles(root: string, relativeDirectory: string): Promise<string[]> {
-  const entries = await readAllowlistedDirectory(root, relativeDirectory);
+async function contentFiles(repositoryRoot: string, relativeDirectory: string): Promise<string[]> {
+  const entries = await readAllowlistedDirectory(repositoryRoot, relativeDirectory);
   const files: string[] = [];
 
   for (const entry of entries) {
@@ -55,7 +55,7 @@ async function contentFiles(root: string, relativeDirectory: string): Promise<st
       throw new Error(`${relativePath}: src/content must not contain symbolic links`);
     }
     if (entry.isDirectory()) {
-      files.push(...await contentFiles(root, relativePath));
+      files.push(...await contentFiles(repositoryRoot, relativePath));
     } else if (entry.isFile() && /\.mdx?$/.test(entry.name)) {
       files.push(relativePath);
     } else if (!entry.isFile()) {
@@ -68,15 +68,15 @@ async function contentFiles(root: string, relativeDirectory: string): Promise<st
 
 export async function loadSourceRecords(root: string): Promise<SourceRecord[]> {
   const records: SourceRecord[] = [];
-  const contentRoot = join(root, 'src', 'content');
 
   for (const collection of sourceCollections) {
-    for (const relativePath of await contentFiles(contentRoot, collection)) {
-      const filename = relativePath.slice(collection.length + 1);
+    const collectionDirectory = `src/content/${collection}`;
+    for (const relativePath of await contentFiles(root, collectionDirectory)) {
+      const filename = relativePath.slice(collectionDirectory.length + 1);
       if (filename.includes('/')) {
         throw new Error(`${filename}: nested content IDs are not supported by the public route contract`);
       }
-      const source = await readAllowlistedTextFile(contentRoot, relativePath);
+      const source = await readAllowlistedTextFile(root, relativePath);
       const parsed = matter(source);
       const id = filename.replace(/\.mdx?$/, '');
       records.push(parseSourceRecord({
@@ -116,7 +116,7 @@ function memoryBodyHtml(body: string): string {
 }
 
 export async function loadPublicMemoryRecords(root: string): Promise<Array<Extract<PublicRecord, { collection: 'memory' }>>> {
-  const source = await readAllowlistedTextFile(join(root, 'src', 'data'), 'memory.public.json');
+  const source = await readAllowlistedTextFile(root, 'src/data/memory.public.json');
   const projection = publicMemoryProjectionSchema.parse(JSON.parse(source));
   const generatedAt = projection.generatedAt ?? '1970-01-01T00:00:00.000Z';
   const thoughts = new Map(projection.thoughts.map((thought) => [thought.slug, thought]));
@@ -251,16 +251,15 @@ export async function resolveSourceMedia(
   }
   if (!/^[a-z0-9][a-z0-9-]*$/.test(mediaId)) throw new Error('invalid public media id');
 
-  const mediaRoot = join(root, 'src', 'assets', 'content');
-  const mediaDirectory = `${collection}/${slug}`;
+  const mediaDirectory = `src/assets/content/${collection}/${slug}`;
   const manifestPath = `${mediaDirectory}/media.yml`;
   const manifest = sourceMediaManifestSchema.parse(parseYaml(
-    await readAllowlistedTextFile(mediaRoot, manifestPath),
+    await readAllowlistedTextFile(root, manifestPath),
   ));
   const item = manifest.items.find((candidate) => candidate.id === mediaId);
   if (!item) throw new Error(`${manifestPath}: unknown media id ${mediaId}`);
 
-  const asset = await readAllowlistedRegularFile(mediaRoot, `${mediaDirectory}/${item.file}`);
+  const asset = await readAllowlistedRegularFile(root, `${mediaDirectory}/${item.file}`);
   const format = extname(item.file).slice(1) as VerifiableSourceInputFormat;
   const actualDimensions = sourceImageDimensions(asset, format);
   const width = item.width ?? actualDimensions.width;

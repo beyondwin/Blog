@@ -98,29 +98,28 @@ export const sourceRecordSchema = z.discriminatedUnion('collection', [
     });
   }
   if (record.collection === 'reviews') {
-    if (
-      record.status === 'published'
-      && (!record.itemAuthor || !record.isbn13 || !record.publisher || !record.verdict || !record.coverState)
-    ) {
-      context.addIssue({
-        code: 'custom',
-        path: ['status'],
-        message: 'published review requires itemAuthor, isbn13, publisher, verdict, and coverState',
-      });
-    }
-    if (record.coverState === 'verified' && !record.coverMedia) {
-      context.addIssue({
-        code: 'custom',
-        path: ['coverMedia'],
-        message: 'coverState verified requires coverMedia',
-      });
-    }
-    if (record.coverState === 'hold' && record.coverMedia) {
-      context.addIssue({
-        code: 'custom',
-        path: ['coverMedia'],
-        message: 'coverState hold forbids coverMedia',
-      });
+    if (record.status === 'published') {
+      if (!record.itemAuthor || !record.isbn13 || !record.publisher || !record.verdict || !record.coverState) {
+        context.addIssue({
+          code: 'custom',
+          path: ['status'],
+          message: 'published review requires itemAuthor, isbn13, publisher, verdict, and coverState',
+        });
+      }
+      if (record.coverState === 'verified' && !record.coverMedia) {
+        context.addIssue({
+          code: 'custom',
+          path: ['coverMedia'],
+          message: 'coverState verified requires coverMedia',
+        });
+      }
+      if (record.coverState === 'hold' && record.coverMedia) {
+        context.addIssue({
+          code: 'custom',
+          path: ['coverMedia'],
+          message: 'coverState hold forbids coverMedia',
+        });
+      }
     }
   }
   if (

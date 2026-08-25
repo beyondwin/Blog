@@ -55,7 +55,7 @@ export interface SourceMediaBuildInput {
   recordId: string;
   role: ResponsiveMediaRole;
   provenanceUrl: string;
-  sourceRoot: string;
+  repositoryRoot: string;
   sourceRelativePath: string;
 }
 
@@ -113,10 +113,9 @@ export async function loadSourceMediaBuildInput(
   role: ResponsiveMediaRole,
 ): Promise<SourceMediaBuildInput> {
   const publicMedia = await resolveSourceMedia(root, collection, recordId, mediaId);
-  const sourceRoot = join(root, 'src', 'assets', 'content');
-  const mediaDirectory = `${collection}/${recordId}`;
+  const mediaDirectory = `src/assets/content/${collection}/${recordId}`;
   const manifest = sourceMediaManifestSchema.parse(parseYaml(
-    await readAllowlistedTextFile(sourceRoot, `${mediaDirectory}/media.yml`),
+    await readAllowlistedTextFile(root, `${mediaDirectory}/media.yml`),
   ));
   const item = manifest.items.find((candidate) => candidate.id === mediaId);
   if (!item) throw new Error(`unknown public media ${collection}/${recordId}/${mediaId}`);
@@ -127,7 +126,7 @@ export async function loadSourceMediaBuildInput(
     recordId,
     role,
     provenanceUrl: item.sourceUrl ?? `/${collection}/${recordId}/`,
-    sourceRoot,
+    repositoryRoot: root,
     sourceRelativePath: `${mediaDirectory}/${item.file}`,
   };
 }
@@ -144,7 +143,7 @@ export async function buildResponsiveMedia(
   input: SourceMediaBuildInput,
   releaseRoot: string,
 ): Promise<ReleaseMediaAsset> {
-  const sourceBytes = await readAllowlistedRegularFile(input.sourceRoot, input.sourceRelativePath);
+  const sourceBytes = await readAllowlistedRegularFile(input.repositoryRoot, input.sourceRelativePath);
   if (checksum(sourceBytes) !== input.publicMedia.checksum) {
     throw new Error(`${input.collection}/${input.recordId}/${input.publicMedia.id}: source checksum changed`);
   }

@@ -305,6 +305,41 @@ describe('source record parsing', () => {
     expect(parseSourceRecord(input)).toMatchObject({ status: 'review', draft: true });
   });
 
+  it.each([
+    {
+      coverState: 'verified',
+      coverMedia: undefined,
+      error: 'coverState verified requires coverMedia',
+    },
+    {
+      coverState: 'hold',
+      coverMedia: 'unreleased-cover',
+      error: 'coverState hold forbids coverMedia',
+    },
+  ] as const)('applies $coverState cover coherence only when the review is published', ({
+    coverState,
+    coverMedia,
+    error,
+  }) => {
+    const fixture = {
+      collection: 'reviews',
+      id: `${coverState}-draft-review`,
+      title: `${coverState} draft review`,
+      description: 'Unpublished review fixture',
+      createdAt: '2026-08-21',
+      updatedAt: '2026-08-23',
+      status: 'review',
+      draft: true,
+      itemType: 'book',
+      itemTitle: 'Unpublished review item',
+      coverState,
+      ...(coverMedia ? { coverMedia } : {}),
+    } as const;
+
+    expect(parseSourceRecord(fixture)).toMatchObject({ status: 'review', draft: true, coverState });
+    expect(() => parseSourceRecord({ ...fixture, status: 'published', draft: false })).toThrow(error);
+  });
+
   it('rejects an update date before its creation date', () => {
     expect(() => parseSourceRecord({
       collection: 'articles',
@@ -460,6 +495,69 @@ describe('framework-neutral corpus loading', () => {
 });
 
 describe('allowlisted source file containment', () => {
+  it('rejects a symlinked repository root before reading public content', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-repository-root-link-'));
+    const fixtureRoot = join(sandbox, 'source');
+    const linkedRoot = join(sandbox, 'source-link');
+
+    try {
+      await writeReleaseFixture(fixtureRoot);
+      await symlink(fixtureRoot, linkedRoot, 'dir');
+
+      await expect(loadSourceRecords(linkedRoot)).rejects.toThrow(/symbolic link/iu);
+    } finally {
+      await rm(sandbox, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a symlinked src ancestor before reading public content', async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), 'beyondwin-content-src-link-'));
+    const srcPath = join(fixtureRoot, 'src');
+    const externalPath = join(fixtureRoot, 'external-src');
+
+    try {
+      await writeReleaseFixture(fixtureRoot);
+      await rename(srcPath, externalPath);
+      await symlink(externalPath, srcPath, 'dir');
+
+      await expect(loadSourceRecords(fixtureRoot)).rejects.toThrow(/symbolic link/iu);
+    } finally {
+      await rm(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a symlinked src ancestor before reading the public-memory projection', async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), 'beyondwin-memory-src-link-'));
+    const srcPath = join(fixtureRoot, 'src');
+    const externalPath = join(fixtureRoot, 'external-src');
+
+    try {
+      await writeReleaseFixture(fixtureRoot);
+      await rename(srcPath, externalPath);
+      await symlink(externalPath, srcPath, 'dir');
+
+      await expect(loadPublicMemoryRecords(fixtureRoot)).rejects.toThrow(/symbolic link/iu);
+    } finally {
+      await rm(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a symlinked src/data directory before reading the public-memory projection', async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), 'beyondwin-memory-data-link-'));
+    const dataPath = join(fixtureRoot, 'src', 'data');
+    const externalPath = join(fixtureRoot, 'external-data');
+
+    try {
+      await writeReleaseFixture(fixtureRoot);
+      await rename(dataPath, externalPath);
+      await symlink(externalPath, dataPath, 'dir');
+
+      await expect(loadPublicMemoryRecords(fixtureRoot)).rejects.toThrow(/symbolic link/iu);
+    } finally {
+      await rm(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
   it('rejects a symlinked content leaf even when its target is a valid MDX record', async () => {
     const fixtureRoot = await mkdtemp(join(tmpdir(), 'beyondwin-content-leaf-link-'));
     const sourcePath = join(fixtureRoot, 'src', 'content', 'articles', 'public-fixture.mdx');

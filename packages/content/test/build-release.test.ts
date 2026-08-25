@@ -163,6 +163,21 @@ describe('immutable public release building', () => {
     })).rejects.toThrow(/symbolic link/iu);
   });
 
+  it('rejects a symlinked src/assets ancestor before reading release media', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-assets-directory-link-'));
+    const sourceRoot = join(sandbox, 'source');
+    const assetsPath = join(sourceRoot, 'src', 'assets');
+    const externalPath = join(sandbox, 'external-assets');
+    await writeReleaseFixture(sourceRoot);
+    await rename(assetsPath, externalPath);
+    await symlink(externalPath, assetsPath, 'dir');
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/symbolic link/iu);
+  });
+
   it.each([
     {
       name: 'published review missing bibliography, verdict, and cover state',
