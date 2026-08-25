@@ -6,6 +6,7 @@ import {
   assertLocalReceiptMaterialGroups,
   deriveChangedSurfacePerformance,
   npmObservedCommandLine,
+  ownedCommandLineReady,
   validateOwnedProcessIdentity,
 } from './evidence-contracts.mts';
 
@@ -116,6 +117,14 @@ describe('source-bound cutover evidence contracts', () => {
     ]) expect(() => validateOwnedProcessIdentity(changed, { controllerPid: 99, expectedArgv: identity.argv })).toThrow();
     expect(npmObservedCommandLine(['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1']))
       .toBe('npm run site:preview --host 127.0.0.1');
+    expect(ownedCommandLineReady(
+      'node /opt/homebrew/opt/node@24/bin/npm run site:preview -- --host 127.0.0.1',
+      ['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1'],
+    )).toBe(false);
+    expect(ownedCommandLineReady(
+      'npm run site:preview --host 127.0.0.1',
+      ['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1'],
+    )).toBe(true);
   });
 
   it('requires the exact 80 dynamic route set with zero mandatory issues', () => {

@@ -10,7 +10,7 @@ import { readActiveRelease } from '../../packages/content/src/release/read-relea
 import { buildHtmlContract, type AstroBaseline } from '../../tools/parity/src/html-contract.ts';
 import { hashFiles, hashTree, readJson, sha256 } from './cutover-evidence.mts';
 import { checkExactDrillPorts, prepareStateFile, writeProxyTarget, type ProxyTarget } from './local-proxy.mts';
-import { deriveChangedSurfacePerformance, npmObservedCommandLine, sealChangedSurfacePerformance, validateOwnedProcessIdentity } from './evidence-contracts.mts';
+import { deriveChangedSurfacePerformance, npmObservedCommandLine, ownedCommandLineReady, sealChangedSurfacePerformance, validateOwnedProcessIdentity } from './evidence-contracts.mts';
 import type { ProxyTransition } from './verify-public-site.mts';
 
 const execFileAsync = promisify(execFile);
@@ -371,13 +371,22 @@ async function spawnedProcess(role: keyof typeof exactCommands, argv: readonly s
   const child = spawn(argv[0]!, argv.slice(1), { cwd: root, env: process.env, stdio: ['ignore', 'pipe', 'pipe'], shell: false, detached: true });
   if (!child.pid) throw new Error(`failed to start owned ${role} process`);
   child.stdout?.pipe(process.stdout); child.stderr?.pipe(process.stderr);
-  const observed = await processSnapshot(child.pid);
+  let observed = await processSnapshot(child.pid);
   const result = {
     role, child, argv: [...argv], root_pid: child.pid, root_ppid: process.pid,
     start_identity: observed.start_identity, observed, started_at: startedAt, term_sent_at: null,
     exited_at: null, exit_code: null, signal: null, stopped: false,
   };
   try {
+    await waitFor(async () => {
+      const candidate = await processSnapshot(child.pid!);
+      if (candidate.pid !== child.pid || candidate.ppid !== process.pid || candidate.start_identity !== result.start_identity) {
+        throw new Error(`owned ${role} process identity changed while waiting for stable command title`);
+      }
+      observed = candidate;
+      return ownedCommandLineReady(candidate.command_line, argv);
+    }, `owned ${role} npm command title`);
+    result.observed = observed;
     validateOwnedProcessIdentity(result, {
       controllerPid: process.pid,
       expectedArgv: argv,

@@ -233,6 +233,10 @@ export function npmObservedCommandLine(argv: readonly string[]): string {
   return argv.filter((argument) => argument !== '--').join(' ');
 }
 
+export function ownedCommandLineReady(actual: string, argv: readonly string[]): boolean {
+  return actual === npmObservedCommandLine(argv);
+}
+
 export function assertDynamicCrawl(value: unknown, expectedRoutes: readonly string[]): void {
   const crawl = array(value, 'dynamic crawl').map((entry, index) => record(entry, `dynamic crawl[${index}]`));
   const paths = crawl.map((entry) => string(entry.path, 'dynamic crawl path'));
