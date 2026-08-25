@@ -9,6 +9,7 @@ import {
   ownedCommandLineReady,
   validateOwnedProcessIdentity,
 } from './evidence-contracts.mts';
+import { parsePortOwnerPids } from './verify-rollback.mts';
 
 const HASH = `sha256:${'a'.repeat(64)}`;
 const COMMIT = 'b'.repeat(40);
@@ -141,6 +142,11 @@ describe('source-bound cutover evidence contracts', () => {
     const issue: Array<any> = structuredClone(crawl);
     issue[3].hydration_errors.push('mismatch');
     expect(() => assertDynamicCrawl(issue, routes)).toThrow(/mandatory|hydration/iu);
+  });
+
+  it('never turns an empty lsof row into PID zero', () => {
+    expect(parsePortOwnerPids('15513\n15514\n')).toEqual([15513, 15514]);
+    expect(parsePortOwnerPids('\n')).toEqual([]);
   });
 
   it('rejects tampering in every material local receipt group', () => {

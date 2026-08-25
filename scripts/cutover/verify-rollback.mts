@@ -415,7 +415,12 @@ async function descendantOf(pid: number, ancestor: number): Promise<boolean> {
 
 async function portOwnerPids(port: number): Promise<number[]> {
   const result = await execFileAsync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t']).catch(() => ({ stdout: '' }));
-  return [...new Set(result.stdout.split('\n').map(Number).filter(Number.isInteger))].sort((left, right) => left - right);
+  return parsePortOwnerPids(result.stdout);
+}
+
+export function parsePortOwnerPids(stdout: string): number[] {
+  return [...new Set(stdout.split('\n').map((value) => value.trim()).filter((value) => /^[1-9][0-9]*$/u.test(value)).map(Number))]
+    .sort((left, right) => left - right);
 }
 
 async function stopOwned(entry: Awaited<ReturnType<typeof spawnedProcess>>): Promise<void> {
