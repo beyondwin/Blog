@@ -91,11 +91,12 @@ describe('React Router current-behavior static route contract', () => {
       readFile(join(candidateRoot, 'app/routes/review.tsx'), 'utf8'),
       readFile(join(candidateRoot, 'app/routes/memory.tsx'), 'utf8'),
     ]);
-    const [tokens, shell, scene, reading, articleCss, reviewCss, memoryCss] = await Promise.all([
+    const [tokens, shell, scene, reading, readingSurface, articleCss, reviewCss, memoryCss] = await Promise.all([
       readFile(join(candidateRoot, 'src/ui/styles/tokens.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/shell.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/route-scene.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/route-reading.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/reading.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/route-article.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/route-review.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/route-memory.css'), 'utf8'),
@@ -105,6 +106,7 @@ describe('React Router current-behavior static route contract', () => {
       shell,
       scene,
       reading,
+      readingSurface,
       article: articleCss,
       review: reviewCss,
       memory: memoryCss,
@@ -116,17 +118,20 @@ describe('React Router current-behavior static route contract', () => {
     expect(homeSource).toContain("import('../../src/ui/styles/route-scene.css?inline')");
     expect(homeSource).not.toContain("import('../../src/ui/styles/scene.css?inline')");
     expect(articleSource).toContain("import('../../src/ui/styles/route-article.css?inline')");
+    expect(articleSource).toContain("import('../../src/ui/styles/reading.css?inline')");
     expect(reviewSource).toContain("import('../../src/ui/styles/route-review.css?inline')");
+    expect(reviewSource).toContain("import('../../src/ui/styles/reading.css?inline')");
     expect(memorySource).toContain("import('../../src/ui/styles/route-memory.css?inline')");
     expect(root.criticalCssForPath('/', cssSources)).toContain('.public-scene');
     expect(root.criticalCssForPath('/', cssSources)).not.toContain('.reading-sheet');
     expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.reading-sheet');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.article-masthead');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.book-sheet');
-    expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).toContain('.book-sheet');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.reading-threshold');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.review-reading-page .content-figure');
+    expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).toContain('.reading-threshold');
+    expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).toContain('.review-reading-page .content-figure');
     expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).not.toContain('.memory-thought');
     expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).toContain('.memory-thought');
-    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).not.toContain('.article-masthead');
+    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).not.toContain('.reading-threshold');
     expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.public-scene');
     expect(root.resolveCriticalCssForRender('route', null, 'tokens', 'shell'))
       .toBe('tokensshellroute');
@@ -213,10 +218,15 @@ describe('React Router current-behavior static route contract', () => {
     expect(homeHtml).toContain('글 읽기');
     expect(homeHtml).not.toContain('전체 보기');
     expect(articleHtml).toContain('<h1>AI 시대에, 나는 왜 책을 읽는가</h1>');
+    expect(articleHtml).toContain('<a class="context-return" href="/articles/">글 목록으로</a>');
+    expect(articleHtml).toContain('<h2 id="continue-reading-title">이어서 읽기</h2>');
+    expect(articleHtml).toContain('<a class="continue-reading__collection" href="/articles/">글 전체 보기</a>');
     expect(articleHtml).toContain('srcset="/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif 720w');
     expect(articleHtml).toContain('width="1536" height="1024"');
     expect(articleHtml).toContain('많아진 답과, 그 답을 어떻게 받아들일지에 대한 판단');
-    expect(reviewHtml).toContain('<h1 class="book-title">블랙스완</h1>');
+    expect(reviewHtml).toContain('<h1>블랙스완</h1>');
+    expect(reviewHtml).toContain('<a class="context-return" href="/reviews/">책 목록으로</a>');
+    expect(reviewHtml).toContain('<a class="continue-reading__collection" href="/reviews/">책 전체 보기</a>');
     expect(reviewHtml).toContain('width="458" height="671"');
     expect(memoryHtml).toContain('href="/articles/lazycodex-agent-harness-analysis/"');
     expect(memoryHtml).toContain('href="/memory/agent-workflows-need-review-gates/"');

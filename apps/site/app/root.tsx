@@ -13,6 +13,7 @@ const [tokensCss, shellCss] = import.meta.env.SSR
 interface CriticalCssSources {
   article: string;
   reading: string;
+  readingSurface: string;
   scene: string;
   memory: string;
   review: string;
@@ -28,9 +29,9 @@ export function criticalCssForPath(
   if (pathname === '/') {
     routeCss = sources.scene;
   } else if (pathname.startsWith('/articles/')) {
-    routeCss = `${sources.reading}${sources.article}`;
+    routeCss = `${sources.reading}${sources.readingSurface}${sources.article}`;
   } else if (pathname.startsWith('/reviews/')) {
-    routeCss = `${sources.reading}${sources.review}`;
+    routeCss = `${sources.reading}${sources.readingSurface}${sources.review}`;
   } else if (pathname.startsWith('/memory/')) {
     routeCss = `${sources.reading}${sources.memory}`;
   }

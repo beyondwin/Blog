@@ -78,7 +78,7 @@ describe('React Router emitted critical output', () => {
     });
 
     expect(routeCss[0]).not.toContain('.reading-sheet');
-    expect(routeCss[0]).not.toContain('.book-sheet');
+    expect(routeCss[0]).not.toContain('.reading-threshold');
     expect(routeCss[0]).toContain('.public-scene');
     expect(routeCss[0]).toContain('.visually-hidden');
     for (const detailCss of routeCss.slice(1)) {
@@ -88,15 +88,14 @@ describe('React Router emitted critical output', () => {
       expect(detailCss).toContain('[data-surface-mode=reading]');
       expect(detailCss).toContain('.reading-sheet');
     }
-    expect(routeCss[1]).toContain('.article-masthead');
-    expect(routeCss[1]).not.toContain('.book-sheet');
+    expect(routeCss[1]).toContain('.reading-threshold');
+    expect(routeCss[1]).not.toContain('.review-reading-page .content-figure');
     expect(routeCss[1]).not.toContain('.memory-thought');
-    expect(routeCss[2]).toContain('.book-sheet');
-    expect(routeCss[2]).not.toContain('.article-masthead');
+    expect(routeCss[2]).toContain('.reading-threshold');
+    expect(routeCss[2]).toContain('.review-reading-page .content-figure');
     expect(routeCss[2]).not.toContain('.memory-thought');
     expect(routeCss[3]).toContain('.memory-thought');
-    expect(routeCss[3]).not.toContain('.article-masthead');
-    expect(routeCss[3]).not.toContain('.book-sheet');
+    expect(routeCss[3]).not.toContain('.reading-threshold');
     expect(routeCss[0].length).toBeLessThan(10_000);
     for (const detailCss of routeCss.slice(1)) expect(detailCss.length).toBeLessThan(8_000);
     expect(homeHtml).toContain(
@@ -116,15 +115,13 @@ describe('React Router emitted critical output', () => {
     expect(rootAssets).toHaveLength(1);
     expect(rootAssets[0]?.source).not.toContain('.site-header__inner{');
     expect(rootAssets[0]?.source).not.toContain('.public-scene');
-    expect(rootAssets[0]?.source).not.toContain('.article-masthead');
-    expect(rootAssets[0]?.source).not.toContain('.book-sheet');
+    expect(rootAssets[0]?.source).not.toContain('.reading-threshold{');
     expect(rootAssets[0]?.source).not.toContain('.memory-thought');
 
     const bundledCriticalCss = [
       '.site-header__inner{',
       '.public-scene{',
-      '.article-masthead{',
-      '.book-sheet{',
+      '.reading-threshold{',
       '.memory-thought{',
     ];
     const bundledJavascript = assets.map(({ source }) => source).join('\n');

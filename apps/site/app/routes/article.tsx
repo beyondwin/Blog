@@ -1,28 +1,51 @@
 import type { PublicRecord } from '@beyondwin/contracts';
+import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { SiteShell } from '../../src/ui/components/SiteShell';
-import { type RouteCriticalCssHandle, DocumentMetadata, metadataForRecord } from '../root';
+import { ArticleReadingPage } from '../../src/ui/reading/ArticleReadingPage';
+import { selectContinuations, type ContinuationItem } from '../../src/ui/reading/select-continuations';
+import {
+  type RouteCriticalCssHandle,
+  DocumentMetadata,
+  metadataForRecord,
+  ResponsivePicture,
+} from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [readingCss, articleCss] = import.meta.env.SSR
+const [routeReadingCss, readingCss, articleCss] = import.meta.env.SSR
   ? await Promise.all([
       import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/reading.css?inline').then((module) => module.default),
       import('../../src/ui/styles/route-article.css?inline').then((module) => module.default),
     ])
-  : ['', ''];
+  : ['', '', ''];
 
 type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
-export interface ArticleData { record: ArticleRecord }
+type ReleaseAsset = PublicReleaseManifest['assets'][string];
+export interface ArticleData {
+  record: ArticleRecord;
+  featuredAsset?: ReleaseAsset;
+  continuations: ContinuationItem[];
+}
 
 export const handle: RouteCriticalCssHandle = {
-  criticalCss: `${readingCss}${articleCss}`,
+  criticalCss: `${routeReadingCss}${readingCss}${articleCss}`,
 };
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ArticleData> {
-  const record = params.slug
-    ? recordForRoute(await loadVerifiedRelease(), 'articles', params.slug)
-    : null;
+  const release = await loadVerifiedRelease();
+  const record = params.slug ? recordForRoute(release, 'articles', params.slug) : null;
   if (!record) throw new Response('Not Found', { status: 404 });
-  return { record };
+  const featuredAsset = record.featuredMedia
+    ? release.manifest.assets[`articles/${record.id}/${record.featuredMedia}`]
+    : undefined;
+  if (record.featuredMedia && !featuredAsset) {
+    throw new Error(`Verified release is missing articles/${record.id}/${record.featuredMedia}`);
+  }
+  return {
+    record,
+    continuations: selectContinuations(record, release.manifest.records),
+    ...(featuredAsset ? { featuredAsset } : {}),
+  };
 }
 
 export function meta({ data }: { data?: ArticleData }) {
@@ -30,10 +53,15 @@ export function meta({ data }: { data?: ArticleData }) {
 }
 
 export function ArticlePresentation({ data }: { data: ArticleData }) {
-  const incumbentBodyHtml = data.record.bodyHtml.replace(
-    /<small>beyondwin · <a href="[^"]+" rel="noreferrer">출처 · [^<]+<\/a><\/small>/gu,
-    '',
-  );
+  const media = data.featuredAsset ? (
+    <ResponsivePicture
+      asset={data.featuredAsset}
+      alt={data.featuredAsset.alt}
+      className="reading-threshold__media-image reading-threshold__media-image--article"
+      eager
+      sizes="(max-width: 720px) 30vw, 9rem"
+    />
+  ) : undefined;
   return (
     <>
       <DocumentMetadata
@@ -42,16 +70,7 @@ export function ArticlePresentation({ data }: { data: ArticleData }) {
         title={`${data.record.title} · beyondwin`}
       />
       <SiteShell mode="reading" currentSection="articles">
-      <article className="reading-sheet article-sheet">
-        <header className="article-masthead">
-          <p className="article-kicker">에세이</p>
-          <h1>{data.record.title}</h1>
-          <p className="article-judgment">{data.record.description}</p>
-        </header>
-        <div className="article-read">
-          <div className="prose article-prose" dangerouslySetInnerHTML={{ __html: incumbentBodyHtml }} />
-        </div>
-      </article>
+        <ArticleReadingPage record={data.record} media={media} continuations={data.continuations} />
       </SiteShell>
     </>
   );

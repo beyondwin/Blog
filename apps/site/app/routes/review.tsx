@@ -7,21 +7,28 @@ import {
   ResponsivePicture,
 } from '../root';
 import { SiteShell } from '../../src/ui/components/SiteShell';
+import { ReviewReadingPage } from '../../src/ui/reading/ReviewReadingPage';
+import { selectContinuations, type ContinuationItem } from '../../src/ui/reading/select-continuations';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [readingCss, reviewCss] = import.meta.env.SSR
+const [routeReadingCss, readingCss, reviewCss] = import.meta.env.SSR
   ? await Promise.all([
       import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/reading.css?inline').then((module) => module.default),
       import('../../src/ui/styles/route-review.css?inline').then((module) => module.default),
     ])
-  : ['', ''];
+  : ['', '', ''];
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
-export interface ReviewData { record: ReviewRecord; coverAsset?: ReleaseAsset }
+export interface ReviewData {
+  record: ReviewRecord;
+  coverAsset?: ReleaseAsset;
+  continuations: ContinuationItem[];
+}
 
 export const handle: RouteCriticalCssHandle = {
-  criticalCss: `${readingCss}${reviewCss}`,
+  criticalCss: `${routeReadingCss}${readingCss}${reviewCss}`,
 };
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ReviewData> {
@@ -34,34 +41,27 @@ export async function loader({ params }: { params: { slug?: string } }): Promise
   if (record.coverMedia && !coverAsset) {
     throw new Error(`Verified release is missing reviews/${record.id}/${record.coverMedia}`);
   }
-  return { record, ...(coverAsset ? { coverAsset } : {}) };
+  return {
+    record,
+    continuations: selectContinuations(record, release.manifest.records),
+    ...(coverAsset ? { coverAsset } : {}),
+  };
 }
 
 export function meta({ data }: { data?: ReviewData }) {
   return data ? metadataForRecord(data.record) : [];
 }
 
-function formatReadMonth(date: string): string {
-  const [year, month] = date.slice(0, 7).split('-');
-  return `${year}년 ${Number(month)}월에 읽음`;
-}
-
 export function ReviewPresentation({ data }: { data: ReviewData }) {
-  const authorLine = data.record.authors.join(' · ');
-  const whisper = data.record.editionLabel?.includes(data.record.publisher ?? '')
-    ? data.record.editionLabel
-    : [data.record.publisher, data.record.editionLabel].filter(Boolean).join(' · ');
   const cover = data.coverAsset ? (
     <ResponsivePicture
       asset={data.coverAsset}
       alt={data.coverAsset.alt}
-      className="book-cover"
+      className="reading-threshold__media-image reading-threshold__media-image--review"
       eager
-      sizes="(max-width: 720px) 42vw, 13.5rem"
+      sizes="(max-width: 720px) 30vw, 9rem"
     />
-  ) : (
-    <span className="book-cover book-cover--set"><b>{data.record.title}</b><em>{authorLine}</em></span>
-  );
+  ) : undefined;
   return (
     <>
       <DocumentMetadata
@@ -70,26 +70,7 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
         title={`${data.record.title} · beyondwin`}
       />
       <SiteShell mode="reading" currentSection="reviews">
-      <span className="book-cover-remnant" aria-hidden="true">
-        {data.coverAsset
-          ? <ResponsivePicture asset={data.coverAsset} alt="" className="book-cover" sizes="28px" />
-          : cover}
-      </span>
-      <article className="reading-sheet book-sheet">
-        <aside className="book-object" aria-label="책">
-          <figure className="book-object__cover">{cover}</figure>
-          {whisper && <p className="book-object__whisper">{whisper}</p>}
-        </aside>
-        <div className="book-reading">
-          <header>
-            <h1 className="book-title">{data.record.title}</h1>
-            <p className="book-author">{authorLine}</p>
-            <p className="book-verdict">{data.record.verdict ?? data.record.description}</p>
-            {data.record.completedAt && <time dateTime={data.record.completedAt}>{formatReadMonth(data.record.completedAt)}</time>}
-          </header>
-          <div className="prose book-prose" dangerouslySetInnerHTML={{ __html: data.record.bodyHtml }} />
-        </div>
-      </article>
+        <ReviewReadingPage record={data.record} cover={cover} continuations={data.continuations} />
       </SiteShell>
     </>
   );
