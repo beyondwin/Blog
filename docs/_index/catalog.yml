@@ -193,6 +193,16 @@
   source: ADR-0005 and ADR-0006
   updated: 2026-08-23
 
+- title: Public reading continuity React migration 작업 회고
+  path: docs/notes/project/public-reading-continuity-migration-retrospective.md
+  topic: project
+  type: retrospective
+  language: ko
+  status: organized
+  summary: Reviews proof churn, late whole-branch review, cutover hardening, report drift, environment setup, and dependency timing, then defines a smaller evidence-driven workflow for future migrations.
+  source: migration commits and Task 14-15 evidence
+  updated: 2026-08-26
+
 - title: Public renderer comparison and promotion evidence
   path: docs/notes/project/evidence/public-renderer-comparison.md
   topic: project
