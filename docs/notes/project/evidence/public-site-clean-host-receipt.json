@@ -1,0 +1,479 @@
+{
+  "schema_version": 1,
+  "implementation_commit": "5f6ff22bfd22335e092f277c81b80a3965c8eccb",
+  "created_at": "2026-08-25T18:36:36.364Z",
+  "completed_at": "2026-08-25T18:36:59.081Z",
+  "eligible": true,
+  "archive_hash": "sha256:b29986640fe6da37aea27c2f7b2c606595537aeb5cd6a2cb9d829395dcb3d950",
+  "archive_inventory_hash": "sha256:4609fc53c336d312007887fda2f2c393dc481704bca2a6d03b789fa451d81169",
+  "archive_inventory_count": 624,
+  "exclusions": {
+    "dependencies": true,
+    "generated_output": true,
+    "secrets_and_environment": true,
+    "top_level_private_memory": true
+  },
+  "node": "v24.18.0",
+  "npm": "11.16.0",
+  "commands": [
+    {
+      "command": "git archive --format=tar --output=/tmp/beyondwin-clean-host.D8mVG8/source.tar 5f6ff22bfd22335e092f277c81b80a3965c8eccb -- . :(exclude)memory :(exclude)build :(exclude)output :(exclude).superpowers :(exclude).env :(exclude).env.*",
+      "pid": 22189,
+      "exit_code": 0,
+      "stopped": true
+    },
+    {
+      "command": "tar -xf /tmp/beyondwin-clean-host.D8mVG8/source.tar -C /tmp/beyondwin-clean-host.D8mVG8/repository",
+      "pid": 22221,
+      "exit_code": 0,
+      "stopped": true
+    },
+    {
+      "command": "npm ci",
+      "pid": 22232,
+      "exit_code": 0,
+      "stopped": true
+    },
+    {
+      "command": "npm run public-release:build",
+      "pid": 22293,
+      "exit_code": 0,
+      "stopped": true
+    },
+    {
+      "command": "npm run public-release:verify",
+      "pid": 22624,
+      "exit_code": 0,
+      "stopped": true
+    },
+    {
+      "command": "npm run site:build",
+      "pid": 22639,
+      "exit_code": 0,
+      "stopped": true
+    }
+  ],
+  "release": {
+    "release_id": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+    "active_pointer_hash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
+    "manifest_hash": "sha256:5462764b984aa492eb6f4194988ddad035a25c9ef751a2857f4b6571ac978195",
+    "artifact_hash": "sha256:38829f0d35c78c5777f1b094a1196fd17146c615c1d5982387c7b2a153c95a08"
+  },
+  "selected_build_hash": "sha256:ee4474c94a47dda0ffc3545e6083298f0519f8ab407fbb0ad428e88ba5e967e3",
+  "route_count": 80,
+  "inventory_hash": "sha256:1dda2a3b837dcbbab650358cf145481cc81210470a6d5677c7b1958b7c275f18",
+  "representative_routes": [
+    "/",
+    "/articles/why-i-read-in-the-ai-era/",
+    "/reviews/black-swan/",
+    "/memory/agent-harnesses-are-operating-systems/",
+    "/search/",
+    "/tags/AI/",
+    "/reviews/the-life-you-can-save/"
+  ],
+  "smoke": [
+    {
+      "path": "/",
+      "status": 200,
+      "body_hash": "sha256:155d4eabd1bb25bc4755daa9a39c9502b3904c08f0a99cf56b9141b9e97b5700"
+    },
+    {
+      "path": "/analysis/",
+      "status": 200,
+      "body_hash": "sha256:c6b8593ae6af00e719729728a54be1edc375edc01e9f431b91afba71a5e08aa8"
+    },
+    {
+      "path": "/articles/",
+      "status": 200,
+      "body_hash": "sha256:a961158f4380cda042afa34c22ec950af3f14e499d7e28bb9738d2211cd79fe0"
+    },
+    {
+      "path": "/articles/ai-design-references/",
+      "status": 200,
+      "body_hash": "sha256:62d11ad41f50b7c72c50f152e14e46bfc26e6d203ec14ebdf19df4b438d92d78"
+    },
+    {
+      "path": "/articles/andrej-karpathy-skills-analysis/",
+      "status": 200,
+      "body_hash": "sha256:144834bc535ed0f30194e371f7e77f381929fe6a2652550395ed43e1993fae0c"
+    },
+    {
+      "path": "/articles/codex-ui-mockup-workflow/",
+      "status": 200,
+      "body_hash": "sha256:e667b14b78e84be116dd5b70ff3b77c2683c1df8ed52bb13a732cee5d58db7e9"
+    },
+    {
+      "path": "/articles/context-refinement-system-design/",
+      "status": 200,
+      "body_hash": "sha256:0e96ac1b531781beaf6bc0332c3c8afe0db7e2872f61b6e74c5935cbb8b19d3d"
+    },
+    {
+      "path": "/articles/graphify-code-knowledge-graph-deep-dive/",
+      "status": 200,
+      "body_hash": "sha256:00af9098fd21eb9f2513ca1c88326703379838b60ae2089ad4bcd84e4c144b96"
+    },
+    {
+      "path": "/articles/hermes-agent-persistent-worker-runtime/",
+      "status": 200,
+      "body_hash": "sha256:0a5364a8e9cdf6b3771a5d3a4da44770913f41dca9254a040c5f1ed6383982bf"
+    },
+    {
+      "path": "/articles/lazycodex-agent-harness-analysis/",
+      "status": 200,
+      "body_hash": "sha256:7ccdb7ca4c9d688d29672a862e6925a91c66b1d1b3044b680488e592463dae7f"
+    },
+    {
+      "path": "/articles/oh-my-pi-deep-review/",
+      "status": 200,
+      "body_hash": "sha256:610a0fb20f96c5595929cae54713a2cc19607aeca5d644ba5261a7968d537e62"
+    },
+    {
+      "path": "/articles/open-design-repo-analysis/",
+      "status": 200,
+      "body_hash": "sha256:0b8d978cedb1fd8cf7a0f042ebcf2f58461442a4efd12673b481f89998184c3e"
+    },
+    {
+      "path": "/articles/pgvector-hybrid-search/",
+      "status": 200,
+      "body_hash": "sha256:66f31ff1870e0173ad70aa2fd33d89c3420401ea80a26c28582eb918dd9138cb"
+    },
+    {
+      "path": "/articles/ponytail-agent-minimalism-analysis/",
+      "status": 200,
+      "body_hash": "sha256:5f41581883f3e723618744483983ba2481f41c5a3c83a592a1aee2b06d9b64ce"
+    },
+    {
+      "path": "/articles/postgresql-bm25-pg-search/",
+      "status": 200,
+      "body_hash": "sha256:e57c837b8065d2cbf1c71dc5de4e2d50558160b4158260ef3efb171a0b339b63"
+    },
+    {
+      "path": "/articles/why-i-read-in-the-ai-era/",
+      "status": 200,
+      "body_hash": "sha256:efa9979229e3a46fbb258ffec65f115e71413a5f52f5ce2f032875a7996445e5"
+    },
+    {
+      "path": "/ideas/",
+      "status": 200,
+      "body_hash": "sha256:6e0f316f2ad87cc571505b9a19439ed023b1d42e570004d1744c60dd80b40e4b"
+    },
+    {
+      "path": "/memory/",
+      "status": 200,
+      "body_hash": "sha256:d896213962f7251ae86df689c8abe037f35d96dba5705563dea671326ec5885c"
+    },
+    {
+      "path": "/memory/agent-harnesses-are-operating-systems/",
+      "status": 200,
+      "body_hash": "sha256:bb53f24fdef4081511b61bb456ecc2029dc64787ccd345369f6e85e9d12ce535"
+    },
+    {
+      "path": "/memory/agent-workflows-need-review-gates/",
+      "status": 200,
+      "body_hash": "sha256:8a8bcda987d639f138fc28b0193371feb8a789329209ddd63fd8daf4ebab1159"
+    },
+    {
+      "path": "/memory/ai-design-tools-need-judgment-loops/",
+      "status": 200,
+      "body_hash": "sha256:b21c0ea869d7df43556185de8561a712ba4659c81a8fcf8b97ee9433cbdbd220"
+    },
+    {
+      "path": "/memory/context-quality-is-routing-problem/",
+      "status": 200,
+      "body_hash": "sha256:60c8871ae11de5e5fcbf039caa96339376d232ed1a8224eac036abfc478a7246"
+    },
+    {
+      "path": "/memory/local-agent-products-are-work-shells/",
+      "status": 200,
+      "body_hash": "sha256:4c709a5289b29e42d20d3f36b51e6472c8660a91d4f1f212b0a66442f9138980"
+    },
+    {
+      "path": "/memory/map/",
+      "status": 200,
+      "body_hash": "sha256:247f8ac780bf118d59bc30a92b34d9771db28701c3892e8dbf0e5e2d9fe9944e"
+    },
+    {
+      "path": "/memory/memory-needs-retrieval-not-decoration/",
+      "status": 200,
+      "body_hash": "sha256:df8a7100ff0941c504be7e5fd68bdaf780e92477e90f4fd075a17e954db7fef8"
+    },
+    {
+      "path": "/memory/personal-sites-should-show-records-first/",
+      "status": 200,
+      "body_hash": "sha256:8325e9021fd01c869789f8590b966c23c817f0bb1697e2a95cefdce7523e5b1e"
+    },
+    {
+      "path": "/reviews/",
+      "status": 200,
+      "body_hash": "sha256:6514c5bf7177ffd283e7a3ee2213924784c453a026ca4d67c0fbddbf1924bad6"
+    },
+    {
+      "path": "/reviews/art-thief/",
+      "status": 200,
+      "body_hash": "sha256:ae719bc39f6d8202c5d44b9bca2e4d7b0ac11a5a4a9b5a35fe120400339aaadb"
+    },
+    {
+      "path": "/reviews/black-swan/",
+      "status": 200,
+      "body_hash": "sha256:b7ce4297d04fa3364c3b66f39ef45e6449c4b2030bce1887876a46dd844757eb"
+    },
+    {
+      "path": "/reviews/changing-their-minds/",
+      "status": 200,
+      "body_hash": "sha256:13d638a9573a069d371a136b94381b770ab48cf199a22ed7d8d72e5862b224cb"
+    },
+    {
+      "path": "/reviews/convenience-store-woman/",
+      "status": 200,
+      "body_hash": "sha256:f9645796491c410f34bb14959f01e15f06399bce99b1b0992797bb8ca0bf4285"
+    },
+    {
+      "path": "/reviews/devotion-of-suspect-x/",
+      "status": 200,
+      "body_hash": "sha256:5ecbcb4f894c6ff276d671ea85f60a144b3dc51e3650db412c54b376f3f60f58"
+    },
+    {
+      "path": "/reviews/doing-good-better/",
+      "status": 200,
+      "body_hash": "sha256:ab7e39ac2589c99d743b9ea946a322ca8c6d3e2af4deffce4480b27ce9d89bb5"
+    },
+    {
+      "path": "/reviews/factfulness/",
+      "status": 200,
+      "body_hash": "sha256:866e82d7f24527680cf009f606744f646eed73d063f957b5f35ef5efee6d96b2"
+    },
+    {
+      "path": "/reviews/future-arrived-first/",
+      "status": 200,
+      "body_hash": "sha256:6f76be246de68313353031ef643deda5b407e2efa73914cad6b3f91bd15cd8a0"
+    },
+    {
+      "path": "/reviews/goethe-said-everything/",
+      "status": 200,
+      "body_hash": "sha256:f9dc8783b3601c19450e46c205c06271c0eda59d5a4a22b18b267f505f2eb496"
+    },
+    {
+      "path": "/reviews/habitus/",
+      "status": 200,
+      "body_hash": "sha256:86ec9e9b94031e6299a99e9d9bbd56419b68770d7ce20b8d8c03a2555b5d957c"
+    },
+    {
+      "path": "/reviews/how-adam-smith-can-change-your-life/",
+      "status": 200,
+      "body_hash": "sha256:bbacd02df64c45d20ef33d07c4dc6a6e8b0e2cada0334404a8f9eeb7043478c1"
+    },
+    {
+      "path": "/reviews/how-we-crossed-winter/",
+      "status": 200,
+      "body_hash": "sha256:2c639acbb80a30e98074020790d86b169ed0d874bf70e952fd34c63e55a675f8"
+    },
+    {
+      "path": "/reviews/lolita/",
+      "status": 200,
+      "body_hash": "sha256:4798f7ad7a888a2a95731b5a1a7b7f2f788f6b394cdf638b2d7a8529b85d2648"
+    },
+    {
+      "path": "/reviews/lord-of-the-flies/",
+      "status": 200,
+      "body_hash": "sha256:f6642644d2f6eb8cc559228d2db0bee842426d1a7173f68393b5a63c6ff47284"
+    },
+    {
+      "path": "/reviews/miracles-of-namiya-general-store/",
+      "status": 200,
+      "body_hash": "sha256:f1dc1230b3be60242b70b22514bbdaae23803989b4d7ad542249119f7fe0013c"
+    },
+    {
+      "path": "/reviews/nevertheless/",
+      "status": 200,
+      "body_hash": "sha256:1d72d9de0cc15de5d4933f725b142ad6e37889ed120bd85c1513638d52116017"
+    },
+    {
+      "path": "/reviews/poor-charlies-almanack/",
+      "status": 200,
+      "body_hash": "sha256:67b880add22e4fb979f6a773777098db61b709c0f7a8a190de77b5bd715dae1a"
+    },
+    {
+      "path": "/reviews/siddhartha/",
+      "status": 200,
+      "body_hash": "sha256:8cbd9af956077e72bff2bb1687832870535245856cd276617e63e1e15043ba01"
+    },
+    {
+      "path": "/reviews/the-life-you-can-save/",
+      "status": 200,
+      "body_hash": "sha256:5cb223546a1774ae76580c0880b6d4aa961bac8ec4c3dcc33718dfe4d4df5fbf"
+    },
+    {
+      "path": "/search/",
+      "status": 200,
+      "body_hash": "sha256:9217fbd33116a430c668f7cbedad22e585272c86e75f9b3c8ee17a8faa05c46f"
+    },
+    {
+      "path": "/tags/",
+      "status": 200,
+      "body_hash": "sha256:15f568c6a2438630dba49a3b0b45ddfc7924be12ded263a7027489dfcb0c9dfa"
+    },
+    {
+      "path": "/tags/agent/",
+      "status": 200,
+      "body_hash": "sha256:46a4b7c626aa83b2db84cb6087c77af4f98429114e89f3ba237698dfde59e3fc"
+    },
+    {
+      "path": "/tags/AI-agent/",
+      "status": 200,
+      "body_hash": "sha256:dcf61f4157673bdc2a52f5a72fcf4f315b6d82b427fb8a2a0cde646d2caa0eca"
+    },
+    {
+      "path": "/tags/AI/",
+      "status": 200,
+      "body_hash": "sha256:a4658f8b062f420d7485bd60c3c68bbc7682e7b22358890e8a68c54249da85e4"
+    },
+    {
+      "path": "/tags/architecture/",
+      "status": 200,
+      "body_hash": "sha256:b621fc0edab743e35035884115d428fba010ab431b8bbe1c778a1ef58bf45255"
+    },
+    {
+      "path": "/tags/automation/",
+      "status": 200,
+      "body_hash": "sha256:928f8c6a83ddd2fb343faaf5a80232c12d5fa068c2da415dc848691dbf083140"
+    },
+    {
+      "path": "/tags/BM25/",
+      "status": 200,
+      "body_hash": "sha256:0ada4ad8c46c8973efaa5bed7a4aa34dad33af1111a570c49c2ec94d3aa5d477"
+    },
+    {
+      "path": "/tags/book/",
+      "status": 200,
+      "body_hash": "sha256:288b8312cc94e6be202ba12cf9d07ae8d5aaf40bbada209c504156da49956480"
+    },
+    {
+      "path": "/tags/code-search/",
+      "status": 200,
+      "body_hash": "sha256:266cad347c954d056a0988f897b067e1d156ef2b66e67e6d3db6149289fbc3fa"
+    },
+    {
+      "path": "/tags/Codex/",
+      "status": 200,
+      "body_hash": "sha256:565112af884e0816a3e354a4dacb8e19cc08b1618a00e2ae8efacaf1b91fa139"
+    },
+    {
+      "path": "/tags/coding/",
+      "status": 200,
+      "body_hash": "sha256:4bf4264cb4fc8c7202132499530821096e328ff387a306046d35f89a4bc2874e"
+    },
+    {
+      "path": "/tags/database/",
+      "status": 200,
+      "body_hash": "sha256:c4183f7f623d2de84c1cb26bb523176a74087844dbcdb9fc57a45d323420d815"
+    },
+    {
+      "path": "/tags/design/",
+      "status": 200,
+      "body_hash": "sha256:61454890c2e01de42a3cbd211f68d12372f2eb5d684fb9f1623bd8723740535b"
+    },
+    {
+      "path": "/tags/developer-tools/",
+      "status": 200,
+      "body_hash": "sha256:7cf20f8e1b646eed243578d52d4322fbbe94e58ace19795b3002e8f34bf35960"
+    },
+    {
+      "path": "/tags/essay/",
+      "status": 200,
+      "body_hash": "sha256:4cee45963da43fb7ab753949d59b59493857742a519c58f7d113c6a18647fc68"
+    },
+    {
+      "path": "/tags/frontend/",
+      "status": 200,
+      "body_hash": "sha256:044fed16fe38d408d5b3573f57b6f7c9a247f786cb6555849eaa66b9e43802c0"
+    },
+    {
+      "path": "/tags/Graphify/",
+      "status": 200,
+      "body_hash": "sha256:d0a98b7d39536a39aa4de16de48595072ef1c9e8c30db8ec5a64424bee94c786"
+    },
+    {
+      "path": "/tags/judgment/",
+      "status": 200,
+      "body_hash": "sha256:15d3038eb48ec9684aff12aafa576d098c2fce7eecd04d141bafcc42272ecdc9"
+    },
+    {
+      "path": "/tags/knowledge-graph/",
+      "status": 200,
+      "body_hash": "sha256:abcb94e796bec0162e0e39d2a6709b20a626743cda7dc0ec707d525661d5571a"
+    },
+    {
+      "path": "/tags/naver-archive/",
+      "status": 200,
+      "body_hash": "sha256:9a9369b9e5807e8ef15d0f9dc0b4a7307a9aec488333b86eefa2a08317785218"
+    },
+    {
+      "path": "/tags/ParadeDB/",
+      "status": 200,
+      "body_hash": "sha256:ca4adb61214bde1de4b3520e7209f56015128deb468f986c53e92b50bb7bc213"
+    },
+    {
+      "path": "/tags/pgvector/",
+      "status": 200,
+      "body_hash": "sha256:b875e39df070e718d333b85ca266c22e39c50ecb53b19f51300b346f0515185c"
+    },
+    {
+      "path": "/tags/PostgreSQL/",
+      "status": 200,
+      "body_hash": "sha256:3a9df01bcd0a7f71caeac941e974174a2ab6021b8c04909fbb0f6573d7883639"
+    },
+    {
+      "path": "/tags/RAG/",
+      "status": 200,
+      "body_hash": "sha256:aab278b6682256084fe21c29cbfb35e65d387b90fba381cad325eb117b08c7ce"
+    },
+    {
+      "path": "/tags/reading/",
+      "status": 200,
+      "body_hash": "sha256:f786d633e5d05ec4ebb046b90a1d4194ede58137aae18b916dc8ec637cc14b14"
+    },
+    {
+      "path": "/tags/reference/",
+      "status": 200,
+      "body_hash": "sha256:f30ddb3011f41a77c1314b8838a9f212c70b6d6ca8c29e0bb7d8f0bc17d33103"
+    },
+    {
+      "path": "/tags/review/",
+      "status": 200,
+      "body_hash": "sha256:e4a1293a181a2a1b344010f0c97aea3a0f366112000942f19b6ed40eed010b59"
+    },
+    {
+      "path": "/tags/search/",
+      "status": 200,
+      "body_hash": "sha256:48f8d533381b6262d3f63971d5696f4604cdbfb20dd5eefeea2e85c52917ec6a"
+    },
+    {
+      "path": "/tags/security/",
+      "status": 200,
+      "body_hash": "sha256:c9563d75fa8c2924d1c711487ce118c29e36f60268df841f4241a6f12a0b2666"
+    },
+    {
+      "path": "/tags/source-grounded/",
+      "status": 200,
+      "body_hash": "sha256:93b4c0095a01587b17ea04e14d126da470a8ddde7a1a96bb2bae86a715d283ef"
+    },
+    {
+      "path": "/tags/system-design/",
+      "status": 200,
+      "body_hash": "sha256:4c000bd1649f3abc8301e6f178d66d8e606902b6fd95b1bd187ae63f833818f5"
+    },
+    {
+      "path": "/tags/workflow/",
+      "status": 200,
+      "body_hash": "sha256:9b8fb97e65339764693864bf0272f6d060c7e5155bd6c4caeeb05cd73c7b0ef8"
+    },
+    {
+      "path": "/travel/",
+      "status": 200,
+      "body_hash": "sha256:db7ddba1da64b96ff110764380b4cfd00b33a2e4e9856970710af6858c6126ff"
+    }
+  ],
+  "preview_port": 54978,
+  "temp_removed": true,
+  "errors": []
+}
