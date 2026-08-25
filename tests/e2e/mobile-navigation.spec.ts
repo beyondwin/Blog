@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { APPROVED_VIEWPORTS, canonicalUrl, expectNoHorizontalOverflow } from './support';
 
-const baseUrl = process.env.BEYONDWIN_E2E_BASE_URL ?? 'http://127.0.0.1:4391';
 const routes = [
   { name: 'scene', path: '/', active: '장면' },
   { name: 'article', path: '/articles/why-i-read-in-the-ai-era/', active: '글' },
@@ -9,7 +9,7 @@ const routes = [
 ] as const;
 
 function url(path: string): string {
-  return new URL(path, baseUrl).href;
+  return canonicalUrl(path);
 }
 
 async function gotoCleanPage(page: Page, path: string) {
@@ -21,13 +21,13 @@ async function gotoCleanPage(page: Page, path: string) {
   await page.goto(url(path));
   await page.waitForLoadState('networkidle');
   expect(errors).toEqual([]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expectNoHorizontalOverflow(page);
 }
 
 for (const viewport of [
-  { width: 1440, height: 1000 },
-  { width: 390, height: 844 },
-  { width: 426, height: 926 },
+  APPROVED_VIEWPORTS.desktop,
+  APPROVED_VIEWPORTS.mobile390,
+  APPROVED_VIEWPORTS.mobile426,
 ]) {
   test.describe(`${viewport.width}px shared chrome`, () => {
     test.use({ viewport });
@@ -63,43 +63,45 @@ for (const viewport of [
   });
 }
 
-test.describe('390px mobile navigation behavior', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
+for (const viewport of [APPROVED_VIEWPORTS.mobile390, APPROVED_VIEWPORTS.mobile426]) {
+  test.describe(`${viewport.width}px mobile navigation behavior`, () => {
+    test.use({ viewport });
 
-  test('closes on Escape and restores focus', async ({ page }) => {
-    await page.goto(url('/'));
-    const button = page.getByRole('button', { name: '메뉴' });
-    const navigation = page.getByRole('navigation', { name: '주 탐색' });
-    await button.click();
-    await expect(button).toHaveAttribute('aria-expanded', 'true');
-    await expect(navigation).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(button).toHaveAttribute('aria-expanded', 'false');
-    await expect(navigation).toBeHidden();
-    await expect(button).toBeFocused();
-  });
+    test('closes on Escape and restores focus', async ({ page }) => {
+      await page.goto(url('/'));
+      const button = page.getByRole('button', { name: '메뉴' });
+      const navigation = page.getByRole('navigation', { name: '주 탐색' });
+      await button.click();
+      await expect(button).toHaveAttribute('aria-expanded', 'true');
+      await expect(navigation).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(button).toHaveAttribute('aria-expanded', 'false');
+      await expect(navigation).toBeHidden();
+      await expect(button).toBeFocused();
+    });
 
-  test('closes on an outside pointer and restores focus', async ({ page }) => {
-    await page.goto(url('/'));
-    const button = page.getByRole('button', { name: '메뉴' });
-    await button.click();
-    await page.locator('main').click({ position: { x: 2, y: 2 } });
-    await expect(button).toHaveAttribute('aria-expanded', 'false');
-    await expect(button).toBeFocused();
-  });
+    test('closes on an outside pointer and restores focus', async ({ page }) => {
+      await page.goto(url('/'));
+      const button = page.getByRole('button', { name: '메뉴' });
+      await button.click();
+      await page.locator('main').click({ position: { x: 2, y: 2 } });
+      await expect(button).toHaveAttribute('aria-expanded', 'false');
+      await expect(button).toBeFocused();
+    });
 
-  test('closes on current-route selection and restores focus', async ({ page }) => {
-    await page.goto(url('/'));
-    const button = page.getByRole('button', { name: '메뉴' });
-    await button.click();
-    await page.getByRole('navigation', { name: '주 탐색' }).getByRole('link', { name: '장면', exact: true }).click();
-    await expect(button).toHaveAttribute('aria-expanded', 'false');
-    await expect(button).toBeFocused();
+    test('closes on current-route selection and restores focus', async ({ page }) => {
+      await page.goto(url('/'));
+      const button = page.getByRole('button', { name: '메뉴' });
+      await button.click();
+      await page.getByRole('navigation', { name: '주 탐색' }).getByRole('link', { name: '장면', exact: true }).click();
+      await expect(button).toHaveAttribute('aria-expanded', 'false');
+      await expect(button).toBeFocused();
+    });
   });
-});
+}
 
 test('desktop hides the mobile button and exposes the active route', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize(APPROVED_VIEWPORTS.desktop);
   await page.goto(url('/articles/why-i-read-in-the-ai-era/'));
   await expect(page.getByRole('button', { name: '메뉴' })).toBeHidden();
   await expect(page.getByRole('navigation', { name: '주 탐색' }).getByRole('link', { name: '글', exact: true })).toHaveAttribute('aria-current', 'page');

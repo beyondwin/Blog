@@ -18,7 +18,7 @@
     "legacy:preview": "astro preview",
     "site:dev": "npm run dev --workspace @beyondwin/site",
     "site:build": "npm run build --workspace @beyondwin/site",
-    "site:preview": "npm run preview --workspace @beyondwin/site",
+    "site:preview": "npm run preview --workspace @beyondwin/site --",
     "site:test": "npm run test --workspace @beyondwin/site",
     "public-release:build": "tsx packages/content/src/cli.ts build",
     "public-release:verify": "tsx packages/content/src/cli.ts verify",

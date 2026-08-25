@@ -57,7 +57,9 @@ function SceneObjectContent({ eager, object }: { eager: boolean; object: SceneOb
         alt={object.asset.alt}
         className="scene-object__image"
         eager={eager}
-        sizes="(max-width: 720px) 72vw, 61vw"
+        sizes={object.role === 'lead'
+          ? '(max-width: 720px) 70vw, (max-width: 1540px) 61vw, 940px'
+          : '(max-width: 720px) 72vw, 61vw'}
       />
       {object.showFolio && (
         <span className="scene-object__folio" aria-hidden="true">

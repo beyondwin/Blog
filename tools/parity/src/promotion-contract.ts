@@ -359,7 +359,7 @@ export async function verifyPromotedRendererWorkspace(
   const expectedRootScripts = {
     'site:dev': 'npm run dev --workspace @beyondwin/site',
     'site:build': 'npm run build --workspace @beyondwin/site',
-    'site:preview': 'npm run preview --workspace @beyondwin/site',
+    'site:preview': 'npm run preview --workspace @beyondwin/site --',
     'site:test': 'npm run test --workspace @beyondwin/site',
   };
   for (const [name, command] of Object.entries(expectedRootScripts)) {

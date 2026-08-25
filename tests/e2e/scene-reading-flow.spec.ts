@@ -1,18 +1,17 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-
-const baseUrl = process.env.BEYONDWIN_E2E_BASE_URL ?? 'http://127.0.0.1:4391';
+import { APPROVED_VIEWPORTS, canonicalUrl, expectNoHorizontalOverflow } from './support';
 
 function url(path: string): string {
-  return new URL(path, baseUrl).href;
+  return canonicalUrl(path);
 }
 
 async function expectCleanPage(page: Page) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expectNoHorizontalOverflow(page);
 }
 
 for (const viewport of [
-  { width: 1440, height: 1000 },
-  { width: 390, height: 844 },
+  APPROVED_VIEWPORTS.desktop,
+  APPROVED_VIEWPORTS.mobile390,
 ]) {
   test.describe(`${viewport.width}px Storyworld continuity`, () => {
     test.use({ viewport });
@@ -59,7 +58,10 @@ for (const viewport of [
 }
 
 async function proveNoJsAnchors(browser: Browser, width: number) {
-  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width, height: width === 390 ? 844 : 1000 } });
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: width === 390 ? APPROVED_VIEWPORTS.mobile390 : APPROVED_VIEWPORTS.desktop,
+  });
   const page = await context.newPage();
   await page.goto(url('/'));
   const article = page.locator('[data-scene-object="reading-desk-cobalt"]');
@@ -97,7 +99,7 @@ test('390px reduced motion changes scene state without geometry animation', asyn
       }) as typeof document.startViewTransition;
     }
   });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize(APPROVED_VIEWPORTS.mobile390);
   await page.goto(url('/'));
   await page.locator('[data-scene-object="reading-desk-cobalt"]').click();
   await expect(page.getByRole('link', { name: '글 읽기' })).toBeFocused();

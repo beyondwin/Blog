@@ -1,4 +1,5 @@
 .memory-thought { max-width: 42em; }
+.memory-thought .reading-threshold__identity h1 { text-wrap: wrap; }
 .memory-thought__en { margin: -.35em 0 1.4em; color: var(--bw-soft-ink); line-height: 1.65; }
 .memory-thought__sources, .memory-thought__companions { margin-top: 2.4em; }
 .memory-thought__sources h2, .memory-thought__companions h2 { margin: 0 0 .6em; color: var(--bw-soft-ink); font-size: .82rem; font-weight: 500; }

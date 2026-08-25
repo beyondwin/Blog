@@ -1,18 +1,18 @@
 import { expect, test, type Page } from '@playwright/test';
+import { APPROVED_VIEWPORTS, canonicalUrl, expectNoHorizontalOverflow } from './support';
 
-const baseUrl = process.env.BEYONDWIN_E2E_BASE_URL ?? 'http://127.0.0.1:4392';
 const articlePath = '/articles/why-i-read-in-the-ai-era/';
 const textOnlyArticlePath = '/articles/ai-design-references/';
 const reviewPath = '/reviews/black-swan/';
 
 function url(path: string): string {
-  return new URL(path, baseUrl).href;
+  return canonicalUrl(path);
 }
 
 async function expectCleanReadingPage(page: Page, path: string, errors: string[]) {
   await expect(page).toHaveURL(url(path));
   expect(errors).toEqual([]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await expectNoHorizontalOverflow(page);
 }
 
 async function gotoReadingPage(page: Page, path: string) {
@@ -47,7 +47,7 @@ async function gotoWithStoredOrigin(
       issuedAt: Date.now() - age,
     }));
   }, { originValue: origin, targetPath: path, tokenValue: token, age: ageMs });
-  const destination = new URL(path, baseUrl);
+  const destination = new URL(path, canonicalUrl('/'));
   destination.searchParams.set('__bw_from', origin.kind);
   if (origin.kind === 'scene') destination.searchParams.set('__bw_focus', origin.focusId);
   if (origin.kind === 'articles' || origin.kind === 'search') {
@@ -60,8 +60,8 @@ async function gotoWithStoredOrigin(
 }
 
 for (const viewport of [
-  { width: 1440, height: 1000 },
-  { width: 390, height: 844 },
+  APPROVED_VIEWPORTS.desktop,
+  APPROVED_VIEWPORTS.mobile390,
 ]) {
   test.describe(`${viewport.width}px quiet reading`, () => {
     test.use({ viewport });
@@ -127,11 +127,13 @@ for (const viewport of [
 }
 
 test('eligible scene origin returns through browser history and keeps clean continuation anchors', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize(APPROVED_VIEWPORTS.desktop);
   await page.goto(url('/'));
   await page.locator('[data-scene-object="reading-desk-cobalt"]').click();
   await expect(page).toHaveURL(/\?focus=reading-desk-cobalt$/u);
-  await page.getByRole('link', { name: '글 읽기' }).click();
+  const focusedReadLink = page.locator('[data-scene-read]');
+  await expect(focusedReadLink).toBeFocused();
+  await focusedReadLink.click();
   await expect(page).toHaveURL(url(articlePath));
   const contextualReturn = page.getByRole('link', { name: '장면으로 돌아가기' });
   await expect(contextualReturn).toHaveAttribute('href', '/?focus=reading-desk-cobalt');
@@ -144,3 +146,50 @@ test('eligible scene origin returns through browser history and keeps clean cont
   await contextualReturn.click();
   await expect(page).toHaveURL(/\?focus=reading-desk-cobalt$/u);
 });
+
+for (const flow of [
+  {
+    name: 'article',
+    viewport: APPROVED_VIEWPORTS.desktop,
+    listPath: '/articles/',
+    detailPath: '/articles/why-i-read-in-the-ai-era/',
+    anchorId: 'record-articles-why-i-read-in-the-ai-era',
+    returnLabel: '글 목록으로',
+  },
+  {
+    name: 'review',
+    viewport: APPROVED_VIEWPORTS.mobile390,
+    listPath: '/reviews/',
+    detailPath: '/reviews/siddhartha/',
+    anchorId: 'record-reviews-siddhartha',
+    returnLabel: '책 목록으로',
+  },
+] as const) {
+  test(`${flow.name} list returns to the exact anchored reading position`, async ({ page }) => {
+    await page.setViewportSize(flow.viewport);
+    await page.goto(url(flow.listPath));
+    const row = page.locator(`#${flow.anchorId}`);
+    await row.scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollBy(0, -96));
+    const before = await row.evaluate((node) => ({
+      scrollY: window.scrollY,
+      top: node.getBoundingClientRect().top,
+    }));
+
+    await row.getByRole('link').click();
+    await expect(page).toHaveURL(url(flow.detailPath));
+    const contextualReturn = page.getByRole('link', { name: flow.returnLabel });
+    await expect(contextualReturn).toHaveAttribute('href', `${flow.listPath}#${flow.anchorId}`);
+    await contextualReturn.click();
+
+    await expect(page).toHaveURL(url(flow.listPath));
+    await expect(row).toBeVisible();
+    const after = await row.evaluate((node) => ({
+      scrollY: window.scrollY,
+      top: node.getBoundingClientRect().top,
+    }));
+    expect(Math.abs(after.scrollY - before.scrollY)).toBeLessThanOrEqual(2);
+    expect(Math.abs(after.top - before.top)).toBeLessThanOrEqual(2);
+    await expectNoHorizontalOverflow(page);
+  });
+}
