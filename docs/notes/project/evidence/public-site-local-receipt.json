@@ -1,17 +1,1829 @@
 {
-  "schema_version": 2,
-  "status": "blocked",
-  "implementation_commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0",
-  "reason": "The one final drill visited the 80-route inventory but failed exact final URL/redirect validation at /memory/map/ before a raw receipt was written.",
-  "dynamic_crawl": "not_measured_unsealed",
-  "attempts": [
-    { "commit": "b8ed8fd914a468f11108509761857d694c5e44cb", "refusal": "npm command title not stable; orphan PID 49587 identified and stopped" },
-    { "commit": "63797edeeaa92f5ea24151d7250b29191970971f", "refusal": "npm command title not stable; owned group cleanup passed" },
-    { "commit": "2b1fd17807c6b88982764dec8508e3d39e6d31bc", "refusal": "listener PPID ancestry did not prove owned detached group" },
-    { "commit": "2177e158a7db478b4d58c2742b02c609d6c201f3", "refusal": "empty lsof row parsed as PID zero before crawl" },
-    { "commit": "479e8063838cd99c1c090b2cf3ac9c9a7385b7d0", "refusal": "one final drill failed exact final URL/redirect validation at /memory/map/; no receipt or retry" }
+  "schema_version": 3,
+  "implementation_commit": "78e0907f5be86c6aeb8480516165f11c15ba2069",
+  "eligible": true,
+  "errors": [],
+  "ports": {
+    "proxy": 4390,
+    "react": 4391,
+    "astro": 4392
+  },
+  "representatives": [
+    "/",
+    "/articles/why-i-read-in-the-ai-era/",
+    "/reviews/black-swan/",
+    "/memory/agent-harnesses-are-operating-systems/",
+    "/search/",
+    "/tags/AI/",
+    "/reviews/the-life-you-can-save/"
   ],
-  "processes_cleaned": true,
-  "ports_free_after": true,
-  "temp_removed": true
+  "transitions": [
+    {
+      "target": "react",
+      "routes": [
+        {
+          "path": "/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:340a27c997f4db8e0bb1f0907e62fd7cc494fdc0716f0d48e72ec81189135acd"
+        },
+        {
+          "path": "/articles/why-i-read-in-the-ai-era/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:96ac6af6c1659ece69d83964561f854c27f78ae24828eea331ae7af247c3593d"
+        },
+        {
+          "path": "/reviews/black-swan/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:11d9653f15047f63c09143e528817eb9f8e8f9e9e7952d6a3ab7879bc035ef98"
+        },
+        {
+          "path": "/memory/agent-harnesses-are-operating-systems/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:87600579ae24a1eec8db021006ddcf551e6d4b659e79103a4156781e2c75240b"
+        },
+        {
+          "path": "/search/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:2d9263c1bdf0b8ef240bdfb5c961ffa4ac2c898dedddd24429538a45a0bff064"
+        },
+        {
+          "path": "/tags/AI/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:59fbb29afaf0878186249b9728e2d3e0754e45443faae77e1a35b14154028c86"
+        },
+        {
+          "path": "/reviews/the-life-you-can-save/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:5cb223546a1774ae76580c0880b6d4aa961bac8ec4c3dcc33718dfe4d4df5fbf"
+        }
+      ]
+    },
+    {
+      "target": "astro",
+      "routes": [
+        {
+          "path": "/",
+          "status": 200,
+          "target_header": "astro",
+          "body_hash": "sha256:a1720671f1d3cbcd1a45bd5b106f0b4d098fec4df7f112b1cffe2e3558b9181c"
+        },
+        {
+          "path": "/articles/why-i-read-in-the-ai-era/",
+          "status": 200,
+          "target_header": "astro",
+          "body_hash": "sha256:b1365d3b7085f1ed0dccd6e320bb1a470af8319b2815736b27dab187188c7d70"
+        },
+        {
+          "path": "/reviews/black-swan/",
+          "status": 200,
+          "target_header": "astro",
+          "body_hash": "sha256:8d2f0c544e6a691e1179a6770d4537e3e197d67336a3767a23b3d2a268643f9b"
+        },
+        {
+          "path": "/memory/agent-harnesses-are-operating-systems/",
+          "status": 200,
+          "target_header": "astro",
+          "body_hash": "sha256:5de2c15f8938f29061955d1bb1232b50dd2507688beda191ced3203e3909aa8d"
+        },
+        {
+          "path": "/search/",
+          "status": 200,
+          "target_header": "astro",
+          "body_hash": "sha256:82b5fe8388401f6c81c9be0150a5a8c57574f1956ca6c47365bf7a98631d9595"
+        },
+        {
+          "path": "/tags/AI/",
+          "status": 200,
+          "target_header": "astro",
+          "body_hash": "sha256:c35ba08bd75a5b95fd80a39a866c3aa9707870821ffaea1873ca518897f6c725"
+        },
+        {
+          "path": "/reviews/the-life-you-can-save/",
+          "status": 200,
+          "target_header": "astro",
+          "body_hash": "sha256:e7bcc1c44c2d814f9f9c4437c2c8b1be35504f34b31abcf36bcc46d1dbefb5ca"
+        }
+      ]
+    },
+    {
+      "target": "react",
+      "routes": [
+        {
+          "path": "/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:340a27c997f4db8e0bb1f0907e62fd7cc494fdc0716f0d48e72ec81189135acd"
+        },
+        {
+          "path": "/articles/why-i-read-in-the-ai-era/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:96ac6af6c1659ece69d83964561f854c27f78ae24828eea331ae7af247c3593d"
+        },
+        {
+          "path": "/reviews/black-swan/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:11d9653f15047f63c09143e528817eb9f8e8f9e9e7952d6a3ab7879bc035ef98"
+        },
+        {
+          "path": "/memory/agent-harnesses-are-operating-systems/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:87600579ae24a1eec8db021006ddcf551e6d4b659e79103a4156781e2c75240b"
+        },
+        {
+          "path": "/search/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:2d9263c1bdf0b8ef240bdfb5c961ffa4ac2c898dedddd24429538a45a0bff064"
+        },
+        {
+          "path": "/tags/AI/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:59fbb29afaf0878186249b9728e2d3e0754e45443faae77e1a35b14154028c86"
+        },
+        {
+          "path": "/reviews/the-life-you-can-save/",
+          "status": 200,
+          "target_header": "react",
+          "body_hash": "sha256:5cb223546a1774ae76580c0880b6d4aa961bac8ec4c3dcc33718dfe4d4df5fbf"
+        }
+      ]
+    }
+  ],
+  "controller": {
+    "pid": 35996,
+    "ppid": 35977,
+    "pgid": 35968,
+    "argv": [
+      "/opt/homebrew/Cellar/node@24/24.18.0/bin/node",
+      "/Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/scripts/cutover/verify-rollback.mts",
+      "--implementation-commit",
+      "78e0907f5be86c6aeb8480516165f11c15ba2069",
+      "--performance-receipt",
+      "docs/notes/project/evidence/public-site-review-performance.json",
+      "--output",
+      "docs/notes/project/evidence/public-site-local-receipt.json"
+    ],
+    "start_identity": "Wed Aug 26 05:35:42 2026",
+    "observed": {
+      "pid": 35996,
+      "ppid": 35977,
+      "pgid": 35968,
+      "start_identity": "Wed Aug 26 05:35:42 2026",
+      "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/verify-rollback.mts --implementation-commit 78e0907f5be86c6aeb8480516165f11c15ba2069 --performance-receipt docs/notes/project/evidence/public-site-review-performance.json --output docs/notes/project/evidence/public-site-local-receipt.json"
+    },
+    "signal_handlers": {
+      "installed_at": "2026-08-25T20:35:43.485Z",
+      "signals": [
+        "SIGINT",
+        "SIGTERM"
+      ],
+      "active": false,
+      "handled_signal": null,
+      "cleanup_completed": true,
+      "removed_at": "2026-08-25T20:36:55.852Z"
+    }
+  },
+  "processes": [
+    {
+      "role": "react",
+      "argv": [
+        "npm",
+        "run",
+        "site:preview",
+        "--",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "4391"
+      ],
+      "expected_command_line": "npm run site:preview --host 127.0.0.1 --port 4391",
+      "root_pid": 36121,
+      "root_ppid": 35996,
+      "root_pgid": 36121,
+      "start_identity": "Wed Aug 26 05:35:43 2026",
+      "observed": {
+        "pid": 36121,
+        "ppid": 35996,
+        "pgid": 36121,
+        "start_identity": "Wed Aug 26 05:35:43 2026",
+        "command_line": "npm run site:preview --host 127.0.0.1 --port 4391"
+      },
+      "started_at": "2026-08-25T20:35:43.494Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:35:43.605Z",
+        "polls": 2,
+        "observed_commands": [
+          "node /opt/homebrew/opt/node@24/bin/npm run site:preview -- --host 127.0.0.1 --port 4391",
+          "npm run site:preview --host 127.0.0.1 --port 4391"
+        ]
+      },
+      "pre_term_identity": {
+        "pid": 36121,
+        "ppid": 35996,
+        "pgid": 36121,
+        "start_identity": "Wed Aug 26 05:35:43 2026",
+        "command_line": "npm run site:preview --host 127.0.0.1 --port 4391"
+      },
+      "term_sent_at": "2026-08-25T20:36:55.789Z",
+      "root_exit": {
+        "exited_at": "2026-08-25T20:36:55.811Z",
+        "exit_code": 143,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 36121,
+            "ppid": 35996,
+            "pgid": 36121,
+            "command_line": "npm run site:preview --host 127.0.0.1 --port 4391",
+            "start_identity": "Wed Aug 26 05:35:43 2026"
+          },
+          {
+            "pid": 36156,
+            "ppid": 36121,
+            "pgid": 36121,
+            "command_line": "npm run preview --host 127.0.0.1 --port 4391",
+            "start_identity": "Wed Aug 26 05:35:43 2026"
+          },
+          {
+            "pid": 36271,
+            "ppid": 36156,
+            "pgid": 36121,
+            "command_line": "node /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/.bin/vite preview --outDir build/client --host 127.0.0.1 --host 127.0.0.1 --port 4391",
+            "start_identity": "Wed Aug 26 05:35:43 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 2,
+        "completed_at": "2026-08-25T20:36:55.847Z"
+      },
+      "stopped": true
+    },
+    {
+      "role": "astro",
+      "argv": [
+        "npm",
+        "run",
+        "legacy:preview",
+        "--",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "4392"
+      ],
+      "expected_command_line": "npm run legacy:preview --host 127.0.0.1 --port 4392",
+      "root_pid": 36201,
+      "root_ppid": 35996,
+      "root_pgid": 36201,
+      "start_identity": "Wed Aug 26 05:35:43 2026",
+      "observed": {
+        "pid": 36201,
+        "ppid": 35996,
+        "pgid": 36201,
+        "start_identity": "Wed Aug 26 05:35:43 2026",
+        "command_line": "npm run legacy:preview --host 127.0.0.1 --port 4392"
+      },
+      "started_at": "2026-08-25T20:35:43.605Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:35:43.714Z",
+        "polls": 2,
+        "observed_commands": [
+          "node /opt/homebrew/opt/node@24/bin/npm run legacy:preview -- --host 127.0.0.1 --port 4392",
+          "npm run legacy:preview --host 127.0.0.1 --port 4392"
+        ]
+      },
+      "pre_term_identity": {
+        "pid": 36201,
+        "ppid": 35996,
+        "pgid": 36201,
+        "start_identity": "Wed Aug 26 05:35:43 2026",
+        "command_line": "npm run legacy:preview --host 127.0.0.1 --port 4392"
+      },
+      "term_sent_at": "2026-08-25T20:36:55.702Z",
+      "root_exit": {
+        "exited_at": "2026-08-25T20:36:55.710Z",
+        "exit_code": 143,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 36201,
+            "ppid": 35996,
+            "pgid": 36201,
+            "command_line": "npm run legacy:preview --host 127.0.0.1 --port 4392",
+            "start_identity": "Wed Aug 26 05:35:43 2026"
+          },
+          {
+            "pid": 36270,
+            "ppid": 36201,
+            "pgid": 36201,
+            "command_line": "node /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/.bin/astro preview --host 127.0.0.1 --port 4392",
+            "start_identity": "Wed Aug 26 05:35:43 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 2,
+        "completed_at": "2026-08-25T20:36:55.746Z"
+      },
+      "stopped": true
+    },
+    {
+      "role": "proxy",
+      "argv": [
+        "npm",
+        "run",
+        "cutover:proxy",
+        "--",
+        "--listen",
+        "127.0.0.1:4390",
+        "--react",
+        "http://127.0.0.1:4391",
+        "--astro",
+        "http://127.0.0.1:4392",
+        "--state",
+        "/tmp/beyondwin-cutover.hdNDj6/target",
+        "--pid-file",
+        "/tmp/beyondwin-cutover.hdNDj6/proxy.pid"
+      ],
+      "expected_command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
+      "root_pid": 36299,
+      "root_ppid": 35996,
+      "root_pgid": 36299,
+      "start_identity": "Wed Aug 26 05:35:44 2026",
+      "observed": {
+        "pid": 36299,
+        "ppid": 35996,
+        "pgid": 36299,
+        "start_identity": "Wed Aug 26 05:35:44 2026",
+        "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid"
+      },
+      "started_at": "2026-08-25T20:35:44.649Z",
+      "stabilization": {
+        "completed_at": "2026-08-25T20:35:44.760Z",
+        "polls": 2,
+        "observed_commands": [
+          "node /opt/homebrew/opt/node@24/bin/npm run cutover:proxy -- --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
+          "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid"
+        ]
+      },
+      "pre_term_identity": {
+        "pid": 36299,
+        "ppid": 35996,
+        "pgid": 36299,
+        "start_identity": "Wed Aug 26 05:35:44 2026",
+        "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid"
+      },
+      "term_sent_at": "2026-08-25T20:36:55.618Z",
+      "root_exit": {
+        "exited_at": "2026-08-25T20:36:55.626Z",
+        "exit_code": 0,
+        "signal": null
+      },
+      "group_lifecycle": {
+        "members_observed": [
+          {
+            "pid": 36299,
+            "ppid": 35996,
+            "pgid": 36299,
+            "command_line": "npm run cutover:proxy --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
+            "start_identity": "Wed Aug 26 05:35:44 2026"
+          },
+          {
+            "pid": 36368,
+            "ppid": 36299,
+            "pgid": 36299,
+            "command_line": "node /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/.bin/tsx scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
+            "start_identity": "Wed Aug 26 05:35:44 2026"
+          },
+          {
+            "pid": 36369,
+            "ppid": 36368,
+            "pgid": 36299,
+            "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
+            "start_identity": "Wed Aug 26 05:35:44 2026"
+          }
+        ],
+        "group_empty": true,
+        "polls": 2,
+        "completed_at": "2026-08-25T20:36:55.660Z"
+      },
+      "stopped": true
+    }
+  ],
+  "proxy_worker": {
+    "pid": 36369,
+    "ppid": 36368,
+    "pgid": 36299,
+    "start_identity": "Wed Aug 26 05:35:44 2026",
+    "command_line": "/opt/homebrew/Cellar/node@24/24.18.0/bin/node --require /Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/preflight.cjs --import file:///Users/user/source/private/Blog/.worktrees/codex/public-reading-continuity-react-migration/node_modules/tsx/dist/loader.mjs scripts/cutover/local-proxy.mts --listen 127.0.0.1:4390 --react http://127.0.0.1:4391 --astro http://127.0.0.1:4392 --state /tmp/beyondwin-cutover.hdNDj6/target --pid-file /tmp/beyondwin-cutover.hdNDj6/proxy.pid",
+    "root_pid": 36299,
+    "descendant_of_proxy": true,
+    "process_group_owned": true,
+    "stopped": true
+  },
+  "port_lifecycle": {
+    "before_free": [
+      4390,
+      4391,
+      4392
+    ],
+    "during_owned": [
+      4390,
+      4391,
+      4392
+    ],
+    "owners_while_running": [
+      {
+        "port": 4390,
+        "pids": [
+          36369
+        ],
+        "root_pid": 36299,
+        "owned_by_group": true
+      },
+      {
+        "port": 4391,
+        "pids": [
+          36271
+        ],
+        "root_pid": 36121,
+        "owned_by_group": true
+      },
+      {
+        "port": 4392,
+        "pids": [
+          36270
+        ],
+        "root_pid": 36201,
+        "owned_by_group": true
+      }
+    ],
+    "after_free": [
+      4390,
+      4391,
+      4392
+    ]
+  },
+  "temp_root": {
+    "pattern": "/tmp/beyondwin-cutover.*",
+    "path": "/tmp/beyondwin-cutover.hdNDj6",
+    "realpath": "/private/tmp/beyondwin-cutover.hdNDj6",
+    "realpath_validated": true,
+    "removed": true
+  },
+  "dynamic_crawl": {
+    "route_count": 80,
+    "failures": [],
+    "routes": [
+      {
+        "path": "/",
+        "status": 200,
+        "final_url": "/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/analysis/",
+        "status": 200,
+        "final_url": "/analysis/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/",
+        "status": 200,
+        "final_url": "/articles/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/ai-design-references/",
+        "status": 200,
+        "final_url": "/articles/ai-design-references/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/andrej-karpathy-skills-analysis/",
+        "status": 200,
+        "final_url": "/articles/andrej-karpathy-skills-analysis/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/codex-ui-mockup-workflow/",
+        "status": 200,
+        "final_url": "/articles/codex-ui-mockup-workflow/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/context-refinement-system-design/",
+        "status": 200,
+        "final_url": "/articles/context-refinement-system-design/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "status": 200,
+        "final_url": "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/hermes-agent-persistent-worker-runtime/",
+        "status": 200,
+        "final_url": "/articles/hermes-agent-persistent-worker-runtime/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/lazycodex-agent-harness-analysis/",
+        "status": 200,
+        "final_url": "/articles/lazycodex-agent-harness-analysis/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/oh-my-pi-deep-review/",
+        "status": 200,
+        "final_url": "/articles/oh-my-pi-deep-review/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/open-design-repo-analysis/",
+        "status": 200,
+        "final_url": "/articles/open-design-repo-analysis/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/pgvector-hybrid-search/",
+        "status": 200,
+        "final_url": "/articles/pgvector-hybrid-search/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/ponytail-agent-minimalism-analysis/",
+        "status": 200,
+        "final_url": "/articles/ponytail-agent-minimalism-analysis/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/postgresql-bm25-pg-search/",
+        "status": 200,
+        "final_url": "/articles/postgresql-bm25-pg-search/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/articles/why-i-read-in-the-ai-era/",
+        "status": 200,
+        "final_url": "/articles/why-i-read-in-the-ai-era/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/ideas/",
+        "status": 200,
+        "final_url": "/ideas/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/",
+        "status": 200,
+        "final_url": "/memory/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/agent-harnesses-are-operating-systems/",
+        "status": 200,
+        "final_url": "/memory/agent-harnesses-are-operating-systems/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/agent-workflows-need-review-gates/",
+        "status": 200,
+        "final_url": "/memory/agent-workflows-need-review-gates/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/ai-design-tools-need-judgment-loops/",
+        "status": 200,
+        "final_url": "/memory/ai-design-tools-need-judgment-loops/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/context-quality-is-routing-problem/",
+        "status": 200,
+        "final_url": "/memory/context-quality-is-routing-problem/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/local-agent-products-are-work-shells/",
+        "status": 200,
+        "final_url": "/memory/local-agent-products-are-work-shells/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/map/",
+        "status": 200,
+        "final_url": "/memory/",
+        "redirected": true,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/memory-needs-retrieval-not-decoration/",
+        "status": 200,
+        "final_url": "/memory/memory-needs-retrieval-not-decoration/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/memory/personal-sites-should-show-records-first/",
+        "status": 200,
+        "final_url": "/memory/personal-sites-should-show-records-first/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/",
+        "status": 200,
+        "final_url": "/reviews/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/art-thief/",
+        "status": 200,
+        "final_url": "/reviews/art-thief/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/black-swan/",
+        "status": 200,
+        "final_url": "/reviews/black-swan/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/changing-their-minds/",
+        "status": 200,
+        "final_url": "/reviews/changing-their-minds/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/convenience-store-woman/",
+        "status": 200,
+        "final_url": "/reviews/convenience-store-woman/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/devotion-of-suspect-x/",
+        "status": 200,
+        "final_url": "/reviews/devotion-of-suspect-x/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/doing-good-better/",
+        "status": 200,
+        "final_url": "/reviews/doing-good-better/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/factfulness/",
+        "status": 200,
+        "final_url": "/reviews/factfulness/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/future-arrived-first/",
+        "status": 200,
+        "final_url": "/reviews/future-arrived-first/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/goethe-said-everything/",
+        "status": 200,
+        "final_url": "/reviews/goethe-said-everything/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/habitus/",
+        "status": 200,
+        "final_url": "/reviews/habitus/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/how-adam-smith-can-change-your-life/",
+        "status": 200,
+        "final_url": "/reviews/how-adam-smith-can-change-your-life/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/how-we-crossed-winter/",
+        "status": 200,
+        "final_url": "/reviews/how-we-crossed-winter/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/lolita/",
+        "status": 200,
+        "final_url": "/reviews/lolita/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/lord-of-the-flies/",
+        "status": 200,
+        "final_url": "/reviews/lord-of-the-flies/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/miracles-of-namiya-general-store/",
+        "status": 200,
+        "final_url": "/reviews/miracles-of-namiya-general-store/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/nevertheless/",
+        "status": 200,
+        "final_url": "/reviews/nevertheless/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/poor-charlies-almanack/",
+        "status": 200,
+        "final_url": "/reviews/poor-charlies-almanack/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/siddhartha/",
+        "status": 200,
+        "final_url": "/reviews/siddhartha/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/reviews/the-life-you-can-save/",
+        "status": 200,
+        "final_url": "/reviews/doing-good-better/",
+        "redirected": true,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/search/",
+        "status": 200,
+        "final_url": "/search/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/",
+        "status": 200,
+        "final_url": "/tags/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/agent/",
+        "status": 200,
+        "final_url": "/tags/agent/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/AI-agent/",
+        "status": 200,
+        "final_url": "/tags/AI-agent/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/AI/",
+        "status": 200,
+        "final_url": "/tags/AI/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/architecture/",
+        "status": 200,
+        "final_url": "/tags/architecture/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/automation/",
+        "status": 200,
+        "final_url": "/tags/automation/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/BM25/",
+        "status": 200,
+        "final_url": "/tags/BM25/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/book/",
+        "status": 200,
+        "final_url": "/tags/book/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/code-search/",
+        "status": 200,
+        "final_url": "/tags/code-search/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/Codex/",
+        "status": 200,
+        "final_url": "/tags/Codex/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/coding/",
+        "status": 200,
+        "final_url": "/tags/coding/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/database/",
+        "status": 200,
+        "final_url": "/tags/database/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/design/",
+        "status": 200,
+        "final_url": "/tags/design/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/developer-tools/",
+        "status": 200,
+        "final_url": "/tags/developer-tools/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/essay/",
+        "status": 200,
+        "final_url": "/tags/essay/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/frontend/",
+        "status": 200,
+        "final_url": "/tags/frontend/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/Graphify/",
+        "status": 200,
+        "final_url": "/tags/Graphify/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/judgment/",
+        "status": 200,
+        "final_url": "/tags/judgment/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/knowledge-graph/",
+        "status": 200,
+        "final_url": "/tags/knowledge-graph/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/naver-archive/",
+        "status": 200,
+        "final_url": "/tags/naver-archive/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/ParadeDB/",
+        "status": 200,
+        "final_url": "/tags/ParadeDB/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/pgvector/",
+        "status": 200,
+        "final_url": "/tags/pgvector/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/PostgreSQL/",
+        "status": 200,
+        "final_url": "/tags/PostgreSQL/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/RAG/",
+        "status": 200,
+        "final_url": "/tags/RAG/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/reading/",
+        "status": 200,
+        "final_url": "/tags/reading/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/reference/",
+        "status": 200,
+        "final_url": "/tags/reference/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/review/",
+        "status": 200,
+        "final_url": "/tags/review/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/search/",
+        "status": 200,
+        "final_url": "/tags/search/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/security/",
+        "status": 200,
+        "final_url": "/tags/security/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/source-grounded/",
+        "status": 200,
+        "final_url": "/tags/source-grounded/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/system-design/",
+        "status": 200,
+        "final_url": "/tags/system-design/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/tags/workflow/",
+        "status": 200,
+        "final_url": "/tags/workflow/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      },
+      {
+        "path": "/travel/",
+        "status": 200,
+        "final_url": "/travel/",
+        "redirected": false,
+        "console_errors": [],
+        "page_errors": [],
+        "hydration_errors": [],
+        "axe_serious_or_critical": [],
+        "overflow": {
+          "expected_max_width": 1440,
+          "actual_scroll_width": 1440,
+          "overflow": false
+        },
+        "private_boundary_hits": []
+      }
+    ]
+  },
+  "static_contract": {
+    "route_count": 80,
+    "inventory_hash": "sha256:1dda2a3b837dcbbab650358cf145481cc81210470a6d5677c7b1958b7c275f18",
+    "metadata_checked": 80,
+    "redirects_checked": 2,
+    "scoped_routes_checked": 80,
+    "failures": [],
+    "environment": {
+      "node": "v24.18.0",
+      "npm": "11.16.0",
+      "os": "darwin 25.5.0 arm64",
+      "playwright": "1.62.1",
+      "chromium": "151.0.7922.34"
+    },
+    "release": {
+      "release_id": "84167f3be46bb747359c29e864516165bbd4212945498089ea1adb6ea4b59c7b",
+      "active_pointer_hash": "sha256:cb6202e7ae0d6ab731b467464d733c5e332d53dc1ab900391b0d14a53806a5e2",
+      "manifest_hash": "sha256:5462764b984aa492eb6f4194988ddad035a25c9ef751a2857f4b6571ac978195",
+      "artifact_hash": "sha256:38829f0d35c78c5777f1b094a1196fd17146c615c1d5982387c7b2a153c95a08"
+    },
+    "builds": {
+      "react_root": "apps/site/build/client",
+      "react_hash": "sha256:601a874e6b655c09b6b99bdb0a2eca24bb0545f4b71670219c9687a9bdc72aee",
+      "astro_root": "dist",
+      "astro_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37",
+      "rollback_hash": "sha256:0a7687d29d5c8207f31f1883e1a95bacff38eb255d23e744cd5a7bc183220c37"
+    },
+    "task14": {
+      "eligible": true,
+      "performance_commit": "b8ed8fd914a468f11108509761857d694c5e44cb",
+      "route_source_hashes": {
+        "/": "sha256:9b19555f7bbeb3fed0e96ece7fd72eef44d8688fc7de14eab1cfad1a965f21be",
+        "/articles/why-i-read-in-the-ai-era/": "sha256:ba8768b43ef81d5a3b5e2fb302031e577d616fbd5f89225b2b9676e06dc8a017",
+        "/reviews/black-swan/": "sha256:4902af6e0e1844453c9fc6e53e9114331232f4b1d2965c0916f738295f652817",
+        "/memory/agent-harnesses-are-operating-systems/": "sha256:357c7276f7025c4c28dd6862c1719a40b5330d3c739697616aebf9ed13c13929"
+      },
+      "metric_summary": [
+        {
+          "viewport": "desktop",
+          "lcp_median_ms": 24,
+          "cls_median": 0,
+          "initial_js_gzip_bytes": 108250,
+          "image_bytes": 45902,
+          "mandatory_issues": 0
+        },
+        {
+          "viewport": "mobile",
+          "lcp_median_ms": 20,
+          "cls_median": 0,
+          "initial_js_gzip_bytes": 108250,
+          "image_bytes": 45902,
+          "mandatory_issues": 0
+        }
+      ]
+    }
+  }
 }
