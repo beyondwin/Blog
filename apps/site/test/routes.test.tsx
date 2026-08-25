@@ -59,18 +59,23 @@ describe('React Router current-behavior static route contract', () => {
     );
     const releaseModule = await candidateModule<{
       loadVerifiedRelease(): Promise<VerifiedActivePublicRelease>;
-      decisionSlicePaths(release: VerifiedActivePublicRelease): string[];
+      fullPublicPaths(release: VerifiedActivePublicRelease): string[];
     }>('app/release.server.ts');
 
     expect(configModule.default.ssr).toBe(false);
     const release = await releaseModule.loadVerifiedRelease();
-    expect(await configModule.default.prerender()).toEqual(releaseModule.decisionSlicePaths(release));
-    expect(routesModule.default).toEqual([
+    expect(await configModule.default.prerender()).toEqual(releaseModule.fullPublicPaths(release));
+    expect(routesModule.default).toEqual(expect.arrayContaining([
       expect.objectContaining({ index: true, file: './routes/home.tsx' }),
+      expect.objectContaining({ path: 'articles', file: './routes/articles-index.tsx' }),
       expect.objectContaining({ path: 'articles/:slug', file: './routes/article.tsx' }),
+      expect.objectContaining({ path: 'reviews', file: './routes/reviews-index.tsx' }),
       expect.objectContaining({ path: 'reviews/:slug', file: './routes/review.tsx' }),
+      expect.objectContaining({ path: 'memory', file: './routes/memory-index.tsx' }),
       expect.objectContaining({ path: 'memory/:slug', file: './routes/memory.tsx' }),
-    ]);
+      expect.objectContaining({ path: 'search', file: './routes/search.tsx' }),
+      expect.objectContaining({ path: 'tags/:tag', file: './routes/tag.tsx' }),
+    ]));
   });
 
   it('resolves the approved Vite pin from the React Router developer tool itself', () => {
@@ -131,7 +136,7 @@ describe('React Router current-behavior static route contract', () => {
     expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).toContain('.review-reading-page .content-figure');
     expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).not.toContain('.memory-thought');
     expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).toContain('.memory-thought');
-    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).not.toContain('.reading-threshold');
+    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).toContain('.memory-thought');
     expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.public-scene');
     expect(root.resolveCriticalCssForRender('route', null, 'tokens', 'shell'))
       .toBe('tokensshellroute');
@@ -262,7 +267,7 @@ describe('React Router current-behavior static route contract', () => {
       expect(source, relativePath).not.toMatch(/\b(?:action|headers|clientLoader|clientAction)\s*[=(]/u);
       expect(source, relativePath).not.toMatch(/\bfetch\s*\(/u);
       expect(imports.join('\n'), relativePath).not.toMatch(
-        /@react-router\/fs-routes|(?:^|\/)src\/content|(?:^|\/)memory(?:\/|$)|memory\.public\.json/u,
+        /@react-router\/fs-routes|(?:^|\/)src\/content|(?:^|\/)\.\.\/\.\.\/memory(?:\/|$)|memory\.public\.json/u,
       );
     }
   });

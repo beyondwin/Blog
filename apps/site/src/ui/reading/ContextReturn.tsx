@@ -3,11 +3,15 @@ import { navigateToReadingOrigin, safeReadingFallback, type ReadingCollection } 
 import { parseOrigin, type ReadingOrigin } from '../navigation/origin';
 import { bootstrapReadingOrigin } from '../navigation/transport';
 
-export type DetailCollection = Extract<ReadingCollection, 'articles' | 'reviews'>;
+export type DetailCollection = ReadingCollection;
 
 const DIRECT_LABELS: Record<DetailCollection, string> = {
   articles: '글 목록으로',
   reviews: '책 목록으로',
+  analysis: '조사 목록으로',
+  ideas: '아이디어 목록으로',
+  travel: '여행 목록으로',
+  memory: '문장 목록으로',
 };
 
 const ORIGIN_LABELS = {

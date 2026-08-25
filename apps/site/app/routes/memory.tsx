@@ -1,5 +1,6 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import { SiteShell } from '../../src/ui/components/SiteShell';
+import { MemoryDetailPage } from '../../src/ui/memory/MemoryDetailPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, metadataForRecord } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
@@ -38,23 +39,7 @@ export function MemoryPresentation({ data }: { data: MemoryData }) {
         title={`${data.record.title} · beyondwin`}
       />
       <SiteShell mode="reading" currentSection={null}>
-      <article className="reading-sheet memory-thought">
-        <h1>{data.record.claimKo}</h1>
-        {data.record.claimEn && <p className="memory-thought__en">{data.record.claimEn}</p>}
-        <div className="reading-prose memory-thought__body" dangerouslySetInnerHTML={{ __html: data.record.bodyHtml }} />
-        {data.record.sources.length > 0 && (
-          <section className="memory-thought__sources">
-            <h2>이 문장이 나온 글</h2>
-            <ul>{data.record.sources.map((source) => <li key={source.href}><a href={source.href}>{source.title}</a></li>)}</ul>
-          </section>
-        )}
-        {data.record.companions.length > 0 && (
-          <section className="memory-thought__companions">
-            <h2>같이 붙는 문장</h2>
-            <ul>{data.record.companions.map((item) => <li key={item.href}><a href={item.href}>{item.claimKo}</a></li>)}</ul>
-          </section>
-        )}
-      </article>
+        <MemoryDetailPage record={data.record} />
       </SiteShell>
     </>
   );
