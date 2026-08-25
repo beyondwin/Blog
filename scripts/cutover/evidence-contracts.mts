@@ -1,5 +1,6 @@
 import { median, medianAbsoluteDeviation } from '../../tools/parity/src/measure-browser.ts';
-import { join, relative } from 'node:path';
+import { realpathSync } from 'node:fs';
+import { basename, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { sha256 } from './cutover-evidence.mts';
 
@@ -417,6 +418,17 @@ export function ownedCommandLineReady(actual: string, argv: readonly string[]): 
 
 export interface DynamicRouteExpectation { path: string; finalUrl: string; redirected: boolean }
 
+function assertTaskTempBinding(value: UnknownRecord, prefix: 'beyondwin-cutover.' | 'beyondwin-clean-host.', label: string): string {
+  const path = string(value.path, `${label} path`);
+  const realpath = string(value.realpath, `${label} realpath`);
+  const name = basename(path);
+  if (path !== `/tmp/${name}` || !new RegExp(`^${prefix.replace('.', '\\.')}[A-Za-z0-9_-]+$`, 'u').test(name)) {
+    throw new Error(`${label} declared path escaped its task-owned /tmp root`);
+  }
+  if (realpath !== join(realpathSync('/tmp'), name)) throw new Error(`${label} canonical realpath binding drifted`);
+  return path;
+}
+
 export function assertDynamicCrawl(value: unknown, expectedRoutes: readonly DynamicRouteExpectation[]): void {
   if (expectedRoutes.length !== 80) throw new Error('dynamic crawl expected route inventory must contain exactly 80 routes');
   const crawl = array(value, 'dynamic crawl').map((entry, index) => record(entry, `dynamic crawl[${index}]`));
@@ -457,8 +469,7 @@ export function assertLocalReceiptMaterialGroups(input: unknown, expected: {
   }
   const controller = assertControllerEvidence(root.controller, { argv: expected.controllerArgv, observedCommandLine: expected.controllerObservedCommandLine });
   const temp = exactKeys(root.temp_root, ['pattern', 'path', 'realpath', 'realpath_validated', 'removed'], 'local temp root');
-  const tempPath = string(temp.path, 'local temp path');
-  if (temp.realpath !== tempPath || !/^\/tmp\/beyondwin-cutover\.[A-Za-z0-9_-]+$/u.test(tempPath)) throw new Error('local temp path/realpath binding drifted');
+  const tempPath = assertTaskTempBinding(temp, 'beyondwin-cutover.', 'local temp root');
   const processExpectations = [
     { role: 'react', argv: ['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1', '--port', '4391'] },
     { role: 'astro', argv: ['npm', 'run', 'legacy:preview', '--', '--host', '127.0.0.1', '--port', '4392'] },
@@ -512,8 +523,7 @@ export function assertCleanHostReceiptMaterialGroups(input: unknown, expected: {
   const allowed = strings(environment.allowed_keys, 'clean-host allowed keys');
   if (allowed.some((key) => /token|auth|proxy|api|secret/iu.test(key))) throw new Error('clean-host environment contains a secret/proxy key');
   const temp = exactKeys(root.temp_root, ['pattern', 'path', 'realpath', 'realpath_validated', 'removed', 'preview_port'], 'clean-host temp root');
-  const tempPath = string(temp.path, 'clean-host temp path');
-  if (temp.realpath !== tempPath || !/^\/tmp\/beyondwin-clean-host\.[A-Za-z0-9_-]+$/u.test(tempPath)) throw new Error('clean-host temp path/realpath binding drifted');
+  const tempPath = assertTaskTempBinding(temp, 'beyondwin-clean-host.', 'clean-host temp root');
   const cleanCommandExpectations = [
     { role: 'install:git', phase: 'install', argv: ['git', 'archive', '--format=tar', `--output=${tempPath}/source.tar`, expected.implementationCommit, '--', '.', ':(exclude)memory', ':(exclude)build', ':(exclude)output', ':(exclude).superpowers', ':(exclude).env', ':(exclude).env.*'] },
     { role: 'install:tar', phase: 'install', argv: ['tar', '-xf', `${tempPath}/source.tar`, '-C', `${tempPath}/repository`] },

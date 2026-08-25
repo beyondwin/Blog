@@ -53,6 +53,16 @@ function validateRootSnapshot(entry: OwnedProcessEvidence, snapshot: ProcessSnap
   if (requireStableCommand && entry.observed && snapshot.command_line !== entry.observed.command_line) throw new Error('owned process command was replaced');
 }
 
+function matchesExpectedNpmBootstrap(entry: OwnedProcessEvidence, actual: string): boolean {
+  if (entry.argv[0] !== 'npm' || entry.argv.some((argument) => /\s/u.test(argument))) return false;
+  const [nodeExecutable, npmExecutable, ...argumentsPassed] = actual.trim().split(/\s+/u);
+  const nodeName = nodeExecutable?.split('/').at(-1);
+  const npmName = npmExecutable?.split('/').at(-1);
+  return /^node(?:@[0-9]+)?$/u.test(nodeName ?? '')
+    && (npmName === 'npm' || npmName === 'npm-cli.js')
+    && JSON.stringify(argumentsPassed) === JSON.stringify(entry.argv.slice(1));
+}
+
 export async function stabilizeOwnedProcess(
   entry: OwnedProcessEvidence,
   snapshot: () => Promise<ProcessSnapshot>,
@@ -127,7 +137,7 @@ export async function terminateOwnedProcess(entry: OwnedProcessEvidence, options
   const beforeTerm = await options.snapshot(entry.root_pid);
   if (!entry.observed || !entry.start_identity) {
     validateRootSnapshot(entry, beforeTerm, false);
-    if (beforeTerm.command_line !== entry.expected_command_line) {
+    if (beforeTerm.command_line !== entry.expected_command_line && !matchesExpectedNpmBootstrap(entry, beforeTerm.command_line)) {
       throw new Error('owned unobserved process command does not match its immutable spawn binding');
     }
     entry.start_identity = beforeTerm.start_identity;

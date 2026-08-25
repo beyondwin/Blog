@@ -52,25 +52,28 @@ describe('owned process lifecycle', () => {
       role: 'react', argv, expectedCommand: observedCommand, rootPid: 101, controllerPid: 99,
       startedAt: '2026-08-26T00:00:00.000Z',
     });
+    const bootstrap = rootSnapshot({
+      command_line: 'node /opt/homebrew/opt/node@24/bin/npm run site:preview -- --host 127.0.0.1 --port 4391',
+    });
     let signalled = false;
     let polls = 0;
     await terminateOwnedProcess(entry, {
-      snapshot: async () => rootSnapshot(),
-      groupMembers: async () => ++polls === 1 ? [rootSnapshot()] : [],
+      snapshot: async () => bootstrap,
+      groupMembers: async () => ++polls === 1 ? [bootstrap] : [],
       signalGroup: () => { signalled = true; },
       waitForRootExit: async () => ({ exited_at: '2026-08-26T00:01:00.000Z', exit_code: null, signal: 'SIGTERM' }),
       pause: async () => {},
     });
     expect(signalled).toBe(true);
-    expect(entry).toMatchObject({ start_identity: 'start-a', observed: rootSnapshot(), stopped: true });
+    expect(entry).toMatchObject({ start_identity: 'start-a', observed: bootstrap, stopped: true });
 
     const foreign = registerOwnedProcess([], {
       role: 'react', argv, expectedCommand: observedCommand, rootPid: 101, controllerPid: 99,
     });
     signalled = false;
     await expect(terminateOwnedProcess(foreign, {
-      snapshot: async () => rootSnapshot({ command_line: 'npm run foreign' }),
-      groupMembers: async () => [rootSnapshot({ command_line: 'npm run foreign' })],
+      snapshot: async () => rootSnapshot({ command_line: 'node /opt/homebrew/opt/node@24/bin/npm run foreign -- --host 127.0.0.1 --port 4391' }),
+      groupMembers: async () => [rootSnapshot({ command_line: 'node /opt/homebrew/opt/node@24/bin/npm run foreign -- --host 127.0.0.1 --port 4391' })],
       signalGroup: () => { signalled = true; },
       waitForRootExit: async () => ({ exited_at: '2026-08-26T00:01:00.000Z', exit_code: null, signal: 'SIGTERM' }),
       pause: async () => {},

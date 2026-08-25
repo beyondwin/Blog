@@ -20,6 +20,8 @@ const REPRESENTATIVES = ['/', '/articles/a/', ROUTE, '/memory/a/', '/search/', '
 const AT = '2026-08-26T00:00:00.000Z';
 const LOCAL_TEMP = '/tmp/beyondwin-cutover.test';
 const CLEAN_TEMP = '/tmp/beyondwin-clean-host.test';
+const LOCAL_REAL_TEMP = '/private/tmp/beyondwin-cutover.test';
+const CLEAN_REAL_TEMP = '/private/tmp/beyondwin-clean-host.test';
 const LOCAL_CONTROLLER_ARGV = ['/node24', '/repo/scripts/cutover/verify-rollback.mts', '--implementation-commit', COMMIT, '--performance-receipt', '/repo/performance.json', '--output', '/repo/local.json'];
 const CLEAN_CONTROLLER_ARGV = ['/node24', '/repo/scripts/cutover/verify-clean-host.mts', '--commit', COMMIT, '--output', '/repo/clean.json'];
 const LOCAL_CONTROLLER_COMMAND = `tsx:${LOCAL_CONTROLLER_ARGV.join(' ')}`;
@@ -263,7 +265,7 @@ describe('source-bound cutover evidence contracts', () => {
       ],
       proxy_worker: { descendant_of_proxy: true, stopped: true },
       port_lifecycle: { before_free: [4390, 4391, 4392], during_owned: [4390, 4391, 4392], after_free: [4390, 4391, 4392] },
-      temp_root: { pattern: '/tmp/beyondwin-cutover.*', path: LOCAL_TEMP, realpath: LOCAL_TEMP, realpath_validated: true, removed: true },
+      temp_root: { pattern: '/tmp/beyondwin-cutover.*', path: LOCAL_TEMP, realpath: LOCAL_REAL_TEMP, realpath_validated: true, removed: true },
       dynamic_crawl: { route_count: 80, failures: [] },
       static_contract: { route_count: 80, inventory_hash: HASH, failures: [] },
     };
@@ -281,6 +283,8 @@ describe('source-bound cutover evidence contracts', () => {
       (x: any) => { x.controller.signal_handlers.active = true; },
       (x: any) => { x.proxy_worker.descendant_of_proxy = false; },
       (x: any) => { x.temp_root.removed = false; },
+      (x: any) => { x.temp_root.path = '/tmp/beyondwin-cutover.test/../escape'; },
+      (x: any) => { x.temp_root.realpath = '/private/tmp/foreign.test'; },
       (x: any) => { x.dynamic_crawl.failures.push('error'); },
       (x: any) => { x.eligible = false; },
       (x: any) => { x.errors.push('failure'); },
@@ -310,7 +314,7 @@ describe('source-bound cutover evidence contracts', () => {
       release: { release_id: RELEASE, active_pointer_hash: HASH, manifest_hash: HASH, artifact_hash: HASH },
       selected_build_hash: HASH, route_count: 80, inventory_hash: HASH,
       smoke: Array.from({ length: 80 }, (_, index) => ({ path: `/route-${index}/`, status: 200, body_hash: HASH })),
-      temp_root: { pattern: '/tmp/beyondwin-clean-host.*', path: CLEAN_TEMP, realpath: CLEAN_TEMP, realpath_validated: true, removed: true, preview_port: 49152 }, errors: [],
+      temp_root: { pattern: '/tmp/beyondwin-clean-host.*', path: CLEAN_TEMP, realpath: CLEAN_REAL_TEMP, realpath_validated: true, removed: true, preview_port: 49152 }, errors: [],
     };
     receipt.archive_inventory_hash = `sha256:${createHash('sha256').update('a\nb\n').digest('hex')}`;
     const expected = { implementationCommit: COMMIT, controllerArgv: CLEAN_CONTROLLER_ARGV, controllerObservedCommandLine: CLEAN_CONTROLLER_COMMAND };
@@ -328,6 +332,8 @@ describe('source-bound cutover evidence contracts', () => {
       (x: any) => { x.release.release_id = ''; },
       (x: any) => { x.smoke.pop(); },
       (x: any) => { x.temp_root.removed = false; },
+      (x: any) => { x.temp_root.path = '/tmp/beyondwin-clean-host.test/../escape'; },
+      (x: any) => { x.temp_root.realpath = '/private/tmp/beyondwin-clean-host.other'; },
       (x: any) => { x.errors.push('failure'); },
       (x: any) => { x.extra = true; },
     ]) {
