@@ -114,6 +114,7 @@ describe('React Router current-behavior static route contract', () => {
     expect(rootSource).toContain("import('../src/ui/styles/shell.css?inline')");
     expect(rootSource).toContain('import.meta.env.SSR');
     expect(homeSource).toContain("import('../../src/ui/styles/route-scene.css?inline')");
+    expect(homeSource).not.toContain("import('../../src/ui/styles/scene.css?inline')");
     expect(articleSource).toContain("import('../../src/ui/styles/route-article.css?inline')");
     expect(reviewSource).toContain("import('../../src/ui/styles/route-review.css?inline')");
     expect(memorySource).toContain("import('../../src/ui/styles/route-memory.css?inline')");
@@ -208,6 +209,9 @@ describe('React Router current-behavior static route contract', () => {
 
     expect(homeHtml).toContain(`href="/articles/${ARTICLE_ID}/"`);
     expect(homeHtml).toContain('data-scene-object="reading-desk-cobalt"');
+    expect(homeHtml).toContain('살펴보기');
+    expect(homeHtml).toContain('글 읽기');
+    expect(homeHtml).not.toContain('전체 보기');
     expect(articleHtml).toContain('<h1>AI 시대에, 나는 왜 책을 읽는가</h1>');
     expect(articleHtml).toContain('srcset="/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif 720w');
     expect(articleHtml).toContain('width="1536" height="1024"');
