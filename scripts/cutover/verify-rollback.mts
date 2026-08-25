@@ -282,16 +282,16 @@ export async function verifyStaticCutoverContract(options: {
   };
 }
 
-interface ProcessSnapshot { pid: number; ppid: number; start_identity: string; command_line: string }
+interface ProcessSnapshot { pid: number; ppid: number; pgid: number; start_identity: string; command_line: string }
 
 async function processSnapshot(pid: number): Promise<ProcessSnapshot> {
   const [identity, start] = await Promise.all([
-    execFileAsync('ps', ['-p', String(pid), '-o', 'pid=,ppid=,command=']),
+    execFileAsync('ps', ['-p', String(pid), '-o', 'pid=,ppid=,pgid=,command=']),
     execFileAsync('ps', ['-p', String(pid), '-o', 'lstart=']),
   ]);
-  const match = identity.stdout.trim().match(/^([0-9]+)\s+([0-9]+)\s+(.+)$/u);
+  const match = identity.stdout.trim().match(/^([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+(.+)$/u);
   if (!match || !start.stdout.trim()) throw new Error(`created process ${pid} is not running`);
-  return { pid: Number(match[1]), ppid: Number(match[2]), start_identity: start.stdout.trim(), command_line: match[3]! };
+  return { pid: Number(match[1]), ppid: Number(match[2]), pgid: Number(match[3]), start_identity: start.stdout.trim(), command_line: match[4]! };
 }
 
 async function smokeTransition(base: string, target: ProxyTarget): Promise<ProxyTransition> {
@@ -363,7 +363,7 @@ async function waitFor(check: () => Promise<boolean>, label: string): Promise<vo
 }
 
 async function spawnedProcess(role: keyof typeof exactCommands, argv: readonly string[], root: string): Promise<{
-  role: keyof typeof exactCommands; child: ChildProcess; argv: string[]; root_pid: number; root_ppid: number;
+  role: keyof typeof exactCommands; child: ChildProcess; argv: string[]; root_pid: number; root_ppid: number; root_pgid: number;
   start_identity: string; observed: ProcessSnapshot; started_at: string; term_sent_at: string | null;
   exited_at: string | null; exit_code: number | null; signal: NodeJS.Signals | null; stopped: boolean;
 }> {
@@ -373,14 +373,14 @@ async function spawnedProcess(role: keyof typeof exactCommands, argv: readonly s
   child.stdout?.pipe(process.stdout); child.stderr?.pipe(process.stderr);
   let observed = await processSnapshot(child.pid);
   const result = {
-    role, child, argv: [...argv], root_pid: child.pid, root_ppid: process.pid,
+    role, child, argv: [...argv], root_pid: child.pid, root_ppid: process.pid, root_pgid: child.pid,
     start_identity: observed.start_identity, observed, started_at: startedAt, term_sent_at: null,
     exited_at: null, exit_code: null, signal: null, stopped: false,
   };
   try {
     await waitFor(async () => {
       const candidate = await processSnapshot(child.pid!);
-      if (candidate.pid !== child.pid || candidate.ppid !== process.pid || candidate.start_identity !== result.start_identity) {
+      if (candidate.pid !== child.pid || candidate.ppid !== process.pid || candidate.pgid !== child.pid || candidate.start_identity !== result.start_identity) {
         throw new Error(`owned ${role} process identity changed while waiting for stable command title`);
       }
       observed = candidate;
@@ -519,7 +519,7 @@ async function runDrill(options: DrillArguments): Promise<void> {
 
   const processes: Array<Awaited<ReturnType<typeof spawnedProcess>>> = [];
   let proxyWorker: Record<string, unknown> | null = null; let transitions: ProxyTransition[] = []; let crawl: Array<Record<string, unknown>> = [];
-  let ownersWhileRunning: Array<{ port: number; pids: number[]; root_pid: number; owned_by_root: boolean }> = [];
+  let ownersWhileRunning: Array<{ port: number; pids: number[]; root_pid: number; owned_by_group: boolean }> = [];
   let runError: unknown;
   try {
     const react = await spawnedProcess('react', exactCommands.react, root); processes.push(react);
@@ -531,17 +531,17 @@ async function runDrill(options: DrillArguments): Promise<void> {
     await waitFor(async () => access(pidPath).then(() => true, () => false), 'proxy PID file');
     const workerPid = Number((await readFile(pidPath, 'utf8')).trim());
     const workerSnapshot = await processSnapshot(workerPid);
-    proxyWorker = { ...workerSnapshot, root_pid: proxy.root_pid, descendant_of_proxy: await descendantOf(workerPid, proxy.root_pid), stopped: false };
+    proxyWorker = { ...workerSnapshot, root_pid: proxy.root_pid, descendant_of_proxy: await descendantOf(workerPid, proxy.root_pid), process_group_owned: workerSnapshot.pgid === proxy.root_pid, stopped: false };
     if (!proxyWorker.descendant_of_proxy) throw new Error('proxy PID-file worker is not a descendant of the owned proxy root');
     await waitFor(async () => (await fetch('http://127.0.0.1:4390/')).status === 200, 'local proxy');
     const rootsByPort = new Map([[4390, proxy.root_pid], [4391, react.root_pid], [4392, astro.root_pid]]);
     ownersWhileRunning = await Promise.all([4390, 4391, 4392].map(async (port) => {
       const pids = await portOwnerPids(port); const ownedRoot = rootsByPort.get(port)!;
-      const owned = (await Promise.all(pids.map(async (pid) => pid === ownedRoot || await descendantOf(pid, ownedRoot)))).every(Boolean);
-      return { port, pids, root_pid: ownedRoot, owned_by_root: owned };
+      const owned = (await Promise.all(pids.map(async (pid) => (await processSnapshot(pid)).pgid === ownedRoot))).every(Boolean);
+      return { port, pids, root_pid: ownedRoot, owned_by_group: owned };
     }));
     if (ownersWhileRunning.some(({ pids }) => pids.length === 0)) throw new Error('one or more drill ports has no observed owned listener');
-    if (ownersWhileRunning.some(({ owned_by_root }) => !owned_by_root)) throw new Error('one or more drill listeners is not descended from its created root');
+    if (ownersWhileRunning.some(({ owned_by_group }) => !owned_by_group)) throw new Error('one or more drill listeners escaped its owned process group');
     for (const target of ['react', 'astro', 'react'] as const) {
       await writeProxyTarget(statePath, target); transitions.push(await smokeTransition('http://127.0.0.1:4390', target));
     }

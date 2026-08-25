@@ -165,19 +165,19 @@ async function verifyArchive(root: string, commit: string, receipt: Record<strin
 function verifyHistoricalProcesses(receipt: Record<string, unknown>): void {
   const processes = receipt.processes as Array<Record<string, unknown>>;
   for (const process of processes) {
-    exactKeys(process, ['role', 'argv', 'root_pid', 'root_ppid', 'start_identity', 'observed', 'started_at', 'term_sent_at', 'exited_at', 'exit_code', 'signal', 'stopped'], 'owned process');
-    const observed = exactKeys(process.observed, ['pid', 'ppid', 'start_identity', 'command_line'], 'owned process observation');
-    if (process.root_pid !== observed.pid || process.root_ppid !== observed.ppid || process.start_identity !== observed.start_identity
+    exactKeys(process, ['role', 'argv', 'root_pid', 'root_ppid', 'root_pgid', 'start_identity', 'observed', 'started_at', 'term_sent_at', 'exited_at', 'exit_code', 'signal', 'stopped'], 'owned process');
+    const observed = exactKeys(process.observed, ['pid', 'ppid', 'pgid', 'start_identity', 'command_line'], 'owned process observation');
+    if (process.root_pid !== observed.pid || process.root_ppid !== observed.ppid || process.root_pgid !== observed.pgid || process.root_pgid !== process.root_pid || process.start_identity !== observed.start_identity
       || observed.command_line !== npmObservedCommandLine(process.argv as string[]) || process.stopped !== true) throw new Error('owned process identity/lifecycle was forged');
     const times = [process.started_at, process.term_sent_at, process.exited_at].map((value) => Date.parse(String(value)));
     if (times.some(Number.isNaN) || !(times[0]! <= times[1]! && times[1]! <= times[2]!)) throw new Error('owned process timestamps are invalid or unordered');
   }
   const worker = receipt.proxy_worker as Record<string, unknown>;
-  if (worker.descendant_of_proxy !== true || worker.stopped !== true || typeof worker.pid !== 'number' || typeof worker.root_pid !== 'number') throw new Error('proxy worker descendant/cleanup evidence is invalid');
+  if (worker.descendant_of_proxy !== true || worker.process_group_owned !== true || worker.stopped !== true || typeof worker.pid !== 'number' || typeof worker.root_pid !== 'number') throw new Error('proxy worker descendant/group/cleanup evidence is invalid');
   const lifecycle = receipt.port_lifecycle as Record<string, unknown>;
   const owners = lifecycle.owners_while_running as Array<Record<string, unknown>>;
   if (!Array.isArray(owners) || JSON.stringify(owners.map(({ port }) => port)) !== '[4390,4391,4392]'
-    || owners.some(({ pids, owned_by_root }) => !Array.isArray(pids) || pids.length === 0 || owned_by_root !== true)) {
+    || owners.some(({ pids, owned_by_group }) => !Array.isArray(pids) || pids.length === 0 || owned_by_group !== true)) {
     throw new Error('historical port ownership evidence is invalid');
   }
 }

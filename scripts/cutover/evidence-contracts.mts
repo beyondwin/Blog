@@ -222,6 +222,7 @@ export function validateOwnedProcessIdentity(
 ): void {
   if (value.root_pid !== value.observed?.pid) throw new Error('owned process PID was replaced');
   if (value.root_ppid !== options.controllerPid || value.observed?.ppid !== options.controllerPid) throw new Error('owned process has a foreign parent');
+  if (value.root_pgid !== value.root_pid || value.observed?.pgid !== value.root_pid) throw new Error('owned process escaped its dedicated process group');
   if (value.start_identity !== value.observed?.start_identity) throw new Error('owned process start identity changed');
   if (JSON.stringify(value.argv) !== JSON.stringify(options.expectedArgv)) throw new Error('owned process argv drifted');
   const expectedCommand = options.expectedObservedCommandLine ?? options.expectedArgv.join(' ');

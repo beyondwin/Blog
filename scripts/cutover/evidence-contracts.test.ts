@@ -104,14 +104,15 @@ describe('source-bound cutover evidence contracts', () => {
 
   it('rejects replacement, foreign-parent, PID, and observed-command mismatches', () => {
     const identity = {
-      role: 'react', root_pid: 101, root_ppid: 99, start_identity: 'start-a',
+      role: 'react', root_pid: 101, root_ppid: 99, root_pgid: 101, start_identity: 'start-a',
       argv: ['npm', 'run', 'site:preview', '--', '--host', '127.0.0.1', '--port', '4391'],
-      observed: { pid: 101, ppid: 99, start_identity: 'start-a', command_line: 'npm run site:preview -- --host 127.0.0.1 --port 4391' },
+      observed: { pid: 101, ppid: 99, pgid: 101, start_identity: 'start-a', command_line: 'npm run site:preview -- --host 127.0.0.1 --port 4391' },
     };
     expect(() => validateOwnedProcessIdentity(identity, { controllerPid: 99, expectedArgv: identity.argv })).not.toThrow();
     for (const changed of [
       { ...identity, root_pid: 102 },
       { ...identity, root_ppid: 1, observed: { ...identity.observed, ppid: 1 } },
+      { ...identity, root_pgid: 777, observed: { ...identity.observed, pgid: 777 } },
       { ...identity, observed: { ...identity.observed, start_identity: 'replacement' } },
       { ...identity, observed: { ...identity.observed, command_line: 'npm run foreign' } },
     ]) expect(() => validateOwnedProcessIdentity(changed, { controllerPid: 99, expectedArgv: identity.argv })).toThrow();
