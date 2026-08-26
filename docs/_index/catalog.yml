@@ -341,7 +341,7 @@
   status: organized
   summary: Evidence packet for a source and runtime inspection of crap4java, its fail-open unknown-coverage policy, CRAP threshold behavior, and the limits of automated code review.
   source: src/content/articles/uncle-bob-ai-code-review-evidence.mdx
-  updated: 2026-07-26
+  updated: 2026-08-26
 
 - title: AWS Static Frontend and Serverless BFF Research Packet
   path: docs/notes/article-factory/aws-static-frontend-serverless-bff.md
