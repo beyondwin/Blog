@@ -83,6 +83,16 @@
   source: user decisions 2026-08-26
   updated: 2026-08-26
 
+- title: 서평 제외 아티클 전면 개선 구현 계획
+  path: docs/notes/project/non-review-article-improvement-implementation-plan.md
+  topic: project
+  type: implementation-plan
+  language: ko
+  status: organized
+  summary: 승인된 설계를 글별 근거 재검증, 한국어 편집, 조건부 공개 전환, 전체 validation과 browser 검사 task로 나눈 실행 계획.
+  source: docs/notes/project/non-review-article-improvement-design.md
+  updated: 2026-08-26
+
 - title: Agent Runbook
   path: docs/notes/project/agent-runbook.md
   topic: project

@@ -11,6 +11,7 @@
 | [시작하기](getting-started.md) | Tutorial | 처음 checkout한 뒤 사이트를 실행하고 콘텐츠 한 건이 route로 이어지는 과정을 확인할 때 |
 | [콘텐츠 운영](publishing-workflows.md) | How-to | 글, 리뷰, queue item, source-grounded article, memory, archive docs를 실제로 추가하거나 고칠 때 |
 | [서평 제외 아티클 전면 개선 설계](non-review-article-improvement-design.md) | Editorial design | 서평과 예시 파일을 제외한 실제 아티클 18편의 근거 재검증, 장르별 편집, 공개 전환과 검증 범위를 확인할 때 |
+| [서평 제외 아티클 전면 개선 구현 계획](non-review-article-improvement-implementation-plan.md) | Implementation plan | 18편 글별 근거 재검증, 한국어 편집, review 글 조건부 공개, 전체 validation과 browser 검사를 task로 실행할 때 |
 | [Agent Runbook](agent-runbook.md) | Agent task map | 에이전트가 작업 유형별 read order, 수정 표면, 위험 경계, 검증 명령을 빠르게 확인해야 할 때 |
 | [Architecture Decision Records](adr/README.md) | Decision log | 제품, 아키텍처, 데이터 경계, 공개 정책, durable UX의 현재 판단과 폐기한 대안을 확인하거나 갱신할 때 |
 | [Node/React 모듈러 모놀리스 설계](node-react-modular-monolith-design.md) | Target architecture | 승인됐지만 아직 구현되지 않은 Node/React 앱 경계, PostgreSQL·worker, public release와 단계적 Astro 제거 계획을 확인할 때 |
