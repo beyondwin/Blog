@@ -106,23 +106,101 @@
           "text": "Graphify는 코드 이해를 정말 더 빠르게 만드는가?"
         }
       ],
-      "bodyTextHash": "54a1b34e3f3763b6d20e354fdb9ff77270dd9d6558c4593c20cbd9203af83058",
+      "bodyTextHash": "2a43b0fba8d68aa9f842d3b7599cbffdc2e40709f172664c3495ae01d0952813",
       "internalHrefs": [
         "/",
         "/articles/",
+        "/articles/agents-md-vs-agent-skills-evidence/",
         "/articles/ai-design-references/",
         "/articles/andrej-karpathy-skills-analysis/",
+        "/articles/aws-static-frontend-serverless-bff/",
         "/articles/codex-ui-mockup-workflow/",
         "/articles/context-refinement-system-design/",
         "/articles/graphify-code-knowledge-graph-deep-dive/",
         "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/karpathy-delete-everything-keep-graph/",
         "/articles/lazycodex-agent-harness-analysis/",
         "/articles/oh-my-pi-deep-review/",
         "/articles/open-design-repo-analysis/",
         "/articles/pgvector-hybrid-search/",
         "/articles/ponytail-agent-minimalism-analysis/",
         "/articles/postgresql-bm25-pg-search/",
+        "/articles/shared-ai-conversation-evidence-boundaries/",
+        "/articles/uncle-bob-ai-code-review-evidence/",
         "/articles/why-i-read-in-the-ai-era/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/agents-md-vs-agent-skills-evidence/",
+      "canonical": "/articles/agents-md-vs-agent-skills-evidence/",
+      "title": "AGENTS.md가 Skills보다 낫다는 말은 어디까지 맞을까 · beyondwin",
+      "description": "Vercel의 Next.js 평가, 공개 벤치마크, Agent Skills 명세와 최신 연구를 교차 검증해 상시 지침과 호출형 스킬의 역할을 구분한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AGENTS.md가 Skills보다 낫다는 말은 어디까지 맞을까"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        }
+      ],
+      "bodyTextHash": "f3a17105b663254c55cbedab6e5268c30582685b2980d88678a3baa7a048fa4a",
+      "internalHrefs": [
+        "/",
+        "/articles/",
         "/reviews/",
         "/search/"
       ],
@@ -168,7 +246,7 @@
           "id": "정리"
         }
       ],
-      "bodyTextHash": "ea7c9c5d28a75be42cc3872cbe5cb090bcfed5184446a3129e36d4f8c1118edf",
+      "bodyTextHash": "d3326d9d6b2d3cc6279e69c04735094da23402774437d0e1e3e1ae17a86f82cd",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -223,7 +301,95 @@
           "id": "정리"
         }
       ],
-      "bodyTextHash": "0452bfe4d2ba7b08d9daa333e59d675e4032f897c3f5ef95fa69aedd94ec712b",
+      "bodyTextHash": "5266ffba08651c0d847d843e0d8026a5fabfb7cadca945f1caba5b13b8b67a47",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/aws-static-frontend-serverless-bff/",
+      "canonical": "/articles/aws-static-frontend-serverless-bff/",
+      "title": "AWS 정적 프런트엔드와 서버리스 BFF를 고르는 기준 · beyondwin",
+      "description": "Next.js 정적 내보내기와 Vite, CloudFront·S3·API Gateway·Lambda BFF의 실제 제약을 공식 문서로 검증하고 보안·비용·운영 사각지대를 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AWS 정적 프런트엔드와 서버리스 BFF를 고르는 기준"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        },
+        {
+          "level": 3,
+          "text": "프런트엔드 선택",
+          "id": "프런트엔드-선택"
+        },
+        {
+          "level": 3,
+          "text": "CDN과 원본",
+          "id": "cdn과-원본"
+        },
+        {
+          "level": 3,
+          "text": "BFF와 사설 백엔드",
+          "id": "bff와-사설-백엔드"
+        }
+      ],
+      "bodyTextHash": "88fb21c93452ea82847155269aa9eec359f8ece94b1769a0f62500b431536b88",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -272,7 +438,7 @@
           "id": "정리"
         }
       ],
-      "bodyTextHash": "5bfd71582b288676e6d7b5696afbe78e0fd99570d0383075e2ecbd4c26deccec",
+      "bodyTextHash": "31d26eac13a8425c7d098fc9b3111a003b60a78c88f9101ec7707f84e0c815b2",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -321,7 +487,7 @@
           "id": "정리"
         }
       ],
-      "bodyTextHash": "8752359826a4db84b69d39e7de41dd5fc3c7d5a32954e1039d90e08fe4d287b8",
+      "bodyTextHash": "a2abddad4812ddb1b5a1ada66ffcc274f64c73edc9cc9e8ff9afcec59be026cf",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -426,8 +592,8 @@
         },
         {
           "level": 3,
-          "text": "path는 방향을 무시하고 가장 짧은 연결을 찾는다",
-          "id": "path는-방향을-무시하고-가장-짧은-연결을-찾는다"
+          "text": "path는 이제 저장된 방향을 기본으로 따른다",
+          "id": "path는-이제-저장된-방향을-기본으로-따른다"
         },
         {
           "level": 3,
@@ -520,7 +686,7 @@
           "id": "11-벤치마크는-세-종류를-분리해서-읽어야-한다"
         }
       ],
-      "bodyTextHash": "7a401fd08a12e5188c0051f74cd59ed5a3e47f99e3fa96870299180b29f9da24",
+      "bodyTextHash": "172b390a933471d6b12a9a65fe1dcd174260a6852e1fe18b96f096862e0cfbc2",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -593,7 +759,7 @@
           "text": "확인한 자료"
         }
       ],
-      "bodyTextHash": "851484c0c4b26f9da8a1f9911ef967a0f4c0d37d79bd152e158b4f219444a598",
+      "bodyTextHash": "5c1123b62a498023e0a18f08c6ccdd0ff45e67e8c51e340579d9dc08fd9fa0d0",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -607,10 +773,95 @@
       ]
     },
     {
+      "path": "/articles/karpathy-delete-everything-keep-graph/",
+      "canonical": "/articles/karpathy-delete-everything-keep-graph/",
+      "title": "2026년에 남길 것은 그래프 제품이 아니다 · beyondwin",
+      "description": "유행 68분 영상은 2023년 수업의 재판매다. 2026년 Karpathy와 Anthropic 원전을 기준으로, 지금 읽을 자료와 버릴 자료를 가른다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "2026년에 남길 것은 그래프 제품이 아니다"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        },
+        {
+          "level": 3,
+          "text": "2026년에 실제로 있는 원전",
+          "id": "2026년에-실제로-있는-원전"
+        },
+        {
+          "level": 3,
+          "text": "유행 패키지는 여기서 뺀다",
+          "id": "유행-패키지는-여기서-뺀다"
+        }
+      ],
+      "bodyTextHash": "41826ff87cb3e89adc9a8c93057bc49c14a71db475c4d76b730029d2de456db7",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/andrej-karpathy-skills-analysis/",
+        "/articles/graphify-code-knowledge-graph-deep-dive/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
       "path": "/articles/lazycodex-agent-harness-analysis/",
       "canonical": "/articles/lazycodex-agent-harness-analysis/",
       "title": "LazyCodex는 Codex를 어떻게 제품형 개발 하네스로 바꾸는가 · beyondwin",
-      "description": "LazyCodex의 공식 문서, GitHub 저장소, OmO 소스, Threads 논의까지 검토해 Codex 위에 올라가는 에이전트 하네스의 구조와 실무 도입 기준을 정리한다.",
+      "description": "LazyCodex의 공식 문서, GitHub 저장소, OmO 소스를 다시 대조해 Codex 위에 올라가는 에이전트 하네스의 구조와 실무 도입 기준을 정리한다.",
       "headings": [
         {
           "level": 1,
@@ -676,7 +927,7 @@
           "text": "확인한 자료"
         }
       ],
-      "bodyTextHash": "c92a1aa506e02bb987c1ea18d6eb50a86344e99e0e563dba64b4ff2d91683b25",
+      "bodyTextHash": "7d6626c330328a68f3fdf129b86bb8d3f6cb36eb3a27b08b31b0e6539aef8190",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -694,7 +945,7 @@
       "path": "/articles/oh-my-pi-deep-review/",
       "canonical": "/articles/oh-my-pi-deep-review/",
       "title": "oh-my-pi는 진짜 쓸 만한가: 강력한 에이전트 하네스의 구조와 위험 · beyondwin",
-      "description": "oh-my-pi의 코드 구조, 개발 도구 통합, 승인·확장·MCP 신뢰 경계, 문서 밖 운영 사각지대와 안전한 도입 순서를 2026년 7월 공개 소스를 기준으로 정리한다.",
+      "description": "oh-my-pi의 코드 구조, 개발 도구 통합, 승인·확장·MCP 신뢰 경계, 문서 밖 운영 사각지대와 안전한 도입 순서를 2026년 8월 공개 소스를 기준으로 정리한다.",
       "headings": [
         {
           "level": 1,
@@ -790,7 +1041,7 @@
           "id": "8-자동화-모드에서는-프로세스-복구도-제품의-일부다"
         }
       ],
-      "bodyTextHash": "dba819cfb4de1d6848ffa680290a947483a5161ba836ad077857c70bbf1a3356",
+      "bodyTextHash": "ebe1cdac90e7be77780072961d15879016a41127acf022fa9090ff746e06f76f",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -844,7 +1095,7 @@
           "id": "정리"
         }
       ],
-      "bodyTextHash": "4f67db75a6ed32e1a44575f1d03886955b504bd7777b92fd9dcc9645bf52d082",
+      "bodyTextHash": "3e669bc74658f92ccf8112ca94cc6c791ccf0d97ec6964c8b5db1ed7837cf79c",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -993,7 +1244,7 @@
           "text": "확인한 자료"
         }
       ],
-      "bodyTextHash": "4181b7ddf46c9a1f2d97e82c3636c1a7035a9ee0fbc04a9f3cdba452b69cddb7",
+      "bodyTextHash": "4f6b90063ac62d91e1b5418d21d73d78c9e07e19d1402e8e85b0faa98b170a8b",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -1056,7 +1307,7 @@
       "path": "/articles/ponytail-agent-minimalism-analysis/",
       "canonical": "/articles/ponytail-agent-minimalism-analysis/",
       "title": "Ponytail은 AI 코딩 에이전트를 어떻게 덜 과하게 만드는가 · beyondwin",
-      "description": "DietrichGebert/ponytail 저장소를 직접 클론해 규칙, 훅, 스킬, 어댑터, 벤치마크를 확인하고 AI 코딩 에이전트 미니멀리즘의 실무 가치를 정리한다.",
+      "description": "DietrichGebert/ponytail의 공식 저장소, npm, 어댑터 문서와 벤치마크 방법론을 다시 대조해 AI 코딩 에이전트 미니멀리즘의 실무 가치를 정리한다.",
       "headings": [
         {
           "level": 1,
@@ -1117,7 +1368,7 @@
           "text": "확인한 자료"
         }
       ],
-      "bodyTextHash": "2f83631298e8b115df70421bc5511ef7aa9ef5c8c3291ac50ef568701785de28",
+      "bodyTextHash": "c6b460ea007a7f26f8da1571b1e0e20b396b16c04cf942e536009a31c03c31a5",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -1245,7 +1496,153 @@
           "id": "vacuum과-업데이트-패턴을-알고-있는가"
         }
       ],
-      "bodyTextHash": "3df1c720a25d93323db1aed8c50efb2e5b763cc1206b5fb419b5b3d668ff2f67",
+      "bodyTextHash": "3d4c33a89491c597f47c69bba46b5ede227eb84253821dfeeca34c184d4d76f3",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/shared-ai-conversation-evidence-boundaries/",
+      "canonical": "/articles/shared-ai-conversation-evidence-boundaries/",
+      "title": "공유된 AI 대화는 어디까지 근거가 될 수 있을까 · beyondwin",
+      "description": "접근할 수 없는 소셜 게시물과 공유 AI 대화를 사례로, 스냅샷·첨부파일·원출처의 경계를 구분하고 재현 가능한 검증 절차를 제안한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "공유된 AI 대화는 어디까지 근거가 될 수 있을까"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        }
+      ],
+      "bodyTextHash": "cba4a1ea777e991eb812afc6f10b2627a8dfd197e99f5f6b1f5115b63265d2cc",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/articles/uncle-bob-ai-code-review-evidence/",
+      "canonical": "/articles/uncle-bob-ai-code-review-evidence/",
+      "title": "AI가 쓴 코드를 읽지 않아도 된다는 말의 조건 · beyondwin",
+      "description": "Uncle Bob의 crap4java 구현과 명세를 직접 추적해 CRAP 지표가 잡는 위험과 놓치는 위험, 자동 검증과 사람 리뷰의 경계를 정리한다.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AI가 쓴 코드를 읽지 않아도 된다는 말의 조건"
+        },
+        {
+          "level": 2,
+          "text": "먼저 알아야 할 개념",
+          "id": "먼저-알아야-할-개념"
+        },
+        {
+          "level": 2,
+          "text": "실제 구조",
+          "id": "실제-구조"
+        },
+        {
+          "level": 2,
+          "text": "핵심 기능",
+          "id": "핵심-기능"
+        },
+        {
+          "level": 2,
+          "text": "좋은 점",
+          "id": "좋은-점"
+        },
+        {
+          "level": 2,
+          "text": "조심해야 할 점",
+          "id": "조심해야-할-점"
+        },
+        {
+          "level": 2,
+          "text": "언제 쓰면 좋은가",
+          "id": "언제-쓰면-좋은가"
+        },
+        {
+          "level": 2,
+          "text": "주니어 개발자가 배울 점",
+          "id": "주니어-개발자가-배울-점"
+        },
+        {
+          "level": 2,
+          "text": "내 결론",
+          "id": "내-결론"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료",
+          "id": "확인한-자료"
+        },
+        {
+          "level": 2,
+          "text": "확인한 자료"
+        }
+      ],
+      "bodyTextHash": "31f9b7a5345da387839641b567fe7289f03fcf783cfab91383a8621d67f448b2",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -2772,7 +3169,27 @@
         },
         {
           "level": 3,
+          "text": "2026년에 남길 것은 그래프 제품이 아니다"
+        },
+        {
+          "level": 3,
           "text": "AI 시대에, 나는 왜 책을 읽는가"
+        },
+        {
+          "level": 3,
+          "text": "AGENTS.md가 Skills보다 낫다는 말은 어디까지 맞을까"
+        },
+        {
+          "level": 3,
+          "text": "AWS 정적 프런트엔드와 서버리스 BFF를 고르는 기준"
+        },
+        {
+          "level": 3,
+          "text": "공유된 AI 대화는 어디까지 근거가 될 수 있을까"
+        },
+        {
+          "level": 3,
+          "text": "AI가 쓴 코드를 읽지 않아도 된다는 말의 조건"
         },
         {
           "level": 3,
@@ -2932,6 +3349,10 @@
         },
         {
           "level": 3,
+          "text": "agents"
+        },
+        {
+          "level": 3,
           "text": "AI"
         },
         {
@@ -2956,11 +3377,19 @@
         },
         {
           "level": 3,
+          "text": "AWS"
+        },
+        {
+          "level": 3,
           "text": "BM25"
         },
         {
           "level": 3,
           "text": "book"
+        },
+        {
+          "level": 3,
+          "text": "code-review"
         },
         {
           "level": 3,
@@ -3004,7 +3433,15 @@
         },
         {
           "level": 3,
+          "text": "evidence"
+        },
+        {
+          "level": 3,
           "text": "frontend"
+        },
+        {
+          "level": 3,
+          "text": "graph"
         },
         {
           "level": 3,
@@ -3013,6 +3450,10 @@
         {
           "level": 3,
           "text": "judgment"
+        },
+        {
+          "level": 3,
+          "text": "Karpathy"
         },
         {
           "level": 3,
@@ -3060,6 +3501,10 @@
         },
         {
           "level": 3,
+          "text": "research"
+        },
+        {
+          "level": 3,
           "text": "review"
         },
         {
@@ -3084,6 +3529,10 @@
         },
         {
           "level": 3,
+          "text": "testing"
+        },
+        {
+          "level": 3,
           "text": "workflow"
         },
         {
@@ -3091,22 +3540,27 @@
           "text": "writing-system"
         }
       ],
-      "bodyTextHash": "f61d87c3410faff70e92b3898641294f6e1d6eb266de68bff3529ea0a373f051",
+      "bodyTextHash": "536d0594b297d9a3a808348bb0bc450b3090d84a21f78126a96ca14a749483bd",
       "internalHrefs": [
         "/",
         "/articles/",
+        "/articles/agents-md-vs-agent-skills-evidence/",
         "/articles/ai-design-references/",
         "/articles/andrej-karpathy-skills-analysis/",
+        "/articles/aws-static-frontend-serverless-bff/",
         "/articles/codex-ui-mockup-workflow/",
         "/articles/context-refinement-system-design/",
         "/articles/graphify-code-knowledge-graph-deep-dive/",
         "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/karpathy-delete-everything-keep-graph/",
         "/articles/lazycodex-agent-harness-analysis/",
         "/articles/oh-my-pi-deep-review/",
         "/articles/open-design-repo-analysis/",
         "/articles/pgvector-hybrid-search/",
         "/articles/ponytail-agent-minimalism-analysis/",
         "/articles/postgresql-bm25-pg-search/",
+        "/articles/shared-ai-conversation-evidence-boundaries/",
+        "/articles/uncle-bob-ai-code-review-evidence/",
         "/articles/why-i-read-in-the-ai-era/",
         "/memory/agent-harnesses-are-operating-systems/",
         "/memory/agent-workflows-need-review-gates/",
@@ -3148,34 +3602,42 @@
         "/search/?q=writing-system",
         "/tags/AI-agent/",
         "/tags/AI/",
+        "/tags/AWS/",
         "/tags/BM25/",
         "/tags/Codex/",
         "/tags/Graphify/",
+        "/tags/Karpathy/",
         "/tags/ParadeDB/",
         "/tags/PostgreSQL/",
         "/tags/RAG/",
         "/tags/agent/",
+        "/tags/agents/",
         "/tags/architecture/",
         "/tags/automation/",
         "/tags/book/",
+        "/tags/code-review/",
         "/tags/code-search/",
         "/tags/coding/",
         "/tags/database/",
         "/tags/design/",
         "/tags/developer-tools/",
         "/tags/essay/",
+        "/tags/evidence/",
         "/tags/frontend/",
+        "/tags/graph/",
         "/tags/judgment/",
         "/tags/knowledge-graph/",
         "/tags/naver-archive/",
         "/tags/pgvector/",
         "/tags/reading/",
         "/tags/reference/",
+        "/tags/research/",
         "/tags/review/",
         "/tags/search/",
         "/tags/security/",
         "/tags/source-grounded/",
         "/tags/system-design/",
+        "/tags/testing/",
         "/tags/workflow/"
       ],
       "imageAttributes": [
@@ -3361,7 +3823,7 @@
       "title": "beyondwin",
       "description": "찾기로 이어진 단어들.",
       "headings": [],
-      "bodyTextHash": "f93e15641ffad9ccd2cccb43463e10aa65e4bf3e4fb7e05458813eaa368f8668",
+      "bodyTextHash": "42b63ea00e9c947624878b4c3eb44eb0d3b6ccfd9aeaeee3459368c849dcec14",
       "internalHrefs": [
         "/",
         "/articles/",
@@ -3370,34 +3832,42 @@
         "/search/",
         "/tags/AI-agent/",
         "/tags/AI/",
+        "/tags/AWS/",
         "/tags/BM25/",
         "/tags/Codex/",
         "/tags/Graphify/",
+        "/tags/Karpathy/",
         "/tags/ParadeDB/",
         "/tags/PostgreSQL/",
         "/tags/RAG/",
         "/tags/agent/",
+        "/tags/agents/",
         "/tags/architecture/",
         "/tags/automation/",
         "/tags/book/",
+        "/tags/code-review/",
         "/tags/code-search/",
         "/tags/coding/",
         "/tags/database/",
         "/tags/design/",
         "/tags/developer-tools/",
         "/tags/essay/",
+        "/tags/evidence/",
         "/tags/frontend/",
+        "/tags/graph/",
         "/tags/judgment/",
         "/tags/knowledge-graph/",
         "/tags/naver-archive/",
         "/tags/pgvector/",
         "/tags/reading/",
         "/tags/reference/",
+        "/tags/research/",
         "/tags/review/",
         "/tags/search/",
         "/tags/security/",
         "/tags/source-grounded/",
         "/tags/system-design/",
+        "/tags/testing/",
         "/tags/workflow/"
       ],
       "imageAttributes": [],
@@ -3425,6 +3895,31 @@
         "/articles/lazycodex-agent-harness-analysis/",
         "/articles/oh-my-pi-deep-review/",
         "/articles/ponytail-agent-minimalism-analysis/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/agents/",
+      "canonical": "/tags/agents/",
+      "title": "agents · beyondwin",
+      "description": "agents로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "agents"
+        }
+      ],
+      "bodyTextHash": "65b24e6a4331fb83144fa71ca86b7cdff2b2a55b6170298527f40a0a906848d7",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/agents-md-vs-agent-skills-evidence/",
         "/reviews/",
         "/search/"
       ],
@@ -3470,19 +3965,23 @@
           "text": "AI"
         }
       ],
-      "bodyTextHash": "421b5523cfec26ce9080310dd66066ac466741192bbf6420f01b93046b5665ed",
+      "bodyTextHash": "a16c462e8ed4960dadd1fa8820a798a91b4cba581624b62848f45379d8b94b65",
       "internalHrefs": [
         "/",
         "/articles/",
+        "/articles/agents-md-vs-agent-skills-evidence/",
         "/articles/ai-design-references/",
         "/articles/andrej-karpathy-skills-analysis/",
         "/articles/codex-ui-mockup-workflow/",
         "/articles/context-refinement-system-design/",
         "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/karpathy-delete-everything-keep-graph/",
         "/articles/lazycodex-agent-harness-analysis/",
         "/articles/oh-my-pi-deep-review/",
         "/articles/open-design-repo-analysis/",
         "/articles/ponytail-agent-minimalism-analysis/",
+        "/articles/shared-ai-conversation-evidence-boundaries/",
+        "/articles/uncle-bob-ai-code-review-evidence/",
         "/articles/why-i-read-in-the-ai-era/",
         "/reviews/",
         "/search/"
@@ -3504,10 +4003,11 @@
           "text": "architecture"
         }
       ],
-      "bodyTextHash": "34df22e2cef4eeee25fddbc8a146b2a87d2f235f1b3ff0ad6fec83ea72770608",
+      "bodyTextHash": "f6ff5ba9f51f1bf19fbcc58a30dc89bd8964f6567a30b0b9c0794e1e2dd72cf4",
       "internalHrefs": [
         "/",
         "/articles/",
+        "/articles/aws-static-frontend-serverless-bff/",
         "/articles/open-design-repo-analysis/",
         "/reviews/",
         "/search/"
@@ -3534,6 +4034,31 @@
         "/",
         "/articles/",
         "/articles/hermes-agent-persistent-worker-runtime/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/AWS/",
+      "canonical": "/tags/AWS/",
+      "title": "AWS · beyondwin",
+      "description": "AWS로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "AWS"
+        }
+      ],
+      "bodyTextHash": "99d171fe9ce0297c6522d1cd06cf973a39073c227c61e0381ff0c13691e1a9fa",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/aws-static-frontend-serverless-bff/",
         "/reviews/",
         "/search/"
       ],
@@ -3602,6 +4127,31 @@
         "/reviews/nevertheless/",
         "/reviews/poor-charlies-almanack/",
         "/reviews/siddhartha/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/code-review/",
+      "canonical": "/tags/code-review/",
+      "title": "code-review · beyondwin",
+      "description": "code-review로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "code-review"
+        }
+      ],
+      "bodyTextHash": "ecb048f32d0f4ac0f43e5267340a1e8d68c0334de958ee7aa4c48c27311df594",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/uncle-bob-ai-code-review-evidence/",
+        "/reviews/",
         "/search/"
       ],
       "imageAttributes": [],
@@ -3790,6 +4340,31 @@
       ]
     },
     {
+      "path": "/tags/evidence/",
+      "canonical": "/tags/evidence/",
+      "title": "evidence · beyondwin",
+      "description": "evidence로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "evidence"
+        }
+      ],
+      "bodyTextHash": "5bcaa214017c8d8121c9fbcf4b4f8f0cecbb49615820d5ee6c5bc81553b20323",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/shared-ai-conversation-evidence-boundaries/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
       "path": "/tags/frontend/",
       "canonical": "/tags/frontend/",
       "title": "frontend · beyondwin",
@@ -3800,11 +4375,37 @@
           "text": "frontend"
         }
       ],
-      "bodyTextHash": "62b049ba458018bfc2a14ce33743b9fb46eaac1df81995d9df215d3ebfdea6f5",
+      "bodyTextHash": "c2ac8b2905137966dd0a3eeb858db4d59c8553d95a4fcca46550510cf60661ea",
       "internalHrefs": [
         "/",
         "/articles/",
+        "/articles/aws-static-frontend-serverless-bff/",
         "/articles/codex-ui-mockup-workflow/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/graph/",
+      "canonical": "/tags/graph/",
+      "title": "graph · beyondwin",
+      "description": "graph로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "graph"
+        }
+      ],
+      "bodyTextHash": "3b76d4c71e25a60af776af98bc46fb2dd12bf6b6c3238059b257c7113165f628",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/karpathy-delete-everything-keep-graph/",
         "/reviews/",
         "/search/"
       ],
@@ -3855,6 +4456,31 @@
         "/",
         "/articles/",
         "/articles/why-i-read-in-the-ai-era/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
+      "path": "/tags/Karpathy/",
+      "canonical": "/tags/Karpathy/",
+      "title": "Karpathy · beyondwin",
+      "description": "Karpathy로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "Karpathy"
+        }
+      ],
+      "bodyTextHash": "39a72021f00370fd60741a55a1148c8f488dd2e39a49a54d7a2fd20a698188e0",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/karpathy-delete-everything-keep-graph/",
         "/reviews/",
         "/search/"
       ],
@@ -4083,6 +4709,31 @@
       ]
     },
     {
+      "path": "/tags/research/",
+      "canonical": "/tags/research/",
+      "title": "research · beyondwin",
+      "description": "research로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "research"
+        }
+      ],
+      "bodyTextHash": "c32ad279b43647cacc2b93595d97f51fbe3ab8b487368ca1fa5bb70f23f31d61",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/shared-ai-conversation-evidence-boundaries/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
       "path": "/tags/review/",
       "canonical": "/tags/review/",
       "title": "review · beyondwin",
@@ -4186,15 +4837,20 @@
           "text": "source-grounded"
         }
       ],
-      "bodyTextHash": "e3837ef7deaa7cd11cc22b58f5dbe3001cbfe8593a36a147cec119db35fc9214",
+      "bodyTextHash": "f22d07e7d9c6d2a65a31abdbbf064b3388dfbfb1303bbabebe76989a48b5a702",
       "internalHrefs": [
         "/",
         "/articles/",
+        "/articles/agents-md-vs-agent-skills-evidence/",
+        "/articles/aws-static-frontend-serverless-bff/",
         "/articles/graphify-code-knowledge-graph-deep-dive/",
         "/articles/hermes-agent-persistent-worker-runtime/",
+        "/articles/karpathy-delete-everything-keep-graph/",
         "/articles/lazycodex-agent-harness-analysis/",
         "/articles/oh-my-pi-deep-review/",
         "/articles/ponytail-agent-minimalism-analysis/",
+        "/articles/shared-ai-conversation-evidence-boundaries/",
+        "/articles/uncle-bob-ai-code-review-evidence/",
         "/reviews/",
         "/search/"
       ],
@@ -4230,6 +4886,31 @@
       ]
     },
     {
+      "path": "/tags/testing/",
+      "canonical": "/tags/testing/",
+      "title": "testing · beyondwin",
+      "description": "testing로 이어진 글과 책.",
+      "headings": [
+        {
+          "level": 1,
+          "text": "testing"
+        }
+      ],
+      "bodyTextHash": "10bf0bcea00060b4f31fffa4c6931d0ba8e42fc7a39136c55f150f9fb5633b0e",
+      "internalHrefs": [
+        "/",
+        "/articles/",
+        "/articles/uncle-bob-ai-code-review-evidence/",
+        "/reviews/",
+        "/search/"
+      ],
+      "imageAttributes": [],
+      "outputAssetPaths": [
+        "/_astro/BaseLayout.CjANaYXz.css",
+        "/favicon.svg"
+      ]
+    },
+    {
       "path": "/tags/workflow/",
       "canonical": "/tags/workflow/",
       "title": "workflow · beyondwin",
@@ -4240,10 +4921,11 @@
           "text": "workflow"
         }
       ],
-      "bodyTextHash": "7ab2d99a3e0319a571d1acdafaf3216624d06f05f93d43101da692b2e3c59ccc",
+      "bodyTextHash": "611469a4ec1af911d363688d41985df0cc1eac1d3def0991c1677a389032e1a8",
       "internalHrefs": [
         "/",
         "/articles/",
+        "/articles/agents-md-vs-agent-skills-evidence/",
         "/articles/andrej-karpathy-skills-analysis/",
         "/articles/context-refinement-system-design/",
         "/articles/hermes-agent-persistent-worker-runtime/",

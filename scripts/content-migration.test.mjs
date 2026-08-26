@@ -63,7 +63,7 @@ function publicSourcePathsForThought(slug) {
 
 describe('existing content migration contract', () => {
   it('keeps the approved corpus counts and hides examples', () => {
-    expect(realArticles).toHaveLength(17);
+    expect(realArticles).toHaveLength(18);
     expect(realReviews).toHaveLength(18);
     expect(publicMemory.thoughts).toHaveLength(7);
     expect(exampleEntries).toHaveLength(5);
@@ -76,13 +76,8 @@ describe('existing content migration contract', () => {
       .map((entry) => entry.slug)
       .sort();
 
-    expect(publicArticles).toHaveLength(13);
-    expect(pending).toEqual([
-      'agents-md-vs-agent-skills-evidence',
-      'aws-static-frontend-serverless-bff',
-      'shared-ai-conversation-evidence-boundaries',
-      'uncle-bob-ai-code-review-evidence',
-    ]);
+    expect(publicArticles).toHaveLength(18);
+    expect(pending).toEqual([]);
     expect(realArticles).toHaveLength(publicArticles.length + pending.length);
   });
 

@@ -38,13 +38,24 @@ describe('full public route expansion', () => {
     const releaseModule = await candidateModule<any>('app/release.server.ts');
     const active = await releaseModule.loadVerifiedRelease();
     const actual = releaseModule.fullPublicPaths(active);
-    const expected = baseline.routes.map(({ path }) => path).sort();
+    const astroPaths = baseline.routes.map(({ path }) => path).sort();
+    const locallyPublishedAstroOnly = [
+      '/articles/agents-md-vs-agent-skills-evidence/',
+      '/articles/aws-static-frontend-serverless-bff/',
+      '/articles/karpathy-delete-everything-keep-graph/',
+      '/articles/shared-ai-conversation-evidence-boundaries/',
+      '/articles/uncle-bob-ai-code-review-evidence/',
+    ];
 
     expect(actual).toHaveLength(80);
-    expect([...actual].sort()).toEqual(expected);
+    expect(astroPaths).toEqual(expect.arrayContaining([...actual].sort()));
     expect(actual).toContain('/memory/map/');
     expect(actual).toContain('/tags/AI-agent/');
     expect(actual).toContain('/tags/AI/');
+    for (const path of locallyPublishedAstroOnly) {
+      expect(astroPaths).toContain(path);
+      expect(actual).not.toContain(path);
+    }
   });
 
   it('keeps the frozen article and review fixtures in incumbent latest-first order', async () => {

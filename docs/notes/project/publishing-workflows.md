@@ -417,8 +417,11 @@ npm run build
 Astro route가 보이지 않는다
 : 파일이 올바른 collection 폴더에 있는지, `status: "published"`와 `draft: false`가 모두 맞는지, 파일명이 route slug와 맞는지 확인한다. 개발 서버의 content state가 꼬였으면 서버를 재시작한다. list와 detail route는 모두 shared `published && !draft` selector를 사용한다.
 
-실제 article source 16개 중 현재 공개된 것은 12개다.
-`agents-md-vs-agent-skills-evidence`, `aws-static-frontend-serverless-bff`,
-`shared-ai-conversation-evidence-boundaries`, `uncle-bob-ai-code-review-evidence`
-4개는 publication authorization이 없어 의도적으로 `status: review`를 유지한다.
-검증 또는 migration 위험 해소 요청만으로 이 상태를 바꾸지 않는다.
+실제 article source는 예시 파일을 제외하면 18편이다. 이 브랜치에서 묶음 A 5편
+(`agents-md-vs-agent-skills-evidence`, `aws-static-frontend-serverless-bff`,
+`karpathy-delete-everything-keep-graph`,
+`shared-ai-conversation-evidence-boundaries`,
+`uncle-bob-ai-code-review-evidence`)에 대한 명시적 publication authorization
+이후, 로컬 corpus는 18편 모두 `published && !draft`다. 이 전환은 로컬
+frontmatter만 바꾸며 원격 배포·push·main 병합을 포함하지 않는다. 검증 또는
+migration 위험 해소 요청만으로는 공개 상태를 바꾸지 않는다.

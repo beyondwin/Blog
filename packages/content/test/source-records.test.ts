@@ -13,18 +13,23 @@ import {
 import { writeReleaseFixture } from './helpers/release-fixture';
 
 const expectedPublicIds = [
+  'articles/agents-md-vs-agent-skills-evidence',
   'articles/ai-design-references',
   'articles/andrej-karpathy-skills-analysis',
+  'articles/aws-static-frontend-serverless-bff',
   'articles/codex-ui-mockup-workflow',
   'articles/context-refinement-system-design',
   'articles/graphify-code-knowledge-graph-deep-dive',
   'articles/hermes-agent-persistent-worker-runtime',
+  'articles/karpathy-delete-everything-keep-graph',
   'articles/lazycodex-agent-harness-analysis',
   'articles/oh-my-pi-deep-review',
   'articles/open-design-repo-analysis',
   'articles/pgvector-hybrid-search',
   'articles/ponytail-agent-minimalism-analysis',
   'articles/postgresql-bm25-pg-search',
+  'articles/shared-ai-conversation-evidence-boundaries',
+  'articles/uncle-bob-ai-code-review-evidence',
   'articles/why-i-read-in-the-ai-era',
   'memory/agent-harnesses-are-operating-systems',
   'memory/agent-workflows-need-review-gates',
@@ -55,12 +60,7 @@ const expectedPublicIds = [
 
 const expectedNonPublicIds = [
   'analysis/example-url-analysis',
-  'articles/agents-md-vs-agent-skills-evidence',
-  'articles/aws-static-frontend-serverless-bff',
   'articles/example-article',
-  'articles/karpathy-delete-everything-keep-graph',
-  'articles/shared-ai-conversation-evidence-boundaries',
-  'articles/uncle-bob-ai-code-review-evidence',
   'ideas/example-idea',
   'reviews/example-book-review',
   'travel/example-travel-note',
