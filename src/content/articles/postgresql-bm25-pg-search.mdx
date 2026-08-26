@@ -2,7 +2,7 @@
 title: "PostgreSQL 안에서 BM25 검색 만들기: FTS부터 pg_search와 n-gram까지"
 description: "PostgreSQL 기본 FTS, BM25 랭킹, ParadeDB pg_search, 한글 n-gram 검색을 금융 거래 검색 예제로 정리한다."
 createdAt: "2026-07-09"
-updatedAt: "2026-07-09"
+updatedAt: "2026-08-26"
 tags: ["PostgreSQL", "search", "BM25", "ParadeDB", "database"]
 status: "published"
 ---
@@ -11,7 +11,7 @@ status: "published"
 
 이 지점부터 검색은 문자열 조건이 아니라 랭킹 문제로 바뀐다. PostgreSQL 기본 FTS는 문장을 토큰화하고 GIN 인덱스로 빠르게 찾는 기반을 제공한다. ParadeDB의 `pg_search`는 여기에 BM25 기반 랭킹과 tokenizer 구성을 붙여 PostgreSQL 안에서 검색엔진에 가까운 흐름을 만들 수 있게 해준다.
 
-이 글은 SQL과 PostgreSQL 기본 CRUD는 아는 주니어 개발자를 기준으로 정리한다. 목표는 문법을 외우는 것이 아니라, `FTS`, `BM25`, `pg_search`, `n-gram`이 각각 어떤 문제를 푸는지 이해하는 것이다.
+이 글은 SQL과 PostgreSQL 기본 CRUD를 아는 주니어 개발자를 기준으로 정리한다. 목표는 문법을 외우는 것이 아니라, `FTS`, `BM25`, `pg_search`, `n-gram`이 각각 어떤 문제를 푸는지 이해하는 것이다.
 
 | 질문 | 짧은 답 |
 | --- | --- |
@@ -243,12 +243,12 @@ SQL 검색 + score 정렬
 
 | 항목 | 설명 |
 | --- | --- |
-| 확장 의존성 | PostgreSQL extension 설치와 버전 관리가 필요하다. |
-| 문법 변화 | ParadeDB는 `0.20.0`부터 새 SQL 문법으로 이동했다. legacy 문법과 현재 문법을 구분해야 한다. |
+| 확장 의존성 | PostgreSQL extension 설치와 버전 관리가 필요하다. 0.25.0부터는 pgvector도 필요하다. |
+| 문법 변화 | ParadeDB는 `0.20.0`부터 새 SQL 문법으로 이동했다. 0.25.0부터 인덱스 접근 방법 이름은 `USING paradedb`이고, `USING bm25`는 하위 호환 alias다. |
 | 분산 검색 한계 | Elasticsearch/OpenSearch처럼 검색 인덱스를 독립적으로 대규모 확장하는 구조는 아니다. |
 | 인덱스 설계 비용 | 어떤 컬럼을 BM25 인덱스에 넣을지, 어떤 tokenizer를 쓸지 판단해야 한다. |
 
-2026년 7월 9일 확인한 ParadeDB 문서는 v0.24.1 기준이며, 현재 문법은 `|||`, `&&&`, `###`, `pdb.score()`를 중심으로 설명한다. 기존 글이나 예제에서 `@@@`, `paradedb.score()`, `paradedb.match()`를 봤다면 legacy 계열 문법일 수 있으므로 버전 확인이 필요하다.
+2026년 8월 26일 확인한 ParadeDB 문서는 pg_search v0.25.4 기준이다. 기본 검색 SQL은 여전히 `|||`, `&&&`, `###`, `pdb.score()`가 중심이다. `@@@`는 지금 query builder 함수용 연산자로 남아 있으므로, 기본 match 연산자와는 역할을 구분해서 보면 된다. 기존 글이나 예제에서 `paradedb.score()`, `paradedb.match()`를 봤다면 0.20.0 이전 함수 이름일 수 있으므로 버전 확인이 필요하다.
 
 ## 예제 테이블
 
@@ -284,7 +284,7 @@ ATM 현금 출금
 
 ## BM25 인덱스 만들기
 
-ParadeDB의 기본 BM25 인덱스는 다음처럼 만든다.
+ParadeDB의 기본 검색 인덱스는 다음처럼 만든다. 0.25.0부터 공식 이름은 ParadeDB index이고 접근 방법은 `USING paradedb`다. 아래 SQL의 `USING bm25`는 같은 인덱스의 하위 호환 alias다.
 
 ```sql
 CREATE INDEX trans_search_idx ON transactions
@@ -304,8 +304,9 @@ description 컬럼을 검색 대상으로 사용한다.
 
 | 규칙 | 설명 |
 | --- | --- |
-| 고유해야 함 | 보통 primary key를 사용한다. |
-| BM25 인덱스에 포함되어야 함 | `USING bm25 (transaction_id, description)`처럼 들어가야 한다. |
+| UNIQUE여야 함 | 보통 primary key를 사용한다. 공식 문서는 UNIQUE 제약을 요구한다. |
+| 컬럼 목록 맨 앞 | key field는 인덱스 컬럼 목록의 첫 번째여야 한다. |
+| 인덱스에 포함되어야 함 | `USING bm25 (transaction_id, description)`처럼 들어가야 한다. |
 | score 계산에 사용됨 | `pdb.score(transaction_id)`처럼 key field를 넘긴다. |
 
 좋은 예는 이렇다.
@@ -316,7 +317,7 @@ USING bm25 (transaction_id, description)
 WITH (key_field='transaction_id');
 ```
 
-운영에서는 검색, 필터, 정렬에 자주 쓰는 컬럼도 함께 고려할 수 있다. ParadeDB 문서는 한 테이블에 하나의 BM25 인덱스만 둘 수 있다고 설명하며, 검색 query에 등장할 수 있는 컬럼을 인덱스에 포함하는 방향을 권한다.
+운영에서는 검색, 필터, 정렬에 자주 쓰는 컬럼도 함께 고려할 수 있다. ParadeDB 문서는 한 테이블에 ParadeDB 인덱스를 하나만 둘 수 있다고 설명하며, 검색 query에 등장할 수 있는 컬럼을 인덱스에 포함하는 방향을 권한다.
 
 ```sql
 CREATE INDEX trans_search_idx ON transactions
@@ -344,11 +345,12 @@ WITH (key_field='transaction_id');
 
 ## 현재 문법으로 검색하기
 
-ParadeDB의 match query는 검색어를 tokenizer로 나눈 뒤 매칭한다. 대표 연산자는 세 가지다.
+ParadeDB의 기본 match query는 검색어를 tokenizer로 나눈 뒤 매칭한다. 공식 문서는 match를 두 가지로 나눈다.
 
 - Match Any: `|||`는 검색어 토큰 중 하나라도 포함하면 매칭한다.
 - Match All: `&&&`는 검색어 토큰을 모두 포함해야 매칭한다.
-- Phrase: `###`는 토큰의 순서와 인접성이 맞아야 매칭한다.
+
+순서와 인접성까지 맞아야 하면 phrase 연산자 `###`를 쓴다. 이 글에서는 세 연산자를 같이 비교한다.
 
 `카드 결제`를 넓게 검색하려면 `|||`를 쓴다.
 
@@ -503,7 +505,7 @@ LIMIT 10;
 | 단점 | 의미를 이해하는 것은 아니다. |
 | 단점 | n-gram 설정에 따라 phrase/proximity query 제약이 생길 수 있다. |
 
-특히 ParadeDB 문서는 n-gram token이 서로 겹치기 때문에 기본적으로 token position을 저장하지 않는다고 설명한다. phrase나 proximity query가 필요하다면 `min_gram`과 `max_gram`을 같게 두고 `positions=true` 같은 설정을 검토해야 한다. 이 부분은 버전과 쿼리 요구사항에 따라 테스트가 필요하다.
+특히 ParadeDB 문서는 n-gram token이 서로 겹치기 때문에 기본적으로 token position을 저장하지 않는다고 설명한다. 그래서 phrase, phrase prefix, regex phrase, proximity query는 n-gram 필드에서 기본 지원되지 않는다. 예외는 `min_gram`과 `max_gram`을 같게 두고 `positions=true`를 켠 경우다. 이 부분은 버전과 쿼리 요구사항에 따라 테스트가 필요하다.
 
 ## 한국어 검색 전략 선택
 
@@ -518,7 +520,7 @@ LIMIT 10;
 | Elasticsearch/OpenSearch | analyzer, synonym, autocomplete, 분산 검색이 강하다. | 운영과 동기화가 복잡하다. | 검색이 제품의 중심인 대규모 서비스 |
 | 앱 레벨 정규화 | 도메인 규칙을 정확히 반영할 수 있다. | 직접 구현과 유지보수 부담이 있다. | 약어, 상품코드, 사내 용어가 많은 서비스 |
 
-거래 설명처럼 짧은 텍스트에서는 `pg_search + n-gram`이 꽤 실용적인 출발점이 될 수 있다.
+거래 설명처럼 짧은 텍스트에서는 `pg_search + n-gram`이 꽤 실용적인 출발점이 될 수 있다. ParadeDB 문서에는 Lindera, Chinese compatible처럼 CJK를 겨냥한 tokenizer도 있다. 형태소 품질이 중요하면 그쪽을 검토하고, 이 글의 실습 경로는 짧은 거래 설명의 n-gram이다.
 
 ```text
 카드 결제
@@ -632,7 +634,7 @@ String sql = "WHERE description &&& :keyword";
 
 ## 운영 체크리스트
 
-검색은 인덱스를 만들었다고 끝나지 않는다. 운영에서는 최소한 다음을 확인해야 한다.
+검색은 인덱스를 만들었다고 끝나지 않는다. 운영에서는 최소한 다음을 확인해야 한다. 2026-08-26 기준 pg_search 0.25.0부터는 pgvector의 `vector` 타입에 의존하므로, 설치 문서는 `CREATE EXTENSION pg_search CASCADE`를 기준으로 한다.
 
 ### 인덱스를 실제로 타는가
 
@@ -723,11 +725,11 @@ PostgreSQL 기본 FTS는 검색의 출발점으로 좋다. `to_tsvector`, `plain
 
 ## 확인한 자료
 
-- [PostgreSQL Full Text Search Introduction](https://www.postgresql.org/docs/current/textsearch-intro.html)
-- [PostgreSQL Controlling Text Search](https://www.postgresql.org/docs/current/textsearch-controls.html)
-- [PostgreSQL Text Search Indexes](https://www.postgresql.org/docs/current/textsearch-indexes.html)
-- [ParadeDB Create an Index](https://docs.paradedb.com/documentation/indexing/create-index)
-- [ParadeDB Match](https://docs.paradedb.com/documentation/full-text/match)
-- [ParadeDB BM25 Scoring](https://docs.paradedb.com/documentation/sorting/score)
-- [ParadeDB Ngram Tokenizer](https://docs.paradedb.com/documentation/tokenizers/available-tokenizers/ngrams)
-- [ParadeDB Extension Installation](https://docs.paradedb.com/deploy/self-hosted/extension)
+- [PostgreSQL Full Text Search Introduction](https://www.postgresql.org/docs/current/textsearch-intro.html) (2026-08-26 확인, PostgreSQL 18)
+- [PostgreSQL Controlling Text Search](https://www.postgresql.org/docs/current/textsearch-controls.html) (2026-08-26 확인)
+- [PostgreSQL Text Search Indexes](https://www.postgresql.org/docs/current/textsearch-indexes.html) (2026-08-26 확인)
+- [ParadeDB Create an Index](https://docs.paradedb.com/documentation/indexing/create-index) (2026-08-26 확인, pg_search 0.25.4)
+- [ParadeDB Match](https://docs.paradedb.com/documentation/full-text/match) (2026-08-26 확인)
+- [ParadeDB BM25 Scoring](https://docs.paradedb.com/documentation/sorting/score) (2026-08-26 확인)
+- [ParadeDB Ngram Tokenizer](https://docs.paradedb.com/documentation/tokenizers/available-tokenizers/ngrams) (2026-08-26 확인)
+- [ParadeDB Extension Installation](https://docs.paradedb.com/deploy/self-hosted/extension) (2026-08-26 확인)
