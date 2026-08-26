@@ -401,7 +401,7 @@
   status: organized
   summary: Internal evidence packet for the published LazyCodex article, including source inventory, static source inspection, evidence ledger, and junior explanation notes.
   source: src/content/articles/lazycodex-agent-harness-analysis.mdx
-  updated: 2026-06-25
+  updated: 2026-08-26
 
 - title: Ponytail Agent Minimalism Analysis Research Packet
   path: docs/notes/article-factory/ponytail-agent-minimalism-analysis.md
