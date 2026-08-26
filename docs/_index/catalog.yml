@@ -361,7 +361,7 @@
   status: organized
   summary: Internal evidence packet for the published Graphify deep-dive article, including the supplied HTML report, code-audit claims, controlled experiments, benchmark caveats, and editorial boundaries.
   source: src/content/articles/graphify-code-knowledge-graph-deep-dive.mdx
-  updated: 2026-07-12
+  updated: 2026-08-26
 
 - title: Karpathy Delete Everything Keep Graph Research Packet
   path: docs/notes/article-factory/karpathy-delete-everything-keep-graph.md

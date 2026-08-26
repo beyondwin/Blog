@@ -1,82 +1,82 @@
 # Graphify Code Knowledge Graph Deep-Dive Research Packet
 
+Date: 2026-08-26
+Status: verified-with-runtime-limit
+Target article: `src/content/articles/graphify-code-knowledge-graph-deep-dive.mdx`
+
 ## Publication target
 
 - Public article: `src/content/articles/graphify-code-knowledge-graph-deep-dive.mdx`
 - Supplied report: `docs/raw/graphify/graphify_deep_dive_ko.html`
 - Supplied report SHA-256: `fff4edcd26614a70d58b345b704c2028a502ed441627c4edd242dad720c066e3`
 - Supplied report snapshot: 2026-07-11
-- Independent verification: 2026-07-12 (Asia/Seoul)
-- Fresh clone: `Graphify-Labs/graphify` at `591da764a18db9c558de627accd61a61b32bc23e`
-- Repository branch/version: default branch `v8`, `pyproject.toml` `0.9.13`
-- Installable release: PyPI and GitHub release `0.9.12`, published 2026-07-10
+- Independent verification: 2026-07-12 (Asia/Seoul), CLI probes on PyPI `0.9.12` and then-HEAD `0.9.13`
+- 2026-08-26 re-check: official GitHub/docs/source/issues/PyPI only. Graphify CLI, restore, and install were not run.
+- Historical clone: `Graphify-Labs/graphify` at `591da764a18db9c558de627accd61a61b32bc23e`
+- 2026-08-26 HEAD: default branch still `v8`, commit `43d54acbfa9e731f7a592bb582c1f4b9d48ed73e` (“chore: bump to 0.9.50”, 2026-08-25), 492 commits ahead of the pinned SHA
+- Repository version: `pyproject.toml` `0.9.50`
+- Installable release: PyPI and GitHub release `0.9.50`, published 2026-08-25T17:43:31Z. PyPI JSON upload time 2026-08-25T17:44:02Z
+- Repo stats on 2026-08-26: 110,853 stars, 10,778 forks, 1,127 open issues. Adoption signals only.
 
 The supplied HTML is treated as an input report, not as unquestioned truth.
-The public article is a rewrite based on the claim review and probes below.
+The public article is a rewrite based on the 2026-07-12 claim review and probes,
+updated where 2026-08-26 official sources now contradict those claims.
+Editorial note: local published after verification.
 
-## Source inventory
+## Source Inventory
 
-### Current primary sources
-
-- [Graphify repository](https://github.com/Graphify-Labs/graphify)
-- [README at verified commit](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/README.md)
-- [Architecture at verified commit](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/ARCHITECTURE.md)
-- [Benchmark report at verified commit](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/BENCHMARKS.md)
-- [Security policy at verified commit](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/SECURITY.md)
-- [Package metadata at verified commit](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/pyproject.toml)
-- [Graph builder](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/build.py)
-- [Query and MCP implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/serve.py)
-- [CLI implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/cli.py)
-- [Incremental detection](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/detect.py)
-- [Watch and rebuild path](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/watch.py)
-- [Cache implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/cache.py)
-- [Export implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/export.py)
-- [Built-in token benchmark](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/benchmark.py)
-- [PyPI package](https://pypi.org/project/graphifyy/)
-
-### Issues and maintainer evidence
-
-- [#1706: memory benchmark reproduction](https://github.com/Graphify-Labs/graphify/issues/1706)
-- [#1765: `check-update` and new files](https://github.com/Graphify-Labs/graphify/issues/1765)
-- [#1766: homonymous generic symbols](https://github.com/Graphify-Labs/graphify/issues/1766)
-- [#1751: central graph store](https://github.com/Graphify-Labs/graphify/issues/1751)
-- [#1776: deleted files and unresolved stubs](https://github.com/Graphify-Labs/graphify/issues/1776)
-- [#1774: cache output inside analyzed trees](https://github.com/Graphify-Labs/graphify/issues/1774)
-- [#1769: cost ledger persistence](https://github.com/Graphify-Labs/graphify/issues/1769)
-- [#1652: shrink detection, backup, and dry-run](https://github.com/Graphify-Labs/graphify/issues/1652)
-- [#1789: absolute paths in structural IDs](https://github.com/Graphify-Labs/graphify/issues/1789)
-- [#1795: deletion-evidence guard](https://github.com/Graphify-Labs/graphify/pull/1795)
-
-### Adjacent-tool primary references
-
-- [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
-- [CodeQL data-flow analysis](https://codeql.github.com/docs/writing-codeql-queries/about-data-flow-analysis/)
-- [SCIP](https://github.com/scip-code/scip)
-- [LSIF overview](https://microsoft.github.io/language-server-protocol/overviews/lsif/overview/)
-- [OpenTelemetry traces](https://opentelemetry.io/docs/concepts/signals/traces/)
-- [Zoekt](https://github.com/sourcegraph/zoekt)
-
-## Claim ledger
-
-| Claim | Result | Evidence and editorial treatment |
+| Source | Type | Verified use |
 | --- | --- | --- |
-| Code-only extraction is local and AST-based | Verified | Default dependencies include tree-sitter grammars; code-only probe made no model call. Limit the wording to code-only mode because docs/media can use semantic backends. |
-| Pipeline is detect → extract → build → cluster → analyze → report → export | Verified | `ARCHITECTURE.md` and module boundaries match. Some CLI paths stop at graph/analysis and require a later cluster/report step, so do not imply every command always completes every stage. |
-| Default graph is undirected | Verified | `build_from_json(..., directed=False)` constructs `nx.Graph`. Direction endpoints are preserved as edge metadata for export, but traversal/storage still uses the undirected topology by default. |
-| Default graph preserves every typed relation | Not fully true | A simple `nx.Graph` has one edge per node pair. Parallel relations or opposite-direction relations can collapse or overwrite. `MultiGraph` compatibility helpers do not make the default output a typed multigraph. |
-| `query` is semantic natural-language retrieval | Overstated | Current query uses stopword removal, lexical normalization, IDF weighting, exact/prefix/substring/source tiers, trigram candidate filtering, seed selection, then BFS/DFS. It has useful heuristics, not embedding-based intent understanding. |
-| `path` proves call or data-flow direction | False | Both CLI and MCP call `shortest_path(G.to_undirected(...))`. Output can show stored edge direction, but path selection ignores it. |
-| `check-update` scans the corpus for new files | False interpretation | The command only checks a watcher-written `needs_update` flag. In a fresh probe it exited 0 silently after a new file. The lower-level `detect_incremental()` correctly reported the same new file. Treat this as a naming/operational-contract trap, not proof that all incremental detection is broken. |
-| Deleting files always leaves stale nodes | Not reproduced as a general rule | Current code and maintainer reproduction remove nodes when deletion evidence is clear. Surviving references can create source-less unresolved stubs. PR #1795 adds a guard against evicting nodes without trustworthy deletion evidence. |
-| Absolute-path node ID issue is fixed in current releases | Contradicted for a documented CLI path | Issue #1789 is closed and the maintainer reports portable CLI IDs. However, both PyPI 0.9.12 and current `v8` produced absolute-path-derived node IDs in fresh `graphify extract …` probes. `source_file` became relative in clustered output, but IDs differed across two checkout roots. State this as a command-path-specific reproduction, not a universal claim about every skill-driven path. |
-| Built-in token benchmark measures task success | False | It estimates corpus size as `node_count × 50` words when no corpus count is supplied, estimates context at four characters per token, uses five fixed generic questions, and drops questions with no matching node. It measures an approximate context ratio, not correctness or success rate. |
-| Published memory benchmark is independently reproducible from the public repo | Not currently | The maintainer states that `memory/runner.py` and adapters remain in a separate live research harness. Treat headline numbers as project-reported results. |
-| Published code benchmark is strong general evidence | Limited | The ERPNext code suite reports `n=6`. It is evidence of possibility, not a broad estimate across languages, repos, and task types. |
-| `$1.40` is Graphify index build cost | Misleading boundary | `BENCHMARKS.md` labels it ingest cost in places, while the maintainer clarifies that graph build/ingest is zero and the amount is the shared reader/judge cost. Keep graph construction cost, retrieval/evaluation cost, and competitor ingestion cost separate. |
-| Security controls are absent | False | Current code has SSRF checks, redirect revalidation, size caps, graph path containment, label escaping, semantic-source delimiters, optional HTTP API key middleware, and loopback default binding. These are material strengths. |
-| HTTP exposure is safe by default in every configuration | False | Loopback is the default, but wildcard binding without an API key remains allowed with a warning. In that mode DNS-rebinding protection is disabled because any Host is accepted. Network exposure needs an explicit policy, not only a warning. |
+| [Graphify repository](https://github.com/Graphify-Labs/graphify) | Official repository | 2026-08-26. Default branch `v8`. HEAD [`43d54acbfa9e731f7a592bb582c1f4b9d48ed73e`](https://github.com/Graphify-Labs/graphify/commit/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e). |
+| [README at HEAD](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/README.md) | Official documentation | Code-only tree-sitter path; HTTP loopback default; query-log env table vs privacy paragraph still disagree. |
+| [ARCHITECTURE.md at HEAD](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/ARCHITECTURE.md) | Official documentation | Pipeline unchanged. `build()` still returns `nx.Graph`. Omitting `extract(root=…)` can embed machine path segments in IDs. |
+| [BENCHMARKS.md at HEAD](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/BENCHMARKS.md) | Official documentation | Last updated 2026-07-05. LOCOMO 45.3% / recall@10 0.497; LongMemEval-S 76%; ERPNext n=6 70.8%→82.0%; `$1.40` ingest vs `$0` graph build. Reproduction still calls `python memory/runner.py`. |
+| [SECURITY.md at HEAD](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/SECURITY.md) | Official documentation | SSRF, size caps, path containment, label escaping. HTTP is opt-in; default bind `127.0.0.1`. Supported-version table still says `0.3.x`. |
+| [pyproject.toml at HEAD](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/pyproject.toml) | Package metadata | `name = "graphifyy"`, `version = "0.9.50"`, `requires-python = ">=3.10"`. |
+| `graphify/build.py`, `serve.py`, `cli.py`, `detect.py`, `watch.py`, `cache.py`, `export.py`, `benchmark.py` at HEAD | Implementation | Inspected 2026-08-26 via GitHub contents API. No Graphify command was executed. |
+| [PyPI graphifyy](https://pypi.org/project/graphifyy/) | Installable release | 0.9.50 on 2026-08-26. Package name remains `graphifyy`; CLI remains `graphify`. |
+| [#1706](https://github.com/Graphify-Labs/graphify/issues/1706) | Official issue | Still open. Memory harness not in the public repo. |
+| [#1765](https://github.com/Graphify-Labs/graphify/issues/1765) | Official issue | Still open. `check-update` remains a `needs_update` flag check. |
+| [#1766](https://github.com/Graphify-Labs/graphify/issues/1766) | Official issue | Closed 2026-07-13. Seed selection dedups by normalized label in 0.9.14 (`6ca8604` / PR #1832). |
+| [#1751](https://github.com/Graphify-Labs/graphify/issues/1751) | Official issue | Still open. Central graph store. |
+| [#1776](https://github.com/Graphify-Labs/graphify/issues/1776) | Official issue | Still open. Deleted files and unresolved stubs. |
+| [#1774](https://github.com/Graphify-Labs/graphify/issues/1774) | Official issue | Closed 2026-07-13. Cache-in-tree. |
+| [#1769](https://github.com/Graphify-Labs/graphify/issues/1769) | Official issue | Still open. Cost ledger persistence. |
+| [#1652](https://github.com/Graphify-Labs/graphify/issues/1652) | Official issue | Still open. Dry-run / backup extras. |
+| [#1789](https://github.com/Graphify-Labs/graphify/issues/1789) | Official issue | Closed. 0.9.14 follow-up fixed solution-folder IDs. Historical 2026-07-12 `extract` probe is not re-run. |
+| [#1939](https://github.com/Graphify-Labs/graphify/issues/1939) | Official issue | Closed. Semantic cache now prompt-fingerprinted; still not package-versioned. |
+| [#2487](https://github.com/Graphify-Labs/graphify/issues/2487) | Official issue | Closed 2026-08-05. `path` / MCP `shortest_path` directed by default in 0.9.34. |
+| [PR #1795](https://github.com/Graphify-Labs/graphify/pull/1795) | Official PR | Closed. GitHub `merged=false`; the fail-closed deletion-evidence commit is `591da76` and the same guard remains in HEAD `watch.py`. |
+| Adjacent tools | Primary references | Tree-sitter, CodeQL data-flow, SCIP, LSIF, OpenTelemetry traces, Zoekt. Unchanged role: not Graphify features. |
+| Supplied HTML report | Intake artifact | Present at `docs/raw/graphify/graphify_deep_dive_ko.html`. Not a publishable primary source. |
+
+Pinned 2026-07-12 blobs remain valid as the probe commit, not as current HEAD.
+
+## Evidence Ledger
+
+| Claim | Result (2026-08-26) | Evidence and editorial treatment |
+| --- | --- | --- |
+| Code-only extraction is local and AST-based | Verified | README, `pyproject.toml` tree-sitter deps, `ARCHITECTURE.md`. Limit wording to code-only mode. Not re-probed. |
+| Pipeline is detect → extract → build → cluster → analyze → report → export | Verified | `ARCHITECTURE.md` unchanged. Some CLI paths still stop before cluster/report. |
+| Default graph is undirected | Verified | `build_from_json(..., directed=False)` still constructs `nx.Graph`. `_src`/`_tgt` remain export metadata. |
+| Default graph preserves every typed relation | Not fully true | Default output is still `nx.Graph`. Path CLI now *loads* as directed+multigraph for rendering; that does not make the stored graph a typed multigraph. |
+| `query` is semantic natural-language retrieval | Overstated | HEAD `serve.py` still uses IDF, exact/prefix/substring, trigram candidates, then BFS/DFS. No embeddings. |
+| `path` ignores direction | **Superseded** | True on 2026-07-12 (`to_undirected`). False on HEAD: #2487 closed; CLI/MCP default to a `_src`/`_tgt` digraph; `--undirected` / `undirected=true` opt out. Still not runtime/data-flow proof. |
+| Homonymous `GET()` queries seed every match | **Superseded as current behavior** | 2026-07-12 fixture seeded both `GET()`. #1766 closed in 0.9.14: `_pick_seeds` dedups by normalized label. Historical output kept; not re-run. |
+| `check-update` scans the corpus for new files | False interpretation | HEAD `watch.check_update` still only reads `needs_update`. #1765 still open. 2026-07-12 silent exit 0 remains historical. |
+| Deleting files always leaves stale nodes | Not reproduced as a general rule | HEAD `watch.py` still fail-closes: corpus-absent identity is deletion only if `Path(identity).exists()` is false. #1776 still open for stubs. |
+| Absolute-path node IDs are fixed in current releases | Historical contradiction; current docs qualify | 2026-07-12 `graphify extract` probe produced checkout-dependent IDs on 0.9.12 and then-HEAD. Not re-run. HEAD `extract.py` remaps file IDs to `{parent_dir}_{stem}`; `ARCHITECTURE.md` still warns that omitting `root` can embed machine path segments. |
+| Built-in token benchmark measures task success | False | HEAD `benchmark.py` still uses `node_count × 50`, 4 chars/token, five sample questions, drops unmatched questions. |
+| Published memory benchmark is independently reproducible from the public repo | Not currently | #1706 still open. `BENCHMARKS.md` still documents `python memory/runner.py`. |
+| Published code benchmark is strong general evidence | Limited | ERPNext n=6 and 70.8%→82.0% unchanged. |
+| `$1.40` is Graphify index build cost | Misleading boundary | Same 2026-07-05 tables: graph build `$0`; `$1.40` is LOCOMO ingest vs supermemory `$15.67`. |
+| Security controls are absent | False | SSRF, redirects, size caps, path containment, label escaping, untrusted-source delimiters, optional API-key middleware, loopback default. HEAD checks: test 3.10/3.12, skillgen, security-scan green. |
+| HTTP exposure is safe by default in every configuration | False | Wildcard bind without API key still allowed with a warning; DNS-rebinding protection disabled. |
+| Semantic cache ignores prompt/model changes | Partially superseded | Still not package-versioned (#1252). HEAD fingerprints the extraction prompt (#1939) into `cache/semantic/p{fingerprint}/`. Provider/model are not in the key. Missing fingerprint falls back to the flat layout. |
 
 ## Independent probe record
+
+Historical 2026-07-12 record. Not re-executed on 2026-08-26. Numbers were not invented.
 
 ### Repository and package state
 
@@ -99,7 +99,7 @@ On 2026-07-12 the repository API reported default branch `v8`, 82,450 stars,
 8,124 forks, and 471 open issues. These are only adoption/activity signals.
 They are not accuracy evidence and should not lead the article.
 
-### Current source test run
+### 2026-07-12 source test run
 
 Command:
 
@@ -141,7 +141,7 @@ Fixture:
 - a `getattr(service, "submit")` indirect call,
 - one file added after the initial manifest.
 
-Current `v8` initial result:
+Then-HEAD `v8` initial result (2026-07-12):
 
 ```text
 4 files → 10 nodes, 10 edges
@@ -221,13 +221,15 @@ Classification: code-backed observation plus engineering inference.
 
 ### 2. Semantic cache freshness has a different contract from AST freshness
 
-AST cache entries are namespaced by Graphify version. Semantic cache entries are
-intentionally unversioned to avoid rebilling and are keyed by source-file
-content. A provider, model, prompt, or extraction-policy change can therefore
-reuse old semantic output for unchanged files unless another invalidation path
-is used.
+AST cache entries are namespaced by Graphify version and cache-key schema.
+Semantic cache entries are still not package-versioned, to avoid rebilling.
+HEAD now fingerprints the extraction prompt into `cache/semantic/p{fingerprint}/`
+(#1939). A provider or model change that does not change the prompt, or a caller
+that does not supply a prompt, can still reuse old semantic output. Legacy
+flat-layout hits remain allowed by default.
 
-Classification: explicitly documented in `cache.py` and locked by tests.
+Classification: explicitly documented in HEAD `cache.py`. Prompt fingerprint is
+a 2026-08-26 source update, not a new local probe.
 
 ### 3. Default graph storage loses relation multiplicity
 
@@ -330,43 +332,55 @@ Classification: probe-backed observation plus general static-analysis boundary.
 
 - The independent fixture was intentionally small and Python-only.
 - It tests feature semantics, not representative precision/recall.
-- No document, image, video, external URL, model-backed semantic extraction, MCP
-  client, HTTP listener, Neo4j, FalkorDB, PostgreSQL, SCIP, or global graph store
-  was exercised.
-- The current-source full test run used the default `uv run --frozen` profile,
-  not CI's `--all-extras` profile.
+- 2026-07-12: no document, image, video, external URL, model-backed semantic
+  extraction, MCP client, HTTP listener, Neo4j, FalkorDB, PostgreSQL, SCIP, or
+  global graph store was exercised.
+- 2026-08-26: Graphify CLI, restore, install, local pytest, and the 2026-07-12
+  fixture were not re-run. Inspection used GitHub contents/issues APIs, raw
+  docs, and PyPI.
+- The 2026-07-12 full test run used the default `uv run --frozen` profile, not
+  CI's `--all-extras` profile.
 - DNS behavior was environment-specific; no security conclusion is based on the
   `example.com` resolution failures.
-- The absolute-ID reproduction covers `graphify extract`; the host skill's
-  multi-step `/graphify` path may behave differently.
-- Public issue status and repository statistics are snapshots from 2026-07-12.
+- The absolute-ID reproduction covers 2026-07-12 `graphify extract`; the host
+  skill's multi-step `/graphify` path may behave differently. HEAD source now
+  remaps file IDs; that remap was not re-probed.
+- Public issue status and repository statistics below are 2026-08-26 snapshots
+  unless labeled 2026-07-12.
 
-## Editorial decisions
+## Editorial Decisions
 
 - Do not port the standalone HTML theme toggle, progress bar, sticky table of
   contents, cards, gauges, or custom CSS.
 - Lead with a practical verdict and evidence hierarchy rather than project
   popularity.
-- Replace the report's blanket `check-update` defect statement with the verified
-  distinction between flag checking and corpus comparison.
-- Replace the report's “absolute ID no longer reproduced” statement with the
-  current command-path-specific reproduction.
-- Explain the local full-test failures honestly, but keep them secondary to the
-  product analysis because they were dependency/DNS-profile issues.
+- Keep the 2026-07-12 fixture, pytest, and extract-ID numbers labeled historical.
+  Do not invent a 2026-08-26 local benchmark or re-run Graphify.
+- Update claims that HEAD now contradicts: directed `path` default (#2487),
+  GET seed label-dedup (#1766), semantic-cache prompt fingerprint (#1939),
+  extract ID remapping + `root` warning.
+- Keep `check-update` as a flag/contract trap; #1765 is still open.
+- Keep the 2026-07-12 extract-ID reproduction as a dated CLI-path finding, not
+  as a current-HEAD runtime result.
+- Explain the 2026-07-12 local full-test failures honestly, but keep them
+  secondary. 2026-08-26 HEAD GitHub checks were green.
 - Separate project-reported benchmark results from the built-in token-ratio
-  command and from independent probes.
+  command and from independent probes. `BENCHMARKS.md` date is still 2026-07-05.
 - Mark engineering inferences explicitly instead of dressing them as observed
   vulnerabilities.
-- Keep the article shorter and more linear than the source report while adding
-  the stronger provenance, cache, graph-schema, edge-multiplicity, network, and
-  transactional-output analysis.
+- Local published after verification. Do not unpublish.
 
-## Quality gate notes
+## Quality Gate Notes
 
 - Required public headings: `먼저 알아야 할 개념`, `실제 구조`, `핵심 기능`,
   `좋은 점`, `조심해야 할 점`, `언제 쓰면 좋은가`, `주니어 개발자가 배울 점`,
   `내 결론`, `확인한 자료`.
-- Validate with `node scripts/article-quality.mjs`, `npm run validate`, and
-  `git diff --check`.
-- Confirm the built article route and key source links.
-- Inspect desktop and mobile rendering.
+- Check date 2026-08-26. CreatedAt remains 2026-07-12. Status remains published.
+- Public `## 확인한 자료` uses HEAD commit links and official issues. No local
+  filesystem intake path.
+- Inline SHAs in the article body are abbreviated (`43d54ac`, `591da76`) to
+  avoid 390px overflow; full hashes stay in URLs and this packet.
+- Validate with `node scripts/validate-content.mjs`, `npm run article:quality`,
+  and `git diff --check`.
+- Confirm `/articles/graphify-code-knowledge-graph-deep-dive/` at desktop and
+  mobile. Keep the article on `/articles/`.

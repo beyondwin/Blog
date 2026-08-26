@@ -2,22 +2,22 @@
 title: "Graphify는 코드 이해를 정말 더 빠르게 만드는가?"
 description: "Graphify의 코드 지식 그래프 원리와 질의 방식, 통제 실험, 벤치마크 한계, 보안·운영 사각지대와 현실적인 도입법을 코드와 근거로 검토한다."
 createdAt: "2026-07-12"
-updatedAt: "2026-07-12"
+updatedAt: "2026-08-26"
 tags: ["Graphify", "knowledge-graph", "code-search", "AI-agent", "source-grounded"]
 status: "published"
 ---
 
 Graphify는 분명 쓸모가 있다. 낯선 저장소에서 핵심 심볼과 모듈 관계를 빠르게 훑고, “이 함수와 저 서비스가 어떻게 이어지는가”를 탐색하는 데는 단순 파일 검색보다 좋은 지도를 만든다. 하지만 그 지도를 코드의 의미나 실제 실행 경로와 같다고 믿는 순간부터 문제가 시작된다. 내 결론은 간단하다. **Graphify는 설명 가능한 구조 탐색 계층으로는 유용하지만, 단독 진실 공급원으로 쓰기에는 아직 위험하다.**
 
-이 글은 제공받은 한국어 심층 보고서를 그대로 옮긴 글이 아니다. 2026년 7월 12일 기준 `Graphify-Labs/graphify`의 최신 `v8` 소스를 새로 받아 구현과 테스트를 다시 읽었고, PyPI `graphifyy 0.9.12`와 저장소 HEAD `0.9.13`을 작은 Python 프로젝트에 직접 실행했다. 그 과정에서 원문이 정확히 짚은 부분뿐 아니라, 원문 이후 수정된 부분과 원문에는 없던 사각지대도 확인했다.
+이 글은 제공받은 한국어 심층 보고서를 그대로 옮긴 글이 아니다. 2026년 7월 12일에는 `Graphify-Labs/graphify`의 `v8` 소스를 받아 구현과 테스트를 읽었고, PyPI `graphifyy 0.9.12`와 당시 HEAD `0.9.13`을 작은 Python 프로젝트에 직접 실행했다. 2026년 8월 26일에는 Graphify CLI를 다시 돌리지 않고 공식 저장소·문서·소스·이슈·PyPI만 대조했다. 기본 브랜치는 여전히 `v8`이고, HEAD는 `43d54ac`(pyproject와 PyPI 모두 `0.9.50`, 2026-08-25)다. 7월 12일 핀 커밋 `591da76`보다 492커밋 앞이다. 원문이 짚은 부분, 그 이후 고쳐진 부분, 원문에 없던 사각지대를 그 기준으로 다시 읽었다.
 
 | 질문 | 짧은 판단 |
 | --- | --- |
 | 무엇을 해주는가? | 코드와 문서를 노드·엣지 그래프로 바꾸고 구조 탐색용 보고서와 질의 인터페이스를 만든다. |
 | 코드 분석에 LLM이 꼭 필요한가? | 코드 전용 AST 추출에는 필요 없다. 문서·이미지·영상의 의미 추출은 별도 backend를 사용할 수 있다. |
 | 자연어 질문을 의미적으로 이해하는가? | 기본 질의는 임베딩보다 문자열 정규화, IDF, exact/prefix/substring 점수, trigram 후보화와 그래프 순회에 가깝다. |
-| 호출 그래프와 같은가? | 아니다. 기본 저장은 무방향 그래프이고, 정적 분석이 놓친 엣지는 그래프에 나타나지 않는다. |
-| 벤치마크는 믿을 만한가? | 가능성을 보여주는 프로젝트 자체 결과다. 공개되지 않은 harness와 작은 코드 질문 수 때문에 독립 재현 전에는 제한적으로 읽어야 한다. |
+| 호출 그래프와 같은가? | 아니다. 기본 저장은 여전히 무방향 `Graph`다. `path`는 2026년 8월부터 저장된 방향을 기본으로 따르지만, 정적 분석이 놓친 엣지는 나타나지 않는다. |
+| 벤치마크는 믿을 만한가? | 가능성을 보여주는 프로젝트 자체 결과다. `BENCHMARKS.md`는 2026-07-05 이후 숫자가 같고, 공개되지 않은 harness와 코드 질문 n=6 때문에 독립 재현 전에는 제한적으로 읽어야 한다. |
 | 가장 좋은 역할은? | `rg`·LSP·SCIP·CodeQL·runtime trace를 대체하기보다, 이들을 연결하는 구조 지도와 탐색 출발점이다. |
 
 ## 먼저 알아야 할 개념
@@ -90,7 +90,7 @@ detect
 
 Markdown, PDF, 이미지, 영상 같은 비코드 자료는 의미 추출 backend를 사용할 수 있다. 이때부터 비용, 모델 재현성, 데이터 반출, prompt injection이 분석 경계에 들어온다. 현재 코드는 source를 hash가 붙은 `untrusted_source` 블록으로 감싸고 알려진 injection sentinel을 중화한다. 좋은 방어지만, 모델 기반 추출을 완전히 무해하거나 결정적으로 만들지는 않는다.
 
-더 미묘한 사각지대는 cache다. AST cache는 Graphify 버전이 바뀌면 무효화되지만, semantic cache는 재과금을 피하려고 의도적으로 버전이 없다. 파일 내용이 같으면 provider, model, prompt, 추출 정책이 바뀌어도 과거 semantic 결과가 재사용될 수 있다. “소스가 안 바뀌었다”와 “의미 추출 결과가 현재 정책으로 만들어졌다”는 다른 말이다.
+더 미묘한 사각지대는 cache다. AST cache는 Graphify 버전과 cache-key schema로 나뉜다. semantic cache는 재과금을 피하려고 패키지 버전으로는 여전히 나뉘지 않는다. 다만 2026년 재대조 시점의 코드는 extraction prompt를 fingerprint해서 `cache/semantic/p{fingerprint}/` 아래에 둔다. prompt가 바뀌면 새 칸을 쓰고, 안 바뀌면 옛 결과를 재사용한다. provider나 model은 그 키에 없고, fingerprint를 못 넘긴 호출은 예전 평평한 레이아웃을 그대로 칠 수 있다. “소스가 안 바뀌었다”와 “의미 추출 결과가 현재 정책으로 만들어졌다”는 다른 말이다.
 
 ### 4. 기본 그래프는 단순 무방향 그래프다
 
@@ -132,30 +132,34 @@ degree가 높다는 사실은 “중요하다”와 같지 않다. 공통 logger
 "GET 요청 흐름을 보여줘"
 ```
 
-우리 fixture에는 서로 다른 파일의 `GET()` 두 개가 있었다. `GET`을 질의하자 최신 구현은 둘 다 seed로 골랐다.
+우리 fixture에는 서로 다른 파일의 `GET()` 두 개가 있었다. 2026년 7월 12일에는 `GET`을 질의하자 둘 다 seed로 골랐다.
 
 ```text
 Traversal: BFS depth=1
 Start: ['GET()', 'GET()']
 ```
 
-이는 버그이면서 동시에 정직한 결과다. 질문이 모호하니 후보도 여러 개다. 문제는 사용자가 “자연어 질문이니까 도구가 의도를 골라줬겠지”라고 생각할 때 생긴다.
+이 출력은 당시 핀 커밋의 기록이다. [#1766](https://github.com/Graphify-Labs/graphify/issues/1766)은 2026년 7월 13일 `0.9.14`에서 닫혔고, 현재 seed 선택은 정규화한 label 기준으로 동명 심볼을 하나만 남긴다. 지금 HEAD에서 같은 fixture를 다시 돌리지는 않았다. 질문은 여전히 lexical이라, 도구가 자연어 의도를 골라줬다고 읽으면 안 된다.
 
-### `path`는 방향을 무시하고 가장 짧은 연결을 찾는다
+### `path`는 이제 저장된 방향을 기본으로 따른다
 
-CLI와 MCP의 path 구현은 모두 `G.to_undirected()`에 대해 shortest path를 구한다. A에서 B로 물어도, B에서 A로 물어도 같은 연결을 찾기 쉽다. 탐색용으로는 편하지만 다음을 증명하지 못한다.
+2026년 7월 12일 핀 커밋에서는 CLI와 MCP path가 무방향 뷰에서 shortest path를 구했다. A에서 B로 물어도, B에서 A로 물어도 같은 연결을 찾기 쉬웠다.
 
-- 호출 방향
+그 동작은 [#2487](https://github.com/Graphify-Labs/graphify/issues/2487)로 보고되었고, maintainer는 2026년 8월 5일 `0.9.34`에서 고쳤다고 닫았다. 2026년 8월 26일 HEAD에서는 CLI와 MCP 모두 저장된 `_src`/`_tgt`로 digraph를 만들어 방향을 기본으로 따른다. 방향을 무시하려면 CLI는 `--undirected`, MCP는 `undirected=true`를 따로 줘야 한다. 방향 경로가 없으면 없다고 말하고, 뒤집힌 경로를 기본값으로 돌려주지 않는다.
+
+그래도 다음을 증명하지는 못한다.
+
+- 실제 런타임 호출
 - 데이터 흐름
 - 의존성 전파 방향
 - 실제 요청 순서
 - 트랜잭션 경계
 
-path 결과는 “두 대상 사이에 저장된 구조 관계가 이어진다” 정도로 읽어야 한다.
+기본 저장은 여전히 무방향 `Graph`다. path가 따르는 것은 export용으로 남긴 엣지 방향이지, 실행 경로가 아니다. 결과는 “두 대상 사이에 저장된 구조 관계가 이어진다” 정도로 읽어야 한다.
 
 ### 작은 통제 실험에서 무엇을 잡고 놓쳤나
 
-2026년 7월 12일 최신 `v8`과 PyPI 0.9.12에 5개 Python 파일을 넣었다. 두 파일에는 각각 `GET()`을 정의했고, `OrderService.submit()`을 직접 호출하는 코드와 `getattr(service, "submit")`으로 호출하는 코드를 함께 뒀다.
+2026년 7월 12일 당시 `v8`과 PyPI 0.9.12에 5개 Python 파일을 넣었다. 이 실험은 2026년 8월 26일에 다시 실행하지 않았다. 두 파일에는 각각 `GET()`을 정의했고, `OrderService.submit()`을 직접 호출하는 코드와 `getattr(service, "submit")`으로 호출하는 코드를 함께 뒀다.
 
 흥미롭게도 결과는 직관과 달랐다.
 
@@ -176,16 +180,16 @@ path 결과는 “두 대상 사이에 저장된 구조 관계가 이어진다�
 
 ### 닫힌 이슈도 실행 경로별로 다시 봐야 한다
 
-절대 경로가 node ID에 들어가는 [#1789](https://github.com/Graphify-Labs/graphify/issues/1789)는 닫혀 있다. maintainer는 현재 CLI가 상대 경로 ID를 만들고 서로 다른 checkout에서도 동일하다고 설명했다.
-
-하지만 우리가 문서화된 headless 명령인 `graphify extract`로 다시 실행한 결과는 달랐다. PyPI 0.9.12와 최신 `v8` 모두에서 `source_file`은 clustered output에서 `api_a.py`처럼 상대화됐지만, node ID에는 다음처럼 절대 scan root가 남았다.
+절대 경로가 node ID에 들어가는 [#1789](https://github.com/Graphify-Labs/graphify/issues/1789)는 닫혀 있다. 2026년 7월 12일 우리가 문서화된 headless 명령인 `graphify extract`로 실행한 결과는 당시 maintainer 설명과 달랐다. PyPI 0.9.12와 당시 `v8` 모두에서 `source_file`은 clustered output에서 `api_a.py`처럼 상대화됐지만, node ID에는 다음처럼 절대 scan root가 남았다.
 
 ```text
 private_tmp_graphify_path_a_proj_api_a_get
 private_tmp_graphify_path_b_proj_api_a_get
 ```
 
-동일한 코드의 ID 집합이 checkout 위치에 따라 바뀌었다. 모든 host skill 경로가 같은 문제를 가진다고 단정할 수는 없다. 하지만 “이슈가 닫혔으니 이식성 문제가 완전히 끝났다”고 말할 수도 없다. 특히 `graphify extract`를 CI나 중앙 graph store에 사용할 팀이라면 직접 확인해야 한다.
+동일한 코드의 ID 집합이 checkout 위치에 따라 바뀌었다. 이 재현은 그 날짜·명령 경로의 기록이고, 2026년 8월 26일에 extract를 다시 돌리지는 않았다.
+
+현재 `extract.py`는 file node ID를 `{parent_dir}_{stem}` 형태로 remap하고, 스캔 root 밖 경로는 username이 새지 않게 접는다. `ARCHITECTURE.md`는 그래도 `root`를 생략하면 공통 부모를 추정하다 기계 경로가 ID에 섞일 수 있다고 적는다. solution-folder 누수는 0.9.14에서 고쳤다고 이슈에 적혀 있다. “이슈가 닫혔으니 이식성이 끝났다”고 말할 수는 없다. `graphify extract`를 CI나 중앙 graph store에 쓸 팀은 scan root를 명시하고, 서로 다른 checkout에서 ID가 같은지 직접 봐야 한다.
 
 ## 좋은 점
 
@@ -215,7 +219,7 @@ vector search는 관련 문단을 잘 찾지만 “왜 이 결과가 나왔는�
 - HTTP API key middleware와 loopback 기본 bind
 - SSRF, redirect, download size, XSS, path traversal 방어
 
-2026년 7월 12일 검증한 commit의 GitHub check도 Python 3.10/3.12, skill 생성, security scan에서 녹색이었다. 빠르게 변하는 프로젝트지만, 테스트와 방어 코드를 적극적으로 추가하는 방향은 분명하다.
+2026년 7월 12일 핀 커밋과 2026년 8월 26일 HEAD `43d54ac`의 GitHub check는 모두 Python 3.10/3.12, skill 생성, security scan에서 녹색이었다. 로컬 pytest는 이번 재검증에서 다시 돌리지 않았다. 빠르게 변하는 프로젝트지만, 테스트와 방어 코드를 적극적으로 추가하는 방향은 분명하다.
 
 ## 조심해야 할 점
 
@@ -237,7 +241,7 @@ cache를 재사용했는지 여부
 
 ### 2. semantic cache는 비용과 freshness를 교환한다
 
-파일 내용이 같으면 과거 semantic extraction을 재사용하는 것은 비용 면에서 합리적이다. 하지만 모델이나 prompt가 개선돼도 옛 결과가 남을 수 있다. 팀은 “비용 없이 재사용”과 “현재 정책으로 재생성” 중 어느 쪽을 원하는지 선택할 수 있어야 한다.
+파일 내용이 같으면 과거 semantic extraction을 재사용하는 것은 비용 면에서 합리적이다. 현재 코드는 prompt fingerprint로 “같은 파일, 다른 prompt”를 한 겹 가른다. 그래도 패키지 버전·provider·model은 키에 없고, fingerprint를 못 넘기면 예전 평평한 항목을 그대로 칠 수 있다. 팀은 “비용 없이 재사용”과 “현재 정책으로 재생성” 중 어느 쪽을 원하는지 선택할 수 있어야 한다.
 
 ### 3. 기본 그래프는 typed multigraph가 아니다
 
@@ -279,13 +283,13 @@ backup과 shrink guard는 도움이 되지만, 완전한 crash consistency와 �
 
 ### 9. 설치 명령은 에이전트의 행동을 바꾼다
 
-`graphify install`과 hook 설치는 agent instruction과 Git 동작을 지속적으로 수정한다. 패키지를 upgrade해도 설치된 skill과 hook의 interpreter path가 자동으로 현재 버전과 일치한다는 보장은 없다. 실제로 PyPI 0.9.12 probe에서는 로컬에 설치된 0.9.13 skill과 package가 다르다는 경고가 나왔다.
+`graphify install`과 hook 설치는 agent instruction과 Git 동작을 지속적으로 수정한다. 패키지를 upgrade해도 설치된 skill과 hook의 interpreter path가 자동으로 현재 버전과 일치한다는 보장은 없다. 2026년 7월 12일 PyPI 0.9.12 probe에서는 로컬에 설치된 0.9.13 skill과 package가 다르다는 경고가 나왔다. 이 경고를 0.9.50에서 다시 재현하지는 않았다.
 
 도입 검토에는 Python dependency뿐 아니라 설치되는 instruction, hook, merge driver도 포함해야 한다.
 
 ### 10. 테스트가 많다는 것과 누구나 같은 조건으로 재현된다는 것은 다르다
 
-최신 소스의 로컬 전체 테스트에서는 3,097개가 통과하고 31개가 skip됐지만 10개가 실패했다. 네 개는 기본 dev dependency profile에 optional `openai`가 없어서였고, 해당 extra를 넣으니 모두 통과했다. 여섯 개는 HTTP opener를 mock하면서도 `example.com` DNS에는 의존하는 테스트였다. 같은 commit의 GitHub CI는 `--all-extras`와 정상 DNS 환경에서 녹색이었다.
+2026년 7월 12일 당시 소스의 로컬 전체 테스트에서는 3,097개가 통과하고 31개가 skip됐지만 10개가 실패했다. 네 개는 기본 dev dependency profile에 optional `openai`가 없어서였고, 해당 extra를 넣으니 모두 통과했다. 여섯 개는 HTTP opener를 mock하면서도 `example.com` DNS에는 의존하는 테스트였다. 같은 커밋의 GitHub CI는 `--all-extras`와 정상 DNS 환경에서 녹색이었다. 이 숫자는 그 날짜의 기록이고, 2026년 8월 26일에는 로컬 pytest를 다시 돌리지 않았다. 그날 HEAD의 GitHub check는 다시 녹색이었다.
 
 이 결과는 “제품이 망가졌다”는 증거가 아니다. 오히려 **녹색 CI를 재현하려면 CI의 dependency와 network 전제를 같이 복사해야 한다**는 DX 교훈에 가깝다.
 
@@ -377,7 +381,7 @@ Graphify가 잘 맞는 팀은 다음과 같다.
 
 Graphify는 “저장소 전체를 읽지 않고도 구조 후보를 좁혀주는 도구”로 평가하면 꽤 매력적이다. 코드 전용 AST 경로는 빠르고 저렴하며, source와 relation이 붙은 결과는 vector-only 검색보다 검증하기 쉽다. community와 god node도 낯선 저장소의 첫 지도를 만드는 데 도움이 된다.
 
-하지만 “코드를 이해하는 그래프”라는 표현은 실제 구현보다 넓다. 기본 graph는 무방향 단순 그래프이고, query는 lexical heuristic 중심이며, path는 방향을 무시한다. semantic cache와 graph provenance에는 freshness 공백이 있고, headless extract 경로의 절대 ID 이식성 문제도 현재 버전에서 재현됐다. 공개 benchmark는 흥미롭지만 핵심 memory harness가 공개되지 않았고 code 평가는 n=6이다.
+하지만 “코드를 이해하는 그래프”라는 표현은 실제 구현보다 넓다. 기본 graph는 여전히 무방향 단순 그래프이고, query는 lexical heuristic 중심이다. path는 2026년 8월부터 저장된 `_src`/`_tgt` 방향을 기본으로 따르지만, 그 방향은 실행 순서나 data flow가 아니다. semantic cache는 prompt fingerprint로 한 겹 좁혀졌어도 provider·model은 키에 없고, graph provenance envelope는 여전히 얇다. 2026년 7월 12일의 headless extract 절대 ID 재현은 당시 버전의 기록이다. 현재 extract는 file ID를 상대 형태로 remap하지만, `root`를 생략하면 기계 경로가 섞일 수 있다고 문서가 아직 경고한다. 공개 benchmark는 흥미롭지만 핵심 memory harness가 공개되지 않았고 code 평가는 n=6이다.
 
 그래서 나는 Graphify를 `rg`의 대체재나 architecture oracle로 두지 않는다. **정확 검색과 language intelligence 앞뒤에 놓는 구조 탐색 layer**로 쓴다. Graphify가 후보를 보여주면 source를 열고, LSP로 정의·참조를 확인하고, 보안 질문은 CodeQL로, 실제 경로는 trace와 test로 닫는다.
 
@@ -385,20 +389,23 @@ Graphify는 “저장소 전체를 읽지 않고도 구조 후보를 좁혀주�
 
 ## 확인한 자료
 
-검증 기준은 2026년 7월 12일 `Graphify-Labs/graphify` commit `591da764a18db9c558de627accd61a61b32bc23e`와 PyPI `graphifyy 0.9.12`다.
+검증 기준은 두 층이다. 독립 실험은 2026년 7월 12일 핀 커밋 `591da76`와 PyPI `graphifyy 0.9.12`다. 코드·문서·이슈 재대조는 2026년 8월 26일 기본 브랜치 `v8` HEAD `43d54ac`와 PyPI `0.9.50`이다. Graphify CLI는 이번 재검증에서 실행하지 않았다. 전체 커밋 해시는 아래 파일 링크에 있다.
 
 - [Graphify GitHub repository](https://github.com/Graphify-Labs/graphify)
-- [README](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/README.md)
-- [Architecture](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/ARCHITECTURE.md)
-- [Benchmarks](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/BENCHMARKS.md)
-- [Security policy](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/SECURITY.md)
-- [Package metadata](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/pyproject.toml)
-- [Graph builder](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/build.py)
-- [Query and path implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/serve.py)
-- [Incremental detection](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/detect.py)
-- [Watch and rebuild implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/watch.py)
-- [Cache implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/cache.py)
-- [Built-in benchmark implementation](https://github.com/Graphify-Labs/graphify/blob/591da764a18db9c558de627accd61a61b32bc23e/graphify/benchmark.py)
+- [HEAD 43d54ac, 2026-08-25](https://github.com/Graphify-Labs/graphify/commit/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e)
+- [핀 커밋 591da76, 2026-07-11](https://github.com/Graphify-Labs/graphify/commit/591da764a18db9c558de627accd61a61b32bc23e)
+- [README](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/README.md)
+- [Architecture](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/ARCHITECTURE.md)
+- [Benchmarks](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/BENCHMARKS.md)
+- [Security policy](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/SECURITY.md)
+- [Package metadata](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/pyproject.toml)
+- [Graph builder](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/graphify/build.py)
+- [Query and path implementation](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/graphify/serve.py)
+- [CLI](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/graphify/cli.py)
+- [Incremental detection](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/graphify/detect.py)
+- [Watch and rebuild implementation](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/graphify/watch.py)
+- [Cache implementation](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/graphify/cache.py)
+- [Built-in benchmark implementation](https://github.com/Graphify-Labs/graphify/blob/43d54acbfa9e731f7a592bb582c1f4b9d48ed73e/graphify/benchmark.py)
 - [PyPI graphifyy](https://pypi.org/project/graphifyy/)
 - [Issue #1706 — benchmark reproduction](https://github.com/Graphify-Labs/graphify/issues/1706)
 - [Issue #1751 — central graph store](https://github.com/Graphify-Labs/graphify/issues/1751)
@@ -406,6 +413,8 @@ Graphify는 “저장소 전체를 읽지 않고도 구조 후보를 좁혀주�
 - [Issue #1766 — homonymous generic symbols](https://github.com/Graphify-Labs/graphify/issues/1766)
 - [Issue #1776 — deleted files and unresolved stubs](https://github.com/Graphify-Labs/graphify/issues/1776)
 - [Issue #1789 — absolute path node IDs](https://github.com/Graphify-Labs/graphify/issues/1789)
+- [Issue #1939 — semantic cache prompt fingerprint](https://github.com/Graphify-Labs/graphify/issues/1939)
+- [Issue #2487 — directed path default](https://github.com/Graphify-Labs/graphify/issues/2487)
 - [PR #1795 — deletion-evidence guard](https://github.com/Graphify-Labs/graphify/pull/1795)
 - [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
 - [CodeQL data-flow analysis](https://codeql.github.com/docs/writing-codeql-queries/about-data-flow-analysis/)
@@ -413,4 +422,4 @@ Graphify는 “저장소 전체를 읽지 않고도 구조 후보를 좁혀주�
 - [OpenTelemetry traces](https://opentelemetry.io/docs/concepts/signals/traces/)
 - [Zoekt](https://github.com/sourcegraph/zoekt)
 
-독립 실험은 작은 Python fixture로 기능 경계를 확인하기 위한 것이며, 여러 언어와 대형 저장소의 정확도를 대표하는 benchmark가 아니다. 모델 기반 문서·미디어 추출, 원격 graph DB, HTTP MCP 운영은 실행하지 않았다.
+독립 실험은 2026년 7월 12일의 작은 Python fixture로 기능 경계를 확인한 것이며, 여러 언어와 대형 저장소의 정확도를 대표하는 benchmark가 아니다. 2026년 8월 26일에는 모델 기반 문서·미디어 추출, 원격 graph DB, HTTP MCP, Graphify CLI를 실행하지 않았다.
