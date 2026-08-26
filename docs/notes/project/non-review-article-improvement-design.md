@@ -1,7 +1,8 @@
 # 서평 제외 아티클 전면 개선 설계
 
-- Status: approved, not implemented
+- Status: approved, implemented
 - Approved: 2026-08-26
+- Implemented: 2026-08-26
 - Scope: `src/content/articles/`의 실제 아티클 18편
 - Excluded: `src/content/reviews/` 전체와 예시·테스트 콘텐츠
 - Related guidance: [콘텐츠 운영](publishing-workflows.md), [Agent Runbook](agent-runbook.md), [아키텍처 레퍼런스](architecture-reference.md)

@@ -503,6 +503,10 @@ html {
   max-width: 42em;
 }
 
+.article-sheet {
+  overflow-x: clip;
+}
+
 .article-prose,
 .article-leftover,
 .article-colophon {
@@ -517,6 +521,24 @@ html {
 
 .article-prose {
   order: 1;
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.article-prose pre {
+  max-width: 100%;
+}
+
+.article-prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.article-prose :where(th, td) {
+  overflow-wrap: anywhere;
 }
 
 .article-toc ol {

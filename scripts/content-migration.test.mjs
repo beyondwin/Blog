@@ -70,7 +70,7 @@ describe('existing content migration contract', () => {
     expect(exampleEntries.every((entry) => entry.data.draft === true)).toBe(true);
   });
 
-  it('preserves real articles in review until publication is explicitly authorized', () => {
+  it('keeps all real articles public after explicit Bundle A publication', () => {
     const pending = realArticles
       .filter((entry) => entry.data.status === 'review')
       .map((entry) => entry.slug)

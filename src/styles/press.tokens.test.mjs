@@ -12,6 +12,17 @@ describe('press tokens', () => {
     expect(css).not.toContain('--literary');
   });
 
+  it('keeps article markdown tables inside the reading column on narrow viewports', async () => {
+    const css = await readFile(new URL('./press.css', import.meta.url), 'utf8');
+    const start = css.indexOf('.article-prose table {');
+    expect(start).toBeGreaterThan(-1);
+    const block = css.slice(start, css.indexOf('}', start) + 1);
+    expect(block).toContain('overflow-x: auto');
+    expect(block).toContain('max-width: 100%');
+    expect(css).toContain('.article-prose pre {\n  max-width: 100%;\n}');
+    expect(css).toContain('.article-sheet {\n  overflow-x: clip;\n}');
+  });
+
   it('does not retain the retired home composition', async () => {
     const css = await readFile(new URL('./press.css', import.meta.url), 'utf8');
 

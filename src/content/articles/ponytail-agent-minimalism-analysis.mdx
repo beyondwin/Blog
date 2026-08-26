@@ -107,7 +107,7 @@ README는 Ponytail이 평균 LOC 54%, 토큰 22%, 비용 20%, 시간 27%를 줄�
 
 첫 번째 장점은 메시지가 명확하다는 점이다. AI 코딩 에이전트의 흔한 실패는 코드를 못 쓰는 것이 아니라, 필요 없는 코드를 너무 자신 있게 쓰는 것이다. Ponytail은 이 문제를 정면으로 겨냥한다. “더 똑똑하게”가 아니라 “덜 소유하게” 만든다.
 
-두 번째는 여러 에이전트 환경에 맞춘 배포 구조다. `docs/agent-portability.md`를 보면 Claude Code, Codex, OpenCode, Pi, Gemini만이 아니라 Grok, Hermes, Devin, Qoder, Copilot CLI까지 규칙을 옮기는 방식이 정리되어 있다. 단순 README 조언을 넘어, 각 host가 이해하는 파일과 훅 형식으로 규칙을 포장했다.
+두 번째는 여러 에이전트 환경에 맞춘 배포 구조다. `docs/agent-portability.md`는 Claude Code, Codex, OpenCode, Pi, Gemini, Grok, Hermes, Qoder, Copilot CLI로 규칙을 옮기는 방식을 정리한다. Devin CLI는 README 설치 절에 있다. 단순 README 조언을 넘어, 각 host가 이해하는 파일과 훅 형식으로 규칙을 포장했다.
 
 세 번째는 안전장치를 규칙 본문에 넣은 점이다. “짧게 써라”만 있으면 AI는 검증과 에러 처리를 지울 수 있다. Ponytail은 입력 검증, 보안, 접근성, 데이터 손실 방지, non-trivial logic의 최소 실행 체크를 줄이면 안 되는 영역으로 명시한다. 실제 테스트도 이 구분을 의식한다. `tests/behavior.test.js`는 설명이 요청된 경우 길게 설명하는 것이 허용되는지, non-trivial logic에 runnable check가 남는지 같은 행동 게이트를 검증한다.
 

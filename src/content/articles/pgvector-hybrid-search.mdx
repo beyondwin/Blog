@@ -756,7 +756,7 @@ RRF로 합침
 
 ## RRF 기반 SQL 예시
 
-아래 쿼리는 FTS 후보 50개와 벡터 후보 50개를 가져온 뒤 RRF로 최종 순위를 만든다. 공식 예제도 `FULL OUTER JOIN`과 `k = 60`을 쓰는 같은 모양이다.
+아래 쿼리는 FTS 후보 50개와 벡터 후보 50개를 가져온 뒤 RRF로 최종 순위를 만든다. 공식 예제도 `FULL OUTER JOIN`과 `k = 60`으로 합친다. 다만 공식 코드는 `RANK()`/`ts_rank_cd`와 후보 20개를 쓰고, 아래 예시는 `row_number()`/`ts_rank`와 후보 50개다.
 
 ```sql
 WITH

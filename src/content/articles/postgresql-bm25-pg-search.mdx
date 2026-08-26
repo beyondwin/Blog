@@ -17,7 +17,7 @@ status: "published"
 | --- | --- |
 | `LIKE`와 FTS는 무엇이 다른가? | `LIKE`는 문자열 포함 여부를 보고, FTS는 문서를 토큰화해서 검색 가능한 구조로 만든다. |
 | BM25는 왜 필요한가? | 단순히 많이 나온 단어가 아니라 드문 단어, 문서 길이, 등장 빈도를 함께 보며 관련도 점수를 만든다. |
-| pg_search는 무엇인가? | PostgreSQL 테이블에 BM25 인덱스를 만들고 SQL로 검색과 score 정렬을 하게 해주는 ParadeDB 확장이다. |
+| pg_search는 무엇인가? | PostgreSQL 테이블에 ParadeDB(BM25) 인덱스를 만들고 SQL로 검색과 score 정렬을 하게 해주는 확장이다. |
 | 한글 검색에서 n-gram은 왜 자주 나오나? | `결제`와 `결제했다`처럼 정확히 같은 토큰이 아닌 표현을 글자 조각 기반으로 이어주기 위해 쓴다. |
 | Elasticsearch를 대체할 수 있나? | 일부 서비스에서는 가능하지만, 대규모 분산 검색과 복잡한 analyzer 파이프라인은 여전히 별도 검색 엔진이 강하다. |
 
@@ -520,7 +520,7 @@ LIMIT 10;
 | Elasticsearch/OpenSearch | analyzer, synonym, autocomplete, 분산 검색이 강하다. | 운영과 동기화가 복잡하다. | 검색이 제품의 중심인 대규모 서비스 |
 | 앱 레벨 정규화 | 도메인 규칙을 정확히 반영할 수 있다. | 직접 구현과 유지보수 부담이 있다. | 약어, 상품코드, 사내 용어가 많은 서비스 |
 
-거래 설명처럼 짧은 텍스트에서는 `pg_search + n-gram`이 꽤 실용적인 출발점이 될 수 있다. ParadeDB 문서에는 Lindera, Chinese compatible처럼 CJK를 겨냥한 tokenizer도 있다. 형태소 품질이 중요하면 그쪽을 검토하고, 이 글의 실습 경로는 짧은 거래 설명의 n-gram이다.
+거래 설명처럼 짧은 텍스트에서는 `pg_search + n-gram`이 꽤 실용적인 출발점이 될 수 있다. ParadeDB 문서의 Lindera는 사전 기반 형태소 분석(한국어는 KoDic)이고, Chinese compatible는 CJK 글자 단위 토큰이다. 형태소 품질이 중요하면 Lindera를 검토하고, 이 글의 실습 경로는 짧은 거래 설명의 n-gram이다.
 
 ```text
 카드 결제
