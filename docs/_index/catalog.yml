@@ -331,7 +331,7 @@
   status: organized
   summary: Evidence packet defining what can and cannot be claimed from an inaccessible social post and shared AI conversation, including snapshot and hidden-input boundaries.
   source: src/content/articles/shared-ai-conversation-evidence-boundaries.mdx
-  updated: 2026-07-26
+  updated: 2026-08-26
 
 - title: Uncle Bob AI Code Review Evidence Packet
   path: docs/notes/article-factory/uncle-bob-ai-code-review-evidence.md
