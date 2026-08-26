@@ -2,40 +2,40 @@
 title: "Open Design 분석"
 description: "nexu-io/open-design을 로컬 우선 디자인 에이전트 런타임으로 보고, 구조와 강점, 리스크를 정리한다."
 createdAt: "2026-05-16"
-updatedAt: "2026-05-16"
+updatedAt: "2026-08-26"
 tags: ["AI", "design", "architecture"]
 status: "published"
 ---
 
 `nexu-io/open-design`은 자연어 디자인 브리프를 HTML, 프로토타입, 덱, 템플릿, 디자인 시스템, 미디어 산출물로 바꾸는 로컬 우선 디자인 생성 제품이다. 표면적으로는 Claude Design의 오픈소스 대안처럼 보이지만, 내부 구조를 보면 단순한 디자인 생성기보다 디자인 에이전트 런타임에 가깝다.
 
-핵심은 Open Design이 직접 모든 모델 루프를 소유하지 않는다는 점이다. 사용자의 로컬 환경에 이미 설치된 Claude Code, Codex, Cursor Agent, Gemini CLI, OpenCode 같은 도구를 감지하고 실행한다. 즉 제품의 역할은 모델이 아니라 작업 셸이다.
+핵심은 Open Design이 직접 모든 모델 루프를 소유하지 않는다는 점이다. 사용자의 로컬 환경에 이미 설치된 Claude Code, Codex, Cursor Agent, OpenCode 같은 도구를 감지하고 실행한다. 즉 제품의 역할은 모델이 아니라 작업 셸이다. 2026-08-26 확인 기준으로 Gemini CLI는 로컬 생성 어댑터가 아니라 BYOK와 MCP 대상으로 남아 있다.
 
 ## 제품 정체성
 
 Open Design은 네 가지 축으로 이해할 수 있다.
 
-첫째, local-first다. 데몬과 산출물은 사용자 머신에 있고, API 키와 인증 상태도 사용자의 환경에 남는다.
+첫째, local-first다. 데몬과 산출물은 사용자 머신에 있고, API 키와 인증 상태도 사용자의 환경에 남는다. 공식 모델 서비스인 OpenDesign Cloud가 생겼지만, 그건 선택 경로이지 로컬 런타임을 대체하는 구조는 아니다.
 
-둘째, BYO-agent다. 자체 에이전트만 쓰게 하지 않고 사용자가 이미 인증해 둔 CLI를 활용한다.
+둘째, BYO-agent다. 자체 에이전트만 쓰게 하지 않고 사용자가 이미 인증해 둔 CLI를 활용한다. 어댑터 카탈로그는 Claude Code, Codex, Cursor Agent, OpenCode, Copilot 밖으로 넓어졌고, README의 CLI 개수는 표마다 조금씩 다르다. 여기서는 그 숫자를 센 척하지 않는다.
 
-셋째, skills as files다. 디자인 기능은 `SKILL.md` 기반 폴더로 배포된다. 스킬은 Markdown, frontmatter, assets, references를 포함할 수 있다.
+셋째, skills as files다. 디자인 기능은 `SKILL.md` 기반 폴더로 배포된다. 스킬은 Markdown, frontmatter, assets, references를 포함할 수 있다. 기능 스킬과 렌더링 템플릿은 이제 별도 레지스트리로 나뉘지만, 둘 다 파일로 읽힌다.
 
-넷째, design systems as files다. 브랜드와 제품 스타일은 `DESIGN.md`로 표현된다. 데몬은 이 파일을 읽어 프롬프트에 주입하고, UI에는 요약과 swatch를 보여준다.
+넷째, design systems as files다. 브랜드와 제품 스타일은 `DESIGN.md`로 표현된다. 데몬은 이 파일을 읽어 프롬프트에 주입하고, UI에는 요약과 swatch를 보여준다. 최신 패키지는 `manifest.json`과 `tokens.css`를 더 실을 수 있지만, 계약의 중심은 여전히 Markdown 파일이다.
 
 이 구조 덕분에 Open Design은 특정 모델 업체나 특정 UI 생성 방식에 고정되지 않는다. 반대로 외부 CLI의 버전, 권한 모델, 스트리밍 포맷 변화에는 민감해진다.
 
 ## 전체 아키텍처
 
-구조는 크게 Next.js 웹앱, 로컬 Express 데몬, 에이전트 CLI 레이어, 런타임 데이터 저장소로 나뉜다.
+구조는 크게 Next.js 웹앱, 로컬 Express 데몬, 에이전트 CLI 레이어, 런타임 데이터 저장소로 나뉜다. 권장 설치 경로는 Electron 데스크톱이지만, 웹과 데몬이 제품 권한의 중심이다.
 
 웹앱은 프로젝트 생성, 채팅, 에이전트 선택, 스킬과 디자인 시스템 선택, 파일 트리, preview, comment와 refinement UI를 담당한다.
 
 로컬 데몬은 REST와 SSE API를 제공하고, 에이전트 CLI를 감지하고 실행하며, stdout과 stderr 스트림을 해석한다. 프로젝트 파일, 대화, 메시지, preview comment, deployment 메타데이터도 관리한다.
 
-에이전트 레이어는 Claude Code, Codex, Gemini CLI, Cursor Agent, OpenCode, Copilot 등 여러 CLI를 서로 다른 실행 방식과 스트림 포맷으로 어댑터화한다.
+에이전트 레이어는 Claude Code, Codex, Cursor Agent, OpenCode, Copilot 등 여러 CLI를 서로 다른 실행 방식과 스트림 포맷으로 어댑터화한다. 제각각 권한 플래그와 스트림 파서가 있고, 공통 엔진이 그 정의를 읽어 실행한다.
 
-저장소는 `.od` 런타임 데이터 디렉터리와 SQLite 메타데이터를 중심으로 한다. 생성된 산출물은 파일로 남고, 메타데이터는 DB에 저장된다.
+저장소는 데몬이 해석하는 데이터 루트와 SQLite 메타데이터를 중심으로 한다. 생성된 산출물은 파일로 남고, 메타데이터는 DB에 저장된다. 공식 문서는 구체적인 데이터 경로를 다시 쓰지 말라고 못 박는다.
 
 ## 강점
 
@@ -43,7 +43,7 @@ Open Design은 네 가지 축으로 이해할 수 있다.
 
 파일 기반 확장 모델도 강하다. `SKILL.md`와 `DESIGN.md`는 사람이 읽고 수정하기 쉽다. 제품 내부 설정 화면에 갇히지 않고, 버전 관리와 공유가 가능하다.
 
-프롬프트 품질에 대한 문제의식도 분명하다. 디자인 산출물에서 흔히 나타나는 AI slop을 줄이기 위한 craft rule, preflight directive, discovery form 같은 구조가 있다.
+프롬프트 품질에 대한 문제의식도 분명하다. 디자인 산출물에서 흔히 나타나는 AI slop을 줄이기 위한 craft rule과 인라인 질문 폼 같은 구조가 있다.
 
 local-first와 BYOK는 보안과 신뢰 측면에서 장점이다. 디자인 작업물과 인증 정보가 외부 서비스에 과하게 종속되지 않는다.
 
@@ -51,13 +51,13 @@ local-first와 BYOK는 보안과 신뢰 측면에서 장점이다. 디자인 작
 
 첫 번째 리스크는 데몬의 비대화다. 로컬 데몬이 에이전트 실행, DB, 라우팅, 파일, preview, 배포, media generation까지 많은 책임을 갖게 되면 유지보수 경계가 흐려질 수 있다.
 
-두 번째 리스크는 외부 CLI 의존성이다. 각 에이전트의 옵션, 출력 포맷, 권한 모델이 바뀌면 Open Design도 영향을 받는다. 어댑터별 회귀 테스트가 중요하다.
+두 번째 리스크는 외부 CLI 의존성이다. 각 에이전트의 옵션, 출력 포맷, 권한 모델이 바뀌면 Open Design도 영향을 받는다. Gemini 로컬 런타임이 빠진 것처럼, 어댑터별 회귀 테스트가 중요하다.
 
 세 번째 리스크는 prompt stack 회귀 테스트의 어려움이다. 스킬, 디자인 시스템, craft rule, user prompt가 결합되면 결과 품질이 작은 변경에도 흔들릴 수 있다.
 
-네 번째 리스크는 문서 drift다. 초기 프로젝트는 README, 소스, 실제 동작, 릴리스 노트가 빠르게 어긋날 수 있다. 분석 문서에서도 스킬과 디자인 시스템 개수 표기가 일관되지 않은 점이 보였다.
+네 번째 리스크는 문서 drift다. 초기 프로젝트는 README, 소스, 실제 동작, 릴리스 노트가 빠르게 어긋날 수 있다. 2026-08-26 README만 봐도 기능 스킬, 디자인 시스템, 플러그인, CLI 개수가 표마다 조금씩 다르다. 그 숫자를 고정 센서로 쓰지 않는 편이 맞다.
 
-마지막으로 권한 posture가 중요하다. 로컬 CLI를 실행하고 파일을 만들며 preview iframe을 띄우는 제품은 편리하지만, 샌드박스와 read-only 경계를 명확히 해야 한다.
+마지막으로 권한 posture가 중요하다. 로컬 CLI를 실행하고 파일을 만들며 preview iframe을 띄우는 제품은 편리하지만, 샌드박스와 read-only 경계를 명확히 해야 한다. 헤드리스 실행을 위해 어댑터가 비대화형 권한 플래그를 고르는 경우가 많다.
 
 ## 도입 방식
 
