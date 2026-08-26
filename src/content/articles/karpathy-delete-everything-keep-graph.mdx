@@ -2,10 +2,10 @@
 title: "2026년에 남길 것은 그래프 제품이 아니다"
 description: "유행 68분 영상은 2023년 수업의 재판매다. 2026년 Karpathy와 Anthropic 원전을 기준으로, 지금 읽을 자료와 버릴 자료를 가른다."
 createdAt: "2026-08-18"
-updatedAt: "2026-08-18"
+updatedAt: "2026-08-26"
 tags: ["AI", "Karpathy", "graph", "source-grounded"]
-status: "review"
-draft: true
+status: "published"
+draft: false
 recordKind: "research"
 evidenceState: "source-grounded"
 relationships:
@@ -17,9 +17,9 @@ relationships:
     reason: "Karpathy 관련 기존 글과 2026년 원전 대조를 이어 읽기 위한 연결이다."
 ---
 
-2023년 CS25는 트랜스포머가 왜 attention만 남겼는지 설명하는 수업이다. 그 설명은 아직 맞다. 다만 **2026년 에이전트 시스템을 설계하는 커리큘럼으로는 가치가 거의 없다.** 모델은 이미 그 위에서 돌고, 지금 병목은 검증, 기억, 병렬 작업의 비용이다. 내 결론은 이것이다. **유행 68분은 커리큘럼에서 빼고, 2026년 원전만 남겨라.**
+2023년 CS25에서 Karpathy가 남기라고 한 것은 에이전트 그래프가 아니다. 자막의 말은 “delete everything keep attention”이다. 그 설명은 아직 맞다. 다만 **2026년 에이전트 시스템을 설계하는 커리큘럼으로는 가치가 거의 없다.** 모델은 이미 그 위에서 돌고, 지금 병목은 검증, 기억, 병렬 작업의 비용이다. 내 결론은 이것이다. **유행 68분은 커리큘럼에서 빼고, 2026년 원전만 남겨라.**
 
-이 글은 2026년 8월 18일 기준으로 Karpathy의 Sequoia 정리, LLM Wiki gist, autoresearch 저장소, Anthropic의 에이전트·지식 그래프·Dynamic Workflows 문서를 직접 읽은 결과다. 68분 미러는 정체만 확인했고, 본론에서는 쓰지 않는다.
+이 글은 2026년 8월 26일 기준으로 Karpathy의 Sequoia 정리, LLM Wiki gist, autoresearch 저장소, Anthropic의 에이전트·지식 그래프·Dynamic Workflows 문서를 다시 읽은 결과다. 68분 미러는 정체만 확인했고, 본론의 설계 근거로는 쓰지 않는다.
 
 | 자료 | 연도 | 지금 읽을 이유 |
 | --- | --- | --- |
@@ -39,6 +39,8 @@ relationships:
 | 실행 오케스트레이션 | Dynamic Workflows, Building effective agents | 너무 큰 일을 나눠 병렬로 돌리고 다시 모은다 |
 | 지속 기억 | LLM Wiki, Knowledge graph cookbook | 창이 닫혀도 남는 페이지나 엔티티를 유지한다 |
 
+여기에 2023년 수업의 그래프를 얹으면 안 된다. 그때의 노드는 토큰이고, 화살표는 attention이다. 2026년 소셜에서 도는 Graph Engineering은 공식 이름이 아니다. Sequoia에도, Anthropic 문서에도 그 제목은 없다. 어떤 글은 실행 순서, 어떤 노트는 커밋과 지식의 공유 상태, 어떤 노트북은 엔티티 순회를 가리킨다. 한 개념이 아니다.
+
 Karpathy의 2026년 기억 장치는 그래프 데이터베이스가 아니다. [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)는 원본을 건드리지 않고, 마크다운 위키를 에이전트가 계속 고치는 패턴이다. Obsidian 그래프 뷰는 시각화일 뿐이다. Anthropic Cookbook의 그래프는 다른 물건이다. 엔티티와 typed relation으로 다중 홉 질문을 순회한다.
 
 실행 층도 이름이 다르다. Anthropic은 이것을 Graph Engineering이라고 부르지 않는다. [Dynamic Workflows](https://claude.com/blog/introducing-dynamic-workflows-in-claude-code)는 Claude가 오케스트레이션 스크립트를 쓰고, 수십에서 수백 개의 서브에이전트를 병렬로 돌린 뒤 결과를 검증한다. 공식 글은 토큰이 훨씬 더 든다고 먼저 적는다.
@@ -49,17 +51,19 @@ Karpathy의 2026년 기억 장치는 그래프 데이터베이스가 아니다. 
 
 3월, Karpathy는 [autoresearch](https://github.com/karpathy/autoresearch)를 공개한다. 에이전트는 `train.py`만 고치고, 5분 학습 뒤 `val_bpb`가 좋아지면 커밋을 남기고 아니면 되돌린다. 사람이 고치는 파일은 `program.md`다. 기억은 트랜스크립트가 아니라 Git과 실험 기록이다.
 
-4월, 그는 [LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)를 올린다. RAG는 질문마다 지식을 다시 발견한다. 위키는 한 번 컴파일하고 유지한다. 작업은 ingest, query, lint 세 가지다. 좋은 답은 다시 위키 페이지로 들어간다.
+4월 4일, 그는 [LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)를 올린다. RAG는 질문마다 지식을 다시 발견한다. 위키는 한 번 컴파일하고 유지한다. 작업은 ingest, query, lint 세 가지다. 좋은 답은 다시 위키 페이지로 들어간다.
 
-같은 달 30일 Sequoia AI Ascent에서 그는 2026년 공식 대화를 한다. 영상은 [여기](https://www.youtube.com/watch?v=96jN2OCOfLs)고, 본인 정리는 [블로그](https://karpathy.bearblog.dev/sequoia-ascent-2026/)에 있다. 핵심은 세 줄이다. 2025년 12월 이후 에이전트 덩어리를 믿기 시작했다. vibe coding은 바닥을 올리고 agentic engineering은 천장을 올린다. 자동화는 명세가 아니라 검증이 되는 곳에서 빨라진다. 여기에도 Graph Engineering은 없다.
+같은 달 30일 Sequoia AI Ascent에서 그는 2026년 공식 대화를 한다. 영상은 [여기](https://www.youtube.com/watch?v=96jN2OCOfLs)고, 본인 정리는 [블로그](https://karpathy.bearblog.dev/sequoia-ascent-2026/)에 있다. 핵심은 세 줄이다. 2025년 12월 이후 에이전트가 내놓는 덩어리를 믿기 시작했다. vibe coding은 바닥을 올리고 agentic engineering은 천장을 올린다. 자동화는 명세가 아니라 검증이 되는 곳에서 빨라진다. 여기에도 Graph Engineering은 없다. 프롬프트와 컨텍스트는 Software 3.0의 레버로 남아 있다.
 
-Anthropic은 같은 해를 문서로 채운다. 3월 Cookbook은 추출·해소·순회·평가를 노트북으로 보여 준다. 5월 28일 Dynamic Workflows는 한 패스로 안 되는 이관, 감사, 적대적 검증을 공식 제품 기능으로 올린다. [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)는 날짜가 2024년 12월이지만, 2026년에도 Anthropic이 가리키는 기본 패턴이다. workflow는 미리 정한 경로, agent는 모델이 다음 행동을 고르는 루프다.
+Anthropic은 같은 해를 문서로 채운다. Cookbook은 추출·해소·순회·평가를 노트북으로 보여 준다. 5월 28일 Dynamic Workflows는 한 패스로 안 되는 이관, 감사, 적대적 검증을 공식 제품 기능으로 올린다. [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)는 날짜가 2024년 12월 19일이다. workflow는 미리 정한 경로, agent는 모델이 다음 행동을 고르는 루프다. 2026년 재확인에서도 이 구분은 그대로다. 같은 페이지는 도구 지형을 Managed Agents 글로 넘긴다. 이 글은 그 제품 리뷰가 아니다.
 
 ### 유행 패키지는 여기서 뺀다
 
-2026년 8월 X에 다시 돈 68분은 이 목록에 없다. 자막과 공식 CS25 업로드를 대조하면 2023년 1월 수업과 그 무렵 키노트의 이어붙임이다. 카피인 “Prompting is fading away”는 자막에 없다. 2026년 Sequoia 대화에도 없다.
+2026년 8월 X에 다시 돈 68분은 이 목록에 없다. 미러 제목은 “Delete Everything, Keep Graph”이고, 업로더는 Stanford도 Karpathy도 아니다. [공식 CS25 페이지](https://web.stanford.edu/class/cs25/past/cs25-v2/)와 [Stanford 업로드](https://www.youtube.com/watch?v=XfpMkf4rD6E)는 2023년 1월 10일 Introduction to Transformers다. 캡처한 자막과 대조하면 그 수업과 그 무렵 키노트의 이어붙임이다. 호스트가 감사를 한 뒤 Q&A가 잠깐 이어지다가, 트랜스포머 강의로 끊긴다.
 
-함께 붙은 8단계 가이드와 11페이지 PDF는 2026년 글이긴 하다. 다만 전자는 Karpathy를 한 번도 인용하지 않는 실행 수칙이고, 후자는 표지에 Anthropic·Karpathy와 무관하다고 적혀 있다. 읽을 가치는 있어도 공식 강의가 아니다. `1000x`는 측정이 아니다.
+Karpathy의 말은 “delete everything keep attention”이다. @callanxai가 붙인 “Prompting is fading away”는 자막에 없다. 2026년 Sequoia 대화에도 없다.
+
+함께 붙은 8단계 가이드와 11페이지 PDF는 2026년 글이긴 하다. X Article URL은 2026년 8월 26일에도 로그인 벽에 막혀 있다. 8단계 본문은 공개 게시에서 읽었고, 막힌 기사 전용 문장은 추측하지 않는다. 그 게시는 Karpathy를 한 번도 인용하지 않는 실행 수칙이다. PDF는 표지에 Anthropic·Karpathy와 무관하다고 적혀 있다. 읽을 가치는 있어도 공식 강의가 아니다. `1000x`는 측정이 아니다.
 
 ## 핵심 기능
 
@@ -67,7 +71,7 @@ Anthropic은 같은 해를 문서로 채운다. 3월 Cookbook은 추출·해소�
 
 **검증 가능한 루프.** autoresearch는 한 파일, 한 메트릭, 한 시간 예산이다. Sequoia 대화의 말도 같다. 테스트가 돌고 실패가 보이는 일이 빨라진다. 미학, 보안 경계, 잘못된 계정 식별 같은 일은 아직 사람이 맡는다.
 
-**큰 일의 병렬 실행.** Dynamic Workflows는 서브에이전트를 팬아웃하고, 결과를 접기 전에 검사하고, 중단되면 이어서 한다. 공식 예시는 코드베이스 감사와 대규모 이관이다. Anthropic 연구 시스템은 넓은 탐색에서 이득이 있을 수 있고, 토큰은 일반 채팅의 대략 15배다.
+**큰 일의 병렬 실행.** Dynamic Workflows는 서브에이전트를 팬아웃하고, 결과를 접기 전에 검사하고, 중단되면 이어서 한다. 공식 예시는 코드베이스 감사와 대규모 이관이다. 2025년 6월 Anthropic 연구 시스템 글은 넓은 탐색에서 이득이 있을 수 있고, 멀티에이전트는 일반 채팅의 대략 15배 토큰을 쓴다고 적는다. Dynamic Workflows 공지는 그보다 늦고, 토큰이 훨씬 더 든다고만 하지 배수를 적지는 않는다.
 
 **누적 기억.** LLM Wiki는 페이지와 교차 참조와 로그다. Cookbook은 엔티티와 관계와 출처다. 둘 다 “창에 붙여 넣은 글”이 아니다. 위키는 사람이 읽고 에이전트가 고친다. 지식 그래프는 같은 이름의 다른 사람을 합치지 않는 일이 핵심이다.
 
@@ -83,9 +87,9 @@ Dynamic Workflows는 실행 그래프를 추상 강의가 아니라 제품 기�
 
 ## 조심해야 할 점
 
-2023년 수업을 2026년 교본으로 쓰면 시간이 낭비된다. attention 내부는 여전히 맞지만, 그 지식으로 에이전트 조직도를 설계할 수는 없다. 유행 제목은 그 낭비를 유도한다.
+2023년 수업을 2026년 교본으로 쓰면 시간이 낭비된다. attention 내부는 여전히 맞지만, 그 지식으로 에이전트 조직도를 설계할 수는 없다. 유행 제목은 그 낭비를 유도한다. “프롬프트는 사라진다”는 말도 원문과 반대다.
 
-2026년 자료도 한 덩어리가 아니다. Wiki는 페이지고, Cookbook은 엔티티고, Dynamic Workflows는 실행 스크립트다. 셋에 그래프라는 말을 씌우면 디버깅할 대상이 사라진다.
+2026년 Graph Engineering도 한 덩어리가 아니다. Wiki는 페이지고, Cookbook은 엔티티고, Dynamic Workflows는 실행 스크립트다. 셋에 그래프라는 말을 씌우면 디버깅할 대상이 사라진다.
 
 위키는 노트끼리만 대조하면 코드와 어긋나도 모른다. Cookbook은 잘못된 병합이 홉마다 곱해진다. 워크플로는 토큰과 상관 오류를 키운다. 공식 문서가 이미 적는 한계다.
 
@@ -108,7 +112,7 @@ Dynamic Workflows는 실행 그래프를 추상 강의가 아니라 제품 기�
 
 2026년 원전에서 가져갈 습관은 세 개다. 성공을 숫자나 테스트로 적을 것. 원본과 파생 기억을 섞지 말 것. 병렬은 비용이 있으므로 넓을 때만 쓸 것.
 
-배우지 말아야 할 것은 제목의 연도를 자료의 연도로 착각하는 일이다. 2026년 썸네일이 2023년 수업일 수 있다.
+배우지 말아야 할 것은 제목의 연도를 자료의 연도로 착각하는 일이다. 2026년 썸네일이 2023년 수업일 수 있다. 자막에 없는 문장을 강사의 말로 적으면 안 된다.
 
 실습은 여전히 작다. 루프 하나, 검증 하나, 세션이 끝나도 남는 기록 하나. 그 기록이 개체와 관계를 요구하기 시작하면 Cookbook을 연다. 일이 한 창에 안 들어가기 시작하면 Dynamic Workflows를 연다.
 
@@ -118,23 +122,22 @@ Dynamic Workflows는 실행 그래프를 추상 강의가 아니라 제품 기�
 
 지금 남길 것은 그래프 제품이 아니라 **검증과 누적 기억**이다. Karpathy는 그것을 루프와 위키로 적었고, Anthropic은 워크플로와 지식 그래프 노트북으로 적었다. 유행어 Graph Engineering은 그 위에 씌운 포장이다.
 
-공개는 하지 않는다. 초안은 2026년 원전을 기준으로 다시 짠 상태다. 더 볼 것은 Sequoia 정리, LLM Wiki, autoresearch, Anthropic Cookbook과 Dynamic Workflows다.
-
 시각 정리본은 `docs/notes/karpathy-graph/delete-everything-keep-graph.html`에 두었다.
 
 ## 확인한 자료
 
-- https://www.youtube.com/watch?v=96jN2OCOfLs
-- https://karpathy.bearblog.dev/sequoia-ascent-2026/
-- https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
-- https://github.com/karpathy/autoresearch
-- https://claude.com/blog/introducing-dynamic-workflows-in-claude-code
-- https://code.claude.com/docs/en/workflows
-- https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide
-- https://www.anthropic.com/engineering/building-effective-agents
-- https://www.anthropic.com/engineering/multi-agent-research-system
-- https://x.com/hanakoxbt/status/2087167924410658912
-- https://drive.google.com/file/d/1JuefNEiXNeCc3IcQUdyFYXy0R9bAfHxn/view
-- https://www.youtube.com/watch?v=XdbpCM4yGyE
-- https://www.youtube.com/watch?v=XfpMkf4rD6E
-- https://x.com/callanxai/status/2089367361337897463
+- [Sequoia AI Ascent 2026 영상](https://www.youtube.com/watch?v=96jN2OCOfLs)
+- [Karpathy Sequoia 정리](https://karpathy.bearblog.dev/sequoia-ascent-2026/)
+- [LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+- [autoresearch 저장소](https://github.com/karpathy/autoresearch)
+- [Dynamic Workflows 공지](https://claude.com/blog/introducing-dynamic-workflows-in-claude-code)
+- [Claude Code workflows 문서](https://code.claude.com/docs/en/workflows)
+- [Knowledge graph cookbook](https://platform.claude.com/cookbook/capabilities-knowledge-graph-guide)
+- [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)
+- [Multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system)
+- [Stanford CS25 V2 강의 일정](https://web.stanford.edu/class/cs25/past/cs25-v2/)
+- [CS25 공식 업로드](https://www.youtube.com/watch?v=XfpMkf4rD6E)
+- [유행 68분 미러](https://www.youtube.com/watch?v=XdbpCM4yGyE)
+- [hanakoxbt 8단계 공개 게시](https://x.com/hanakoxbt/status/2087167924410658912)
+- [@callanxai 래퍼 게시](https://x.com/callanxai/status/2089367361337897463)
+- [독립 Graph Engineering PDF](https://drive.google.com/file/d/1JuefNEiXNeCc3IcQUdyFYXy0R9bAfHxn/view)

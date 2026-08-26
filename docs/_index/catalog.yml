@@ -371,7 +371,7 @@
   status: organized
   summary: Evidence packet separating Karpathy's 2023 attention/compute graph from the 2026 Graph Engineering overlay, the independent 11-page PDF, and this site's code knowledge graph.
   source: src/content/articles/karpathy-delete-everything-keep-graph.mdx
-  updated: 2026-08-18
+  updated: 2026-08-26
 
 - title: Karpathy 그래프 시각 정리
   path: docs/notes/karpathy-graph/delete-everything-keep-graph.html
