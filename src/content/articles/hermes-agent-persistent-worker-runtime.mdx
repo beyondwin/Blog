@@ -2,14 +2,14 @@
 title: "Hermes Agent는 어떻게 개인 AI 워커 런타임을 만들고 있나"
 description: "NousResearch/hermes-agent 저장소와 공식 문서, 핵심 Python 소스, 실제 GitHub 이슈를 대조해 Hermes Agent의 구조, 장점, 리스크, 도입 기준을 기술 블로그 형식으로 정리한다."
 createdAt: "2026-06-29"
-updatedAt: "2026-06-29"
+updatedAt: "2026-08-26"
 tags: ["AI", "agent", "automation", "workflow", "source-grounded"]
 status: "published"
 ---
 
 Hermes Agent를 처음 보면 “터미널에서 쓰는 AI 비서” 정도로 보이기 쉽다. 그런데 저장소를 직접 열어보면 결이 조금 다르다. 이 프로젝트는 채팅 인터페이스 하나를 잘 만든 도구라기보다, 모델에게 파일, 터미널, 브라우저, 메시징, 기억, 스킬, 크론을 붙여 오래 굴리는 개인용 AI 워커 런타임에 가깝다.
 
-이번 글은 사용자가 제공한 한국어 심층 리포트를 그대로 옮긴 것이 아니다. 2026년 6월 29일 Asia/Seoul 기준으로 `NousResearch/hermes-agent`를 로컬에 클론했고, README와 공식 문서, 그리고 `run_agent.py`, `model_tools.py`, `tools/registry.py`, `toolsets.py`, `hermes_state.py`, `tools/session_search_tool.py`, `tools/skill_manager_tool.py`, `cron/scheduler.py`를 직접 확인했다. 로컬에서 본 커밋은 `d0d2cf1c2f7e821e6d06a7a0e838ad66c6e17fd5`다.
+이번 글은 사용자가 제공한 한국어 심층 리포트를 그대로 옮긴 것이 아니다. 2026년 6월 29일에는 `NousResearch/hermes-agent`를 로컬에 클론해 README와 공식 문서, 그리고 `run_agent.py`, `model_tools.py`, `tools/registry.py`, `toolsets.py`, `hermes_state.py`, `tools/session_search_tool.py`, `tools/skill_manager_tool.py`, `cron/scheduler.py`를 읽었다. 당시 핀은 `d0d2cf1`다. 2026년 8월 26일에는 에이전트 런타임을 실행하지 않고 공식 저장소·문서·소스·이슈만 다시 대조했다. 기본 브랜치는 여전히 `main`이고, HEAD는 `cddb908`(pyproject `0.20.5`)다. 6월 핀보다 12073커밋 앞이다. GitHub latest release 이름은 `v0.20.5`(`v2026.8.19`, 2026-08-21)다.
 
 내 판단은 이렇다. 원문 리포트의 큰 방향은 맞다. 다만 공개 글로 정리할 때는 “self-improving assistant”라는 말보다 “권한을 가진 상주형 자동화 작업자”라는 표현이 훨씬 정확하다. Hermes는 편한 도구이기도 하지만, 동시에 권한 설계를 잘못하면 꽤 위험한 도구다. 이 글은 그 둘을 같이 보려는 리뷰다.
 
@@ -54,18 +54,16 @@ Hermes Agent를 처음 보면 “터미널에서 쓰는 AI 비서” 정도로 �
 
 나머지 핵심 파일은 역할이 비교적 선명하다.
 
-| 영역 | 파일 | 볼 만한 지점 |
-| --- | --- | --- |
-| Agent loop | `run_agent.py` | provider 선택, tool loop, retry, compression |
-| Tool orchestration | `model_tools.py` | schema 수집, async/sync bridge, dispatch |
-| Tool registry | `tools/registry.py` | self-registration, availability check, schema snapshot |
-| Toolset policy | `toolsets.py` | 표면별 tool 노출 정책 |
-| Session DB | `hermes_state.py` | SQLite state store, WAL fallback, FTS5 search |
-| Recall | `tools/session_search_tool.py` | 과거 대화 discovery, scroll, browse |
-| Skills | `tools/skill_manager_tool.py` | agent-managed skill create/edit/patch/delete |
-| Cron | `cron/scheduler.py` | scheduled agent session, delivery, fail-closed 정책 |
+- Agent loop, `run_agent.py`: provider 선택, tool loop, retry, compression
+- Tool orchestration, `model_tools.py`: schema 수집, async/sync bridge, dispatch
+- Tool registry, `registry.py`: self-registration, availability check, schema snapshot
+- Toolset policy, `toolsets.py`: 표면별 tool 노출 정책
+- Session DB, `hermes_state.py`: SQLite state store, WAL fallback, FTS5 search
+- Recall, `session_search_tool.py`: discovery, scroll, read, browse
+- Skills, `skill_manager_tool.py`: agent-managed create/edit/patch/delete
+- Cron, `scheduler.py`: scheduled session, delivery, fail-closed
 
-`pyproject.toml`도 그냥 지나칠 파일은 아니었다. 패키지는 `hermes-agent` `0.17.0`, Python `>=3.11,<3.14`를 선언한다. core dependency를 exact pin 중심으로 관리하고, 주석에는 supply-chain 공격과 transitive dependency drift를 줄이려는 판단이 적혀 있다. 개인 실험용 스크립트라기보다, 설치해서 오래 돌릴 때 깨지는 문제를 신경 쓴 프로젝트라는 인상을 준다.
+`pyproject.toml`도 그냥 지나칠 파일은 아니었다. 2026년 8월 26일 HEAD 패키지는 `hermes-agent` `0.20.5`이고, Python `>=3.11,<3.14` 상한은 그대로다. core dependency를 exact pin 중심으로 관리하고, 주석에는 supply-chain 공격과 transitive dependency drift를 줄이려는 판단이 적혀 있다. 개인 실험용 스크립트라기보다, 설치해서 오래 돌릴 때 깨지는 문제를 신경 쓴 프로젝트라는 인상을 준다.
 
 ## 핵심 기능
 
@@ -75,13 +73,13 @@ Hermes의 첫 번째 특징은 같은 agent를 여러 표면에서 쓴다는 점
 
 두 번째 특징은 장기 기억이다. 공식 memory 문서는 `MEMORY.md`와 `USER.md`를 설명한다. `MEMORY.md`는 환경과 프로젝트 규칙 같은 agent-side notes이고, `USER.md`는 사용자 선호와 기대치다. 둘 다 `~/.hermes/memories/` 아래 저장되고, 세션 시작 시 frozen snapshot으로 system prompt에 들어간다. 세션 중 memory write가 disk에는 저장되지만 active prompt에 즉시 다시 들어가지는 않는다는 점도 흥미롭다. prompt cache를 지키기 위한 의도적인 설계다.
 
-세 번째 특징은 session search다. `tools/session_search_tool.py`를 보면 과거 대화를 FTS5 기반으로 찾고, LLM이 새로 요약한 내용이 아니라 DB에 저장된 실제 메시지를 반환한다. discovery, scroll, browse 형태를 args 모양으로 추론하는 구현도 있다. 작은 디테일이지만 cron session을 완전히 제외하지 않고 interactive session보다 rank만 낮춘 것도 좋았다. 반복 cron output이 검색 결과를 덮어 사용자의 실제 대화가 안 보이는 문제를 줄이려는 판단으로 읽힌다.
+세 번째 특징은 session search다. `tools/session_search_tool.py`를 보면 과거 대화를 FTS5 기반으로 찾고, LLM이 새로 요약한 내용이 아니라 DB에 저장된 실제 메시지를 반환한다. 모듈 주석은 discovery, scroll, read, browse 네 형태를 args 모양으로 추론한다고 적는다. README의 “LLM summarization”은 이 도구의 반환값이 요약본이라는 뜻이 아니다. 작은 디테일이지만 cron session을 완전히 제외하지 않고 interactive session보다 rank만 낮춘 것도 좋았다. 반복 cron output이 검색 결과를 덮어 사용자의 실제 대화가 안 보이는 문제를 줄이려는 판단으로 읽힌다.
 
 네 번째 특징은 skills다. 공식 문서와 `skill_manager_tool.py`는 skills를 procedural memory로 설명한다. 일반 memory가 “무엇을 기억할지”라면, skill은 “어떻게 할지”를 저장한다. `/learn`은 로컬 문서, 온라인 문서, 방금 수행한 workflow, 붙여넣은 절차를 `SKILL.md`로 바꾸는 경로다. Agent가 skill을 create, edit, patch, delete할 수 있으므로 강력하지만, 그만큼 잘못된 절차가 굳어질 위험도 있다.
 
 다섯 번째 특징은 cron이다. Hermes cron은 shell command를 예약 실행하는 수준이 아니다. 공식 cron 문서와 `cron/scheduler.py`를 보면 due job마다 fresh `AIAgent` session을 만들고, skill을 주입하고, prompt를 실행한 뒤, 결과를 origin chat, local file, Telegram, Discord, Slack, Email 등으로 보낸다. no-agent mode도 있어서 단순 script stdout delivery는 LLM 없이 처리할 수 있다.
 
-GitHub 이슈를 보면 이 사용 방식이 단지 문서상의 상상이 아니라는 점도 보인다. Telegram daily briefing, Telegram rich message table 문제, Slack Block Kit 요구, Email gateway subject isolation, cron `deliver=origin` target loss, sandbox file transfer, Telegram photo caching, provider switch poisoning, Windows/WSL remote backend, macOS launchd service 같은 이슈가 있었다. 일부는 이미 closed 상태지만, Hermes가 개인 CLI 도구를 넘어 메시징과 자동화 표면에서 실제로 부딪히고 있다는 근거로는 충분하다.
+GitHub 이슈를 보면 이 사용 방식이 문서상의 상상이 아니라는 점도 보인다. 2026년 8월 26일에도 cron 출력 thinking block, Email subject isolation, `deliver=origin` 대상 소실, 샌드박스 파일 전송, Telegram 사진 캐시, macOS launchd는 열려 있다. 나머지 인용 이슈는 이미 닫혔다. 닫힌 이슈를 전부 고쳐졌다고 읽으면 안 되지만, 메시징과 자동화 표면에서 실제로 부딪히고 있다는 근거로는 충분하다.
 
 ## 좋은 점
 
@@ -95,7 +93,7 @@ MCP discovery를 다루는 방식도 인상적이었다. `model_tools.py` 주석
 
 세션 저장소 쪽도 대충 만들지 않았다. `hermes_state.py`는 SQLite WAL mode를 기본으로 쓰되, NFS, SMB, 일부 FUSE처럼 WAL locking이 깨지는 환경에서는 DELETE journal mode로 fallback한다. macOS에서는 checkpoint full fsync barrier도 적용한다. “SQLite에 저장한다”는 말은 흔하지만, 파일 시스템별 locking 문제까지 고려한 구현은 덜 흔하다.
 
-Cron 쪽에서는 fail-closed 성향이 마음에 들었다. 공식 cron 문서는 provider/model을 명시하지 않은 job이 생성 시점의 provider/model snapshot을 잡고, 나중에 global default가 바뀌면 fail closed한다고 설명한다. `cron/scheduler.py`도 cron-spawned agent에서 `cronjob`, `messaging`, `clarify` toolset을 항상 비활성화한다. unattended job이 cron을 무한 생성하거나, 사용자 응답을 기다리며 멈추는 일을 막기 위한 판단이다.
+Cron 쪽에서는 fail-closed 성향이 마음에 들었다. 공식 cron 문서는 provider/model을 명시하지 않은 job이 생성 시점의 provider/model snapshot을 잡고, 나중에 global default가 바뀌면 fail closed한다고 설명한다. `cron/scheduler.py`는 cron-spawned agent에서 `messaging`과 `clarify`를 항상 끈다. `cronjob`은 기본이 비활성이고, `cron.allow_agent_scheduling: true`로만 연다. 기본값에서는 unattended job이 cron을 무한 생성하거나, 사용자 응답을 기다리며 멈추는 일을 막으려는 판단이다.
 
 ## 조심해야 할 점
 
@@ -103,13 +101,13 @@ Hermes의 가장 큰 리스크는 기능이 많다는 것 자체다. 이 도구�
 
 Approval 설정은 특히 조심해야 한다. 보안 문서는 `approvals.mode`가 `manual`, `smart`, `off`를 지원한다고 설명한다. `off`는 모든 approval check를 끄는 모드이고, YOLO도 위험 명령 승인 prompt를 우회한다. hardline blocklist가 항상 남아 있기는 하지만, 그것은 최후의 바닥일 뿐이다. 처음부터 `off`나 YOLO로 쓰는 것은 추천하기 어렵다.
 
-Container backend도 오해하기 쉽다. 보안 문서는 Docker, Singularity, Modal, Daytona backend에서는 container가 security boundary라 dangerous command check가 skip된다고 설명한다. 그런데 tools 문서를 같이 보면 Docker backend는 fresh container per command가 아니라 process lifetime 동안 유지되는 persistent sandbox다. 패키지 설치, cwd, 파일, 환경 조정이 다음 tool call과 subagent에 남는다. 이건 편리하지만, 오염도 같이 남는다는 뜻이다.
+Container backend도 오해하기 쉽다. 보안 문서는 Docker, Singularity, Modal, Daytona, Vercel Sandbox backend에서는 container가 security boundary라 dangerous command check가 skip된다고 설명한다. 그런데 tools 문서를 같이 보면 Docker backend는 fresh container per command가 아니라 process lifetime 동안 유지되는 persistent sandbox다. 패키지 설치, cwd, 파일, 환경 조정이 다음 tool call과 subagent에 남는다. 이건 편리하지만, 오염도 같이 남는다는 뜻이다.
 
 Memory와 skills는 장점이면서 동시에 drift 위험이다. Memory는 세션 시작 prompt에 들어가므로 틀린 가정이 저장되면 다음 세션을 계속 오염시킨다. Skills는 더 강하다. 잘못된 절차가 `SKILL.md`로 저장되면 agent가 같은 실수를 반복할 수 있다. 그래서 `memory.write_approval: true`, skill folder Git 관리, 민감 skill 보호, `/learn` 결과 리뷰가 중요하다.
 
 메시징 표면은 UX 리스크도 크다. 실제 이슈를 보면 Telegram Markdown/table escaping, Telegram image caching timeout, Email notification volume, Slack Block Kit 부족, origin delivery target loss 같은 문제가 나온다. Agent 본체가 아무리 좋아도 플랫폼별 delivery reliability와 session isolation이 흔들리면 사용자는 “대충 불안정하다”고 느낀다.
 
-마지막으로 toolset을 보안 경계로 과신하면 안 된다. Toolset은 모델에게 노출되는 schema를 줄이는 장치다. OS 권한, 네트워크 접근, 파일 시스템 권한을 완전히 격리하는 장치는 아니다. 실제 보안 경계는 Docker/SSH/Modal 같은 backend, gateway allowlist, approval mode, env passthrough 최소화, workdir 제한, API key scope 제한과 함께 만들어야 한다.
+마지막으로 toolset을 보안 경계로 과신하면 안 된다. Toolset은 모델에게 노출되는 schema를 줄이는 장치다. OS 권한, 네트워크 접근, 파일 시스템 권한을 완전히 격리하는 장치는 아니다. 실제 보안 경계는 Docker/SSH/Modal/Vercel Sandbox 같은 backend, gateway allowlist, approval mode, env passthrough 최소화, workdir 제한, API key scope 제한과 함께 만들어야 한다.
 
 ## 언제 쓰면 좋은가
 
@@ -123,14 +121,12 @@ Hermes가 잘 맞는 사람은 여러 프로젝트와 반복 업무를 장기간
 
 내가 도입한다면 이렇게 갈 것 같다.
 
-| 단계 | 목표 | 권장 설정 |
-| --- | --- | --- |
-| 0 | 로컬 실험 | messaging gateway 끄기, `terminal.backend=docker` 또는 `ssh`, approval manual |
-| 1 | 단발 CLI 작업 | `web,file,terminal,todo,skills`처럼 좁은 toolset |
-| 2 | Memory 안정화 | `memory.write_approval=true`, `/memory pending` 리뷰 |
-| 3 | Skills 축적 | 반복 workflow를 3번 이상 수행한 뒤 `/learn`, 결과 Git diff 리뷰 |
-| 4 | Gateway 연결 | allowlist 필수, trusted DM부터, public/group은 read-only toolset |
-| 5 | Cron 자동화 | read-only report부터, provider/model pinning, delivery fallback |
+- 0 로컬 실험: messaging 끄기, backend는 `docker` 또는 `ssh`, approval manual
+- 1 단발 CLI 작업: web, file, terminal, todo, skills처럼 좁은 toolset
+- 2 Memory 안정화: `write_approval=true`, `/memory pending` 리뷰
+- 3 Skills 축적: 같은 workflow를 3번 한 뒤 `/learn`, Git diff 리뷰
+- 4 Gateway 연결: allowlist 필수, trusted DM부터, public/group은 read-only toolset
+- 5 Cron 자동화: read-only report부터, provider/model pinning, delivery fallback
 
 ## 주니어 개발자가 배울 점
 
@@ -177,4 +173,9 @@ Hermes Agent는 단순 코딩 에이전트보다 더 넓은 방향을 본다. CL
 - [Issue #42376](https://github.com/NousResearch/hermes-agent/issues/42376)
 - [Issue #54410](https://github.com/NousResearch/hermes-agent/issues/54410)
 
-로컬 소스 검토 기준은 `NousResearch/hermes-agent` `d0d2cf1c2f7e821e6d06a7a0e838ad66c6e17fd5`다. 확인한 핵심 Python 파일은 `python3 -m py_compile`로 구문 검증했고, 외부 저장소의 설치 스크립트나 전체 테스트 스위트는 실행하지 않았다.
+검증 기준은 두 층이다. 2026년 6월 29일 핀은 `d0d2cf1`이고, 2026년 8월 26일 재대조는 `main` HEAD `cddb908`와 pyproject `0.20.5`다. 에이전트 런타임은 실행하지 않았다. 전체 커밋 해시는 아래 커밋 링크에 있다.
+
+- [HEAD cddb908, 2026-08-26](https://github.com/NousResearch/hermes-agent/commit/cddb908aab2542eec9b4480a3738e9ea0ae3a8f5)
+- [핀 커밋 d0d2cf1, 2026-06-28](https://github.com/NousResearch/hermes-agent/commit/d0d2cf1c2f7e821e6d06a7a0e838ad66c6e17fd5)
+
+확인한 핵심 Python 파일은 `python3 -m py_compile`로 구문 검증했고, 외부 저장소의 설치 스크립트나 전체 테스트 스위트는 실행하지 않았다.

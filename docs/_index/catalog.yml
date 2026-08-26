@@ -391,7 +391,7 @@
   status: organized
   summary: Internal evidence packet for the published Hermes Agent article, including the supplied Korean report review, local source inspection, issue verification, and junior explanation notes.
   source: src/content/articles/hermes-agent-persistent-worker-runtime.mdx
-  updated: 2026-06-29
+  updated: 2026-08-26
 
 - title: LazyCodex Agent Harness Analysis Research Packet
   path: docs/notes/article-factory/lazycodex-agent-harness-analysis.md
