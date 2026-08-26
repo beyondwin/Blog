@@ -2,7 +2,7 @@
 title: "pgvector로 벡터 검색 이해하기: 임베딩, SQL, HNSW, RRF까지"
 description: "PostgreSQL과 pgvector로 의미 기반 검색을 만드는 과정을 임베딩 기초, 거리 연산자, JSONB/JOIN, HNSW/IVFFLAT, FTS와 RRF 하이브리드 검색까지 한 흐름으로 정리한다."
 createdAt: "2026-07-09"
-updatedAt: "2026-07-09"
+updatedAt: "2026-08-26"
 tags: ["PostgreSQL", "pgvector", "RAG", "search", "database"]
 status: "published"
 ---
@@ -13,7 +13,7 @@ pgvector를 처음 보면 “PostgreSQL에 벡터 컬럼 하나 추가하는 기
 
 pgvector는 이 “의미가 가까운 데이터 찾기”를 PostgreSQL 안에서 SQL로 처리하게 해준다. 더 중요한 점은 벡터 검색만 따로 하는 것이 아니라, 기존 테이블, JOIN, JSONB 필터, Full-Text Search와 함께 조합할 수 있다는 것이다.
 
-이 글은 PostgreSQL은 조금 써봤지만 임베딩과 벡터 검색은 처음 접하는 주니어 개발자를 기준으로 쓴다. 목표는 SQL을 외우는 것이 아니라, 어떤 데이터가 어디에 저장되고, 왜 거리 연산자와 인덱스와 하이브리드 검색이 필요한지 이해하는 것이다.
+이 글은 PostgreSQL을 조금 써봤지만 임베딩과 벡터 검색은 처음 접하는 주니어 개발자를 기준으로 쓴다. 목표는 SQL을 외우는 것이 아니라, 어떤 데이터가 어디에 저장되고, 왜 거리 연산자와 인덱스와 하이브리드 검색이 필요한지 이해하는 것이다.
 
 | 질문 | 짧은 답 |
 | --- | --- |
@@ -104,7 +104,7 @@ CREATE TABLE doc_embeddings (
 검색 벡터: 1536차원
 ```
 
-둘이 다르면 검색 품질이 떨어지는 정도가 아니라 쿼리 자체가 실패한다. 또 pgvector의 타입별 차원 한도와 인덱스 한도는 버전과 타입에 따라 다르므로, 큰 차원 모델을 쓰는 경우 공식 README의 현재 제한을 확인하는 편이 안전하다.
+둘이 다르면 검색 품질이 떨어지는 정도가 아니라 쿼리 자체가 실패한다. 2026-08-26 기준 공식 README(pgvector 0.8.6)에서 `vector` 타입 저장은 최대 16,000차원이고, HNSW/IVFFLAT 인덱스는 `vector` 기준 최대 2,000차원이다. 한도는 타입과 버전에 따라 달라지므로, 큰 차원 모델을 쓸 때는 현재 README를 다시 보는 편이 안전하다.
 
 ## 교육용 샘플 데이터
 
@@ -151,6 +151,8 @@ pgvector에서 자주 쓰는 연산자는 세 가지다.
 | `<=>` | Cosine distance | 방향이 얼마나 비슷한가 | 작을수록 가까움 |
 | `<->` | L2 distance | 직선 거리가 얼마나 가까운가 | 작을수록 가까움 |
 | `<#>` | Negative inner product | 내적값의 음수 | 작을수록 가까움 |
+
+처음 배우는 검색은 이 세 가지면 충분하다. 2026-08-26 README에는 L1 거리 연산자 `<+>`도 있다. HNSW는 `vector_l1_ops`로 인덱스를 만들 수 있지만, IVFFLAT에는 해당 operator class가 없다. Hamming(`<~>`)과 Jaccard(`<%>`)는 binary 벡터용이다.
 
 가장 많이 헷갈리는 부분은 `<=>`가 유사도가 아니라 거리라는 점이다.
 
@@ -502,7 +504,7 @@ LIMIT 5;
 COMMIT;
 ```
 
-초기 RAG 검색이라면 HNSW를 먼저 검토하는 경우가 많다. 검색 품질이 대체로 좋고, 테이블에 데이터가 없는 상태에서도 인덱스를 만들 수 있기 때문이다. 대신 인덱스 생성은 느릴 수 있고 메모리 사용량도 더 크다.
+공식 README의 HNSW 기본값은 `m = 16`, `ef_construction = 64`, `hnsw.ef_search = 40`이다. 초기 RAG 검색이라면 HNSW를 먼저 검토하는 경우가 많다. 속도 대비 recall 타협이 IVFFLAT보다 나은 편이고, 테이블에 데이터가 없는 상태에서도 인덱스를 만들 수 있기 때문이다. 대신 인덱스 생성은 느릴 수 있고 메모리 사용량도 더 크다.
 
 ## IVFFLAT: 가까운 클러스터만 들어가서 찾기
 
@@ -540,7 +542,9 @@ lists = 100, probes = 100
 
 `probes`가 낮으면 빠르지만 놓치는 문서가 생길 수 있다. `probes`가 높으면 느려지지만 recall이 좋아진다.
 
-IVFFLAT은 인덱스 구축이 비교적 빠르고 메모리 사용량도 낮은 편이다. 대신 데이터가 어느 정도 들어간 뒤 인덱스를 만드는 편이 좋다. 클러스터를 나누려면 기존 데이터 분포를 봐야 하기 때문이다.
+2026-08-26 기준 공식 README가 제안하는 출발점은 대략 이렇다. `lists`는 행이 100만 개 이하면 `rows / 1000`, 그 이상이면 `sqrt(rows)`부터 보고, `probes`는 `sqrt(lists)`부터 본다. 기본 `probes`는 1이다. `probes`를 `lists`와 같게 두면 exact nearest neighbor에 가깝고, 그 시점에는 플래너가 인덱스를 쓰지 않을 수 있다.
+
+IVFFLAT은 인덱스 구축이 비교적 빠르고 메모리 사용량도 낮은 편이다. 대신 데이터가 어느 정도 들어간 뒤 인덱스를 만드는 편이 좋다. 클러스터를 나누는 학습 단계가 있어 기존 데이터 분포를 봐야 하기 때문이다.
 
 ## HNSW와 IVFFLAT 비교
 
@@ -591,6 +595,7 @@ USING hnsw (embedding vector_ip_ops);
 | 코사인 거리 | `<=>` | `vector_cosine_ops` |
 | L2 거리 | `<->` | `vector_l2_ops` |
 | 내적 | `<#>` | `vector_ip_ops` |
+| L1 거리 | `<+>` | `vector_l1_ops` (HNSW만) |
 
 인덱스를 만들었는데 쿼리가 다른 연산자를 쓰면 기대한 인덱스 전략이 깨진다.
 
@@ -635,7 +640,7 @@ ON transactions
 USING gin (metadata);
 ```
 
-필터 조건과 벡터 검색을 섞는 쿼리는 실제 데이터 분포에 따라 실행 계획이 달라진다. 그래서 `EXPLAIN ANALYZE`가 필요하다.
+필터 조건과 벡터 검색을 섞는 쿼리는 실제 데이터 분포에 따라 실행 계획이 달라진다. approximate 인덱스는 필터를 인덱스 스캔 뒤에 적용한다. 조건에 맞는 행이 일부뿐이면, 기본 `hnsw.ef_search = 40`에서는 기대한 개수보다 적게 나올 수 있다. pgvector 0.8.0부터는 iterative index scan으로 후보를 더 읽을 수 있다. 그래서 `EXPLAIN ANALYZE`가 필요하다.
 
 ```sql
 EXPLAIN ANALYZE
@@ -662,7 +667,7 @@ RAG 검색을 만들 때 흔히 벡터 검색만 있으면 된다고 생각한�
 | FTS | 정확한 단어, 코드, 제품명, 에러 문자열 찾기 | `ERR_PAYMENT_403`, `카드` |
 | Vector Search | 표현은 달라도 의미가 가까운 문서 찾기 | `결제가 실패해요`, `결제 수단 등록이 안 됩니다` |
 
-PostgreSQL FTS는 이렇게 시작할 수 있다.
+PostgreSQL FTS는 문서를 `tsvector`로 전처리하고, 질의는 `tsquery`로 맞춰 `@@`로 찾는다. 랭킹은 매칭과 별개이며, 이 글은 `ts_rank`를 쓴다. 시작은 이렇게 할 수 있다.
 
 ```sql
 ALTER TABLE doc_embeddings
@@ -718,7 +723,7 @@ ORDER BY fts_score + vec_score DESC
 
 여기서 `fts_score = 0.30`이 `vec_score = 0.89`보다 강한 신호인지 단순 비교하기 어렵다. 점수의 출신이 다르기 때문이다.
 
-그래서 실무에서는 점수 자체보다 순위를 합치는 RRF를 자주 쓴다.
+그래서 실무에서는 점수 자체보다 순위를 합치는 RRF를 자주 쓴다. 공식 README도 하이브리드 검색을 PostgreSQL FTS와 함께 쓰고, 결과는 Reciprocal Rank Fusion 또는 cross-encoder로 합치라고 안내한다.
 
 ```text
 점수 기반 결합:
@@ -728,7 +733,7 @@ fts_score + vec_score
 1 / (k + fts_rank) + 1 / (k + vec_rank)
 ```
 
-보통 `k = 60`을 기본값처럼 많이 쓴다.
+보통 `k = 60`을 기본값처럼 많이 쓴다. 공식 예제도 이 값을 쓴다.
 
 ```text
 RRF Score = 1 / (60 + rank)
@@ -751,7 +756,7 @@ RRF로 합침
 
 ## RRF 기반 SQL 예시
 
-아래 쿼리는 FTS 후보 50개와 벡터 후보 50개를 가져온 뒤 RRF로 최종 순위를 만든다.
+아래 쿼리는 FTS 후보 50개와 벡터 후보 50개를 가져온 뒤 RRF로 최종 순위를 만든다. 공식 예제도 `FULL OUTER JOIN`과 `k = 60`을 쓰는 같은 모양이다.
 
 ```sql
 WITH
@@ -868,6 +873,7 @@ embedding 컬럼 차원과 query vector 차원이 같은가?
 vector_cosine_ops 인덱스 → <=> 검색
 vector_l2_ops 인덱스     → <-> 검색
 vector_ip_ops 인덱스     → <#> 검색
+vector_l1_ops 인덱스     → <+> 검색 (HNSW만)
 ```
 
 셋째, 인덱스를 타는 쿼리 형태인지 확인한다.
@@ -904,7 +910,7 @@ WITH (m = 16, ef_construction = 64);
 
 단, `CREATE INDEX CONCURRENTLY`는 트랜잭션 블록 안에서 쓸 수 없는 등 제약이 있다. 마이그레이션 도구와 운영 절차에 맞춰 별도 계획을 잡아야 한다.
 
-일곱째, `NULL` 벡터를 검색 대상에서 제외한다.
+일곱째, `NULL` 벡터를 검색 대상에서 제외한다. 코사인 거리 인덱스에서는 요소가 모두 0인 벡터도 인덱싱되지 않는다.
 
 ```sql
 WHERE embedding IS NOT NULL
@@ -918,7 +924,7 @@ WHERE embedding IS NOT NULL
 
 둘째, `<#>`를 실제 내적값이라고 착각한다. `<#>`는 negative inner product다. 실제 내적은 `-1 * (embedding <#> query_vector)`로 본다.
 
-셋째, 인덱스 operator class와 검색 연산자를 다르게 쓴다. `vector_cosine_ops` 인덱스를 만들고 `<->`로 검색하면 의도와 달라진다.
+셋째, 인덱스 operator class와 검색 연산자를 다르게 쓴다. `vector_cosine_ops` 인덱스를 만들고 `<->`로 검색하면 의도와 달라진다. L1(`<+>`)은 HNSW만 인덱스로 받을 수 있다.
 
 넷째, 최종 5개를 보여준다는 이유로 후보도 5개만 가져온다.
 
@@ -1014,5 +1020,6 @@ PostgreSQL + pgvector
 
 ## 확인한 자료
 
-- [pgvector 공식 GitHub README](https://github.com/pgvector/pgvector)
+- [pgvector 공식 GitHub README](https://github.com/pgvector/pgvector) (2026-08-26 확인, 최신 릴리스 0.8.6)
+- [PostgreSQL Full Text Search 소개](https://www.postgresql.org/docs/current/textsearch-intro.html) (2026-08-26 확인)
 - 내부 강의노트: `PostgreSQL + pgvector 벡터 검색 강의 노트`
