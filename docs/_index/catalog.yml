@@ -351,7 +351,7 @@
   status: organized
   summary: Evidence packet for a CloudFront, S3, API Gateway, Lambda, and private Spring architecture, covering runtime constraints, origin security, networking, cost, and operational blind spots.
   source: src/content/articles/aws-static-frontend-serverless-bff.mdx
-  updated: 2026-07-26
+  updated: 2026-08-26
 
 - title: Graphify Code Knowledge Graph Deep-Dive Research Packet
   path: docs/notes/article-factory/graphify-code-knowledge-graph-deep-dive.md
