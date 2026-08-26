@@ -409,9 +409,9 @@
   type: research-note
   language: ko
   status: organized
-  summary: Internal evidence packet for the published Ponytail article, including source inventory, local clone inspection, adapter map, benchmark reading notes, and adoption risks.
+  summary: Internal evidence packet for the published Ponytail article, including 2026-08-26 official source re-check, version/adapter map, and benchmark-methodology limits.
   source: src/content/articles/ponytail-agent-minimalism-analysis.mdx
-  updated: 2026-06-25
+  updated: 2026-08-26
 
 - title: oh-my-pi Deep Review Research Packet
   path: docs/notes/article-factory/oh-my-pi-deep-review.md
