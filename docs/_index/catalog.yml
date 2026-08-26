@@ -321,7 +321,7 @@
   status: organized
   summary: Evidence packet comparing persistent AGENTS.md guidance and on-demand Agent Skills using vendor evaluation data, public Next.js results, specifications, and instruction-quality research.
   source: src/content/articles/agents-md-vs-agent-skills-evidence.mdx
-  updated: 2026-07-26
+  updated: 2026-08-26
 
 - title: Shared AI Conversation Evidence Boundaries Research Packet
   path: docs/notes/article-factory/shared-ai-conversation-evidence-boundaries.md
