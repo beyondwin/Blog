@@ -73,6 +73,16 @@
   source: src/content.config.ts
   updated: 2026-06-30
 
+- title: 서평 제외 아티클 전면 개선 설계
+  path: docs/notes/project/non-review-article-improvement-design.md
+  topic: project
+  type: workflow
+  language: ko
+  status: organized
+  summary: 서평과 예시 파일을 제외한 실제 아티클 18편의 최신 근거 재검증, 장르별 한국어 편집, review 글 공개 전환과 검증 경계를 정의한 승인 설계.
+  source: user decisions 2026-08-26
+  updated: 2026-08-26
+
 - title: Agent Runbook
   path: docs/notes/project/agent-runbook.md
   topic: project

@@ -11,6 +11,7 @@
 | beyondwin 프로젝트 문서 | project | reference | ko | organized | [docs/notes/project/README.md](notes/project/README.md) |
 | beyondwin 시작하기 | project | tutorial | ko | organized | [docs/notes/project/getting-started.md](notes/project/getting-started.md) |
 | 콘텐츠 운영 | project | guide | ko | organized | [docs/notes/project/publishing-workflows.md](notes/project/publishing-workflows.md) |
+| 서평 제외 아티클 전면 개선 설계 | project | workflow | ko | organized | [docs/notes/project/non-review-article-improvement-design.md](notes/project/non-review-article-improvement-design.md) |
 | Agent Runbook | project | workflow | ko | organized | [docs/notes/project/agent-runbook.md](notes/project/agent-runbook.md) |
 | Architecture Decision Records | project | reference | ko | organized | [docs/notes/project/adr/README.md](notes/project/adr/README.md) |
 | ADR-0000: ADR 관리 규칙 | project | decision-record | ko | organized | [docs/notes/project/adr/0000-adr-governance.md](notes/project/adr/0000-adr-governance.md) |
