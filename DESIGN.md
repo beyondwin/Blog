@@ -110,9 +110,9 @@ Astro rollback의 `src/styles/press.css`는 어두운 방과 밝은 종이를 �
 - `PublicScene`: server-rendered scene objects, native mobile rail, URL/history/focus lifecycle.
 - `PublicSceneObject`: media 또는 text-only object와 canonical no-JS anchor.
 - `storyworld.css`: Staged Aperture, focus composition, mobile snap rail, reduced-motion 규칙.
-- `press-sheet`: 읽기 지면. 재단선과 색띠를 그린다.
-- layout 파일들: 글 팸플릿, 책 객체, 문장 페이지의 본문 셸.
-- `이 쇄 / 이전 쇄`는 데이터가 있을 때만 그린다. 가짜 이력을 만들지 않는다.
+- `reading-sheet`: React 공개 읽기 지면. `--bw-mineral` field 위의 `--bw-white` sheet다. Astro `press-sheet`의 재단선과 색띠는 rollback baseline이다.
+- React reading page: 글 팸플릿, 책 객체, 문장 페이지의 본문 셸.
+- `이어서 읽기`가 이어 읽기 문법이다. 이어질 기록이 있을 때만 목록을 그린다. 가짜 `이전 쇄` 이력을 만들지 않는다.
 
 ## Motion
 
