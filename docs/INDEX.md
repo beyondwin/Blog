@@ -26,6 +26,8 @@
 | Public reading continuity 상세 설계 | project | product-design | ko | organized | [docs/notes/project/public-reading-continuity-design.md](notes/project/public-reading-continuity-design.md) |
 | Public reading continuity React migration 구현 계획 | project | implementation-plan | ko | organized | [docs/notes/project/public-reading-continuity-implementation-plan.md](notes/project/public-reading-continuity-implementation-plan.md) |
 | Public reading continuity React migration 작업 회고 | project | retrospective | ko | organized | [docs/notes/project/public-reading-continuity-migration-retrospective.md](notes/project/public-reading-continuity-migration-retrospective.md) |
+| 공개 글·책 독서 지면 설계 | project | product-design | ko | organized | [docs/notes/project/reading-surface-density-design.md](notes/project/reading-surface-density-design.md) |
+| 공개 글·책 독서 지면 구현 계획 | project | implementation-plan | ko | organized | [docs/notes/project/reading-surface-density-implementation-plan.md](notes/project/reading-surface-density-implementation-plan.md) |
 | Public renderer comparison and promotion evidence | project | evidence | en | organized | [docs/notes/project/evidence/public-renderer-comparison.md](notes/project/evidence/public-renderer-comparison.md) |
 | Public site cutover, rollback, and restore evidence | project | evidence | en | organized | [docs/notes/project/evidence/public-site-cutover.md](notes/project/evidence/public-site-cutover.md) |
 | Public Atlas Visual Storyworld vertical slice 설계 | project | product-design | ko | organized | [docs/notes/project/visual-storyworld-public-atlas-design.md](notes/project/visual-storyworld-public-atlas-design.md) |

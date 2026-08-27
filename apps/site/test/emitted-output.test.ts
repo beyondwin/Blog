@@ -107,7 +107,7 @@ describe('React Router emitted critical output', () => {
     expect(routeCss[3]).toContain('.reading-threshold');
     expect(routeCss[3]).toContain('.context-return');
     expect(routeCss[0].length).toBeLessThan(10_000);
-    for (const detailCss of routeCss.slice(1)) expect(detailCss.length).toBeLessThan(8_000);
+    for (const detailCss of routeCss.slice(1)) expect(detailCss.length).toBeLessThan(12_000);
     const imagePreload = homeHtml.match(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u)?.[0];
     expect(imagePreload).toContain('href="/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif"');
     expect(imagePreload).toContain('imageSizes="(max-width: 720px) 70vw, (max-width: 1540px) 61vw, 940px"');

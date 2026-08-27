@@ -223,6 +223,26 @@
   source: migration commits and Task 14-15 evidence
   updated: 2026-08-26
 
+- title: 공개 글·책 독서 지면 설계
+  path: docs/notes/project/reading-surface-density-design.md
+  topic: project
+  type: product-design
+  language: ko
+  status: organized
+  summary: Moves article pamphlet, investigation TOC and colophon, and review cover objects with a yearly diary onto the mineral reading surface without changing scene grammar.
+  source: ADR-0006
+  updated: 2026-08-27
+
+- title: 공개 글·책 독서 지면 구현 계획
+  path: docs/notes/project/reading-surface-density-implementation-plan.md
+  topic: project
+  type: implementation-plan
+  language: ko
+  status: organized
+  summary: Executes article and review presentation helpers, folded brief tables, pamphlet and bookshelf UI, browser evidence, and DESIGN.md built-truth sync in TDD-sized tasks.
+  source: ADR-0006
+  updated: 2026-08-27
+
 - title: Public renderer comparison and promotion evidence
   path: docs/notes/project/evidence/public-renderer-comparison.md
   topic: project

@@ -1,6 +1,6 @@
 # 공개 글·책 독서 지면 설계
 
-- Status: approved, not implemented
+- Status: approved, implemented
 - Approved: 2026-08-27
 - Decision: [ADR-0006](adr/0006-unified-public-reading-continuity.md)
 - Related decisions: [ADR-0002](adr/0002-consumer-grade-visual-experience.md), [ADR-0003](adr/0003-visual-storyworld-experience-model.md)
