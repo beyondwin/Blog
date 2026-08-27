@@ -38,5 +38,9 @@ describe('route-scoped critical CSS source accounting', () => {
     expect(memoryDetail).toContain('.memory-thought');
     expect(memoryDetail).toContain('.reading-threshold');
     expect(memoryDetail).toContain('.context-return');
+    expect(criticalCssForPath('/articles/', sources)).toContain('.article-lead');
+    expect(criticalCssForPath('/articles/', sources)).not.toContain('.public-scene');
+    expect(criticalCssForPath('/reviews/', sources)).toContain('.book-objects');
+    expect(criticalCssForPath('/reviews/', sources)).not.toContain('.public-scene');
   });
 });

@@ -1,1 +1,157 @@
 .review-reading-page .content-figure { margin: 2em 0; }
+
+.book-index {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(40px, 6vw, 72px);
+}
+
+.book-objects {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 36px) clamp(16px, 2.4vw, 28px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.book-objects li,
+.book-diary li {
+  scroll-margin-top: 6rem;
+}
+
+.book-card {
+  display: grid;
+  align-content: start;
+  gap: 0.45em;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.book-card:hover .book-title,
+.book-diary a:hover .book-title {
+  text-decoration: underline;
+  text-decoration-color: var(--bw-cobalt);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
+.book-objects picture,
+.book-diary picture {
+  display: block;
+  width: 100%;
+  max-width: 11.5rem;
+}
+
+.book-cover {
+  display: block;
+  width: 100%;
+  max-width: 11.5rem;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--bw-white);
+}
+
+img.book-cover {
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--bw-ink) 18%, transparent);
+}
+
+.book-cover--set {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.35em;
+  padding: 0.75em;
+  border: 1px solid var(--bw-line);
+  box-shadow: none;
+  color: var(--bw-ink);
+  font-size: 0.82rem;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.book-cover--set em {
+  color: var(--bw-soft-ink);
+  font-style: normal;
+}
+
+.book-cover--small,
+.book-diary picture {
+  width: 42px;
+  max-width: 42px;
+}
+
+.book-cover--small.book-cover--set {
+  padding: 0.28em;
+  font-size: 0.48rem;
+  line-height: 1.2;
+}
+
+.book-title {
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.book-card .book-title {
+  font-size: 0.98rem;
+}
+
+.book-author {
+  color: var(--bw-soft-ink);
+  font-size: 0.82rem;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+.book-verdict {
+  color: var(--bw-ink);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.book-diary h2 {
+  margin: 0 0 0.85em;
+  color: var(--bw-soft-ink);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.book-diary ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.book-diary li + li {
+  margin-top: 1.05em;
+}
+
+.book-diary a {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  column-gap: 0.9rem;
+  align-items: start;
+  color: inherit;
+  text-decoration: none;
+}
+
+.book-diary__copy {
+  display: grid;
+  gap: 0.2em;
+  min-width: 0;
+}
+
+.book-diary .book-title {
+  font-size: 1rem;
+}
+
+@media (max-width: 720px) {
+  .book-objects {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 16px;
+  }
+}
