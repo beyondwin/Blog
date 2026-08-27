@@ -2,11 +2,11 @@
 
 ## 적용 범위
 
-`/`는 공개 사이트의 첫 `판단` 탐색 화면이다. 차갑고 밝은 mineral daylight field, 실제 media, text-only object, cobalt selection으로 하나의 authored spatial composition을 만든다.
+`/`는 공개 사이트의 첫 `판단` 탐색 화면이다. 차갑고 밝은 mineral daylight field, 실제 media, text-only object, cobalt selection으로 하나의 authored spatial composition을 만든다. 장면 문법과 Continuity Zoom은 이 작업에서 재설계하지 않았다.
 
-기존 `/articles/`, `/reviews/`, `/memory/`, `/search/`와 detail route는 아직 회색 교정 부스와 흰 proof sheet 계열을 사용한다. 이 reading route들은 동작하는 기존 시스템이며 공개 탐색 화면과 같은 visual world로 재설계된 범위가 아니다.
+React 공개 reading mode는 같은 mineral field와 optical-white sheet를 쓴다. `/articles/`와 `/reviews/`의 목록 밀도와 글 상세 밀도는 이 작업에서 실렸다. `/memory/`와 `/search/`는 이 작업에서 다시 만들지 않았고, 이미 mineral reading mode다.
 
-두 범위를 섞어 built truth를 흐리지 않는다. 공개 탐색 화면에는 `src/styles/storyworld.css`, 기존 reading route에는 `src/styles/press.css`와 관련 layout이 적용된다.
+회색 교정 부스, 재단선, `src/styles/press.css`는 Astro rollback baseline이다. 현재 React 공개 글/책 화면의 built truth가 아니다.
 
 ## 공개 명사
 
@@ -51,13 +51,15 @@
 
 ## 색
 
-공개 탐색 화면은 `src/styles/storyworld.css`의 daylight field를 사용한다.
+공개 탐색 화면과 React 글/책 reading surface는 같은 daylight field를 쓴다.
 
 - base light `#F2F4F7`, reading white `#FFFFFF`, ink `#151619`.
 - selection과 visible focus는 cobalt `#2B63E8`.
 - 실제 media가 색을 담당하고 자동 gradient, glass, card shadow, paper grain, sticker, particle을 쓰지 않는다.
 
-기존 reading route는 `src/styles/press.css`의 OKLCH 토큰을 쓴다. 방은 어둡고 종이는 밝다. 다크모드 본문이 아니다.
+React 글/책은 mineral field 위의 optical-white sheet다. 회색 부스가 아니다.
+
+Astro rollback의 `src/styles/press.css`는 어두운 방과 밝은 종이를 그린다. 다크모드 본문이 아니다. 그 baseline에만 다음 토큰이 남는다.
 
 - `--booth`: 중성 그레이. 페이지 바깥, 헤더/푸터 크롬.
 - `--sheet`: 코팅 옵티컬 화이트. 읽기 시트. 본문은 여기만.
@@ -92,11 +94,11 @@
 
 ## 기존 reading route 레이아웃
 
-- 페이지는 회색 방이다. 그 안에 흰 시트가 있다.
-- 시트 네 모서리에만 재단선. 하단 4mm 색띠는 시트 발에만.
+- React 공개 사이트의 글/책은 mineral field + optical-white sheet다. 회색 부스와 재단선은 Astro rollback baseline이다.
 - 그림자는 책 표지 물체에만. UI 패널은 띄우지 않는다.
-- `/articles/`는 팸플릿이다. 리드 하나와 한 줄 장부. `조사` / `에세이`.
-- `/reviews/`는 최근 표지 격자와 연도별 읽기 일기다. 모바일에서 제목과 평을 숨기지 않는다.
+- `/articles/`는 리드 하나와 `조사`/`에세이` 장부 팸플릿이다.
+- 조사 글 상세는 본문 앞 절 목록과 `확인한 자료` colophon을 쓴다.
+- `/reviews/`는 최근 표지 객체와 연도별 일기다. 모바일에서 제목과 판정을 숨기지 않는다.
 - `/memory/`는 짧은 문장집이다. 각 문장은 `/memory/[slug]/`로 간다.
 - `/search/` 빈 쿼리는 글 / 책 / 문장 목록이다. KPI 사이드바 없음.
 - 텍스트가 많은 영역은 카드 그리드보다 행과 지면을 우선한다.

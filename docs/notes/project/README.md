@@ -18,6 +18,8 @@
 | [`판단` 공개 탐색 화면 설계](visual-storyworld-public-atlas-design.md) | Product design | 승인된 첫 public vertical slice, interaction, data contract, 검증 범위를 구현할 때 |
 | [Public reading continuity 설계](public-reading-continuity-design.md) | Product design | 장면에서 list·search·detail로 이어지는 공통 visual world, contextual return, continued discovery를 구현할 때 |
 | [Public reading continuity 구현 계획](public-reading-continuity-implementation-plan.md) | Implementation plan | React renderer 비교, 선택된 renderer의 UX 구현, 전체 route 이관, cutover evidence와 Astro 제거를 순서대로 실행할 때 |
+| [공개 글·책 독서 지면 설계](reading-surface-density-design.md) | Product design | React 글 팸플릿, 조사 글 절 목록, 책 표지와 연도 일기의 밀도를 mineral reading mode로 옮길 때 |
+| [공개 글·책 독서 지면 구현 계획](reading-surface-density-implementation-plan.md) | Implementation plan | 글/책 presentation, 표 접힘, 목록 UI, browser evidence와 DESIGN.md built truth를 task로 실행할 때 |
 | [Public reading continuity migration 작업 회고](public-reading-continuity-migration-retrospective.md) | Retrospective | 대형 migration의 검증 반복을 줄이고 review·source freeze·evidence 재사용 순서를 잡을 때 |
 | [Public renderer 비교 근거](evidence/public-renderer-comparison.md) | Evidence | React Router 선택·승격의 sealed raw sample, deterministic run, mandatory/variance 계산, rejected source 경계를 확인할 때 |
 | [아키텍처 레퍼런스](architecture-reference.md) | Reference | route, schema, script, test, data contract의 정확한 값이 필요할 때 |
