@@ -13,12 +13,15 @@ import {
 import type { RecordSummary } from '../src/ui/collections/RecordRow';
 import type { SearchInventoryItem, SearchKind } from '../src/ui/search/SearchPage';
 import type { PublicTag } from '../src/ui/tags/TagsPage';
+import { PREFERRED_PUBLIC_ARTICLE_LEAD_ID } from '../src/ui/articles/articlePresentation';
 import { recordAnchor as createRecordAnchor } from '../src/ui/navigation/record-anchor';
 import { safeSearchAnchors } from '../src/ui/navigation/search-anchor';
 
 export type CandidateRelease = Pick<VerifiedActivePublicRelease, 'manifest' | 'releasePath'>;
 export type CandidateCollection = PublicCollection;
 export type CandidateRecord<C extends CandidateCollection> = Extract<PublicRecord, { collection: C }>;
+
+export { PREFERRED_PUBLIC_ARTICLE_LEAD_ID };
 
 export const PUBLIC_CONTENT_COLLECTIONS = [
   'analysis',
@@ -32,8 +35,6 @@ const VERIFIED_COMPATIBILITY_ROUTES = [{
   path: '/reviews/the-life-you-can-save/',
   target: '/reviews/doing-good-better/',
 }] as const;
-
-const PREFERRED_PUBLIC_ARTICLE_LEAD_ID = 'graphify-code-knowledge-graph-deep-dive';
 
 export function repositoryRootFromModuleUrl(moduleUrl: string): string {
   let current = dirname(fileURLToPath(moduleUrl));
