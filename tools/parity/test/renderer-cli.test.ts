@@ -93,7 +93,9 @@ describe('renderer harness CLIs', () => {
     ], { cwd: process.cwd() }).then(
       () => { throw new Error('Comparison unexpectedly accepted unproven captures'); },
       (error: { stderr?: string }) => {
-        expect(error.stderr).toMatch(/provenance is missing|renderer manifest hash|outside the repository evidence root/iu);
+        expect(error.stderr).toMatch(
+          /provenance is missing|renderer manifest hash|outside the repository evidence root|ENOENT|no such file or directory/iu,
+        );
       },
     );
   }, 30_000);

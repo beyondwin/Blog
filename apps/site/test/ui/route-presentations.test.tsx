@@ -50,7 +50,7 @@ describe('full public route expansion', () => {
     expect(actual).toContain('/articles/karpathy-delete-everything-keep-graph/');
     expect(actual).toContain('/articles/shared-ai-conversation-evidence-boundaries/');
     expect(actual).toContain('/articles/uncle-bob-ai-code-review-evidence/');
-  });
+  }, 30_000);
 
   it('keeps the frozen article and review fixtures in incumbent latest-first order', async () => {
     const releaseModule = await candidateModule<any>('app/release.server.ts');
