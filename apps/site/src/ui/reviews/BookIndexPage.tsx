@@ -49,7 +49,7 @@ export function BookIndexPage({
   const { diary, shelfTiers } = buildBookshelfPresentation(records, assets);
   const objects = shelfTiers.flat();
   const shelfIds = new Set(objects.map((item) => item.id));
-  if (objects.length === 0) {
+  if (objects.length === 0 && diary.length === 0) {
     return (
       <section className="reading-sheet book-index">
         <p>아직 공개한 책이 없습니다.</p>
@@ -60,27 +60,29 @@ export function BookIndexPage({
   return (
     <section className="reading-sheet book-index">
       <h1 className="visually-hidden">책</h1>
-      <ol className="book-objects">
-        {objects.map((item, index) => {
-          const anchorId = recordAnchor('reviews', item.id);
-          return (
-            <li key={item.id} id={anchorId}>
-              <OriginLink
-                className="book-card"
-                href={item.href}
-                origin={{ kind: 'reviews', anchorId }}
-              >
-                <BookCover eager={index < 4} item={item} />
-                <strong className="book-title">{item.title}</strong>
-                {item.authors.length > 0 ? (
-                  <em className="book-author">{item.authors.join(' · ')}</em>
-                ) : null}
-                <span className="book-verdict">{item.verdict}</span>
-              </OriginLink>
-            </li>
-          );
-        })}
-      </ol>
+      {objects.length > 0 ? (
+        <ol className="book-objects">
+          {objects.map((item, index) => {
+            const anchorId = recordAnchor('reviews', item.id);
+            return (
+              <li key={item.id} id={anchorId}>
+                <OriginLink
+                  className="book-card"
+                  href={item.href}
+                  origin={{ kind: 'reviews', anchorId }}
+                >
+                  <BookCover eager={index < 4} item={item} />
+                  <strong className="book-title">{item.title}</strong>
+                  {item.authors.length > 0 ? (
+                    <em className="book-author">{item.authors.join(' · ')}</em>
+                  ) : null}
+                  <span className="book-verdict">{item.verdict}</span>
+                </OriginLink>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
       {diary.map(({ year, entries }) => (
         <section className="book-diary" id={`reviews-${year}`} key={year}>
           <h2>{year}</h2>

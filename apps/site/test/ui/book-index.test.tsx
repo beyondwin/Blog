@@ -1,9 +1,21 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { BookIndexPage } from '../../src/ui/reviews/BookIndexPage';
+import { buildBookshelfPresentation } from '../../src/ui/reviews/bookshelfPresentation';
+
+vi.mock('../../src/ui/reviews/bookshelfPresentation', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/ui/reviews/bookshelfPresentation')>();
+  return {
+    ...actual,
+    buildBookshelfPresentation: vi.fn((
+      records: Parameters<typeof actual.buildBookshelfPresentation>[0],
+      assets: Parameters<typeof actual.buildBookshelfPresentation>[1],
+    ) => actual.buildBookshelfPresentation(records, assets)),
+  };
+});
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
@@ -79,5 +91,36 @@ describe('book index objects and diary', () => {
       assets: new Map(),
     }));
     expect(html).toContain('아직 공개한 책이 없습니다.');
+    expect(html).not.toContain('class="book-objects"');
+    expect(html).not.toContain('class="book-diary"');
+  });
+
+  it('renders the diary when the shelf is empty', () => {
+    vi.mocked(buildBookshelfPresentation).mockReturnValueOnce({
+      shelfTiers: [],
+      diary: [{
+        year: 2026,
+        entries: [{
+          id: 'black-swan',
+          href: '/reviews/black-swan/',
+          title: '블랙 스완',
+          authors: ['저자'],
+          verdict: '불확실성을 몸으로 읽는다.',
+          year: 2026,
+        }],
+      }],
+    });
+    const html = renderToStaticMarkup(createElement(BookIndexPage, {
+      records: [review('black-swan', {
+        title: '블랙 스완',
+        completedAt: '2026-05-27T00:00:00.000Z',
+      })],
+      assets: new Map(),
+    }));
+    expect(html).toContain('class="book-diary"');
+    expect(html).toContain('<h2>2026</h2>');
+    expect(html).toContain('id="record-reviews-black-swan"');
+    expect(html).not.toContain('아직 공개한 책이 없습니다.');
+    expect(html).not.toContain('class="book-objects"');
   });
 });
