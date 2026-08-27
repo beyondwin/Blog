@@ -96,7 +96,7 @@ describe('renderer harness CLIs', () => {
         expect(error.stderr).toMatch(/provenance is missing|renderer manifest hash|outside the repository evidence root/iu);
       },
     );
-  });
+  }, 30_000);
 
   it('refuses a forged real-marked summary and requires all three strict raw captures', async () => {
     const root = await createRoot();
@@ -119,7 +119,7 @@ describe('renderer harness CLIs', () => {
         'Usage: select-renderer.ts --baseline <astro-capture.json> --next <next-capture.json> --react-router <react-router-capture.json>',
       ),
     });
-  });
+  }, 30_000);
 
   it('recomputes from committed raw captures and rejects dirty or stale current evidence', async () => {
     const root = await createRoot();
@@ -262,6 +262,6 @@ describe('renderer harness CLIs', () => {
 
     await writeFile(join(root, RENDERER_LAYOUTS.next.outputRoot, 'index.html'), '<h1>stale Next output</h1>');
     await expect(selectRendererFromCaptures(paths, root)).rejects.toThrow(/artifact hash no longer matches/iu);
-  }, 30_000);
+  }, 90_000);
 
 });

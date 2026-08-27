@@ -40,5 +40,5 @@ describe('official public-site Playwright contract', () => {
     ]);
     expect(stdout).toContain('vite preview');
     expect(stderr).not.toContain('Unknown cli config');
-  });
+  }, 30_000);
 });

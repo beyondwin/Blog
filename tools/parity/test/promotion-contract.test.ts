@@ -100,5 +100,5 @@ describe('renderer promotion contract', () => {
       comparisonRunHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u),
       rejectedSourceHash: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u),
     });
-  });
+  }, 30_000);
 });

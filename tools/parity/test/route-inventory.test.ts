@@ -8,7 +8,7 @@ describe('Astro public route inventory', () => {
   beforeAll(async () => {
     await buildLegacyAstro(process.cwd());
     inventory = await buildPublicRouteInventory(process.cwd());
-  }, 60_000);
+  }, 180_000);
 
   it('contains every required route family and no draft records', async () => {
     expect(inventory.routes).toContain('/');

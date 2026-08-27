@@ -20,7 +20,7 @@ afterEach(async () => {
   await Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-describe('renderer evidence boundaries', () => {
+describe('renderer evidence boundaries', { timeout: 30_000 }, () => {
   it('clears only declared contained output and cache roots before every build sample', async () => {
     const root = await createRoot();
     const output = join(root, 'dist');

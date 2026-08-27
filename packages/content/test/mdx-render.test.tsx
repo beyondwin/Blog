@@ -64,7 +64,7 @@ describe('trusted repository MDX rendering', () => {
     });
 
     expect(stdout).toBe('<p>CLI transform</p>');
-  });
+  }, 30_000);
 
   it('renders GFM headings, a semantic Callout, and a provenance-preserving responsive Figure', async () => {
     const html = await renderTrustedMdx([

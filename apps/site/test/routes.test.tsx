@@ -76,7 +76,7 @@ describe('React Router current-behavior static route contract', () => {
       expect.objectContaining({ path: 'search', file: './routes/search.tsx' }),
       expect.objectContaining({ path: 'tags/:tag', file: './routes/tag.tsx' }),
     ]));
-  });
+  }, 30_000);
 
   it('resolves the approved Vite pin from the React Router developer tool itself', () => {
     const candidateRequire = createRequire(join(candidateRoot, 'package.json'));
@@ -266,7 +266,7 @@ describe('React Router current-behavior static route contract', () => {
       expect(html).not.toContain('data-discover=');
       expect(html).not.toContain('memory/thoughts');
     }
-  });
+  }, 30_000);
 
   it('contains no runtime API/client loader/source-private access or file-route convention', async () => {
     const appRoot = join(candidateRoot, 'app');

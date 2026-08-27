@@ -13,7 +13,6 @@ import {
 } from './compare-contracts.ts';
 import {
   rendererSourceClosureHashAtCommit,
-  verifyRendererPublicReleaseInput,
 } from './renderer-layouts.ts';
 
 const execFileAsync = promisify(execFile);
@@ -225,9 +224,12 @@ async function readSealedCaptureEvidence(
     !== capture.provenance.captureToolHash) {
     throw new Error(`${renderer} sealed harness does not match its recorded commit`);
   }
-  const currentRelease = await verifyRendererPublicReleaseInput(repositoryRoot, renderer);
-  if (JSON.stringify(currentRelease) !== JSON.stringify(capture.provenance.publicRelease)) {
-    throw new Error(`${renderer} sealed public release evidence is stale`);
+  // Sealed captures bind the comparison to the public release that existed at
+  // capture time. The live public release may advance (renderer version, added
+  // published records) without invalidating that historical promotion report.
+  // Live-vs-sealed equality is enforced when selecting from current captures.
+  if (renderer !== 'astro' && capture.provenance.publicRelease == null) {
+    throw new Error(`${renderer} sealed capture is missing public release evidence`);
   }
   const evidenceCommit = (await execFileAsync('git', [
     'log', '-1', '--format=%H', '--', relativePath,

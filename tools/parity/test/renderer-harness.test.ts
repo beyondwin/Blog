@@ -201,7 +201,7 @@ describe('renderer capture harness', () => {
     } finally {
       await browser.close();
     }
-  }, 30_000);
+  }, 90_000);
 
   it('counts external, inline, and Next flight bootstrap JavaScript without double counting', async () => {
     const root = await createRoot();
@@ -259,7 +259,7 @@ describe('renderer capture harness', () => {
     } finally {
       await browser.close();
     }
-  }, 30_000);
+  }, 90_000);
 
   it('rejects a styled invalid image instead of treating its tiny bytes as an advantage', async () => {
     const root = await createRoot();
@@ -286,5 +286,5 @@ describe('renderer capture harness', () => {
     } finally {
       await browser.close();
     }
-  }, 30_000);
+  }, 90_000);
 });

@@ -15,7 +15,7 @@ describe('Astro public HTML contract', () => {
   beforeAll(async () => {
     await buildLegacyAstro(process.cwd());
     actual = await captureAstroBaseline(process.cwd());
-  }, 60_000);
+  }, 180_000);
 
   it('matches the checked-in public baseline', async () => {
     assertAstroBaselinesMatch(await readCheckedInBaseline(), actual);

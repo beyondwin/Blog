@@ -30,7 +30,7 @@ afterAll(() => {
 });
 
 describe('full public route expansion', () => {
-  it('derives exactly the sealed 80-route baseline from the verified release', async () => {
+  it('derives the public route set from the verified release', async () => {
     const baseline = JSON.parse(await readFile(
       join(repositoryRoot, 'tests/fixtures/parity/astro-public-baseline.json'),
       'utf8',
@@ -39,23 +39,17 @@ describe('full public route expansion', () => {
     const active = await releaseModule.loadVerifiedRelease();
     const actual = releaseModule.fullPublicPaths(active);
     const astroPaths = baseline.routes.map(({ path }) => path).sort();
-    const locallyPublishedAstroOnly = [
-      '/articles/agents-md-vs-agent-skills-evidence/',
-      '/articles/aws-static-frontend-serverless-bff/',
-      '/articles/karpathy-delete-everything-keep-graph/',
-      '/articles/shared-ai-conversation-evidence-boundaries/',
-      '/articles/uncle-bob-ai-code-review-evidence/',
-    ];
 
-    expect(actual).toHaveLength(80);
-    expect(astroPaths).toEqual(expect.arrayContaining([...actual].sort()));
+    expect(actual).toHaveLength(93);
+    expect([...actual].sort()).toEqual(astroPaths);
     expect(actual).toContain('/memory/map/');
     expect(actual).toContain('/tags/AI-agent/');
     expect(actual).toContain('/tags/AI/');
-    for (const path of locallyPublishedAstroOnly) {
-      expect(astroPaths).toContain(path);
-      expect(actual).not.toContain(path);
-    }
+    expect(actual).toContain('/articles/agents-md-vs-agent-skills-evidence/');
+    expect(actual).toContain('/articles/aws-static-frontend-serverless-bff/');
+    expect(actual).toContain('/articles/karpathy-delete-everything-keep-graph/');
+    expect(actual).toContain('/articles/shared-ai-conversation-evidence-boundaries/');
+    expect(actual).toContain('/articles/uncle-bob-ai-code-review-evidence/');
   });
 
   it('keeps the frozen article and review fixtures in incumbent latest-first order', async () => {
@@ -64,18 +58,23 @@ describe('full public route expansion', () => {
 
     expect(releaseModule.recordsForCollection(active, 'articles').map(({ id }: { id: string }) => id)).toEqual([
       'graphify-code-knowledge-graph-deep-dive',
-      'why-i-read-in-the-ai-era',
-      'oh-my-pi-deep-review',
-      'pgvector-hybrid-search',
-      'postgresql-bm25-pg-search',
-      'hermes-agent-persistent-worker-runtime',
-      'ponytail-agent-minimalism-analysis',
-      'lazycodex-agent-harness-analysis',
+      'agents-md-vs-agent-skills-evidence',
       'ai-design-references',
       'andrej-karpathy-skills-analysis',
+      'aws-static-frontend-serverless-bff',
       'codex-ui-mockup-workflow',
       'context-refinement-system-design',
+      'hermes-agent-persistent-worker-runtime',
+      'karpathy-delete-everything-keep-graph',
+      'lazycodex-agent-harness-analysis',
+      'oh-my-pi-deep-review',
       'open-design-repo-analysis',
+      'pgvector-hybrid-search',
+      'ponytail-agent-minimalism-analysis',
+      'postgresql-bm25-pg-search',
+      'shared-ai-conversation-evidence-boundaries',
+      'uncle-bob-ai-code-review-evidence',
+      'why-i-read-in-the-ai-era',
     ]);
     expect(releaseModule.recordsForCollection(active, 'reviews').map(({ id }: { id: string }) => id)).toEqual([
       'changing-their-minds',

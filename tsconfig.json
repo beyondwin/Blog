@@ -7,6 +7,7 @@
     }
   },
   "exclude": [
+    "build",
     "apps/site/build",
     "apps/site/.react-router",
     "spikes/rejected"

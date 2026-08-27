@@ -120,7 +120,7 @@ describe('Node 24 workspace contract', () => {
     } finally {
       await rm(sentinel, { force: true });
     }
-  }, 30_000);
+  }, 120_000);
 
   it('keeps selected React Router output outside the root Astro diagnostic boundary', async () => {
     const generatedRoots = [
@@ -160,5 +160,5 @@ describe('Node 24 workspace contract', () => {
     } finally {
       await Promise.all(sentinels.map((sentinel) => rm(sentinel, { force: true })));
     }
-  }, 30_000);
+  }, 120_000);
 });

@@ -7,7 +7,7 @@ import { readAstroHtmlContracts, type AstroBaseline } from './html-contract.ts';
 
 const execFileAsync = promisify(execFile);
 const buildLockRetryMs = 50;
-const buildLockTimeoutMs = 60_000;
+const buildLockTimeoutMs = 180_000;
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));

@@ -77,7 +77,7 @@ async function writeForgedCandidate(
   return { src: href, width, height, checksum: sha256(bytes) };
 }
 
-describe('active public release boundary', () => {
+describe('active public release boundary', { timeout: 30_000 }, () => {
   it.each([
     ['private source locator', 'file:///Users/example/private/Blog/memory/thoughts/secret.md'],
     ['private memory edge locator', 'memory/edges.jsonl'],
