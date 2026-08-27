@@ -23,6 +23,10 @@ import {
   readBoundActiveRelease,
   serializeReleaseBinding,
 } from './release-binding';
+import {
+  verifiedReleaseAssetInventory,
+  type VerifiedReleaseAsset,
+} from './verified-release-assets';
 
 interface ReactRouterBuildContext {
   environment: NodeJS.ProcessEnv;
@@ -39,11 +43,6 @@ interface StaticExportOptions {
 interface StagingContext {
   stagedOutput: string;
   stagedClient: string;
-}
-
-interface ExpectedAsset {
-  checksum: string;
-  sourcePath: string;
 }
 
 interface RealDirectoryIdentity {
@@ -72,22 +71,10 @@ function permissionMode(mode: number): number {
   return mode & 0o777;
 }
 
-function expectedAssets(active: VerifiedActivePublicRelease): Map<string, ExpectedAsset> {
-  const assets = new Map<string, ExpectedAsset>();
-  const add = (href: string, checksum: string): void => {
-    const relativePath = href.slice(1);
-    const existing = assets.get(relativePath);
-    if (existing && existing.checksum !== checksum) {
-      throw new Error(`${href}: verified manifest assigns conflicting checksums`);
-    }
-    assets.set(relativePath, { checksum, sourcePath: join(active.releasePath, relativePath) });
-  };
-  for (const asset of Object.values(active.manifest.assets)) {
-    add(asset.fallback.src, asset.fallback.checksum);
-    for (const candidate of asset.fallback.candidates) add(candidate.src, candidate.checksum);
-    for (const source of asset.sources) {
-      for (const candidate of source.candidates) add(candidate.src, candidate.checksum);
-    }
+function expectedAssets(active: VerifiedActivePublicRelease): Map<string, VerifiedReleaseAsset> {
+  const assets = new Map<string, VerifiedReleaseAsset>();
+  for (const [href, asset] of verifiedReleaseAssetInventory(active)) {
+    assets.set(href.slice(1), asset);
   }
   return new Map([...assets].sort(([left], [right]) => left.localeCompare(right)));
 }
@@ -282,7 +269,7 @@ async function outputFiles(root: string, directory = root): Promise<string[]> {
 
 async function verifyExportedAssets(
   outputClient: string,
-  expected: ReadonlyMap<string, ExpectedAsset>,
+  expected: ReadonlyMap<string, VerifiedReleaseAsset>,
 ): Promise<void> {
   const outputContent = join(outputClient, 'assets/content');
   await assertRealDirectory(outputContent, 'exported release assets root');
