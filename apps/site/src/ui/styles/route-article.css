@@ -3,7 +3,26 @@
 .content-figure figcaption { display: flex; justify-content: space-between; gap: 12px; margin-top: .65em; color: var(--bw-soft-ink); font-size: 12px; line-height: 1.5; }
 .content-figure figcaption small { text-align: right; }
 
+.article-index { display: flex; flex-direction: column; gap: clamp(36px, 5vw, 56px); }
+.article-lead { display: block; max-width: 36em; scroll-margin-top: 6rem; color: inherit; text-decoration: none; }
+.article-lead h1 { margin: 0 0 .4em; }
+.article-lead p:not(.article-kicker) { margin: 0; color: var(--bw-ink); font-size: 17px; line-height: 1.8; }
+.article-lead:hover h1 { text-decoration: underline; text-decoration-color: var(--bw-cobalt); text-decoration-thickness: 1px; text-underline-offset: .18em; }
+.article-kicker { margin: 0 0 .7em; color: var(--bw-soft-ink); font-size: .92rem; font-weight: 500; }
+.article-ledger { margin: 0; padding: 0; list-style: none; }
+.article-ledger li { scroll-margin-top: 6rem; }
+.article-ledger li + li { margin-top: 1.15em; }
+.article-ledger a { display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) auto; column-gap: 1rem; align-items: start; color: inherit; text-decoration: none; }
+.article-ledger a:hover .article-ledger__title { text-decoration: underline; text-decoration-color: var(--bw-cobalt); text-decoration-thickness: 1px; text-underline-offset: .16em; }
+.article-ledger__month, .article-ledger__kind { color: var(--bw-soft-ink); font-size: .88rem; }
+.article-ledger__title { display: block; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; word-break: keep-all; }
+.article-ledger__stake { display: block; margin-top: .2em; color: var(--bw-ink); font-size: .95rem; line-height: 1.55; }
+.article-ledger__kind { white-space: nowrap; }
+
 @media (max-width: 720px) {
   .content-figure figcaption { flex-direction: column; }
   .content-figure figcaption small { text-align: left; }
+  .article-lead p:not(.article-kicker) { font-size: 16px; }
+  .article-ledger a { grid-template-columns: 2.6rem minmax(0, 1fr); }
+  .article-ledger__kind { grid-column: 2; margin-top: .2em; white-space: normal; }
 }
