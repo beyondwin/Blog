@@ -4,10 +4,20 @@ import type { ReleaseMediaAsset } from '../media/build-responsive-media';
 
 export interface TrustedMdxComponentOptions {
   media: ReadonlyMap<string, ReleaseMediaAsset>;
+  foldBriefTable?: boolean;
 }
 
 function srcSet(candidates: ReleaseMediaAsset['fallback']['candidates']): string {
   return candidates.map((candidate) => `${candidate.src} ${candidate.width}w`).join(', ');
+}
+
+function textFromChildren(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(textFromChildren).join('');
+  if (node && typeof node === 'object' && 'props' in node) {
+    return textFromChildren((node as { props?: { children?: ReactNode } }).props?.children);
+  }
+  return '';
 }
 
 function Callout({ title = 'Note', children }: { title?: string; children?: ReactNode }) {
@@ -53,5 +63,18 @@ export function createTrustedMdxComponents(options: TrustedMdxComponentOptions) 
     );
   }
 
-  return { Callout, Figure };
+  function Table({ children }: { children?: ReactNode }) {
+    const table = <table>{children}</table>;
+    if (!options.foldBriefTable) return table;
+    const text = textFromChildren(children);
+    if (!text.includes('질문') || !text.includes('짧은 판단')) return table;
+    return (
+      <details className="article-brief">
+        <summary>질문과 짧은 판단</summary>
+        {table}
+      </details>
+    );
+  }
+
+  return { Callout, Figure, table: Table };
 }

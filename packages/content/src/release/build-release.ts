@@ -32,7 +32,7 @@ import {
   type PublicReleaseManifest,
 } from './read-release';
 
-export const PUBLIC_RELEASE_RENDERER_VERSION = 'mdx-3.1.1-sharp-0.35.3-v2';
+export const PUBLIC_RELEASE_RENDERER_VERSION = 'mdx-3.1.1-sharp-0.35.3-v3';
 
 type SourceCollection = Exclude<SourceRecord['collection'], 'memory'>;
 
@@ -534,7 +534,9 @@ export async function buildPublicRelease(
           .filter(([assetKey]) => assetKey.startsWith(`${key}/`))
           .map(([, asset]) => [asset.id, asset] as const),
       );
-      const bodyHtml = await renderTrustedMdx(record.body, { media: recordAssets });
+      const foldBriefTable = record.collection === 'articles'
+        && (record.evidenceState === 'source-grounded' || record.tags.includes('source-grounded'));
+      const bodyHtml = await renderTrustedMdx(record.body, { media: recordAssets, foldBriefTable });
       const publicRecord = parsePublicRecord(publicRecordInput(
         record,
         (recordMedia.get(key) ?? []).map((input) => input.publicMedia),

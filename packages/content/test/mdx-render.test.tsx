@@ -102,4 +102,32 @@ describe('trusted repository MDX rendering', () => {
   ])('rejects %s before evaluating MDX', async (_case, source) => {
     await expect(renderTrustedMdx(source, { media: new Map([['hero', hero]]) })).rejects.toThrow(/trusted MDX/i);
   });
+
+  const briefTable = [
+    '| 질문 | 짧은 판단 |',
+    '| --- | --- |',
+    '| 무엇을 고르나? | 공개 가능한 것만. |',
+  ].join('\n');
+
+  it('folds 질문/짧은 판단 tables only when foldBriefTable is set', async () => {
+    const folded = await renderTrustedMdx(briefTable, { media: new Map(), foldBriefTable: true });
+    expect(folded).toContain('<details class="article-brief">');
+    expect(folded).toContain('<summary>질문과 짧은 판단</summary>');
+    expect(folded).toContain('<table>');
+    expect(folded).toContain('무엇을 고르나?');
+
+    const plain = await renderTrustedMdx(briefTable, { media: new Map() });
+    expect(plain).toContain('<table>');
+    expect(plain).not.toContain('article-brief');
+  });
+
+  it('leaves ordinary tables unfolded even when foldBriefTable is set', async () => {
+    const html = await renderTrustedMdx([
+      '| Contract | State |',
+      '| --- | --- |',
+      '| Public | Ready |',
+    ].join('\n'), { media: new Map(), foldBriefTable: true });
+    expect(html).toContain('<table>');
+    expect(html).not.toContain('article-brief');
+  });
 });
