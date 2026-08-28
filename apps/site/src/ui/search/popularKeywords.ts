@@ -7,7 +7,7 @@ export interface PopularKeyword {
 }
 
 const MAX_PUBLIC_KEYWORDS = 8;
-const EXCLUDED_TAGS = new Set(['published', 'review', 'source-grounded']);
+const KEYWORD_CHIP_EXCLUDED_TAGS = new Set(['published', 'review', 'source-grounded']);
 const KOREAN_TAG_LABELS: Readonly<Record<string, string>> = {
   agent: '에이전트',
   agents: '에이전트',
@@ -36,14 +36,13 @@ const KOREAN_TAG_LABELS: Readonly<Record<string, string>> = {
 export interface NormalizedPublicSearchTag {
   key: string;
   label: string;
-  raw: string;
 }
 
 export function normalizePublicSearchTag(tag: string): NormalizedPublicSearchTag | null {
   const raw = tag.trim();
   const key = raw.toLocaleLowerCase('en-US');
-  if (!key || EXCLUDED_TAGS.has(key)) return null;
-  return { key, label: KOREAN_TAG_LABELS[key] ?? raw, raw };
+  if (!key) return null;
+  return { key, label: KOREAN_TAG_LABELS[key] ?? raw };
 }
 
 function keywordHref(label: string): string {
@@ -59,7 +58,7 @@ export function popularKeywords(
     const labelsForRecord = new Set<string>();
     for (const tag of item.topics) {
       const normalized = normalizePublicSearchTag(tag);
-      if (!normalized) continue;
+      if (!normalized || KEYWORD_CHIP_EXCLUDED_TAGS.has(normalized.key)) continue;
       labelsForRecord.add(normalized.label);
     }
     for (const label of labelsForRecord) {

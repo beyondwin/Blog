@@ -109,6 +109,17 @@ describe('FORM & THOUGHT public search', () => {
     expect(html).not.toMatch(/search-discovery-card|검색어와 제목이 일치합니다/u);
   });
 
+  it.each([
+    ['source-grounded', 'articles/title-match'],
+    ['review', 'reviews/tag-match'],
+    ['published', 'thoughts/description-match'],
+  ] as const)('keeps direct raw-tag search for chip-ineligible %s', (query, expectedId) => {
+    expect(searchMatches(inventory, query)).toMatchObject([{
+      item: { id: expectedId },
+      match: { field: 'tag', rank: 1, reason: `태그 “${query}”와 일치합니다` },
+    }]);
+  });
+
   it('makes every mapped keyword link find exactly the unique primary records counted for that label', () => {
     const keywordInventory = [
       item('article', 'agent-aliases', {
@@ -142,7 +153,7 @@ describe('FORM & THOUGHT public search', () => {
     }
   });
 
-  it('excludes internal-only tags and orders equal-frequency mapped labels by Korean label', () => {
+  it('excludes chip-ineligible tags and orders equal-frequency mapped labels by Korean label', () => {
     const tieInventory = [
       item('article', 'design', { topics: ['design', 'source-grounded'] }),
       item('review', 'database', { topics: ['database', 'review'] }),

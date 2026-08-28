@@ -49,7 +49,7 @@ export function matchSearchItem(item: SearchInventoryItem, rawQuery: string): Se
   const topic = item.topics
     .map(normalizePublicSearchTag)
     .find((value) => value && (
-      value.raw.toLocaleLowerCase('ko').includes(query)
+      value.key.includes(query)
       || value.label.toLocaleLowerCase('ko').includes(query)
     ));
   if (topic) return { field: 'tag', rank: 1, reason: `태그 “${topic.label}”와 일치합니다` };
