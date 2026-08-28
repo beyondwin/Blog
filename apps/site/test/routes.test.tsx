@@ -307,6 +307,8 @@ describe('React Router current-behavior static route contract', () => {
 
   it('loads one primary-only search corpus with a bounded GET query and fixed lane discovery records', async () => {
     const search = await candidateModule<any>('app/routes/search.tsx');
+    const searchPage = await candidateModule<any>('src/ui/search/SearchPage.tsx');
+    const keywordModule = await candidateModule<any>('src/ui/search/popularKeywords.ts');
     const data = await search.loader({ request: new Request('https://beyondwin.test/search/?q=%20Graphify%20') });
 
     expect(data.initialQuery).toBe('Graphify');
@@ -319,6 +321,29 @@ describe('React Router current-behavior static route contract', () => {
     expect(data.inventory.every((item: { id: string }) => (
       /^(?:articles|reviews|thoughts)\//u.test(item.id)
     ))).toBe(true);
+    const rawTagsByKeyword = new Map([
+      ['독서', ['book']],
+      ['서평', ['naver-archive']],
+      ['AI', ['AI']],
+      ['워크플로', ['workflow']],
+      ['에이전트', ['agent', 'agents']],
+      ['디자인', ['design']],
+      ['검색', ['search']],
+      ['데이터베이스', ['database']],
+    ]);
+    for (const keyword of keywordModule.popularKeywords(data.inventory)) {
+      const query = new URL(keyword.href, 'https://beyondwin.test').searchParams.get('q');
+      const rawTags = rawTagsByKeyword.get(keyword.label);
+      expect(rawTags, `raw tags for ${keyword.label}`).toBeDefined();
+      const countedRecordIds = data.inventory
+        .filter((item: { topics: string[] }) => item.topics.some((tag) => rawTags!.includes(tag)))
+        .map((item: { id: string }) => item.id);
+      const matchedRecordIds = new Set(
+        searchPage.searchMatches(data.inventory, query).map(({ item }: { item: { id: string } }) => item.id),
+      );
+      expect(countedRecordIds, keyword.label).toHaveLength(keyword.count);
+      expect(countedRecordIds.every((id: string) => matchedRecordIds.has(id)), keyword.label).toBe(true);
+    }
 
     const html = renderToStaticMarkup(createElement(search.SearchPresentation, { data }));
     expect(html).toContain('<title>검색 · FORM &amp; THOUGHT</title>');

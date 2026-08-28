@@ -5,8 +5,10 @@ import {
   boundedSearchQuery,
   matchSearchItem,
   SearchPage,
+  searchMatches,
   type SearchInventoryItem,
 } from '../../src/ui/search/SearchPage';
+import { popularKeywords } from '../../src/ui/search/popularKeywords';
 
 function item(
   kind: 'article' | 'review' | 'thought',
@@ -105,5 +107,51 @@ describe('FORM & THOUGHT public search', () => {
     expect(html).toContain('다른 키워드로 이어서 찾아보세요.');
     expect(html).toContain('href="/search/?q=AI"');
     expect(html).not.toMatch(/search-discovery-card|검색어와 제목이 일치합니다/u);
+  });
+
+  it('makes every mapped keyword link find exactly the unique primary records counted for that label', () => {
+    const keywordInventory = [
+      item('article', 'agent-aliases', {
+        title: '첫 기록',
+        description: '첫 설명',
+        topics: ['agent', 'agents', 'source-grounded'],
+      }),
+      item('review', 'agent-and-book', {
+        title: '둘째 기록',
+        description: '둘째 설명',
+        topics: ['agent', 'book', 'review'],
+      }),
+      item('thought', 'agents-and-book', {
+        title: '셋째 기록',
+        description: '셋째 설명',
+        topics: ['agents', 'book', 'published'],
+      }),
+    ];
+
+    const keywords = popularKeywords(keywordInventory);
+    expect(keywords).toEqual([
+      { count: 3, href: '/search/?q=%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8', label: '에이전트' },
+      { count: 2, href: '/search/?q=%EB%8F%85%EC%84%9C', label: '독서' },
+    ]);
+
+    for (const keyword of keywords) {
+      const query = new URL(keyword.href, 'https://beyondwin.test').searchParams.get('q')!;
+      const matches = searchMatches(keywordInventory, query);
+      expect(matches, keyword.label).toHaveLength(keyword.count);
+      expect(matches.every(({ match }) => match.field === 'tag'), keyword.label).toBe(true);
+    }
+  });
+
+  it('excludes internal-only tags and orders equal-frequency mapped labels by Korean label', () => {
+    const tieInventory = [
+      item('article', 'design', { topics: ['design', 'source-grounded'] }),
+      item('review', 'database', { topics: ['database', 'review'] }),
+      item('thought', 'excluded', { topics: ['published'] }),
+    ];
+
+    expect(popularKeywords(tieInventory)).toEqual([
+      { count: 1, href: '/search/?q=%EB%8D%B0%EC%9D%B4%ED%84%B0%EB%B2%A0%EC%9D%B4%EC%8A%A4', label: '데이터베이스' },
+      { count: 1, href: '/search/?q=%EB%94%94%EC%9E%90%EC%9D%B8', label: '디자인' },
+    ]);
   });
 });

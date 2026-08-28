@@ -53,20 +53,26 @@ for (const viewport of [{ width: 768, height: 900 }, { width: 390, height: 844 }
 }
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
-  test(`${viewport.width}px no-JS search keeps a browser-native GET form and canonical discovery links`, async ({ browser }) => {
+  test(`${viewport.width}px no-JS search submits a canonical GET URL while static discovery remains readable`, async ({ browser }) => {
     const { context, page } = await noJsPage(browser, viewport);
     try {
       await page.goto('/search/');
       const form = page.getByRole('search');
+      const discovery = page.getByRole('list', { name: '검색 탐색' });
       await expect(form).toHaveAttribute('action', '/search/');
       await expect(form).toHaveAttribute('method', 'get');
       await expect(page.getByRole('searchbox', { name: '검색어' })).toHaveAttribute('maxlength', '120');
-      await expect(page.getByRole('list', { name: '검색 탐색' }).getByRole('link')).toHaveCount(3);
+      await expect(discovery.getByRole('link')).toHaveCount(3);
       await page.getByRole('searchbox', { name: '검색어' }).fill('Graphify');
       await page.getByRole('button', { name: '검색' }).click();
       await expect(page).toHaveURL(`${BASE_URL}/search/?q=Graphify`);
       await expect(page.getByRole('heading', { level: 1, name: '검색' })).toBeVisible();
       await expect(page.getByRole('search')).toBeVisible();
+      await expect(page.getByRole('searchbox', { name: '검색어' })).toHaveValue('');
+      await expect(discovery).toBeVisible();
+      await expect(discovery.getByRole('link')).toHaveCount(3);
+      await expect(page.locator('.search-result-list')).toHaveCount(0);
+      await expect(page.locator('.search-page [hidden]')).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
     } finally {
       await context.close();

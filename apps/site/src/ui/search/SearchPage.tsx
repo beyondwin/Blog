@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ResponsivePicture } from '../../../app/root';
 import { OriginLink } from '../navigation/OriginLink';
 import { ORIGIN_QUERY_MAX_LENGTH, parseOrigin } from '../navigation/origin';
-import { popularKeywords } from './popularKeywords';
+import { normalizePublicSearchTag, popularKeywords } from './popularKeywords';
 
 export type SearchKind = 'article' | 'review' | 'thought';
 
@@ -46,8 +46,13 @@ export function matchSearchItem(item: SearchInventoryItem, rawQuery: string): Se
   if (item.title.toLocaleLowerCase('ko').includes(query)) {
     return { field: 'title', rank: 0, reason: '제목이 검색어와 일치합니다' };
   }
-  const topic = item.topics.find((value) => value.toLocaleLowerCase('ko').includes(query));
-  if (topic) return { field: 'tag', rank: 1, reason: `태그 “${topic}”와 일치합니다` };
+  const topic = item.topics
+    .map(normalizePublicSearchTag)
+    .find((value) => value && (
+      value.raw.toLocaleLowerCase('ko').includes(query)
+      || value.label.toLocaleLowerCase('ko').includes(query)
+    ));
+  if (topic) return { field: 'tag', rank: 1, reason: `태그 “${topic.label}”와 일치합니다` };
   if (item.description.toLocaleLowerCase('ko').includes(query)) {
     return { field: 'description', rank: 2, reason: '설명에 검색어가 있습니다' };
   }

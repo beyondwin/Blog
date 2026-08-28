@@ -33,11 +33,17 @@ const KOREAN_TAG_LABELS: Readonly<Record<string, string>> = {
   workflow: '워크플로',
 };
 
-function normalizedTag(tag: string): { key: string; label: string } | null {
-  const label = tag.trim();
-  const key = label.toLocaleLowerCase('en-US');
+export interface NormalizedPublicSearchTag {
+  key: string;
+  label: string;
+  raw: string;
+}
+
+export function normalizePublicSearchTag(tag: string): NormalizedPublicSearchTag | null {
+  const raw = tag.trim();
+  const key = raw.toLocaleLowerCase('en-US');
   if (!key || EXCLUDED_TAGS.has(key)) return null;
-  return { key, label: KOREAN_TAG_LABELS[key] ?? label };
+  return { key, label: KOREAN_TAG_LABELS[key] ?? raw, raw };
 }
 
 function keywordHref(label: string): string {
@@ -50,10 +56,14 @@ export function popularKeywords(
 ): PopularKeyword[] {
   const counts = new Map<string, number>();
   for (const item of inventory) {
+    const labelsForRecord = new Set<string>();
     for (const tag of item.topics) {
-      const normalized = normalizedTag(tag);
+      const normalized = normalizePublicSearchTag(tag);
       if (!normalized) continue;
-      counts.set(normalized.label, (counts.get(normalized.label) ?? 0) + 1);
+      labelsForRecord.add(normalized.label);
+    }
+    for (const label of labelsForRecord) {
+      counts.set(label, (counts.get(label) ?? 0) + 1);
     }
   }
   return [...counts]
