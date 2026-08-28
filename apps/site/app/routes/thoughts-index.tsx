@@ -22,7 +22,7 @@ export function ThoughtsIndexPresentation({ data }: { data: Awaited<ReturnType<t
   return (
     <>
       <DocumentMetadata canonical="/thoughts/" description="읽고 남은 생각." title={publicMetadataTitle('생각')} />
-      <SiteShell mode="reading" currentSection={null}>
+      <SiteShell currentSection={null}>
         <ThoughtIndexPage records={data.records} assets={new Map(Object.entries(data.assets))} />
       </SiteShell>
     </>

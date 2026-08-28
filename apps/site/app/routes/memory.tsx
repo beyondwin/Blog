@@ -39,7 +39,7 @@ export function MemoryPresentation({ data }: { data: MemoryData }) {
         description={data.record.description}
         title={publicMetadataTitle(data.record.title)}
       />
-      <SiteShell mode="reading" currentSection={null}>
+      <SiteShell currentSection={null}>
         <MemoryDetailPage record={data.record} />
       </SiteShell>
     </>

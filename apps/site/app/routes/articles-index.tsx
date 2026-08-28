@@ -12,6 +12,6 @@ export async function loader() {
   return { records: recordsForCollection(await loadVerifiedRelease(), 'articles') };
 }
 export function ArticlesIndexPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {
-  return <><DocumentMetadata canonical="/articles/" description="다 쓴 에세이와 조사." title={publicMetadataTitle('글')} /><SiteShell mode="reading" currentSection="articles"><ArticleIndexPage records={data.records} /></SiteShell></>;
+  return <><DocumentMetadata canonical="/articles/" description="다 쓴 에세이와 조사." title={publicMetadataTitle('글')} /><SiteShell currentSection="articles"><ArticleIndexPage records={data.records} /></SiteShell></>;
 }
 export default function ArticlesIndexRoute({ loaderData }: { loaderData: Awaited<ReturnType<typeof loader>> }) { return <ArticlesIndexPresentation data={loaderData} />; }

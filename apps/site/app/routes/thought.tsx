@@ -58,7 +58,7 @@ export function ThoughtPresentation({ data }: { data: ThoughtData }) {
         description={data.record.description}
         title={publicMetadataTitle(data.record.title)}
       />
-      <SiteShell mode="reading" currentSection={null}>
+      <SiteShell currentSection={null}>
         <ThoughtReadingPage record={data.record} media={media} />
       </SiteShell>
     </>

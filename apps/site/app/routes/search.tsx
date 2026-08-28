@@ -10,6 +10,6 @@ const [readingCss, collectionsCss] = import.meta.env.SSR ? await Promise.all([
 export const handle: RouteCriticalCssHandle = { criticalCss: `${readingCss}${collectionsCss}` };
 export async function loader() { return { inventory: searchInventory(await loadVerifiedRelease()) }; }
 export function SearchPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {
-  return <><DocumentMetadata canonical="/search/" description="글, 책, 문장을 찾습니다." title={publicMetadataTitle('찾기')} /><SiteShell mode="reading" currentSection="search"><SearchPage inventory={data.inventory} /></SiteShell></>;
+  return <><DocumentMetadata canonical="/search/" description="글, 책, 문장을 찾습니다." title={publicMetadataTitle('찾기')} /><SiteShell currentSection="search"><SearchPage inventory={data.inventory} /></SiteShell></>;
 }
 export default function SearchRoute({ loaderData }: { loaderData: Awaited<ReturnType<typeof loader>> }) { return <SearchPresentation data={loaderData} />; }

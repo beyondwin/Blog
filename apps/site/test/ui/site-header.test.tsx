@@ -1,8 +1,14 @@
-import { createElement } from 'react';
+import { createElement, type ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { SiteHeader } from '../../src/ui/components/SiteHeader';
 import { SiteShell } from '../../src/ui/components/SiteShell';
+
+type SiteShellProps = ComponentProps<typeof SiteShell>;
+
+const siteShellHasNoArbitraryProps: string extends keyof SiteShellProps ? never : true = true;
+const siteShellHasNoLegacyMode: 'mode' extends keyof SiteShellProps ? never : true = true;
+const siteShellRejectsScene: 'scene' extends SiteShellProps['currentSection'] ? never : true = true;
 
 describe('FORM & THOUGHT shared site header', () => {
   it('renders the two-line wordmark and approved primary navigation in exact order', () => {
@@ -22,8 +28,10 @@ describe('FORM & THOUGHT shared site header', () => {
       expect(html).toContain(`href="${href}"`);
     }
     expect(html).toContain('<noscript>');
+    expect(html).toMatch(/<button[^>]*hidden=""/u);
     expect(html).toContain('aria-controls="site-navigation-menu"');
     expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain('aria-haspopup="menu"');
     expect(html.match(/<i><\/i>/gu)).toHaveLength(3);
   });
 
@@ -59,5 +67,11 @@ describe('FORM & THOUGHT shared site header', () => {
     expect(html).toMatch(/<main class="site-main" data-mobile-menu-inert/u);
     expect(html).not.toContain('<footer');
     expect(html).not.toContain('data-surface-mode');
+  });
+
+  it('exposes only the current editorial shell contract', () => {
+    expect(siteShellHasNoArbitraryProps).toBe(true);
+    expect(siteShellHasNoLegacyMode).toBe(true);
+    expect(siteShellRejectsScene).toBe(true);
   });
 });

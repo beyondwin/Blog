@@ -37,6 +37,26 @@ describe('editorial primitives', () => {
     expect(html).toContain('class="editorial-list-row__arrow" aria-hidden="true"');
   });
 
+  it('preserves the complete book cover in review list rows', () => {
+    const html = renderToStaticMarkup(createElement(EditorialListRow, {
+      href: '/reviews/the-long-way/',
+      title: 'The Long Way to a Small, Angry Planet',
+      description: '표지 전체 비율을 보존하는 서평 행',
+      date: '2026.08.29',
+      media: createElement('img', {
+        src: '/covers/the-long-way.jpg',
+        alt: 'The Long Way cover',
+      }),
+      variant: 'review',
+    }));
+
+    expect(html).toContain('class="editorial-list-row editorial-list-row--review"');
+    expect(html).toContain(
+      '<span class="editorial-list-row__media" data-media-fit="contain">',
+    );
+    expect(html).not.toContain('data-media-fit="cover"');
+  });
+
   it('uses a text-led row and detail frame when resolved media is absent', () => {
     const row = renderToStaticMarkup(createElement(EditorialListRow, {
       href: '/reviews/no-public-cover/',
@@ -57,6 +77,24 @@ describe('editorial primitives', () => {
     expect(detail).toContain('editorial-detail-frame editorial-detail-frame--text-led');
     expect(detail).not.toContain('editorial-detail-frame__media');
     expect(detail).toMatch(/actions[\s\S]*본문/u);
+  });
+
+  it('preserves the complete book cover in review detail frames', () => {
+    const html = renderToStaticMarkup(createElement(EditorialDetailFrame, {
+      variant: 'review',
+      title: 'The Long Way to a Small, Angry Planet',
+      actions: null,
+      media: createElement('img', {
+        src: '/covers/the-long-way.jpg',
+        alt: 'The Long Way cover',
+      }),
+      children: createElement('p', null, '본문'),
+    }));
+
+    expect(html).toContain(
+      '<figure class="editorial-detail-frame__media" data-media-fit="contain">',
+    );
+    expect(html).not.toContain('data-media-fit="cover"');
   });
 
   it('renders like and comment as count-free statuses and only copy as a control', () => {

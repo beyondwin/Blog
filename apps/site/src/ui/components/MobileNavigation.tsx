@@ -40,6 +40,7 @@ function NavigationLinks({
 }
 
 export function MobileNavigation({ currentSection }: { currentSection: PublicSection }) {
+  const [enhanced, setEnhanced] = useState(false);
   const [open, setOpen] = useState(false);
   const [mobileViewport, setMobileViewport] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -52,6 +53,7 @@ export function MobileNavigation({ currentSection }: { currentSection: PublicSec
   }, []);
 
   useEffect(() => {
+    setEnhanced(true);
     const media = window.matchMedia(MOBILE_QUERY);
     const updateViewport = () => setMobileViewport(media.matches);
     updateViewport();
@@ -144,7 +146,8 @@ export function MobileNavigation({ currentSection }: { currentSection: PublicSec
         aria-label={open ? '메뉴 닫기' : '메뉴 열기'}
         aria-controls="site-navigation-menu"
         aria-expanded={open}
-        aria-haspopup={mobileViewport ? 'dialog' : 'menu'}
+        aria-haspopup={mobileViewport ? 'dialog' : undefined}
+        hidden={!enhanced}
         onClick={() => {
           if (open) restoreFocusRef.current = true;
           setOpen((value) => !value);

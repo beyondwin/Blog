@@ -95,7 +95,7 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
         description={reviewDescription(data.record)}
         title={publicMetadataTitle(data.record.title)}
       />
-      <SiteShell mode="reading" currentSection="reviews">
+      <SiteShell currentSection="reviews">
         <ReviewReadingPage record={data.record} cover={cover} continuations={data.continuations} />
       </SiteShell>
     </>

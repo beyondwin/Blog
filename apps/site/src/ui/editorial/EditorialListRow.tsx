@@ -6,19 +6,33 @@ export function EditorialListRow({
   href,
   media,
   title,
+  variant = 'default',
 }: {
   date: string;
   description: string;
   href: string;
   media?: ReactNode;
   title: string;
+  variant?: 'default' | 'review';
 }) {
+  const className = [
+    'editorial-list-row',
+    media ? null : 'editorial-list-row--text-led',
+    variant === 'review' ? 'editorial-list-row--review' : null,
+  ].filter(Boolean).join(' ');
+
   return (
-    <a
-      className={`editorial-list-row${media ? '' : ' editorial-list-row--text-led'}`}
-      href={href}
-    >
-      {media ? <span className="editorial-list-row__media">{media}</span> : null}
+    <a className={className} href={href}>
+      {media
+        ? (
+            <span
+              className="editorial-list-row__media"
+              data-media-fit={variant === 'review' ? 'contain' : 'cover'}
+            >
+              {media}
+            </span>
+          )
+        : null}
       <span className="editorial-list-row__copy">
         <h2>{title}</h2>
         <span>{description}</span>

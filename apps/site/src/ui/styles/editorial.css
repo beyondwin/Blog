@@ -40,6 +40,10 @@
   color: inherit;
 }
 
+.mobile-navigation__button[hidden] {
+  display: none;
+}
+
 .mobile-navigation__button > span {
   width: 23px;
   gap: 5px;
@@ -208,6 +212,10 @@
   object-fit: cover;
 }
 
+.editorial-list-row__media[data-media-fit="contain"] img {
+  object-fit: contain;
+}
+
 .editorial-list-row__copy {
   min-width: 0;
   display: flex;
@@ -325,6 +333,10 @@
 
 .editorial-detail-frame__media img {
   object-fit: cover;
+}
+
+.editorial-detail-frame__media[data-media-fit="contain"] img {
+  object-fit: contain;
 }
 
 .editorial-detail-frame--text-led .editorial-detail-frame__hero {

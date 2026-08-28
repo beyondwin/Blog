@@ -70,7 +70,7 @@ export function ArticlePresentation({ data }: { data: ArticleData }) {
         description={data.record.description}
         title={publicMetadataTitle(data.record.title)}
       />
-      <SiteShell mode="reading" currentSection="articles">
+      <SiteShell currentSection="articles">
         <ArticleReadingPage record={data.record} media={media} continuations={data.continuations} />
       </SiteShell>
     </>

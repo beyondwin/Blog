@@ -68,7 +68,7 @@ export function meta() {
 
 export function HomePresentation({ data }: { data: HomeData }) {
   return (
-    <SiteShell mode="scene" currentSection="scene">
+    <SiteShell currentSection={null} inverseHeader>
       <ScenePage data={data} />
     </SiteShell>
   );

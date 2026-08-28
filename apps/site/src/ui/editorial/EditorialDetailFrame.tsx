@@ -29,7 +29,14 @@ export function EditorialDetailFrame({
     </div>
   );
   const resolvedMedia = media
-    ? <figure className="editorial-detail-frame__media">{media}</figure>
+    ? (
+        <figure
+          className="editorial-detail-frame__media"
+          data-media-fit={variant === 'review' ? 'contain' : 'cover'}
+        >
+          {media}
+        </figure>
+      )
     : null;
 
   return (

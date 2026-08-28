@@ -9,17 +9,12 @@ export function SiteShell({
   inverseHeader = false,
 }: {
   children: ReactNode;
-  currentSection: PublicSection | 'scene';
+  currentSection: PublicSection;
   inverseHeader?: boolean;
-  [legacyProp: string]: unknown;
 }) {
-  const legacyHome = currentSection === 'scene';
   return (
     <div className="site-shell">
-      <SiteHeader
-        currentSection={legacyHome ? null : currentSection}
-        inverse={inverseHeader || legacyHome}
-      />
+      <SiteHeader currentSection={currentSection} inverse={inverseHeader} />
       <main className="site-main" data-mobile-menu-inert>{children}</main>
     </div>
   );
