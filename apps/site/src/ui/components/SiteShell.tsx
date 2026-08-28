@@ -1,24 +1,26 @@
 import type { ReactNode } from 'react';
-import { SiteFooter } from './SiteFooter';
 import { SiteHeader } from './SiteHeader';
 import type { PublicSection } from './MobileNavigation';
-
-export type SiteMode = 'scene' | 'reading';
+import '../styles/editorial.css';
 
 export function SiteShell({
   children,
   currentSection,
-  mode,
+  inverseHeader = false,
 }: {
   children: ReactNode;
-  currentSection: PublicSection;
-  mode: SiteMode;
+  currentSection: PublicSection | 'scene';
+  inverseHeader?: boolean;
+  [legacyProp: string]: unknown;
 }) {
+  const legacyHome = currentSection === 'scene';
   return (
-    <div className="site-shell" data-surface-mode={mode}>
-      <SiteHeader currentSection={currentSection} />
-      <main className="site-main">{children}</main>
-      <SiteFooter currentSection={currentSection} />
+    <div className="site-shell">
+      <SiteHeader
+        currentSection={legacyHome ? null : currentSection}
+        inverse={inverseHeader || legacyHome}
+      />
+      <main className="site-main" data-mobile-menu-inert>{children}</main>
     </div>
   );
 }

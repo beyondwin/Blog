@@ -2,40 +2,62 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { SiteHeader } from '../../src/ui/components/SiteHeader';
+import { SiteShell } from '../../src/ui/components/SiteShell';
 
-describe('shared public site header', () => {
-  it('renders the approved public nouns in one labeled primary navigation', () => {
+describe('FORM & THOUGHT shared site header', () => {
+  it('renders the two-line wordmark and approved primary navigation in exact order', () => {
     const html = renderToStaticMarkup(createElement(SiteHeader, { currentSection: 'articles' }));
 
-    expect(html.match(/<nav\b/gu)).toHaveLength(1);
-    expect(html).toContain('aria-label="주 탐색"');
-    expect(html).toMatch(/장면[\s\S]*글[\s\S]*책[\s\S]*찾기/u);
+    expect(html).toContain('aria-label="FORM &amp; THOUGHT 홈"');
+    expect(html).toContain('<span>FORM &amp;</span><span>THOUGHT</span>');
+    expect(html).toMatch(/서평[\s\S]*아티클[\s\S]*생각[\s\S]*검색/u);
     expect(html).toContain('href="/articles/" aria-current="page"');
+    expect(html).not.toMatch(/beyondwin|장면|>글<|>책<|찾기/u);
   });
 
-  it('uses an explicit 44px mobile control without production decoration', () => {
-    const html = renderToStaticMarkup(createElement(SiteHeader, { currentSection: 'scene' }));
+  it('keeps canonical anchors in the server response and renders a three-line menu trigger', () => {
+    const html = renderToStaticMarkup(createElement(SiteHeader, { currentSection: null }));
 
-    expect(html).toContain('<button');
+    for (const href of ['/reviews/', '/articles/', '/thoughts/', '/search/']) {
+      expect(html).toContain(`href="${href}"`);
+    }
+    expect(html).toContain('<noscript>');
+    expect(html).toContain('aria-controls="site-navigation-menu"');
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain('class="mobile-navigation__button touch-target"');
-    expect(html).not.toMatch(/brand__mark|crop|cmyk|production-bar|>\+<|aria-label="beyondwin home"/iu);
-    expect(html).toContain('aria-label="beyondwin 홈"');
+    expect(html.match(/<i><\/i>/gu)).toHaveLength(3);
   });
 
-  it('marks only the matching route family as current', () => {
+  it('marks only the selected section and supports inverse home chrome', () => {
     for (const [currentSection, label] of [
-      ['scene', '장면'],
-      ['articles', '글'],
-      ['reviews', '책'],
-      ['search', '찾기'],
+      ['reviews', '서평'],
+      ['articles', '아티클'],
+      ['thoughts', '생각'],
+      ['search', '검색'],
     ] as const) {
       const html = renderToStaticMarkup(createElement(SiteHeader, { currentSection }));
-      expect(html.match(/aria-current="page"/gu)).toHaveLength(1);
+      expect(html.match(/aria-current="page"/gu)).toHaveLength(3);
       expect(html).toContain(`aria-current="page">${label}</a>`);
+      expect(html).toMatch(new RegExp(`navigation-menu[\\s\\S]*aria-current="page">${label}</a>`, 'u'));
+      expect(html).toMatch(new RegExp(`navigation-noscript[\\s\\S]*aria-current="page">${label}</a>`, 'u'));
     }
 
-    const unselected = renderToStaticMarkup(createElement(SiteHeader, { currentSection: null }));
-    expect(unselected).not.toContain('aria-current="page"');
+    const inverse = renderToStaticMarkup(createElement(SiteHeader, {
+      currentSection: null,
+      inverse: true,
+    }));
+    expect(inverse).toContain('site-header site-header--inverse');
+    expect(inverse).not.toContain('aria-current="page"');
+  });
+
+  it('renders a header and main without a repeated footer or surface mode', () => {
+    const html = renderToStaticMarkup(createElement(SiteShell, {
+      currentSection: 'reviews',
+      children: createElement('p', null, '본문'),
+    }));
+
+    expect(html).toContain('<header');
+    expect(html).toMatch(/<main class="site-main" data-mobile-menu-inert/u);
+    expect(html).not.toContain('<footer');
+    expect(html).not.toContain('data-surface-mode');
   });
 });
