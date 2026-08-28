@@ -1,6 +1,6 @@
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { BookIndexPage } from '../../src/ui/reviews/BookIndexPage';
-import { type RouteCriticalCssHandle, DocumentMetadata } from '../root';
+import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
 import { loadVerifiedRelease, recordsForCollection } from '../release.server';
 
 const [readingCss, reviewCss] = import.meta.env.SSR ? await Promise.all([
@@ -16,6 +16,6 @@ export async function loader() {
   };
 }
 export function ReviewsIndexPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {
-  return <><DocumentMetadata canonical="/reviews/" description="읽고 남은 판단." title="책 · beyondwin" /><SiteShell mode="reading" currentSection="reviews"><BookIndexPage records={data.records} assets={new Map(Object.entries(data.assets))} /></SiteShell></>;
+  return <><DocumentMetadata canonical="/reviews/" description="읽고 남은 판단." title={publicMetadataTitle('책')} /><SiteShell mode="reading" currentSection="reviews"><BookIndexPage records={data.records} assets={new Map(Object.entries(data.assets))} /></SiteShell></>;
 }
 export default function ReviewsIndexRoute({ loaderData }: { loaderData: Awaited<ReturnType<typeof loader>> }) { return <ReviewsIndexPresentation data={loaderData} />; }

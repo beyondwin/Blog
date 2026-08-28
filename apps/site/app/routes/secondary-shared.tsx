@@ -3,7 +3,7 @@ import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { CollectionPage } from '../../src/ui/collections/CollectionPage';
 import { SecondaryReadingPage } from '../../src/ui/reading/SecondaryReadingPage';
-import { DocumentMetadata, ResponsivePicture } from '../root';
+import { DocumentMetadata, publicMetadataTitle, ResponsivePicture } from '../root';
 
 export type SecondaryCollection = 'analysis' | 'ideas' | 'travel';
 type SecondaryRecord = Extract<PublicRecord, { collection: SecondaryCollection }>;
@@ -28,10 +28,10 @@ export function SecondaryIndexPresentation({
   data: SecondaryIndexData;
 }) {
   const copy = SECONDARY_COPY[collection];
-  return <><DocumentMetadata canonical={`/${collection}/`} description={copy.empty} title="beyondwin" /><SiteShell mode="reading" currentSection={null}><CollectionPage collection={collection} title={copy.title} description={copy.description} emptyMessage={copy.empty} records={data.records} /></SiteShell></>;
+  return <><DocumentMetadata canonical={`/${collection}/`} description={copy.empty} title={publicMetadataTitle()} /><SiteShell mode="reading" currentSection={null}><CollectionPage collection={collection} title={copy.title} description={copy.description} emptyMessage={copy.empty} records={data.records} /></SiteShell></>;
 }
 
 export function SecondaryDetailPresentation({ data }: { data: SecondaryDetailData }) {
   const media = data.mediaAsset ? <ResponsivePicture asset={data.mediaAsset} alt={data.mediaAsset.alt} className="reading-threshold__media-image" eager sizes="(max-width: 720px) 30vw, 9rem" /> : undefined;
-  return <><DocumentMetadata canonical={data.record.href} description={data.record.description} title={`${data.record.title} · beyondwin`} /><SiteShell mode="reading" currentSection={null}><SecondaryReadingPage record={data.record} media={media} /></SiteShell></>;
+  return <><DocumentMetadata canonical={data.record.href} description={data.record.description} title={publicMetadataTitle(data.record.title)} /><SiteShell mode="reading" currentSection={null}><SecondaryReadingPage record={data.record} media={media} /></SiteShell></>;
 }

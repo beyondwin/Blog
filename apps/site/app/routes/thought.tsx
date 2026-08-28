@@ -6,6 +6,7 @@ import {
   type RouteCriticalCssHandle,
   DocumentMetadata,
   metadataForRecord,
+  publicMetadataTitle,
   ResponsivePicture,
 } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
@@ -55,7 +56,7 @@ export function ThoughtPresentation({ data }: { data: ThoughtData }) {
       <DocumentMetadata
         canonical={data.record.href}
         description={data.record.description}
-        title={`${data.record.title} · FORM & THOUGHT`}
+        title={publicMetadataTitle(data.record.title)}
       />
       <SiteShell mode="reading" currentSection={null}>
         <ThoughtReadingPage record={data.record} media={media} />

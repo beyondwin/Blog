@@ -1,6 +1,6 @@
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { ThoughtIndexPage } from '../../src/ui/thoughts/ThoughtIndexPage';
-import { type RouteCriticalCssHandle, DocumentMetadata } from '../root';
+import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
 import { loadVerifiedRelease, recordsForCollection } from '../release.server';
 
 const [routeReadingCss, readingCss] = import.meta.env.SSR ? await Promise.all([
@@ -21,7 +21,7 @@ export async function loader() {
 export function ThoughtsIndexPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {
   return (
     <>
-      <DocumentMetadata canonical="/thoughts/" description="읽고 남은 생각." title="생각 · FORM & THOUGHT" />
+      <DocumentMetadata canonical="/thoughts/" description="읽고 남은 생각." title={publicMetadataTitle('생각')} />
       <SiteShell mode="reading" currentSection={null}>
         <ThoughtIndexPage records={data.records} assets={new Map(Object.entries(data.assets))} />
       </SiteShell>

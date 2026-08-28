@@ -7,6 +7,7 @@ import {
   type RouteCriticalCssHandle,
   DocumentMetadata,
   metadataForRecord,
+  publicMetadataTitle,
   ResponsivePicture,
 } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
@@ -67,7 +68,7 @@ export function ArticlePresentation({ data }: { data: ArticleData }) {
       <DocumentMetadata
         canonical={data.record.href}
         description={data.record.description}
-        title={`${data.record.title} · beyondwin`}
+        title={publicMetadataTitle(data.record.title)}
       />
       <SiteShell mode="reading" currentSection="articles">
         <ArticleReadingPage record={data.record} media={media} continuations={data.continuations} />

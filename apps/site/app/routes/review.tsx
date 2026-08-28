@@ -3,6 +3,7 @@ import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import {
   type RouteCriticalCssHandle,
   DocumentMetadata,
+  publicMetadataTitle,
   ResponsivePicture,
 } from '../root';
 import { SiteShell } from '../../src/ui/components/SiteShell';
@@ -69,7 +70,7 @@ export async function loader({ params }: { params: { slug?: string } }): Promise
 
 export function meta({ data }: { data?: ReviewData }) {
   return data ? [
-    { title: `${data.record.title} · beyondwin` },
+    { title: publicMetadataTitle(data.record.title) },
     { name: 'description', content: reviewDescription(data.record) },
     { tagName: 'link', rel: 'canonical', href: data.record.href },
   ] : [];
@@ -92,7 +93,7 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
       <DocumentMetadata
         canonical={data.record.href}
         description={reviewDescription(data.record)}
-        title={`${data.record.title} · beyondwin`}
+        title={publicMetadataTitle(data.record.title)}
       />
       <SiteShell mode="reading" currentSection="reviews">
         <ReviewReadingPage record={data.record} cover={cover} continuations={data.continuations} />

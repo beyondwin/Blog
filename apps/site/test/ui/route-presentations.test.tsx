@@ -314,9 +314,9 @@ describe('full public route expansion', () => {
     expect(Object.keys(tagData).sort()).toEqual(['records', 'tag']);
 
     const cases = [
-      ['app/routes/memory-index.tsx', 'MemoryIndexPresentation', '<title>문장 · beyondwin</title>', '글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.'],
-      ['app/routes/search.tsx', 'SearchPresentation', '<title>찾기 · beyondwin</title>', '글, 책, 문장을 찾습니다.'],
-      ['app/routes/tags-index.tsx', 'TagsIndexPresentation', '<title>beyondwin</title>', '찾기로 이어진 단어들.'],
+      ['app/routes/memory-index.tsx', 'MemoryIndexPresentation', '<title>문장 · FORM &amp; THOUGHT</title>', '글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.'],
+      ['app/routes/search.tsx', 'SearchPresentation', '<title>찾기 · FORM &amp; THOUGHT</title>', '글, 책, 문장을 찾습니다.'],
+      ['app/routes/tags-index.tsx', 'TagsIndexPresentation', '<title>FORM &amp; THOUGHT</title>', '찾기로 이어진 단어들.'],
     ] as const;
     for (const [path, presentationName, title, description] of cases) {
       const route = await candidateModule<any>(path);

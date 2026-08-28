@@ -10,6 +10,7 @@ import { readActiveRelease } from '@beyondwin/content/release';
 import type { VerifiedActivePublicRelease } from '@beyondwin/content/release';
 
 const ARTICLE_ID = 'why-i-read-in-the-ai-era';
+const ESTABLISHED_ARTICLE_ID = 'graphify-code-knowledge-graph-deep-dive';
 const REVIEW_ID = 'black-swan';
 const MEMORY_ID = 'agent-harnesses-are-operating-systems';
 const THOUGHT_ID = 'why-i-read-in-the-ai-era';
@@ -315,6 +316,24 @@ describe('React Router current-behavior static route contract', () => {
       expect(html).not.toContain('data-discover=');
       expect(html).not.toContain('memory/thoughts');
     }
+  });
+
+  it('uses FORM & THOUGHT metadata for established article and review records', async () => {
+    const article = await candidateModule<any>('app/routes/article.tsx');
+    const review = await candidateModule<any>('app/routes/review.tsx');
+    const articleData = await article.loader({ params: { slug: ESTABLISHED_ARTICLE_ID } });
+    const reviewData = await review.loader({ params: { slug: REVIEW_ID } });
+
+    expect(article.meta({ data: articleData })).toContainEqual({
+      title: 'Graphify는 코드 이해를 정말 더 빠르게 만드는가? · FORM & THOUGHT',
+    });
+    expect(review.meta({ data: reviewData })).toContainEqual({
+      title: '블랙스완 · FORM & THOUGHT',
+    });
+    expect(renderToStaticMarkup(createElement(article.ArticlePresentation, { data: articleData })))
+      .toContain('<title>Graphify는 코드 이해를 정말 더 빠르게 만드는가? · FORM &amp; THOUGHT</title>');
+    expect(renderToStaticMarkup(createElement(review.ReviewPresentation, { data: reviewData })))
+      .toContain('<title>블랙스완 · FORM &amp; THOUGHT</title>');
   });
 
   it('contains no runtime API/client loader/source-private access or file-route convention', async () => {

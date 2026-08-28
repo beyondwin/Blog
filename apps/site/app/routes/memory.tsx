@@ -1,7 +1,7 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { MemoryDetailPage } from '../../src/ui/memory/MemoryDetailPage';
-import { type RouteCriticalCssHandle, DocumentMetadata, metadataForRecord } from '../root';
+import { type RouteCriticalCssHandle, DocumentMetadata, metadataForRecord, publicMetadataTitle } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
 const [routeReadingCss, readingCss, memoryCss] = import.meta.env.SSR
@@ -37,7 +37,7 @@ export function MemoryPresentation({ data }: { data: MemoryData }) {
       <DocumentMetadata
         canonical={data.record.href}
         description={data.record.description}
-        title={`${data.record.title} · beyondwin`}
+        title={publicMetadataTitle(data.record.title)}
       />
       <SiteShell mode="reading" currentSection={null}>
         <MemoryDetailPage record={data.record} />

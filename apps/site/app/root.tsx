@@ -44,6 +44,12 @@ export interface RouteCriticalCssHandle {
   criticalCss: string;
 }
 
+export const PUBLIC_METADATA_BRAND = 'FORM & THOUGHT';
+
+export function publicMetadataTitle(title?: string): string {
+  return title ? `${title} · ${PUBLIC_METADATA_BRAND}` : PUBLIC_METADATA_BRAND;
+}
+
 export function resolveCriticalCssForRender(
   routeCss: string,
   existingCss: string | null,
@@ -122,7 +128,7 @@ export function CriticalScripts() {
 
 export function metadataForRecord(record: PublicRecord) {
   return [
-    { title: `${record.title} · FORM & THOUGHT` },
+    { title: publicMetadataTitle(record.title) },
     { name: 'description', content: record.description },
     { tagName: 'link', rel: 'canonical', href: record.href },
   ] as const;

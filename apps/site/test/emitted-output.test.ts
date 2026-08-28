@@ -40,7 +40,7 @@ beforeAll(async () => {
     readFile(join(candidateRoot, 'build/client/index.html'), 'utf8'),
     readFile(join(
       candidateRoot,
-      'build/client/articles/why-i-read-in-the-ai-era/index.html',
+      'build/client/articles/graphify-code-knowledge-graph-deep-dive/index.html',
     ), 'utf8'),
     readFile(join(candidateRoot, 'build/client/reviews/black-swan/index.html'), 'utf8'),
     readFile(join(
@@ -134,6 +134,11 @@ describe('React Router emitted critical output', () => {
       candidateRoot,
       'build/client/reviews/the-life-you-can-save/index.html',
     ))).rejects.toThrow();
+  });
+
+  it('emits FORM & THOUGHT titles for the established article and review routes', () => {
+    expect(articleHtml).toContain('<title>Graphify는 코드 이해를 정말 더 빠르게 만드는가? · FORM &amp; THOUGHT</title>');
+    expect(reviewHtml).toContain('<title>블랙스완 · FORM &amp; THOUGHT</title>');
   });
 
   it('preloads only AVIF candidates declared by the lead picture and present in static output', async () => {
