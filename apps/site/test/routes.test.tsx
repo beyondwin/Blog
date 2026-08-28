@@ -336,6 +336,16 @@ describe('React Router current-behavior static route contract', () => {
       .toContain('<title>블랙스완 · FORM &amp; THOUGHT</title>');
   });
 
+  it('uses FORM & THOUGHT metadata for Home', async () => {
+    const home = await candidateModule<any>('app/routes/home.tsx');
+
+    expect(home.meta()).toEqual([
+      { title: '판단 · FORM & THOUGHT' },
+      { name: 'description', content: 'AI 시대에 무엇을 믿을지 판단하기 위해 읽고 연결한 글, 책, 문장.' },
+      { tagName: 'link', rel: 'canonical', href: '/' },
+    ]);
+  });
+
   it('contains no runtime API/client loader/source-private access or file-route convention', async () => {
     const appRoot = join(candidateRoot, 'app');
     const files = (await readdir(appRoot, { recursive: true }))

@@ -1,7 +1,7 @@
 import type { LinksFunction } from 'react-router';
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { ScenePage, type ScenePageData } from '../../src/ui/scene/ScenePage';
-import { type RouteCriticalCssHandle } from '../root';
+import { type RouteCriticalCssHandle, publicMetadataTitle } from '../root';
 import { loadVerifiedRelease } from '../release.server';
 
 const sceneCss = import.meta.env.SSR
@@ -60,7 +60,7 @@ export const links: LinksFunction = () => [{
 
 export function meta() {
   return [
-    { title: '판단 · beyondwin' },
+    { title: publicMetadataTitle('판단') },
     { name: 'description', content: 'AI 시대에 무엇을 믿을지 판단하기 위해 읽고 연결한 글, 책, 문장.' },
     { tagName: 'link', rel: 'canonical', href: '/' },
   ];
