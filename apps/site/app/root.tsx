@@ -34,6 +34,8 @@ export function criticalCssForPath(
     routeCss = `${sources.reading}${sources.readingSurface}${sources.review}`;
   } else if (pathname.startsWith('/memory/')) {
     routeCss = `${sources.reading}${sources.readingSurface}${sources.memory}`;
+  } else if (pathname.startsWith('/thoughts/')) {
+    routeCss = `${sources.reading}${sources.readingSurface}`;
   }
   return `${sources.tokens}${sources.shell}${routeCss}`;
 }
@@ -120,7 +122,7 @@ export function CriticalScripts() {
 
 export function metadataForRecord(record: PublicRecord) {
   return [
-    { title: `${record.title} · beyondwin` },
+    { title: `${record.title} · FORM & THOUGHT` },
     { name: 'description', content: record.description },
     { tagName: 'link', rel: 'canonical', href: record.href },
   ] as const;
@@ -170,7 +172,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#f2f4f7" />
+        <meta name="theme-color" content="#F2EFE9" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <CriticalStyles />
         <Meta />

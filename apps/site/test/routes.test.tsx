@@ -12,6 +12,7 @@ import type { VerifiedActivePublicRelease } from '@beyondwin/content/release';
 const ARTICLE_ID = 'why-i-read-in-the-ai-era';
 const REVIEW_ID = 'black-swan';
 const MEMORY_ID = 'agent-harnesses-are-operating-systems';
+const THOUGHT_ID = 'why-i-read-in-the-ai-era';
 const candidateRoot = fileURLToPath(new URL('..', import.meta.url));
 const releaseBindingEnvironment = 'BEYONDWIN_PUBLIC_RELEASE_BINDING_V1';
 const originalReleaseBinding = process.env[releaseBindingEnvironment];
@@ -71,11 +72,18 @@ describe('React Router current-behavior static route contract', () => {
       expect.objectContaining({ path: 'articles/:slug', file: './routes/article.tsx' }),
       expect.objectContaining({ path: 'reviews', file: './routes/reviews-index.tsx' }),
       expect.objectContaining({ path: 'reviews/:slug', file: './routes/review.tsx' }),
+      expect.objectContaining({ path: 'thoughts', file: './routes/thoughts-index.tsx' }),
+      expect.objectContaining({ path: 'thoughts/:slug', file: './routes/thought.tsx' }),
       expect.objectContaining({ path: 'memory', file: './routes/memory-index.tsx' }),
       expect.objectContaining({ path: 'memory/:slug', file: './routes/memory.tsx' }),
       expect.objectContaining({ path: 'search', file: './routes/search.tsx' }),
       expect.objectContaining({ path: 'tags/:tag', file: './routes/tag.tsx' }),
     ]));
+    expect(routesModule.default).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: 'reviews/the-life-you-can-save' }),
+    ]));
+    expect(await configModule.default.prerender()).toContain('/thoughts/');
+    expect(await configModule.default.prerender()).toContain(`/thoughts/${THOUGHT_ID}/`);
   }, 30_000);
 
   it('resolves the approved Vite pin from the React Router developer tool itself', () => {
@@ -268,6 +276,47 @@ describe('React Router current-behavior static route contract', () => {
     }
   }, 30_000);
 
+  it('loads and renders the canonical thought index and detail from the verified release', async () => {
+    const thought = await candidateModule<any>('app/routes/thought.tsx');
+    const thoughtsIndex = await candidateModule<any>('app/routes/thoughts-index.tsx');
+
+    expect(thought.meta({ data: undefined })).toEqual([]);
+    const indexData = await thoughtsIndex.loader();
+    const detailData = await thought.loader({ params: { slug: THOUGHT_ID } });
+
+    expect(detailData.featuredAsset?.fallback.src).toBe(
+      '/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
+    );
+    expect(thought.meta({ data: detailData })).toEqual([
+      { title: 'AI 시대에, 나는 왜 책을 읽는가 · FORM & THOUGHT' },
+      {
+        name: 'description',
+        content: '지식에 도달하는 비용이 싸진 시대에, 더 많은 답을 모으기보다 답을 쉽게 믿지 않기 위해 책을 읽고 함께 읽는다.',
+      },
+      { tagName: 'link', rel: 'canonical', href: `/thoughts/${THOUGHT_ID}/` },
+    ]);
+    await expect(thought.loader({ params: { slug: 'missing-thought' } })).rejects.toMatchObject({ status: 404 });
+
+    const indexHtml = renderToStaticMarkup(createElement(
+      thoughtsIndex.ThoughtsIndexPresentation,
+      { data: indexData },
+    ));
+    const detailHtml = renderToStaticMarkup(createElement(thought.ThoughtPresentation, { data: detailData }));
+
+    expect(indexHtml).toContain(`href="/thoughts/${THOUGHT_ID}/"`);
+    expect(indexHtml).toContain('2026-08-16');
+    expect(indexHtml).toContain('<picture>');
+    expect(detailHtml).toContain('<h1 id="thought-title">AI 시대에, 나는 왜 책을 읽는가</h1>');
+    expect(detailHtml).toContain('AI 때문에 책을 읽기 시작했다.');
+    expect(detailHtml).toContain('<time dateTime="2026-08-16T00:00:00.000Z">2026-08-16</time>');
+    expect(detailHtml).toContain(`<a href="/thoughts/">생각 목록으로</a>`);
+    expect(detailHtml).toContain(`<link rel="canonical" href="/thoughts/${THOUGHT_ID}/"/>`);
+    for (const html of [indexHtml, detailHtml]) {
+      expect(html).not.toContain('data-discover=');
+      expect(html).not.toContain('memory/thoughts');
+    }
+  });
+
   it('contains no runtime API/client loader/source-private access or file-route convention', async () => {
     const appRoot = join(candidateRoot, 'app');
     const files = (await readdir(appRoot, { recursive: true }))
@@ -279,6 +328,8 @@ describe('React Router current-behavior static route contract', () => {
       'routes/article.tsx',
       'routes/review.tsx',
       'routes/memory.tsx',
+      'routes/thoughts-index.tsx',
+      'routes/thought.tsx',
     ]));
     for (const relativePath of files) {
       const source = await readFile(join(appRoot, relativePath), 'utf8');

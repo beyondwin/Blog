@@ -42,8 +42,11 @@ describe('full public route expansion', () => {
     const astroPaths = baseline.routes.map(({ path }) => path).sort();
 
     const expected = astroPaths
-      .filter((path) => path !== '/articles/why-i-read-in-the-ai-era/')
-      .concat('/thoughts/why-i-read-in-the-ai-era/')
+      .filter((path) => ![
+        '/articles/why-i-read-in-the-ai-era/',
+        '/reviews/the-life-you-can-save/',
+      ].includes(path))
+      .concat('/thoughts/', '/thoughts/why-i-read-in-the-ai-era/')
       .sort();
     expect(actual).toHaveLength(93);
     expect([...actual].sort()).toEqual(expected);

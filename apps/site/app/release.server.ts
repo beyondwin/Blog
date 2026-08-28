@@ -38,11 +38,6 @@ type _PublicContentCollectionsAreExhaustive = AssertNever<
   Exclude<PublicContentCollection, (typeof PUBLIC_CONTENT_COLLECTIONS)[number]>
 >;
 
-const VERIFIED_COMPATIBILITY_ROUTES = [{
-  path: '/reviews/the-life-you-can-save/',
-  target: '/reviews/doing-good-better/',
-}] as const;
-
 export function repositoryRootFromModuleUrl(moduleUrl: string): string {
   let current = dirname(fileURLToPath(moduleUrl));
   while (true) {
@@ -246,15 +241,13 @@ export function fullPublicPaths(release: CandidateRelease): string[] {
     '/reviews/',
     '/search/',
     '/tags/',
+    '/thoughts/',
     '/travel/',
   ];
   const details = Object.values(release.manifest.records)
     .filter(hasPublicPublicationState)
     .map((record) => record.href);
-  const compatibility = VERIFIED_COMPATIBILITY_ROUTES
-    .filter(({ target }) => details.includes(target))
-    .map(({ path }) => path);
   const tags = exactPublicTags(release).map((tag) => tag.href);
-  const paths = [...new Set([...fixed, ...details, ...compatibility, ...tags])];
+  const paths = [...new Set([...fixed, ...details, ...tags])];
   return paths.sort((left, right) => left.localeCompare(right));
 }

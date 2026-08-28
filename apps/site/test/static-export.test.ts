@@ -81,7 +81,7 @@ describe('fail-closed React Router static export orchestration', () => {
     await expect(access(join(fixture.spikeRoot, 'build/client'))).rejects.toThrow();
   }, 30_000);
 
-  it('publishes only manifest-inventory assets with verified checksums', async () => {
+  it('publishes only manifest-inventory assets while retaining framework-prerendered canonical documents', async () => {
     const fixture = await releasePair();
     const buildModule = await candidateModule<any>('build-static-export.ts');
 
@@ -89,8 +89,13 @@ describe('fail-closed React Router static export orchestration', () => {
       repositoryRoot: fixture.repositoryRoot,
       spikeRoot: fixture.spikeRoot,
       runReactRouterBuild: async () => {
-        await mkdir(join(fixture.spikeRoot, 'build/client/assets'), { recursive: true });
-        await writeFile(join(fixture.spikeRoot, 'build/client/index.html'), '<h1>verified candidate output</h1>');
+      await mkdir(join(fixture.spikeRoot, 'build/client/assets'), { recursive: true });
+      await mkdir(join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era'), { recursive: true });
+      await writeFile(join(fixture.spikeRoot, 'build/client/index.html'), '<h1>verified candidate output</h1>');
+      await writeFile(
+        join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era/index.html'),
+        '<a href="/thoughts/why-i-read-in-the-ai-era/">canonical thought</a>',
+      );
         await writeFile(join(fixture.spikeRoot, 'build/client/__spa-fallback.html'), '<h1>static fallback</h1>');
         await writeFile(join(fixture.spikeRoot, 'build/client/assets/root-generated.js'), 'framework asset');
       },
@@ -105,6 +110,10 @@ describe('fail-closed React Router static export orchestration', () => {
       .toContain('static fallback');
     expect(await readFile(join(fixture.spikeRoot, 'build/client/assets/root-generated.js'), 'utf8'))
       .toBe('framework asset');
+    expect(await readFile(
+      join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era/index.html'),
+      'utf8',
+    )).toContain('canonical thought');
   }, 30_000);
 
   it('refuses publication when a verified staged asset changes after copy', async () => {

@@ -11,6 +11,8 @@ let homeHtml = '';
 let articleHtml = '';
 let reviewHtml = '';
 let memoryHtml = '';
+let thoughtsIndexHtml = '';
+let thoughtHtml = '';
 
 function attribute(tag: string, name: string): string | undefined {
   return tag.match(new RegExp(`\\b${name}="([^"]*)"`, 'u'))?.[1];
@@ -34,7 +36,7 @@ beforeAll(async () => {
     cwd: repositoryRoot,
     env: { ...process.env, NODE_ENV: 'production' },
   });
-  [homeHtml, articleHtml, reviewHtml, memoryHtml] = await Promise.all([
+  [homeHtml, articleHtml, reviewHtml, memoryHtml, thoughtsIndexHtml, thoughtHtml] = await Promise.all([
     readFile(join(candidateRoot, 'build/client/index.html'), 'utf8'),
     readFile(join(
       candidateRoot,
@@ -44,6 +46,11 @@ beforeAll(async () => {
     readFile(join(
       candidateRoot,
       'build/client/memory/agent-harnesses-are-operating-systems/index.html',
+    ), 'utf8'),
+    readFile(join(candidateRoot, 'build/client/thoughts/index.html'), 'utf8'),
+    readFile(join(
+      candidateRoot,
+      'build/client/thoughts/why-i-read-in-the-ai-era/index.html',
     ), 'utf8'),
   ]);
 }, 120_000);
@@ -63,7 +70,7 @@ describe('React Router emitted critical output', () => {
   });
 
   it('emits one route-scoped critical style while preserving eager Framework bootstrap and shared rules', () => {
-    const routeHtml = [homeHtml, articleHtml, reviewHtml, memoryHtml];
+    const routeHtml = [homeHtml, articleHtml, reviewHtml, memoryHtml, thoughtsIndexHtml, thoughtHtml];
     const routeCss = routeHtml.map((html) => {
       const styles = [...html.matchAll(
         /<style data-critical-css="true">([\s\S]*?)<\/style>/gu,
@@ -106,12 +113,27 @@ describe('React Router emitted critical output', () => {
     expect(routeCss[3]).toContain('.memory-thought');
     expect(routeCss[3]).toContain('.reading-threshold');
     expect(routeCss[3]).toContain('.context-return');
+    expect(routeCss[4]).not.toContain('.memory-thought');
+    expect(routeCss[5]).not.toContain('.memory-thought');
     expect(routeCss[0].length).toBeLessThan(10_000);
     for (const detailCss of routeCss.slice(1)) expect(detailCss.length).toBeLessThan(12_000);
     const imagePreload = homeHtml.match(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u)?.[0];
     expect(imagePreload).toContain('href="/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif"');
     expect(imagePreload).toContain('imageSizes="(max-width: 720px) 70vw, (max-width: 1540px) 61vw, 940px"');
     expect(imagePreload).toContain('fetchPriority="high"');
+  });
+
+  it('emits canonical thought pages and excludes the removed review compatibility page', async () => {
+    expect(thoughtsIndexHtml).toContain('<title>생각 · FORM &amp; THOUGHT</title>');
+    expect(thoughtsIndexHtml).toContain('href="/thoughts/why-i-read-in-the-ai-era/"');
+    expect(thoughtHtml).toContain('<title>AI 시대에, 나는 왜 책을 읽는가 · FORM &amp; THOUGHT</title>');
+    expect(thoughtHtml).toContain('<link rel="canonical" href="/thoughts/why-i-read-in-the-ai-era/"/>');
+    expect(thoughtHtml).toContain('AI 때문에 책을 읽기 시작했다.');
+    expect(thoughtHtml).toContain('<meta name="theme-color" content="#F2EFE9"/>');
+    await expect(access(join(
+      candidateRoot,
+      'build/client/reviews/the-life-you-can-save/index.html',
+    ))).rejects.toThrow();
   });
 
   it('preloads only AVIF candidates declared by the lead picture and present in static output', async () => {
