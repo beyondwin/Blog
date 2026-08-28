@@ -11,7 +11,10 @@ import {
   parseGeneratedMediaApprovalRegistry,
 } from '../packages/content/src/media/generated-media-approval-registry.mjs';
 import {
+  assertRegisteredReviewCoverApproval,
   canonicalReviewCoverDecisionPath,
+  parseReviewCoverApprovalRegistry,
+  REVIEW_COVER_APPROVAL_REGISTRY_PATH,
   reviewCoverRedistributionDecisionSchema,
 } from '../packages/content/src/media/review-cover-redistribution.mjs';
 
@@ -394,7 +397,29 @@ async function validateManifest(root, absolutePath, state) {
                   } else if (decision.edition.label !== item.edition) {
                     state.errors.add(`${label}: edition label does not match the approved redistribution decision`);
                   } else {
-                    redistributionApproved = true;
+                    try {
+                      assertRegisteredReviewCoverApproval(state.reviewCoverApprovalRegistry, {
+                        collection: 'reviews',
+                        recordId,
+                        mediaId: item.id,
+                        decisionDocument: receipt.decisionDocument,
+                        decisionChecksum: sha256(decisionBytes),
+                        source: {
+                          path: expectedAsset.path,
+                          checksum: expectedAsset.checksum,
+                          width: expectedAsset.width,
+                          height: expectedAsset.height,
+                          kind: expectedAsset.kind,
+                          isbn13: decision.edition.isbn13,
+                          edition: decision.edition.label,
+                          sourceUrl: item.sourceUrl,
+                          verifiedAt: item.verifiedAt,
+                        },
+                      });
+                      redistributionApproved = true;
+                    } catch (error) {
+                      state.errors.add(error instanceof Error ? error.message : String(error));
+                    }
                   }
                 }
               }
@@ -413,6 +438,64 @@ async function validateManifest(root, absolutePath, state) {
       }
     } else if (item.sourceUrl && item.rightsNote.trim() && !redistributionApproved) {
       state.warnings.add(`${assetRepoPath}: redistribution rights are not independently verified`);
+    }
+  }
+}
+
+async function loadReviewCoverApprovalRegistry(root, state) {
+  const registryPath = join(root, ...REVIEW_COVER_APPROVAL_REGISTRY_PATH.split('/'));
+  try {
+    if (await inspectRepositoryFile(root, registryPath, root) !== 'ok') {
+      state.errors.add(`${REVIEW_COVER_APPROVAL_REGISTRY_PATH}: review cover approval registry is missing`);
+      return { version: 1, approvals: [] };
+    }
+    return parseReviewCoverApprovalRegistry(
+      await readFile(registryPath, 'utf8'),
+      REVIEW_COVER_APPROVAL_REGISTRY_PATH,
+    );
+  } catch (error) {
+    state.errors.add(error instanceof Error ? error.message : String(error));
+    return { version: 1, approvals: [] };
+  }
+}
+
+async function validateReviewCoverApprovalInventory(root, state) {
+  const registry = state.reviewCoverApprovalRegistry;
+  const registeredPaths = new Set(registry.approvals.map((entry) => entry.decisionDocument));
+  const evidenceRoot = join(root, 'docs', 'notes', 'project', 'assets', 'review-cover-rights');
+  const evidenceTree = await scanTree(evidenceRoot);
+  for (const path of evidenceTree.symlinks) {
+    state.errors.add(`${repoPath(root, path)}: symbolic link is not allowed`);
+  }
+  for (const absolutePath of evidenceTree.files) {
+    const decisionPath = repoPath(root, absolutePath);
+    if (
+      /^docs\/notes\/project\/assets\/review-cover-rights\/[a-z0-9][a-z0-9-]*\/redistribution-decision\.yml$/.test(decisionPath)
+      && !registeredPaths.has(decisionPath)
+    ) {
+      state.errors.add(`unregistered review cover decision evidence: ${decisionPath}`);
+    }
+  }
+
+  for (const registered of registry.approvals) {
+    const decisionPath = resolve(root, registered.decisionDocument);
+    if (!isInside(root, decisionPath) || await inspectRepositoryFile(root, decisionPath, root) !== 'ok') {
+      state.errors.add(`${registered.decisionDocument}: registered review cover decision is missing`);
+      continue;
+    }
+    if (sha256(await readFile(decisionPath)) !== registered.decisionChecksum) {
+      state.errors.add(`${registered.decisionDocument}: registry decision checksum must match the committed decision`);
+    }
+    const manifestPath = resolve(root, dirname(registered.source.path), 'media.yml');
+    const manifest = state.manifests.get(manifestPath);
+    const item = manifest?.items.find((candidate) => candidate.id === registered.mediaId);
+    if (!item) {
+      state.errors.add(`${registered.collection}/${registered.recordId}/${registered.mediaId}: registered review cover source media is missing`);
+    } else if (
+      item.redistributionApproval?.decisionDocument !== registered.decisionDocument
+      || item.redistributionApproval?.decisionChecksum !== registered.decisionChecksum
+    ) {
+      state.errors.add(`${registered.collection}/${registered.recordId}/${registered.mediaId}: registered review cover receipt does not match the approval registry`);
     }
   }
 }
@@ -724,8 +807,11 @@ export async function validateMediaRepository(root, { strict = false } = {}) {
     declaredAssets: new Set(),
     errors: new Set(),
     manifests: new Map(),
+    reviewCoverApprovalRegistry: { version: 1, approvals: [] },
     warnings: new Set(),
   };
+
+  state.reviewCoverApprovalRegistry = await loadReviewCoverApprovalRegistry(repositoryRoot, state);
 
   const [contentTree, assetTree] = await Promise.all([
     scanTree(contentRoot),
@@ -758,6 +844,7 @@ export async function validateMediaRepository(root, { strict = false } = {}) {
     await validateManifest(repositoryRoot, manifestPath, state);
   }
 
+  await validateReviewCoverApprovalInventory(repositoryRoot, state);
   await validateGeneratedInventory(repositoryRoot, state);
 
   for (const [checksum, declarations] of state.checksumDeclarations) {

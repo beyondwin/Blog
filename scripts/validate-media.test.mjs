@@ -18,6 +18,7 @@ async function makeRepository() {
   roots.push(root);
   await put(root, 'src/data/memory.public.json', '{"thoughts":[]}\n');
   await put(root, 'packages/content/generated-media-approval-batches.json', '{"version":1,"batches":[]}\n');
+  await put(root, 'packages/content/review-cover-redistribution-approvals.json', '{"version":1,"approvals":[]}\n');
   return root;
 }
 
@@ -308,6 +309,58 @@ describe('repository media validation', () => {
 
     expect(result.errors).toEqual([]);
     expect(result.warnings).toEqual([]);
+  });
+
+  it('rejects an attacker-recomputed self-declared cover decision that is absent from the independent registry', async () => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { registryMutation: 'unregistered' });
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/not registered for independent approval/i),
+    ]));
+  });
+
+  it.each([
+    ['missing role', ['controller']],
+    ['duplicate role', ['controller', 'controller']],
+    ['extra role', ['controller', 'independent-rights-reviewer', 'publisher']],
+    ['spoofed role', ['controller', 'independent-rights-reviewer ']],
+  ])('rejects review-cover approval roles with %s', async (_name, approvalRoles) => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { approvalRoles });
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/approvedBy.*exactly.*controller.*independent-rights-reviewer/i),
+    ]));
+  });
+
+  it.each([
+    ['missing', 'missing', /approval registry is missing/i],
+    ['tampered shape', 'invalid', /approval registry.*expected array/i],
+    ['unregistered decision', 'unregistered', /not registered for independent approval/i],
+    ['tampered decision checksum', 'decision-checksum', /registry decision checksum.*match/i],
+    ['wrong source tuple', 'source-path', /registry source path.*match/i],
+    ['wrong source URL', 'source-url', /registry source sourceUrl.*match/i],
+  ])('rejects a %s review-cover approval registry', async (_name, registryMutation, error) => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { registryMutation });
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(error),
+    ]));
+  });
+
+  it('rejects unregistered extra review-cover decision evidence even when no media item claims it', async () => {
+    const root = await makeRepository();
+    const path = 'docs/notes/project/assets/review-cover-rights/rogue-review/redistribution-decision.yml';
+    await put(root, path, 'version: 1\n');
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toContain(
+      `unregistered review cover decision evidence: ${path}`,
+    );
   });
 
   it('accepts generated-media provenance only through a canonical approved decision inventory', async () => {

@@ -23,8 +23,10 @@ import {
 } from '../schemas';
 import { resolveSourceMedia } from '../source-records';
 import {
+  assertRegisteredReviewCoverApproval,
   canonicalReviewCoverDecisionPath,
   reviewCoverRedistributionDecisionSchema,
+  type ReviewCoverApprovalRegistry,
   type ReviewCoverRedistributionReceipt,
 } from './review-cover-redistribution.mjs';
 
@@ -159,6 +161,7 @@ async function loadReviewCoverRedistributionEvidence(
   mediaDirectory: string,
   item: SourceMediaManifest['items'][number],
   publicMedia: PublicMedia,
+  registry: ReviewCoverApprovalRegistry,
 ): Promise<ReviewCoverRedistributionEvidence | undefined> {
   const receipt = item.redistributionApproval as ReviewCoverRedistributionReceipt | undefined;
   if (!receipt) return undefined;
@@ -166,6 +169,7 @@ async function loadReviewCoverRedistributionEvidence(
   if (collection !== 'reviews' || item.kind !== 'book-cover') {
     throw new Error(`${label}: redistribution approval is only valid for review book-cover media`);
   }
+  if (!item.sourceUrl) throw new Error(`${label}: approved review book-cover requires an exact source URL`);
   const expectedDecisionPath = canonicalReviewCoverDecisionPath(recordId);
   if (receipt.decisionDocument !== expectedDecisionPath) {
     throw new Error(`${label}: redistribution decision document must use the canonical record path`);
@@ -205,6 +209,24 @@ async function loadReviewCoverRedistributionEvidence(
   if (decision.edition.label !== item.edition) {
     throw new Error(`${label}: edition label does not match the approved redistribution decision`);
   }
+  assertRegisteredReviewCoverApproval(registry, {
+    collection: 'reviews',
+    recordId,
+    mediaId: item.id,
+    decisionDocument: receipt.decisionDocument,
+    decisionChecksum,
+    source: {
+      path: expectedAsset.path,
+      checksum: expectedAsset.checksum,
+      width: expectedAsset.width,
+      height: expectedAsset.height,
+      kind: expectedAsset.kind,
+      isbn13: decision.edition.isbn13,
+      edition: decision.edition.label,
+      sourceUrl: item.sourceUrl,
+      verifiedAt: item.verifiedAt,
+    },
+  });
 
   return reviewCoverRedistributionEvidenceSchema.parse({
     state: 'approved',
@@ -268,6 +290,7 @@ export async function loadSourceMediaBuildInput(
   recordId: string,
   mediaId: string,
   role: ResponsiveMediaRole,
+  reviewCoverApprovalRegistry: ReviewCoverApprovalRegistry,
 ): Promise<SourceMediaBuildInput> {
   const publicMedia = await resolveSourceMedia(root, collection, recordId, mediaId);
   const mediaDirectory = `src/assets/content/${collection}/${recordId}`;
@@ -291,6 +314,7 @@ export async function loadSourceMediaBuildInput(
     mediaDirectory,
     item,
     publicMedia,
+    reviewCoverApprovalRegistry,
   );
   const approvedPublicMedia = {
     ...publicMedia,

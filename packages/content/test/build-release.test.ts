@@ -9,6 +9,7 @@ import {
   writeReleaseFixture,
   writeReviewCoverFixture,
   type ReviewCoverDecisionMutation,
+  type ReviewCoverRegistryMutation,
 } from './helpers/release-fixture';
 
 describe('immutable public release building', () => {
@@ -202,6 +203,66 @@ describe('immutable public release building', () => {
     const sourceRoot = join(sandbox, 'source');
     await writeReleaseFixture(sourceRoot);
     await writeReviewCoverFixture(sourceRoot, mutation);
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(error);
+  });
+
+  it('rejects an attacker-self-declared decision even after its receipt checksum is recomputed', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-self-authorized-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot, { registryMutation: 'unregistered' });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/not registered for independent approval/i);
+  });
+
+  it('rejects legacy arbitrary decidedBy, URL, and note fields even when their recomputed decision is registered', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-invented-evidence-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot, { legacySelfDeclaredEvidence: true });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/unrecognized key|approval/i);
+  });
+
+  it.each([
+    ['missing role', ['controller']],
+    ['duplicate role', ['controller', 'controller']],
+    ['extra role', ['controller', 'independent-rights-reviewer', 'publisher']],
+    ['spoofed role', ['controller', 'independent-rights-reviewer ']],
+  ])('rejects an independently registered review-cover decision with %s', async (_name, approvalRoles) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-role-contract-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot, { approvalRoles });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/approvedBy.*exactly.*controller.*independent-rights-reviewer/i);
+  });
+
+  it.each([
+    ['missing registry', 'missing' as ReviewCoverRegistryMutation, /approval registry is missing/i],
+    ['tampered registry shape', 'invalid' as ReviewCoverRegistryMutation, /approval registry.*expected array/i],
+    ['unregistered decision', 'unregistered' as ReviewCoverRegistryMutation, /not registered for independent approval/i],
+    ['tampered registered decision checksum', 'decision-checksum' as ReviewCoverRegistryMutation, /registry decision checksum.*match/i],
+    ['wrong registered source tuple', 'source-path' as ReviewCoverRegistryMutation, /registry source path.*match/i],
+    ['wrong registered source URL', 'source-url' as ReviewCoverRegistryMutation, /registry source sourceUrl.*match/i],
+  ])('rejects a review-cover decision with %s', async (_name, registryMutation, error) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-registry-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot, { registryMutation });
 
     await expect(buildPublicRelease({
       root: sourceRoot,

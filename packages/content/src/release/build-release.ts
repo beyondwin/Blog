@@ -19,6 +19,12 @@ import {
   type ReleaseMediaAsset,
   type SourceMediaBuildInput,
 } from '../media/build-responsive-media';
+import { readAllowlistedTextFile } from '../allowlisted-source-file';
+import {
+  parseReviewCoverApprovalRegistry,
+  REVIEW_COVER_APPROVAL_REGISTRY_PATH,
+  type ReviewCoverApprovalRegistry,
+} from '../media/review-cover-redistribution.mjs';
 import { validateGeneratedMediaInventory } from '../media/validate-generated-media-inventory';
 import { analyzeTrustedMdx, renderTrustedMdx } from '../mdx/render';
 import type { SourceRecord } from '../schemas';
@@ -286,7 +292,11 @@ function referencedMedia(
   return references;
 }
 
-async function loadRecordMedia(root: string, record: SourceRecord): Promise<SourceMediaBuildInput[]> {
+async function loadRecordMedia(
+  root: string,
+  record: SourceRecord,
+  reviewCoverApprovalRegistry: ReviewCoverApprovalRegistry,
+): Promise<SourceMediaBuildInput[]> {
   const inputs: SourceMediaBuildInput[] = [];
   const analysis = await analyzeTrustedMdx(record.body);
   for (const [mediaId, role] of [...referencedMedia(record, analysis.figureMediaIds)]
@@ -297,6 +307,7 @@ async function loadRecordMedia(root: string, record: SourceRecord): Promise<Sour
       record.id,
       mediaId,
       role,
+      reviewCoverApprovalRegistry,
     ));
   }
   return inputs;
@@ -306,8 +317,9 @@ async function loadReleaseSelectedMedia(
   root: string,
   record: SourceRecord,
   selectedMediaIds: readonly string[],
+  reviewCoverApprovalRegistry: ReviewCoverApprovalRegistry,
 ): Promise<SourceMediaBuildInput[]> {
-  const inputs = await loadRecordMedia(root, record);
+  const inputs = await loadRecordMedia(root, record, reviewCoverApprovalRegistry);
   const loaded = new Set(inputs.map((input) => input.publicMedia.id));
   for (const mediaId of [...selectedMediaIds].sort()) {
     if (loaded.has(mediaId)) continue;
@@ -317,6 +329,7 @@ async function loadReleaseSelectedMedia(
       record.id,
       mediaId,
       'intrinsic',
+      reviewCoverApprovalRegistry,
     ));
     loaded.add(mediaId);
   }
@@ -548,6 +561,19 @@ export async function buildPublicRelease(
   const releasesRoot = resolve(options.releasesRoot ?? join(root, 'build', 'public-releases'));
   await mkdir(releasesRoot, { recursive: true });
 
+  let reviewCoverApprovalRegistrySource: string;
+  try {
+    reviewCoverApprovalRegistrySource = await readAllowlistedTextFile(root, REVIEW_COVER_APPROVAL_REGISTRY_PATH);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(`${REVIEW_COVER_APPROVAL_REGISTRY_PATH}: review cover approval registry is missing`);
+    }
+    throw error;
+  }
+  const reviewCoverApprovalRegistry = parseReviewCoverApprovalRegistry(
+    reviewCoverApprovalRegistrySource,
+    REVIEW_COVER_APPROVAL_REGISTRY_PATH,
+  );
   const approvedGeneratedMedia = await validateGeneratedMediaInventory(root);
 
   const sourceRecords = (await loadSourceRecords(root))
@@ -562,7 +588,12 @@ export async function buildPublicRelease(
       .map((selection) => selection.mediaId);
     recordMedia.set(
       `${record.collection}/${record.id}`,
-      publicArtifactMedia(record, await loadReleaseSelectedMedia(root, record, selectedMediaIds)),
+      publicArtifactMedia(record, await loadReleaseSelectedMedia(
+        root,
+        record,
+        selectedMediaIds,
+        reviewCoverApprovalRegistry,
+      )),
     );
   }
 
