@@ -216,7 +216,7 @@ selection:
     measured_body_width_em: 21.63
     note: Preserve the approved inset and body size; do not shrink type or force overflow.
 production:
-  total_font_bytes: 247556
+  total_font_bytes: 247368
   font_display: swap
   preload: all three semantic WOFF2 roles, once each, anonymous CORS
   remote_font_requests: 0
@@ -224,22 +224,45 @@ production:
     - file: apps/site/public/fonts/form-thought-display-ko.woff2
       family: Noto Serif KR
       weight: 400
-      bytes: 164384
-      sha256: e947ea52090b52c69864c431eda9aa4c4dd6cba1877119af927929f812c17c17
+      bytes: 164212
+      sha256: 1a35ac02c8463935de05abf0653f416596367019946389a35ba5c6e4832d3030
+      metadata:
+        family: Noto Serif KR
+        subfamily: Regular
+        full_name: Noto Serif KR Regular
+        postscript_name: NotoSerifKR-Regular
+        os2_weight: 400
+        glyphs: 1360
       hold: null
     - file: apps/site/public/fonts/form-thought-wordmark.woff2
       family: Cormorant Garamond
       weight: 400
       bytes: 2408
       sha256: 96ba19a6327e841dcf9fefc29b4827c5cd6dc80c7469aeb80fa70eca7411609f
+      metadata:
+        family: Cormorant Garamond
+        subfamily: Regular
+        full_name: Cormorant Garamond Regular
+        postscript_name: CormorantGaramond-Regular
+        os2_weight: 400
+        glyphs: 13
       hold: null
     - file: apps/site/public/fonts/form-thought-ui-ko.woff2
       family: Noto Sans KR
       weight: 400
-      bytes: 80764
-      sha256: ca472485e483c69a74dfdaee95d79bdc3a998b6730f627808bc12935088b24d4
+      bytes: 80748
+      sha256: f79fa2b266ac19f28489051b0ab8a9510c1131943b09d09b47f1538b8f66d15c
+      metadata:
+        family: Noto Sans KR
+        subfamily: Regular
+        full_name: Noto Sans KR Regular
+        postscript_name: NotoSansKR-Regular
+        os2_weight: 400
+        glyphs: 1360
       hold: null
   wordmark_optical_calibration:
+    artifact: docs/notes/project/assets/form-and-thought-type-calibration/production-calibration.html
+    automated_test: apps/site/test/font-production-calibration.test.ts
     reference_ink_width_css_px: 92.49
     measurement: Canvas TextMetrics actualBoundingBoxLeft plus actualBoundingBoxRight with production WOFF2 loaded
     weight: 400
@@ -257,3 +280,17 @@ production:
     selected_font_size_css_px: 20
     selected_delta_percent: 0.5298
     tolerance_percent: 4
+    fresh_production_capture:
+      browser: HeadlessChrome 152.0.0.0
+      desktop:
+        viewport_css: [1440, 900]
+        wordmark_line_ink_widths_css_px: [69.58003, 92.98003]
+        title_lines: 2
+        body_paragraph_lines: [1, 1]
+        body_measure_em: 37.65
+      mobile:
+        viewport_css: [390, 844]
+        wordmark_line_ink_widths_css_px: [62.62204, 83.68204]
+        title_lines: 2
+        body_paragraph_lines: [2, 2]
+        body_measure_em: 21.63

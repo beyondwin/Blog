@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FORM &amp; THOUGHT production typography calibration</title>
+  <style>
+    @font-face { font-family: "FORM THOUGHT Display"; src: url("/fonts/form-thought-display-ko.woff2") format("woff2"); font-display: block; font-style: normal; font-weight: 400; }
+    @font-face { font-family: "FORM THOUGHT Wordmark"; src: url("/fonts/form-thought-wordmark.woff2") format("woff2"); font-display: block; font-style: normal; font-weight: 400; }
+    @font-face { font-family: "FORM THOUGHT UI"; src: url("/fonts/form-thought-ui-ko.woff2") format("woff2"); font-display: block; font-style: normal; font-weight: 400; }
+
+    :root { color-scheme: light; --canvas: #e8e1d8; --paper: #f2efe9; --ink: #11100f; --soft: #5e554e; --rule: #d3c9bf; --terracotta: #af6047; }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--canvas); }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-family: "FORM THOUGHT UI", sans-serif; }
+    main { width: min(1280px, calc(100% - 64px)); margin: 32px auto; padding: 48px; background: var(--paper); box-shadow: 0 18px 44px rgb(36 23 18 / 14%); }
+    header { padding-bottom: 24px; border-bottom: 1px solid var(--rule); }
+    header p { max-width: 60ch; margin: 10px 0 0; color: var(--soft); font-size: 14px; line-height: 1.55; }
+    .wordmark { display: inline-flex; flex-direction: column; width: max-content; font-family: "FORM THOUGHT Wordmark", serif; font-size: 20px; font-weight: 400; line-height: .9; letter-spacing: -.04em; }
+    .wordmark span { display: block; }
+    .specimen { display: grid; grid-template-columns: 330px minmax(0, 40em); gap: 48px; align-items: start; margin-top: 36px; }
+    .lane { margin: 0 0 18px; color: var(--terracotta); font-family: "FORM THOUGHT UI", sans-serif; font-size: 14px; line-height: 1.5; }
+    .representative-title { width: 330px; max-width: 100%; margin: 0; font-family: "FORM THOUGHT Display", serif; font-size: 48px; font-weight: 400; line-height: 1.16; letter-spacing: -.02em; word-break: keep-all; overflow-wrap: normal; }
+    .body-sample { width: 40em; max-width: 100%; font-family: "FORM THOUGHT Display", serif; font-size: 17px; font-weight: 400; line-height: 1.9; }
+    .body-sample p { margin: 0 0 12px; }
+    #result { margin: 30px 0 0; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--soft); font: 12px/1.55 ui-monospace, monospace; white-space: pre-wrap; }
+
+    @media (max-width: 767px) {
+      main { width: 100%; min-height: 100vh; margin: 0; padding: 24px 22px 32px; box-shadow: none; }
+      .wordmark { font-size: 18px; }
+      .specimen { grid-template-columns: 1fr; gap: 32px; margin-top: 32px; }
+      .representative-title { width: 100%; font-size: 38px; line-height: 1.2; }
+      .body-sample { width: 100%; max-width: none; font-size: 16px; line-height: 1.86; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="wordmark" data-wordmark><span>FORM &amp;</span><span>THOUGHT</span></div>
+      <p>Production semantic WOFF2, weight 400, live responsive sizes, and actual glyph ink bounds.</p>
+    </header>
+    <section class="specimen">
+      <div>
+        <p class="lane">아티클</p>
+        <h1 class="representative-title" data-title>AI 시대에, 나는 왜 책을 읽는가</h1>
+      </div>
+      <div class="body-sample" data-body>
+        <p>요즘 종종 질문을 받는다. 갑자기 왜 그렇게 책을 읽느냐고.</p>
+        <p>이유는 조금 이상하다. 나는 AI 때문에 책을 읽기 시작했다.</p>
+      </div>
+    </section>
+    <pre id="result" aria-live="polite"></pre>
+  </main>
+  <script>
+    const round = (value, places) => Number(value.toFixed(places));
+
+    function renderedLineCount(element) {
+      const range = document.createRange();
+      const tops = new Set();
+      for (const node of element.childNodes) {
+        if (node.nodeType !== Node.TEXT_NODE) continue;
+        for (let index = 0; index < node.textContent.length; index += 1) {
+          if (/\s/u.test(node.textContent[index])) continue;
+          range.setStart(node, index);
+          range.setEnd(node, index + 1);
+          for (const rect of range.getClientRects()) tops.add(round(rect.top, 2));
+        }
+      }
+      return tops.size;
+    }
+
+    function wordmarkInkWidths(element) {
+      const style = getComputedStyle(element);
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      context.letterSpacing = style.letterSpacing;
+      return [...element.querySelectorAll('span')].map((line) => {
+        const metrics = context.measureText(line.textContent);
+        return round(metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight, 5);
+      });
+    }
+
+    async function calibrate() {
+      await Promise.all([
+        document.fonts.load('400 48px "FORM THOUGHT Display"', 'AI 시대에, 나는 왜 책을 읽는가'),
+        document.fonts.load('400 20px "FORM THOUGHT Wordmark"', 'FORM & THOUGHT'),
+        document.fonts.load('400 16px "FORM THOUGHT UI"', '아티클'),
+      ]);
+      await document.fonts.ready;
+
+      const wordmark = document.querySelector('[data-wordmark]');
+      const title = document.querySelector('[data-title]');
+      const body = document.querySelector('[data-body]');
+      const wordmarkStyle = getComputedStyle(wordmark);
+      const bodyStyle = getComputedStyle(body);
+      const wordmarkLineInkWidthsPx = wordmarkInkWidths(wordmark);
+      const result = {
+        viewport: [innerWidth, innerHeight],
+        weight: Number(wordmarkStyle.fontWeight),
+        fontSizePx: parseFloat(wordmarkStyle.fontSize),
+        letterSpacingEm: round(parseFloat(wordmarkStyle.letterSpacing) / parseFloat(wordmarkStyle.fontSize), 2),
+        wordmarkLineInkWidthsPx,
+        wordmarkMaxInkWidthPx: Math.max(...wordmarkLineInkWidthsPx),
+        titleLineCount: renderedLineCount(title),
+        bodyLineCounts: [...body.querySelectorAll('p')].map(renderedLineCount),
+        bodyMeasureEm: round(body.getBoundingClientRect().width / parseFloat(bodyStyle.fontSize), 2),
+      };
+      window.__ftProductionCalibration = result;
+      document.querySelector('#result').textContent = JSON.stringify(result, null, 2);
+      document.documentElement.dataset.calibrationReady = 'true';
+    }
+
+    calibrate();
+  </script>
+</body>
+</html>

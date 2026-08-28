@@ -6,6 +6,7 @@ Status: selected and integrated. The delegated controller selected stack 2 after
 
 - `type-calibration.html`: the exact typography sheet and runtime measurement script.
 - `type-calibration.png`: combined desktop/mobile evidence captured from 1440×900 and 390×844 CSS viewports at DPR 1.
+- `production-calibration.html`: deterministic post-selection specimen that loads only the semantic production WOFF2 files and exposes browser-measured ink/wrap data.
 - `../form-and-thought-reference/calibration.yml`: reference crops, bitmap-to-CSS calibration, source provenance, checksums, byte counts, measurements, holds, and recommendation.
 
 The HTML loads calibration-only files from ignored `output/form-and-thought-type-calibration/fonts/`. Phase A did not copy any candidate into the public app. After the selection gate, Phase B added only stack 2 under the semantic production filenames documented in `apps/site/public/fonts/LICENSES.md`.
@@ -78,13 +79,15 @@ The delegated controller selected stack 2: Noto Serif KR 400 + Cormorant Garamon
 
 | semantic file | bytes | SHA-256 |
 | --- | ---: | --- |
-| `form-thought-display-ko.woff2` | 164,384 | `e947ea52090b52c69864c431eda9aa4c4dd6cba1877119af927929f812c17c17` |
+| `form-thought-display-ko.woff2` | 164,212 | `1a35ac02c8463935de05abf0653f416596367019946389a35ba5c6e4832d3030` |
 | `form-thought-wordmark.woff2` | 2,408 | `96ba19a6327e841dcf9fefc29b4827c5cd6dc80c7469aeb80fa70eca7411609f` |
-| `form-thought-ui-ko.woff2` | 80,764 | `ca472485e483c69a74dfdaee95d79bdc3a998b6730f627808bc12935088b24d4` |
+| `form-thought-ui-ko.woff2` | 80,748 | `f79fa2b266ac19f28489051b0ab8a9510c1131943b09d09b47f1538b8f66d15c` |
 
-The three files total 247,556 bytes. They use `font-display: swap`, are preloaded once as anonymous `font/woff2`, and the public application makes no remote font request.
+The three files total 247,368 bytes. They use `font-display: swap`, are preloaded once as anonymous `font/woff2`, and the public application makes no remote font request. The Korean binaries report Regular family/full/PostScript names, OS/2 weight 400, and 1,360 glyphs each; the wordmark reports Regular/400 and 13 glyphs. A compressed-WOFF2 metadata test enforces those values.
 
-The reference's calibrated wordmark ink width is 92.49px. A browser canvas measurement of the production Cormorant file used the actual left/right ink bounds rather than DOM advance width. At weight 400 and `-.04em` tracking, the measured desktop candidates were 88.33px at 19px, 92.98px at 20px, and 97.63px at 21px. The selected 20px value is +0.53% from the reference and therefore inside the controller's ±4% tolerance. The mobile role uses 18px.
+The reference's calibrated wordmark ink width is 92.49px. The committed production specimen uses the semantic Cormorant file and actual left/right Canvas ink bounds rather than DOM advance width. At weight 400, 20px, and `-.04em` tracking, fresh Chromium measurements were 69.58003px for `FORM &` and 92.98003px for `THOUGHT`. The maximum is +0.5298% from the reference and inside the controller's ±4% tolerance. At the responsive 18px role, the lines measured 62.62204px and 83.68204px.
+
+The same fresh run recorded a two-line Korean title at both 1440×900 and 390×844. The two representative body paragraphs render as 1/1 lines on desktop and 2/2 on mobile. Desktop body measure is 37.65em in the production specimen grid; mobile remains the ruled 21.63em. `apps/site/test/font-production-calibration.test.ts` starts an isolated local server, launches the repository-pinned Playwright Chromium, and asserts the optical tolerance and exact responsive line counts.
 
 The controller also resolved the 390px measure tension in favor of the original layout constraints: retain 22px side insets and 16px body text. The resulting measured body width remains 21.63em; the implementation does not shrink the text or introduce overflow to manufacture a larger character count.
 
@@ -95,3 +98,4 @@ The controller also resolved the 390px measure tension in favor of the original 
 3. Serve the repository root on an unused local port; the capture used `python3 -m http.server 43717 --bind 127.0.0.1`.
 4. Open `type-calibration.html` in Chromium 152, resize to 1440×900 and 390×844, wait for `document.fonts.ready`, and capture the `main` element at CSS scale.
 5. Place the 1280px desktop sheet and 390px mobile sheet side by side with a 24px `#E8E1D8` gutter. The expected combined PNG checksum is `069bf580dac6a4b69f4f1d6797e7fc371accb2ca51f087bd4705ebc70a8eb2b2`.
+6. Run `npm exec vitest run apps/site/test/font-production-calibration.test.ts` to serve `production-calibration.html` in isolation and reproduce the selected production measurements in the pinned Chromium.

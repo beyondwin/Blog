@@ -66,6 +66,24 @@ describe('route-scoped critical CSS source accounting', () => {
     }
   });
 
+  it('keeps a two-color focus indicator perceivable on every approved surface', async () => {
+    const surfaces = ['#F2EFE9', '#AF6047', '#11100F', '#241712'];
+    const focusLight = '#FFFFFF';
+    const focusDark = '#11100F';
+
+    for (const surface of surfaces) {
+      expect(Math.max(
+        contrastRatio(focusLight, surface),
+        contrastRatio(focusDark, surface),
+      )).toBeGreaterThanOrEqual(3);
+    }
+    expect(contrastRatio(focusLight, focusDark)).toBeGreaterThanOrEqual(3);
+
+    const shell = await readFile(join(candidateRoot, 'src/ui/styles/shell.css'), 'utf8');
+    expect(shell).toContain('outline: 2px solid var(--ft-on-terracotta);');
+    expect(shell).toContain('box-shadow: 0 0 0 2px var(--ft-ink);');
+  });
+
   it('accounts for the three semantic WOFF2 subsets and their critical preloads', async () => {
     const fontPaths = [
       join(candidateRoot, 'public/fonts/form-thought-display-ko.woff2'),
@@ -103,7 +121,7 @@ describe('route-scoped critical CSS source accounting', () => {
     expect(shell).toContain('box-shadow: 0 18px 44px rgb(36 23 18 / 14%);');
     expect(shell).toContain('border-radius: 8px;');
     expect(shell).toContain('.site-shell[data-surface-mode] { background: var(--ft-paper); }');
-    expect(shell).toContain('outline: 2px solid var(--ft-terracotta-dark);');
+    expect(shell).toContain('outline: 2px solid var(--ft-on-terracotta);');
     expect(shell).toMatch(/\.site-brand \{[^}]*font-family: var\(--ft-font-wordmark\);[^}]*font-size: 20px;[^}]*font-weight: 400;[^}]*letter-spacing: -\.04em;/u);
   });
 
