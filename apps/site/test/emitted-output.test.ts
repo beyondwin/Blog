@@ -8,11 +8,24 @@ const candidateRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(candidateRoot, '../..');
 const execFileAsync = promisify(execFile);
 let homeHtml = '';
+let articlesIndexHtml = '';
 let articleHtml = '';
+let reviewsIndexHtml = '';
 let reviewHtml = '';
 let memoryHtml = '';
 let thoughtsIndexHtml = '';
 let thoughtHtml = '';
+let searchHtml = '';
+
+const ARTICLE_IDS = [
+  'agents-md-vs-agent-skills-evidence', 'ai-design-references', 'andrej-karpathy-skills-analysis',
+  'aws-static-frontend-serverless-bff', 'codex-ui-mockup-workflow', 'context-refinement-system-design',
+  'graphify-code-knowledge-graph-deep-dive', 'hermes-agent-persistent-worker-runtime',
+  'karpathy-delete-everything-keep-graph', 'lazycodex-agent-harness-analysis', 'oh-my-pi-deep-review',
+  'open-design-repo-analysis', 'pgvector-hybrid-search', 'ponytail-agent-minimalism-analysis',
+  'postgresql-bm25-pg-search', 'shared-ai-conversation-evidence-boundaries',
+  'uncle-bob-ai-code-review-evidence',
+] as const;
 
 function attribute(tag: string, name: string): string | undefined {
   return tag.match(new RegExp(`\\b${name}="([^"]*)"`, 'u'))?.[1];
@@ -36,12 +49,17 @@ beforeAll(async () => {
     cwd: repositoryRoot,
     env: { ...process.env, NODE_ENV: 'production' },
   });
-  [homeHtml, articleHtml, reviewHtml, memoryHtml, thoughtsIndexHtml, thoughtHtml] = await Promise.all([
+  [
+    homeHtml, articlesIndexHtml, articleHtml, reviewsIndexHtml, reviewHtml,
+    memoryHtml, thoughtsIndexHtml, thoughtHtml, searchHtml,
+  ] = await Promise.all([
     readFile(join(candidateRoot, 'build/client/index.html'), 'utf8'),
+    readFile(join(candidateRoot, 'build/client/articles/index.html'), 'utf8'),
     readFile(join(
       candidateRoot,
       'build/client/articles/graphify-code-knowledge-graph-deep-dive/index.html',
     ), 'utf8'),
+    readFile(join(candidateRoot, 'build/client/reviews/index.html'), 'utf8'),
     readFile(join(candidateRoot, 'build/client/reviews/black-swan/index.html'), 'utf8'),
     readFile(join(
       candidateRoot,
@@ -52,6 +70,7 @@ beforeAll(async () => {
       candidateRoot,
       'build/client/thoughts/why-i-read-in-the-ai-era/index.html',
     ), 'utf8'),
+    readFile(join(candidateRoot, 'build/client/search/index.html'), 'utf8'),
   ]);
 }, 120_000);
 
@@ -70,8 +89,18 @@ describe('React Router emitted critical output', () => {
   });
 
   it('emits one route-scoped critical style while preserving eager Framework bootstrap and shared rules', () => {
-    const routeHtml = [homeHtml, articleHtml, reviewHtml, memoryHtml, thoughtsIndexHtml, thoughtHtml];
-    const routeCss = routeHtml.map((html) => {
+    const routeHtml = {
+      home: homeHtml,
+      articlesIndex: articlesIndexHtml,
+      articleDetail: articleHtml,
+      reviewsIndex: reviewsIndexHtml,
+      reviewDetail: reviewHtml,
+      memoryDetail: memoryHtml,
+      thoughtsIndex: thoughtsIndexHtml,
+      thoughtDetail: thoughtHtml,
+      search: searchHtml,
+    };
+    const routeCss = Object.fromEntries(Object.entries(routeHtml).map(([route, html]) => {
       const styles = [...html.matchAll(
         /<style data-critical-css="true">([\s\S]*?)<\/style>/gu,
       )];
@@ -92,36 +121,50 @@ describe('React Router emitted critical output', () => {
       expect(styles[0]?.[1]).toContain('.site-header__inner');
       expect(styles[0]?.[1]).toContain(':where(a,button,input,select,textarea):focus-visible');
       expect(styles[0]?.[1]).toContain('@media (prefers-reduced-motion:reduce)');
-      return styles[0]?.[1] ?? '';
-    });
+      return [route, styles[0]?.[1] ?? ''];
+    })) as Record<keyof typeof routeHtml, string>;
 
-    expect(routeCss[0]).not.toContain('.reading-sheet');
-    expect(routeCss[0]).not.toContain('.reading-threshold');
-    expect(routeCss[0]).not.toContain('.public-scene');
-    expect(routeCss[0]).toContain('.form-home__hero');
-    expect(routeCss[0]).toContain('.visually-hidden');
-    expect(routeCss[1]).not.toContain('.storyworld-page');
-    expect(routeCss[1]).not.toContain('.public-scene');
-    expect(routeCss[1]).not.toContain('.reading-sheet');
-    expect(routeCss[1]).not.toContain('.reading-threshold');
-    expect(routeCss[1]).toContain('.article-toc');
-    for (const css of routeCss.slice(1)) expect(css).toContain('.visually-hidden');
-    expect(routeCss[1]).not.toContain('.review-reading-page .content-figure');
-    expect(routeCss[1]).not.toContain('.memory-thought');
-    expect(routeCss[2]).toContain('.reading-threshold');
-    expect(routeCss[2]).toContain('.review-reading-page .content-figure');
-    expect(routeCss[2]).not.toContain('.memory-thought');
-    expect(routeCss[3]).toContain('.memory-thought');
-    expect(routeCss[3]).toContain('.reading-threshold');
-    expect(routeCss[3]).toContain('.context-return');
-    expect(routeCss[4]).not.toContain('.memory-thought');
-    expect(routeCss[5]).not.toContain('.memory-thought');
-    expect(routeCss[0].length).toBeLessThan(10_000);
-    for (const detailCss of routeCss.slice(1)) expect(detailCss.length).toBeLessThan(12_000);
+    expect(routeCss.home).toContain('.form-home__hero');
+    expect(routeCss.home).not.toMatch(/\.reading-sheet|\.reading-threshold|\.public-scene/u);
+    expect(routeCss.articlesIndex).toContain('.article-topic-filter');
+    expect(routeCss.articlesIndex).not.toContain('.reading-sheet');
+    expect(routeCss.articleDetail).toContain('.article-toc');
+    expect(routeCss.articleDetail).not.toMatch(/\.reading-sheet|\.reading-threshold|\.public-scene/u);
+    expect(routeCss.reviewsIndex).toContain('.article-topic-filter');
+    expect(routeCss.reviewsIndex).toContain('.book-index');
+    expect(routeCss.reviewsIndex).toContain('.reading-sheet');
+    expect(routeCss.reviewDetail).toContain('.article-colophon');
+    expect(routeCss.reviewDetail).toContain('.reading-threshold');
+    expect(routeCss.reviewDetail).toContain('.review-reading-page .content-figure');
+    expect(routeCss.thoughtsIndex).toContain('.article-topic-filter');
+    expect(routeCss.thoughtsIndex).toContain('.reading-sheet');
+    expect(routeCss.thoughtDetail).toContain('.article-colophon');
+    expect(routeCss.thoughtDetail).toContain('.reading-threshold');
+    expect(routeCss.memoryDetail).toContain('.memory-thought');
+    expect(routeCss.memoryDetail).toContain('.reading-threshold');
+    expect(routeCss.memoryDetail).toContain('.context-return');
+    expect(routeCss.search).toContain('.search-page__form');
+    expect(routeCss.search).not.toMatch(/\.article-topic-filter|\.article-colophon/u);
+    for (const css of Object.values(routeCss)) expect(css).toContain('.visually-hidden');
+    expect(routeCss.home.length).toBeLessThan(10_000);
+    expect(routeCss.articleDetail.length).toBeLessThan(12_000);
+    for (const css of Object.values(routeCss)) expect(css.length).toBeLessThan(18_000);
     const imagePreload = homeHtml.match(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u)?.[0];
     expect(imagePreload).toContain('href="/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero-1536w.avif"');
     expect(imagePreload).toContain('imageSizes="(max-width: 767px) 100vw, (max-width: 1179px) 54vw, 710px"');
     expect(imagePreload).toContain('fetchPriority="high"');
+  });
+
+  it('keeps the no-JS article document as a complete ledger with six canonical filter anchors', () => {
+    expect(articlesIndexHtml.match(/class="editorial-list-row(?:\s|"|--)/gu)).toHaveLength(17);
+    for (const id of ARTICLE_IDS) {
+      expect(articlesIndexHtml).toContain(`href="/articles/${id}/"`);
+    }
+    expect(articlesIndexHtml).toContain('href="/articles/" aria-current="page"');
+    for (const topic of ['에이전트', '디자인', '데이터', '아키텍처', '검증']) {
+      expect(articlesIndexHtml).toContain(`href="/articles/?topic=${encodeURIComponent(topic)}"`);
+    }
+    expect(articlesIndexHtml).not.toMatch(/article-index__ledger[^>]*(?:hidden|display:\s*none)/u);
   });
 
   it('emits canonical thought pages and excludes the removed review compatibility page', async () => {

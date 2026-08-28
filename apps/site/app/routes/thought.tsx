@@ -11,10 +11,11 @@ import {
 } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [routeReadingCss, readingCss] = import.meta.env.SSR ? await Promise.all([
+const [detailCss, routeReadingCss, readingCss] = import.meta.env.SSR ? await Promise.all([
+  import('../../src/ui/styles/route-detail.css?inline').then((module) => module.default),
   import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
   import('../../src/ui/styles/reading.css?inline').then((module) => module.default),
-]) : ['', ''];
+]) : ['', '', ''];
 
 type ThoughtRecord = Extract<PublicRecord, { collection: 'thoughts' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
@@ -24,7 +25,7 @@ export interface ThoughtData {
   featuredAsset?: ReleaseAsset;
 }
 
-export const handle: RouteCriticalCssHandle = { criticalCss: `${routeReadingCss}${readingCss}` };
+export const handle: RouteCriticalCssHandle = { criticalCss: `${detailCss}${routeReadingCss}${readingCss}` };
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ThoughtData> {
   const release = await loadVerifiedRelease();

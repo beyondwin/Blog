@@ -99,56 +99,39 @@ describe('React Router current-behavior static route contract', () => {
     const root = await candidateModule<any>('app/root.tsx');
     const home = await candidateModule<any>('app/routes/home.tsx');
     const rootSource = await readFile(join(candidateRoot, 'app/root.tsx'), 'utf8');
-    const [homeSource, articleSource, reviewSource, memorySource] = await Promise.all([
+    const [
+      homeSource, articleSource, articlesIndexSource, reviewSource, reviewsIndexSource,
+      memorySource, searchSource, thoughtSource, thoughtsIndexSource,
+    ] = await Promise.all([
       readFile(join(candidateRoot, 'app/routes/home.tsx'), 'utf8'),
       readFile(join(candidateRoot, 'app/routes/article.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/articles-index.tsx'), 'utf8'),
       readFile(join(candidateRoot, 'app/routes/review.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/reviews-index.tsx'), 'utf8'),
       readFile(join(candidateRoot, 'app/routes/memory.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/search.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/thought.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/thoughts-index.tsx'), 'utf8'),
     ]);
-    const [tokens, shell, homeCss, indexCss, detailCss, reading, readingSurface, reviewCss, memoryCss] = await Promise.all([
-      readFile(join(candidateRoot, 'src/ui/styles/tokens.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/shell.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-home.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-index.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-detail.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-reading.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/reading.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-review.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-memory.css'), 'utf8'),
-    ]);
-    const cssSources = {
-      tokens,
-      shell,
-      home: homeCss,
-      index: indexCss,
-      detail: detailCss,
-      secondary: reading,
-      readingSurface,
-      review: reviewCss,
-      memory: memoryCss,
-      search: reading,
-    };
 
     expect(rootSource).toContain("import('../src/ui/styles/tokens.css?inline')");
     expect(rootSource).toContain("import('../src/ui/styles/shell.css?inline')");
     expect(rootSource).toContain('import.meta.env.SSR');
+    expect(rootSource).not.toContain('criticalCssForPath');
     expect(homeSource).toContain("import('../../src/ui/styles/route-home.css?inline')");
     expect(homeSource).not.toContain("route-scene.css?inline");
+    expect(articlesIndexSource).toContain("import('../../src/ui/styles/route-index.css?inline')");
     expect(articleSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
     expect(articleSource).not.toMatch(/route-article\.css\?inline|reading\.css\?inline/u);
+    expect(reviewsIndexSource).toContain("import('../../src/ui/styles/route-index.css?inline')");
     expect(reviewSource).toContain("import('../../src/ui/styles/route-review.css?inline')");
     expect(reviewSource).toContain("import('../../src/ui/styles/reading.css?inline')");
+    expect(reviewSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
+    expect(thoughtsIndexSource).toContain("import('../../src/ui/styles/route-index.css?inline')");
+    expect(thoughtSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
     expect(memorySource).toContain("import('../../src/ui/styles/route-memory.css?inline')");
-    expect(root.criticalCssForPath('/', cssSources)).toContain('.form-home__hero');
-    expect(root.criticalCssForPath('/', cssSources)).not.toContain('.public-scene');
-    expect(root.criticalCssForPath('/articles/', cssSources)).toContain('.article-topic-filter');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.article-colophon');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.reading-threshold');
-    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).toContain('.memory-thought');
-    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources))
-      .toContain('.memory-thought .reading-threshold__identity h1 { text-wrap: wrap; }');
-    expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).toContain('.memory-thought');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.public-scene');
+    expect(searchSource).toContain("import('../../src/ui/styles/route-collections.css?inline')");
+    expect(searchSource).not.toMatch(/route-(?:index|detail|search)\.css\?inline/u);
     expect(root.resolveCriticalCssForRender('route', null, 'tokens', 'shell'))
       .toBe('tokensshellroute');
     expect(root.resolveCriticalCssForRender('', 'server-rendered', '', ''))

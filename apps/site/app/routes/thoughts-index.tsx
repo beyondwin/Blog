@@ -3,12 +3,13 @@ import { ThoughtIndexPage } from '../../src/ui/thoughts/ThoughtIndexPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
 import { loadVerifiedRelease, recordsForCollection } from '../release.server';
 
-const [routeReadingCss, readingCss] = import.meta.env.SSR ? await Promise.all([
+const [indexCss, routeReadingCss, readingCss] = import.meta.env.SSR ? await Promise.all([
+  import('../../src/ui/styles/route-index.css?inline').then((module) => module.default),
   import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
   import('../../src/ui/styles/reading.css?inline').then((module) => module.default),
-]) : ['', ''];
+]) : ['', '', ''];
 
-export const handle: RouteCriticalCssHandle = { criticalCss: `${routeReadingCss}${readingCss}` };
+export const handle: RouteCriticalCssHandle = { criticalCss: `${indexCss}${routeReadingCss}${readingCss}` };
 
 export async function loader() {
   const release = await loadVerifiedRelease();

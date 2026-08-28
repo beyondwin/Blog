@@ -1,7 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { criticalCssForPath } from '../app/root';
 
 const candidateRoot = resolve(import.meta.dirname, '..');
 
@@ -125,45 +124,25 @@ describe('route-scoped critical CSS source accounting', () => {
     expect(shell).toMatch(/\.site-brand \{[^}]*font-family: var\(--ft-font-wordmark\);[^}]*font-size: 20px;[^}]*font-weight: 400;[^}]*letter-spacing: -\.04em;/u);
   });
 
-  it('emits shared tokens and shell exactly once with only the matching route styles', async () => {
-    const [tokens, shell, homeCss, indexCss, detailCss, legacyReading, legacyReadingSurface, legacyReview, legacyMemory] = await Promise.all([
-      readFile(join(candidateRoot, 'src/ui/styles/tokens.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/shell.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-home.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-index.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-detail.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-reading.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/reading.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-review.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-memory.css'), 'utf8'),
+  it('binds the planned index and detail CSS to the actual primary route handles', async () => {
+    const [root, reviewIndex, thoughtIndex, reviewDetail, thoughtDetail, search] = await Promise.all([
+      readFile(join(candidateRoot, 'app/root.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/reviews-index.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/thoughts-index.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/review.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/thought.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'app/routes/search.tsx'), 'utf8'),
     ]);
-    const sources = {
-      tokens, shell, home: homeCss, index: indexCss, detail: detailCss,
-      secondary: legacyReading, readingSurface: legacyReadingSurface,
-      review: legacyReview, memory: legacyMemory, search: legacyReading,
-    };
-    const home = criticalCssForPath('/', sources);
-    const articleDetail = criticalCssForPath('/articles/example/', sources);
-    const reviewDetail = criticalCssForPath('/reviews/example/', sources);
-    const memoryDetail = criticalCssForPath('/memory/example/', sources);
-
-    for (const css of [home, articleDetail, reviewDetail, memoryDetail]) {
-      expect(css.match(/--ft-canvas: #E8E1D8;/gu)).toHaveLength(1);
-      expect(css).toContain('.site-header__inner');
-      expect(Buffer.byteLength(css)).toBeGreaterThan(0);
-    }
-    expect(home).toContain('.form-home__hero');
-    expect(home).not.toContain('.public-scene');
-    expect(articleDetail).toContain('.article-colophon');
-    expect(articleDetail).not.toContain('.reading-threshold');
-    expect(reviewDetail).toContain('.article-colophon');
-    expect(reviewDetail).not.toContain('.reading-threshold');
-    expect(memoryDetail).toContain('.memory-thought');
-    expect(memoryDetail).toContain('.reading-threshold');
-    expect(memoryDetail).toContain('.context-return');
-    expect(criticalCssForPath('/articles/', sources)).toContain('.article-topic-filter');
-    expect(criticalCssForPath('/articles/', sources)).not.toContain('.public-scene');
-    expect(criticalCssForPath('/reviews/', sources)).toContain('.article-topic-filter');
-    expect(criticalCssForPath('/reviews/', sources)).not.toContain('.public-scene');
+    expect(root).not.toContain('criticalCssForPath');
+    expect(reviewIndex).toContain("import('../../src/ui/styles/route-index.css?inline')");
+    expect(reviewIndex).toContain('criticalCss: `${indexCss}${readingCss}${reviewCss}`');
+    expect(thoughtIndex).toContain("import('../../src/ui/styles/route-index.css?inline')");
+    expect(thoughtIndex).toContain('criticalCss: `${indexCss}${routeReadingCss}${readingCss}`');
+    expect(reviewDetail).toContain("import('../../src/ui/styles/route-detail.css?inline')");
+    expect(reviewDetail).toContain('criticalCss: `${detailCss}${routeReadingCss}${readingCss}${reviewCss}`');
+    expect(thoughtDetail).toContain("import('../../src/ui/styles/route-detail.css?inline')");
+    expect(thoughtDetail).toContain('criticalCss: `${detailCss}${routeReadingCss}${readingCss}`');
+    expect(search).toContain('criticalCss: `${readingCss}${collectionsCss}`');
+    expect(search).not.toMatch(/route-(?:index|detail|search)\.css\?inline/u);
   });
 });
