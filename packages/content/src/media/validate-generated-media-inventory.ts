@@ -44,6 +44,12 @@ interface ApprovedEntry {
   decisionChecksum: string;
 }
 
+export interface ApprovedGeneratedMediaSelection {
+  collection: SourceEntry['collection'];
+  recordId: string;
+  mediaId: string;
+}
+
 function checksum(bytes: Buffer): string {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
@@ -231,7 +237,7 @@ async function assertSourceFile(root: string, approved: ApprovedEntry): Promise<
   }
 }
 
-export async function validateGeneratedMediaInventory(root: string): Promise<void> {
+export async function validateGeneratedMediaInventory(root: string): Promise<ApprovedGeneratedMediaSelection[]> {
   const registry = await loadRequiredRegistry(root);
   const approved = await discoverApproved(root, registry);
   const sources = await discoverSourceEntries(root);
@@ -285,4 +291,10 @@ export async function validateGeneratedMediaInventory(root: string): Promise<voi
     }
     await assertSourceFile(root, entry);
   }
+  return [...expectedByIdentity.values()]
+    .map(({ asset }) => ({ collection: asset.collection, recordId: asset.recordId, mediaId: asset.mediaId }))
+    .sort((left, right) => (
+      `${left.collection}/${left.recordId}/${left.mediaId}`
+        .localeCompare(`${right.collection}/${right.recordId}/${right.mediaId}`)
+    ));
 }

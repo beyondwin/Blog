@@ -302,6 +302,27 @@ async function loadRecordMedia(root: string, record: SourceRecord): Promise<Sour
   return inputs;
 }
 
+async function loadReleaseSelectedMedia(
+  root: string,
+  record: SourceRecord,
+  selectedMediaIds: readonly string[],
+): Promise<SourceMediaBuildInput[]> {
+  const inputs = await loadRecordMedia(root, record);
+  const loaded = new Set(inputs.map((input) => input.publicMedia.id));
+  for (const mediaId of [...selectedMediaIds].sort()) {
+    if (loaded.has(mediaId)) continue;
+    inputs.push(await loadSourceMediaBuildInput(
+      root,
+      record.collection as SourceCollection,
+      record.id,
+      mediaId,
+      'intrinsic',
+    ));
+    loaded.add(mediaId);
+  }
+  return inputs;
+}
+
 function optional<T extends object, K extends string, V>(key: K, value: V | undefined): T | Record<K, V> {
   return value === undefined ? {} as T : { [key]: value } as Record<K, V>;
 }
@@ -496,7 +517,7 @@ export async function buildPublicRelease(
   const releasesRoot = resolve(options.releasesRoot ?? join(root, 'build', 'public-releases'));
   await mkdir(releasesRoot, { recursive: true });
 
-  await validateGeneratedMediaInventory(root);
+  const approvedGeneratedMedia = await validateGeneratedMediaInventory(root);
 
   const sourceRecords = (await loadSourceRecords(root))
     .filter(isPublicRecord)
@@ -505,7 +526,13 @@ export async function buildPublicRelease(
     .sort((left, right) => left.id.localeCompare(right.id));
   const recordMedia = new Map<string, SourceMediaBuildInput[]>();
   for (const record of sourceRecords) {
-    recordMedia.set(`${record.collection}/${record.id}`, await loadRecordMedia(root, record));
+    const selectedMediaIds = approvedGeneratedMedia
+      .filter((selection) => selection.collection === record.collection && selection.recordId === record.id)
+      .map((selection) => selection.mediaId);
+    recordMedia.set(
+      `${record.collection}/${record.id}`,
+      await loadReleaseSelectedMedia(root, record, selectedMediaIds),
+    );
   }
 
   const hashInput = {

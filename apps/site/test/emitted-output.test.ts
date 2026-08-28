@@ -76,7 +76,9 @@ describe('React Router emitted critical output', () => {
         /<style data-critical-css="true">([\s\S]*?)<\/style>/gu,
       )];
       expect(styles).toHaveLength(1);
-      expect(html).not.toContain('rel="stylesheet"');
+      const stylesheets = [...html.matchAll(/<link\b(?=[^>]*\brel="stylesheet")[^>]*>/gu)];
+      expect(stylesheets).toHaveLength(1);
+      expect(stylesheets[0]?.[0]).toMatch(/href="\/assets\/SiteShell-[^"]+\.css"/u);
       expect(html).not.toContain('rel="modulepreload"');
       expect(html).not.toContain('application/react-router-deferred');
       expect(html).not.toContain('requestAnimationFrame(() => setTimeout');
@@ -88,23 +90,22 @@ describe('React Router emitted critical output', () => {
       expect(modules[0]?.[1]).toContain('window.__reactRouterRouteModules');
       expect(modules[0]?.[1]).toMatch(/import\("\/assets\/entry\.client-[^"]+\.js"\);/u);
       expect(styles[0]?.[1]).toContain('.site-header__inner');
-      expect(styles[0]?.[1]).toContain(':where(a,button):focus-visible');
+      expect(styles[0]?.[1]).toContain(':where(a,button,input,select,textarea):focus-visible');
       expect(styles[0]?.[1]).toContain('@media (prefers-reduced-motion:reduce)');
       return styles[0]?.[1] ?? '';
     });
 
     expect(routeCss[0]).not.toContain('.reading-sheet');
     expect(routeCss[0]).not.toContain('.reading-threshold');
-    expect(routeCss[0]).toContain('.public-scene');
+    expect(routeCss[0]).not.toContain('.public-scene');
+    expect(routeCss[0]).toContain('.form-home__hero');
     expect(routeCss[0]).toContain('.visually-hidden');
-    for (const detailCss of routeCss.slice(1)) {
-      expect(detailCss).not.toContain('.storyworld-page');
-      expect(detailCss).not.toContain('.public-scene');
-      expect(detailCss).toContain('.visually-hidden');
-      expect(detailCss).toContain('[data-surface-mode=reading]');
-      expect(detailCss).toContain('.reading-sheet');
-    }
-    expect(routeCss[1]).toContain('.reading-threshold');
+    expect(routeCss[1]).not.toContain('.storyworld-page');
+    expect(routeCss[1]).not.toContain('.public-scene');
+    expect(routeCss[1]).not.toContain('.reading-sheet');
+    expect(routeCss[1]).not.toContain('.reading-threshold');
+    expect(routeCss[1]).toContain('.article-toc');
+    for (const css of routeCss.slice(1)) expect(css).toContain('.visually-hidden');
     expect(routeCss[1]).not.toContain('.review-reading-page .content-figure');
     expect(routeCss[1]).not.toContain('.memory-thought');
     expect(routeCss[2]).toContain('.reading-threshold');
@@ -118,8 +119,8 @@ describe('React Router emitted critical output', () => {
     expect(routeCss[0].length).toBeLessThan(10_000);
     for (const detailCss of routeCss.slice(1)) expect(detailCss.length).toBeLessThan(12_000);
     const imagePreload = homeHtml.match(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u)?.[0];
-    expect(imagePreload).toContain('href="/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif"');
-    expect(imagePreload).toContain('imageSizes="(max-width: 720px) 70vw, (max-width: 1540px) 61vw, 940px"');
+    expect(imagePreload).toContain('href="/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero-1536w.avif"');
+    expect(imagePreload).toContain('imageSizes="(max-width: 767px) 100vw, (max-width: 1179px) 54vw, 710px"');
     expect(imagePreload).toContain('fetchPriority="high"');
   });
 
@@ -146,7 +147,7 @@ describe('React Router emitted critical output', () => {
       /<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u,
     )?.[0];
     const leadPicture = homeHtml.match(
-      /<picture><source\b[^>]*type="image\/avif"[^>]*reading-desk-cobalt[^>]*>[\s\S]*?<\/picture>/u,
+      /<picture><source\b[^>]*type="image\/avif"[^>]*editorial-home-hero[^>]*>[\s\S]*?<\/picture>/u,
     )?.[0];
     const avifSource = leadPicture?.match(/<source\b[^>]*type="image\/avif"[^>]*>/u)?.[0];
 
@@ -195,15 +196,15 @@ describe('React Router emitted critical output', () => {
 
     expect(rootAssets).toHaveLength(1);
     expect(rootAssets[0]?.source).not.toContain('.site-header__inner{');
-    expect(rootAssets[0]?.source).not.toContain('.public-scene');
-    expect(rootAssets[0]?.source).not.toContain('.reading-threshold{');
+    expect(rootAssets[0]?.source).not.toContain('.form-home__hero{');
+    expect(rootAssets[0]?.source).not.toContain('.article-toc{');
     expect(rootAssets[0]?.source).not.toContain('.memory-thought');
     expect(rootAssets[0]?.source).not.toContain('.context-return{');
 
     const bundledCriticalCss = [
       '.site-header__inner{',
-      '.public-scene{',
-      '.reading-threshold{',
+      '.form-home__hero{',
+      '.article-toc{',
       '.memory-thought{',
       '.context-return{',
     ];

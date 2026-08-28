@@ -11,12 +11,14 @@ const [tokensCss, shellCss] = import.meta.env.SSR
   : ['', ''];
 
 interface CriticalCssSources {
-  article: string;
-  reading: string;
+  detail: string;
+  home: string;
+  index: string;
   readingSurface: string;
-  scene: string;
   memory: string;
   review: string;
+  search: string;
+  secondary: string;
   shell: string;
   tokens: string;
 }
@@ -25,17 +27,17 @@ export function criticalCssForPath(
   pathname: string,
   sources: CriticalCssSources,
 ): string {
-  let routeCss = sources.reading;
+  let routeCss = sources.secondary;
   if (pathname === '/') {
-    routeCss = sources.scene;
-  } else if (pathname.startsWith('/articles/')) {
-    routeCss = `${sources.reading}${sources.readingSurface}${sources.article}`;
-  } else if (pathname.startsWith('/reviews/')) {
-    routeCss = `${sources.reading}${sources.readingSurface}${sources.review}`;
+    routeCss = sources.home;
+  } else if (['/articles/', '/reviews/', '/thoughts/'].includes(pathname)) {
+    routeCss = sources.index;
+  } else if (/^\/(?:articles|reviews|thoughts)\/[a-z0-9][a-z0-9-]*\/$/u.test(pathname)) {
+    routeCss = sources.detail;
+  } else if (pathname === '/search/') {
+    routeCss = sources.search;
   } else if (pathname.startsWith('/memory/')) {
-    routeCss = `${sources.reading}${sources.readingSurface}${sources.memory}`;
-  } else if (pathname.startsWith('/thoughts/')) {
-    routeCss = `${sources.reading}${sources.readingSurface}`;
+    routeCss = `${sources.secondary}${sources.readingSurface}${sources.memory}`;
   }
   return `${sources.tokens}${sources.shell}${routeCss}`;
 }

@@ -16,7 +16,7 @@ export function ContinueReading({
   items,
 }: {
   collectionHref: '/articles/' | '/reviews/';
-  collectionLabel: '글 전체 보기' | '책 전체 보기';
+  collectionLabel: '아티클 전체 보기' | '글 전체 보기' | '책 전체 보기';
   items: readonly ContinuationItem[];
 }) {
   const visibleItems = items.slice(0, 3);

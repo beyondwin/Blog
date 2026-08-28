@@ -9,8 +9,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readActiveRelease } from '@beyondwin/content/release';
 import type { VerifiedActivePublicRelease } from '@beyondwin/content/release';
 
-const ARTICLE_ID = 'why-i-read-in-the-ai-era';
-const ESTABLISHED_ARTICLE_ID = 'graphify-code-knowledge-graph-deep-dive';
+const ARTICLE_ID = 'graphify-code-knowledge-graph-deep-dive';
+const ESTABLISHED_ARTICLE_ID = ARTICLE_ID;
 const REVIEW_ID = 'black-swan';
 const MEMORY_ID = 'agent-harnesses-are-operating-systems';
 const THOUGHT_ID = 'why-i-read-in-the-ai-era';
@@ -105,45 +105,45 @@ describe('React Router current-behavior static route contract', () => {
       readFile(join(candidateRoot, 'app/routes/review.tsx'), 'utf8'),
       readFile(join(candidateRoot, 'app/routes/memory.tsx'), 'utf8'),
     ]);
-    const [tokens, shell, scene, reading, readingSurface, articleCss, reviewCss, memoryCss] = await Promise.all([
+    const [tokens, shell, homeCss, indexCss, detailCss, reading, readingSurface, reviewCss, memoryCss] = await Promise.all([
       readFile(join(candidateRoot, 'src/ui/styles/tokens.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/shell.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-scene.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-home.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-index.css'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-detail.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/route-reading.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/reading.css'), 'utf8'),
-      readFile(join(candidateRoot, 'src/ui/styles/route-article.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/route-review.css'), 'utf8'),
       readFile(join(candidateRoot, 'src/ui/styles/route-memory.css'), 'utf8'),
     ]);
     const cssSources = {
       tokens,
       shell,
-      scene,
-      reading,
+      home: homeCss,
+      index: indexCss,
+      detail: detailCss,
+      secondary: reading,
       readingSurface,
-      article: articleCss,
       review: reviewCss,
       memory: memoryCss,
+      search: reading,
     };
 
     expect(rootSource).toContain("import('../src/ui/styles/tokens.css?inline')");
     expect(rootSource).toContain("import('../src/ui/styles/shell.css?inline')");
     expect(rootSource).toContain('import.meta.env.SSR');
-    expect(homeSource).toContain("import('../../src/ui/styles/route-scene.css?inline')");
-    expect(homeSource).not.toContain("import('../../src/ui/styles/scene.css?inline')");
-    expect(articleSource).toContain("import('../../src/ui/styles/route-article.css?inline')");
-    expect(articleSource).toContain("import('../../src/ui/styles/reading.css?inline')");
+    expect(homeSource).toContain("import('../../src/ui/styles/route-home.css?inline')");
+    expect(homeSource).not.toContain("route-scene.css?inline");
+    expect(articleSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
+    expect(articleSource).not.toMatch(/route-article\.css\?inline|reading\.css\?inline/u);
     expect(reviewSource).toContain("import('../../src/ui/styles/route-review.css?inline')");
     expect(reviewSource).toContain("import('../../src/ui/styles/reading.css?inline')");
     expect(memorySource).toContain("import('../../src/ui/styles/route-memory.css?inline')");
-    expect(root.criticalCssForPath('/', cssSources)).toContain('.public-scene');
-    expect(root.criticalCssForPath('/', cssSources)).not.toContain('.reading-sheet');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.reading-sheet');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.reading-threshold');
-    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.review-reading-page .content-figure');
-    expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).toContain('.reading-threshold');
-    expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).toContain('.review-reading-page .content-figure');
-    expect(root.criticalCssForPath(`/reviews/${REVIEW_ID}/`, cssSources)).not.toContain('.memory-thought');
+    expect(root.criticalCssForPath('/', cssSources)).toContain('.form-home__hero');
+    expect(root.criticalCssForPath('/', cssSources)).not.toContain('.public-scene');
+    expect(root.criticalCssForPath('/articles/', cssSources)).toContain('.article-topic-filter');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).toContain('.article-colophon');
+    expect(root.criticalCssForPath(`/articles/${ARTICLE_ID}/`, cssSources)).not.toContain('.reading-threshold');
     expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources)).toContain('.memory-thought');
     expect(root.criticalCssForPath(`/memory/${MEMORY_ID}/`, cssSources))
       .toContain('.memory-thought .reading-threshold__identity h1 { text-wrap: wrap; }');
@@ -159,10 +159,10 @@ describe('React Router current-behavior static route contract', () => {
     expect(home.links()).toEqual([{
       rel: 'preload',
       as: 'image',
-      href: '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif',
+      href: '/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero-1536w.avif',
       type: 'image/avif',
-      imageSrcSet: '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt-1536w.avif 1536w',
-      imageSizes: '(max-width: 720px) 70vw, (max-width: 1540px) 61vw, 940px',
+      imageSrcSet: '/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero-1536w.avif 1536w',
+      imageSizes: '(max-width: 767px) 100vw, (max-width: 1179px) 54vw, 710px',
       fetchPriority: 'high',
     }]);
 
@@ -194,8 +194,8 @@ describe('React Router current-behavior static route contract', () => {
     const verdictReviewData = await review.loader({ params: { slug: 'art-thief' } });
 
     expect(home.meta({ data: homeData })).toEqual([
-      { title: '판단 · beyondwin' },
-      { name: 'description', content: 'AI 시대에 무엇을 믿을지 판단하기 위해 읽고 연결한 글, 책, 문장.' },
+      { title: 'FORM & THOUGHT' },
+      { name: 'description', content: '서평과 아티클, 생각을 한 지면에서 골라 읽는 FORM & THOUGHT.' },
       { tagName: 'link', rel: 'canonical', href: '/' },
     ]);
     expect(article.meta({ data: articleData })).toContainEqual({
@@ -246,17 +246,19 @@ describe('React Router current-behavior static route contract', () => {
     const memoryHtml = renderToStaticMarkup(createElement(memory.MemoryPresentation, { data: memoryData }));
 
     expect(homeHtml).toContain(`href="/articles/${ARTICLE_ID}/"`);
-    expect(homeHtml).toContain('data-scene-object="reading-desk-cobalt"');
-    expect(homeHtml).toContain('살펴보기');
-    expect(homeHtml).toContain('글 읽기');
-    expect(homeHtml).not.toContain('전체 보기');
-    expect(articleHtml).toContain('<h1>AI 시대에, 나는 왜 책을 읽는가</h1>');
-    expect(articleHtml).toContain('<a class="context-return" href="/articles/">글 목록으로</a>');
+    expect(homeHtml).toContain('class="form-home__hero"');
+    expect(homeHtml).toContain('이 글 읽기');
+    expect(homeHtml).toContain('href="/reviews/black-swan/"');
+    expect(homeHtml).toContain('href="/articles/ai-design-references/"');
+    expect(homeHtml).toContain('href="/thoughts/why-i-read-in-the-ai-era/"');
+    expect(homeHtml).not.toMatch(/data-scene-object|focus=|살펴보기/u);
+    expect(articleHtml).toContain('<h1>Graphify는 코드 이해를 정말 더 빠르게 만드는가?</h1>');
+    expect(articleHtml).toContain('좋아요 · 준비 중');
     expect(articleHtml).toContain('<h2 id="continue-reading-title">이어서 읽기</h2>');
-    expect(articleHtml).toContain('<a class="continue-reading__collection" href="/articles/">글 전체 보기</a>');
-    expect(articleHtml).toContain('srcset="/assets/content/articles/why-i-read-in-the-ai-era/judgment-scale-720w.avif 720w');
+    expect(articleHtml).toContain('<a class="continue-reading__collection" href="/articles/">아티클 전체 보기</a>');
+    expect(articleHtml).toContain('srcSet="/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-hero-1536w.avif 1536w');
     expect(articleHtml).toContain('width="1536" height="1024"');
-    expect(articleHtml).toContain('많아진 답과, 그 답을 어떻게 받아들일지에 대한 판단');
+    expect(articleHtml).toContain('Graphify는 분명 쓸모가 있다.');
     expect(reviewHtml).toContain('<h1>블랙스완</h1>');
     expect(reviewHtml).toContain('<a class="context-return" href="/reviews/">책 목록으로</a>');
     expect(reviewHtml).toContain('<a class="continue-reading__collection" href="/reviews/">책 전체 보기</a>');
@@ -286,7 +288,7 @@ describe('React Router current-behavior static route contract', () => {
     const detailData = await thought.loader({ params: { slug: THOUGHT_ID } });
 
     expect(detailData.featuredAsset?.fallback.src).toBe(
-      '/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
+      '/assets/content/thoughts/why-i-read-in-the-ai-era/editorial-reading.png',
     );
     expect(thought.meta({ data: detailData })).toEqual([
       { title: 'AI 시대에, 나는 왜 책을 읽는가 · FORM & THOUGHT' },
@@ -340,8 +342,8 @@ describe('React Router current-behavior static route contract', () => {
     const home = await candidateModule<any>('app/routes/home.tsx');
 
     expect(home.meta()).toEqual([
-      { title: '판단 · FORM & THOUGHT' },
-      { name: 'description', content: 'AI 시대에 무엇을 믿을지 판단하기 위해 읽고 연결한 글, 책, 문장.' },
+      { title: 'FORM & THOUGHT' },
+      { name: 'description', content: '서평과 아티클, 생각을 한 지면에서 골라 읽는 FORM & THOUGHT.' },
       { tagName: 'link', rel: 'canonical', href: '/' },
     ]);
   });

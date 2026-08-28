@@ -7,7 +7,7 @@ import { readActiveRelease } from '../src/release/read-release';
 import { writeReleaseFixture } from './helpers/release-fixture';
 
 describe('immutable public release building', () => {
-  it('builds the approved article and thought featured media while keeping the home hero unreferenced', async () => {
+  it('builds every approved generated media selection needed by the fixed home and detail projections', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-thought-round-trip-'));
     const releasesRoot = join(sandbox, 'releases');
     const built = await buildPublicRelease({ root: process.cwd(), releasesRoot });
@@ -29,7 +29,12 @@ describe('immutable public release building', () => {
       featuredMedia: 'editorial-hero',
     });
     expect(active.manifest.assets['articles/graphify-code-knowledge-graph-deep-dive/editorial-hero']).toBeDefined();
-    expect(active.manifest.assets['articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero']).toBeUndefined();
+    expect(active.manifest.assets['articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero']).toMatchObject({
+      collection: 'articles',
+      recordId: 'graphify-code-knowledge-graph-deep-dive',
+      fallback: { src: '/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero.png' },
+      generationEvidence: { candidateId: 'H01' },
+    });
     expect(built.manifest).toEqual(active.manifest);
   }, 30_000);
 

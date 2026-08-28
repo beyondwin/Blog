@@ -1,3 +1,20 @@
+.skip-link {
+  position: fixed;
+  inset-block-start: 12px;
+  inset-inline-start: 12px;
+  z-index: 100;
+  padding: 10px 14px;
+  background: var(--ft-paper-bright);
+  color: var(--ft-ink);
+  font-family: var(--ft-font-ui);
+  font-size: 14px;
+  transform: translateY(calc(-100% - 24px));
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 .site-header {
   background: var(--ft-paper);
   color: var(--ft-ink);

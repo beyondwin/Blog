@@ -159,14 +159,14 @@ describe('selectContinuations', () => {
     const html = renderToStaticMarkup(createElement(ContinueReading, {
       items: [{ href: '/reviews/first/', title: '첫 책', reason: '사람이 쓴 이유', kind: 'review' }],
       collectionHref: '/articles/',
-      collectionLabel: '글 전체 보기',
+      collectionLabel: '아티클 전체 보기',
     }));
 
     expect(html).toContain('<h2 id="continue-reading-title">이어서 읽기</h2>');
     expect(html).toContain('href="/reviews/first/"');
     expect(html).toContain('사람이 쓴 이유');
     expect(html).toContain('책');
-    expect(html).toContain('<a class="continue-reading__collection" href="/articles/">글 전체 보기</a>');
+    expect(html).toContain('<a class="continue-reading__collection" href="/articles/">아티클 전체 보기</a>');
     expect(html).not.toContain('__bw_');
   });
 });

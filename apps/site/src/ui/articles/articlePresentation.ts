@@ -22,6 +22,10 @@ export interface ArticleReadingPresentation {
   colophonHtml?: string;
 }
 
+export function formatArticleDate(value: string): string {
+  return value.slice(0, 10).replaceAll('-', '.');
+}
+
 function stripTags(html: string): string {
   return html.replace(/<[^>]+>/g, '').trim();
 }

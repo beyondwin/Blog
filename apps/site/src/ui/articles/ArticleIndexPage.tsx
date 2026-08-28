@@ -1,57 +1,91 @@
-import { OriginLink } from '../navigation/OriginLink';
+import type { PublicReleaseManifest } from '@beyondwin/content/release';
+import { useEffect, useState } from 'react';
+import { ResponsivePicture } from '../../../app/root';
+import { EditorialListRow } from '../editorial/EditorialListRow';
+import { EditorialPageHeader } from '../editorial/EditorialPageHeader';
 import { recordAnchor } from '../navigation/record-anchor';
+import { formatArticleDate, type ArticleRecord } from './articlePresentation';
 import {
-  buildArticleIndex,
-  type ArticleIndexItem,
-  type ArticleRecord,
-} from './articlePresentation';
+  ARTICLE_TOPIC_FILTERS,
+  articleTopic,
+  articleTopicHref,
+  normalizeArticleTopic,
+  type ArticleTopicFilter,
+} from './articleTopics';
 
-function kindLabel(item: ArticleIndexItem): string {
-  return item.hasEvidence ? '조사 · 근거' : '에세이';
+type ReleaseAsset = PublicReleaseManifest['assets'][string];
+
+export function browserArticleTopic(fallback: ArticleTopicFilter, search?: string): ArticleTopicFilter {
+  if (search === undefined) return fallback;
+  return normalizeArticleTopic(new URLSearchParams(search).get('topic'));
 }
 
-export function ArticleIndexPage({ records }: { records: readonly ArticleRecord[] }) {
-  const { lead, ledger } = buildArticleIndex(records);
-  if (!lead) {
-    return (
-      <section className="reading-sheet article-index">
-        <p>아직 공개한 글이 없습니다.</p>
-      </section>
-    );
-  }
+export function ArticleIndexPage({
+  assets = new Map(),
+  records,
+  selectedTopic = '전체',
+}: {
+  assets?: ReadonlyMap<string, ReleaseAsset>;
+  records: readonly ArticleRecord[];
+  selectedTopic?: ArticleTopicFilter;
+}) {
+  const [visibleTopic, setVisibleTopic] = useState(selectedTopic);
+  useEffect(() => {
+    setVisibleTopic(browserArticleTopic(selectedTopic, window.location.search));
+  }, [selectedTopic]);
+  const classified = records.map((record) => ({ record, topic: articleTopic(record.id) }));
+  const visible = visibleTopic === '전체'
+    ? classified
+    : classified.filter((item) => item.topic === visibleTopic);
+  let renderedMedia = 0;
 
-  const leadAnchorId = recordAnchor('articles', lead.id);
   return (
-    <section className="reading-sheet article-index">
-      <OriginLink
-        className="article-lead"
-        href={lead.href}
-        id={leadAnchorId}
-        origin={{ kind: 'articles', anchorId: leadAnchorId }}
+    <section className="article-index">
+      <EditorialPageHeader
+        title="아티클"
+        description="기술과 디자인, 에이전트와 시스템을 실제 근거와 오래 남는 판단으로 다룹니다."
       >
-        <p className="article-kicker">{kindLabel(lead)}</p>
-        <h1>{lead.title}</h1>
-        <p>{lead.stake}</p>
-      </OriginLink>
-      {ledger.length > 0 ? (
-        <ol className="article-ledger">
-          {ledger.map((item) => {
-            const anchorId = recordAnchor('articles', item.id);
+        <nav className="article-topic-filter" aria-label="아티클 주제">
+          {ARTICLE_TOPIC_FILTERS.map((topic) => (
+            <a
+              key={topic}
+              href={articleTopicHref(topic)}
+              aria-current={visibleTopic === topic ? 'page' : undefined}
+            >
+              {topic}
+            </a>
+          ))}
+        </nav>
+      </EditorialPageHeader>
+      {visible.length > 0 ? (
+        <ol className="article-index__ledger">
+          {visible.map(({ record }) => {
+            const asset = record.featuredMedia
+              ? assets.get(`articles/${record.id}/${record.featuredMedia}`)
+              : undefined;
+            const eager = asset ? renderedMedia++ === 0 : false;
+            const media = asset ? (
+              <ResponsivePicture
+                asset={asset}
+                alt={asset.alt}
+                eager={eager}
+                sizes="(max-width: 767px) 100vw, (max-width: 1179px) 37vw, 430px"
+              />
+            ) : undefined;
             return (
-              <li key={item.id} id={anchorId}>
-                <OriginLink href={item.href} origin={{ kind: 'articles', anchorId }}>
-                  <span className="article-ledger__month">{item.monthLabel}</span>
-                  <span className="article-ledger__copy">
-                    <span className="article-ledger__title">{item.title}</span>
-                    <span className="article-ledger__stake">{item.stake}</span>
-                  </span>
-                  <span className="article-ledger__kind">{kindLabel(item)}</span>
-                </OriginLink>
+              <li key={record.id} id={recordAnchor('articles', record.id)}>
+                <EditorialListRow
+                  href={record.href}
+                  title={record.title}
+                  description={record.description}
+                  date={formatArticleDate(record.updatedAt)}
+                  media={media}
+                />
               </li>
             );
           })}
         </ol>
-      ) : null}
+      ) : <p className="article-index__empty">이 주제에 공개된 아티클이 없습니다.</p>}
     </section>
   );
 }
