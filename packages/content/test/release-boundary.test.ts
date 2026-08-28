@@ -78,6 +78,25 @@ async function writeForgedCandidate(
 }
 
 describe('active public release boundary', { timeout: 30_000 }, () => {
+  it('accepts the migrated thought media through the verified release boundary', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-thought-boundary-'));
+    const releasesRoot = join(sandbox, 'releases');
+    await buildPublicRelease({ root: process.cwd(), releasesRoot });
+
+    const active = await readActiveRelease(releasesRoot);
+
+    expect(active.boundaryHits).toEqual([]);
+    expect(active.manifest.records['thoughts/why-i-read-in-the-ai-era']).toMatchObject({
+      collection: 'thoughts',
+      href: '/thoughts/why-i-read-in-the-ai-era/',
+    });
+    expect(active.manifest.records['articles/why-i-read-in-the-ai-era']).toBeUndefined();
+    expect(active.manifest.assets['thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt']).toMatchObject({
+      collection: 'thoughts',
+      fallback: { src: '/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png' },
+    });
+  });
+
   it.each([
     ['private source locator', 'file:///Users/example/private/Blog/memory/thoughts/secret.md'],
     ['private memory edge locator', 'memory/edges.jsonl'],

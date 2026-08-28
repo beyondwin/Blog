@@ -7,7 +7,7 @@ import { isPublicEntry } from '../src/lib/content/publication';
 import { parseMediaManifest } from '../src/lib/content/mediaManifest.mjs';
 
 const root = process.cwd();
-const contentCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel'];
+const contentCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts'];
 
 async function readCollectionEntries(collection) {
   const directory = join(root, 'src', 'content', collection);
@@ -47,6 +47,10 @@ const publicArticles = entriesByCollection.articles.filter((entry) => isPublicEn
   data: { ...entry.data, draft: entry.data.draft ?? false },
 }));
 const realReviews = entriesByCollection.reviews.filter((entry) => entry.data.draft !== true);
+const realThoughts = entriesByCollection.thoughts.filter((entry) => entry.data.draft !== true);
+const publicThoughts = entriesByCollection.thoughts.filter((entry) => isPublicEntry({
+  data: { ...entry.data, draft: entry.data.draft ?? false },
+}));
 const exampleEntries = allEntries.filter((entry) => entry.slug.startsWith('example-'));
 const publicEntries = allEntries.filter((entry) => isPublicEntry({
   data: { ...entry.data, draft: entry.data.draft ?? false },
@@ -62,12 +66,20 @@ function publicSourcePathsForThought(slug) {
 }
 
 describe('existing content migration contract', () => {
-  it('keeps the approved corpus counts and hides examples', () => {
-    expect(realArticles).toHaveLength(18);
+  it('keeps the approved corpus counts, public thought, and hidden examples', () => {
+    expect(realArticles).toHaveLength(17);
     expect(realReviews).toHaveLength(18);
+    expect(realThoughts).toHaveLength(1);
+    expect(publicThoughts).toHaveLength(1);
+    expect(publicThoughts[0]).toMatchObject({
+      collection: 'thoughts',
+      slug: 'why-i-read-in-the-ai-era',
+      data: { status: 'published', draft: false },
+    });
     expect(publicMemory.thoughts).toHaveLength(7);
     expect(exampleEntries).toHaveLength(5);
     expect(exampleEntries.every((entry) => entry.data.draft === true)).toBe(true);
+    expect(publicEntries.some((entry) => entry.slug.startsWith('example-'))).toBe(false);
   });
 
   it('keeps all real articles public after explicit Bundle A publication', () => {
@@ -76,7 +88,7 @@ describe('existing content migration contract', () => {
       .map((entry) => entry.slug)
       .sort();
 
-    expect(publicArticles).toHaveLength(18);
+    expect(publicArticles).toHaveLength(17);
     expect(pending).toEqual([]);
     expect(realArticles).toHaveLength(publicArticles.length + pending.length);
   });

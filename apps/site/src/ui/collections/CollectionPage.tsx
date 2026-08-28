@@ -1,3 +1,4 @@
+import type { PublicCollection } from '@beyondwin/contracts';
 import { RecordRow, type RecordSummary } from './RecordRow';
 
 const ORIGIN_KIND = {
@@ -9,6 +10,10 @@ const ORIGIN_KIND = {
 } as const;
 
 type CollectionLane = keyof typeof ORIGIN_KIND;
+
+export function supportsCollectionPage(collection: PublicCollection): collection is CollectionLane {
+  return Object.hasOwn(ORIGIN_KIND, collection);
+}
 
 export function CollectionPage({
   collection,

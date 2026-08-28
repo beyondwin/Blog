@@ -7,6 +7,26 @@ import { readActiveRelease } from '../src/release/read-release';
 import { writeReleaseFixture } from './helpers/release-fixture';
 
 describe('immutable public release building', () => {
+  it('builds the migrated thought featured media and omits its old article key', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-thought-round-trip-'));
+    const releasesRoot = join(sandbox, 'releases');
+    const built = await buildPublicRelease({ root: process.cwd(), releasesRoot });
+    const active = await readActiveRelease(releasesRoot);
+
+    expect(active.manifest.records['thoughts/why-i-read-in-the-ai-era']).toMatchObject({
+      collection: 'thoughts',
+      href: '/thoughts/why-i-read-in-the-ai-era/',
+      featuredMedia: 'reading-desk-cobalt',
+    });
+    expect(active.manifest.records['articles/why-i-read-in-the-ai-era']).toBeUndefined();
+    expect(active.manifest.assets['thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt']).toMatchObject({
+      collection: 'thoughts',
+      recordId: 'why-i-read-in-the-ai-era',
+      fallback: { src: '/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png' },
+    });
+    expect(built.manifest).toEqual(active.manifest);
+  }, 30_000);
+
   it('derives a deterministic ID from public inputs and changes it when a public field changes', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-build-'));
     const firstRoot = join(sandbox, 'first-source');

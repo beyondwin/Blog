@@ -1,11 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createElement } from 'react';
+import { createElement, type ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, expectTypeOf, it } from 'vitest';
 import { readActiveRelease, type VerifiedActivePublicRelease } from '@beyondwin/content/release';
 import { parsePublicRecord } from '@beyondwin/contracts';
+import { CollectionPage, supportsCollectionPage } from '../../src/ui/collections/CollectionPage';
 
 const candidateRoot = resolve(import.meta.dirname, '../..');
 const repositoryRoot = resolve(candidateRoot, '../..');
@@ -40,8 +41,12 @@ describe('full public route expansion', () => {
     const actual = releaseModule.fullPublicPaths(active);
     const astroPaths = baseline.routes.map(({ path }) => path).sort();
 
+    const expected = astroPaths
+      .filter((path) => path !== '/articles/why-i-read-in-the-ai-era/')
+      .concat('/thoughts/why-i-read-in-the-ai-era/')
+      .sort();
     expect(actual).toHaveLength(93);
-    expect([...actual].sort()).toEqual(astroPaths);
+    expect([...actual].sort()).toEqual(expected);
     expect(actual).toContain('/memory/map/');
     expect(actual).toContain('/tags/AI-agent/');
     expect(actual).toContain('/tags/AI/');
@@ -74,7 +79,6 @@ describe('full public route expansion', () => {
       'postgresql-bm25-pg-search',
       'shared-ai-conversation-evidence-boundaries',
       'uncle-bob-ai-code-review-evidence',
-      'why-i-read-in-the-ai-era',
     ]);
     expect(releaseModule.recordsForCollection(active, 'reviews').map(({ id }: { id: string }) => id)).toEqual([
       'changing-their-minds',
@@ -96,6 +100,32 @@ describe('full public route expansion', () => {
       'doing-good-better',
       'factfulness',
     ]);
+    expect(releaseModule.recordsForCollection(active, 'thoughts').map(({ id }: { id: string }) => id)).toEqual([
+      'why-i-read-in-the-ai-era',
+    ]);
+  });
+
+  it('includes the public thought in all-content and tag-facing discovery', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const active = await releaseModule.loadVerifiedRelease();
+
+    expect(releaseModule.allPublicContentRecords(active)).toContainEqual(expect.objectContaining({
+      collection: 'thoughts',
+      id: 'why-i-read-in-the-ai-era',
+    }));
+    expect(releaseModule.recordsForTag(active, 'reading')).toContainEqual(expect.objectContaining({
+      collection: 'thoughts',
+      id: 'why-i-read-in-the-ai-era',
+      href: '/thoughts/why-i-read-in-the-ai-era/',
+    }));
+    expect(releaseModule.exactPublicTags(active)).toContainEqual(expect.objectContaining({ label: 'reading' }));
+  });
+
+  it('keeps the generic collection page typed to its secondary origins and excludes thoughts', () => {
+    type Collection = ComponentProps<typeof CollectionPage>['collection'];
+    expectTypeOf<Collection>().toEqualTypeOf<'analysis' | 'articles' | 'ideas' | 'reviews' | 'travel'>();
+    expect(supportsCollectionPage('thoughts')).toBe(false);
+    expect(supportsCollectionPage('articles')).toBe(true);
   });
 
   it('uses safe stable collection/id anchors and fails closed when one is overlong', async () => {

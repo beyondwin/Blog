@@ -20,6 +20,7 @@ import { safeSearchAnchors } from '../src/ui/navigation/search-anchor';
 export type CandidateRelease = Pick<VerifiedActivePublicRelease, 'manifest' | 'releasePath'>;
 export type CandidateCollection = PublicCollection;
 export type CandidateRecord<C extends CandidateCollection> = Extract<PublicRecord, { collection: C }>;
+type PublicContentCollection = Exclude<PublicCollection, 'memory'>;
 
 export { PREFERRED_PUBLIC_ARTICLE_LEAD_ID };
 
@@ -29,7 +30,13 @@ export const PUBLIC_CONTENT_COLLECTIONS = [
   'ideas',
   'reviews',
   'travel',
-] as const satisfies readonly PublicCollection[];
+  'thoughts',
+] as const satisfies readonly PublicContentCollection[];
+
+type AssertNever<Value extends never> = Value;
+type _PublicContentCollectionsAreExhaustive = AssertNever<
+  Exclude<PublicContentCollection, (typeof PUBLIC_CONTENT_COLLECTIONS)[number]>
+>;
 
 const VERIFIED_COMPATIBILITY_ROUTES = [{
   path: '/reviews/the-life-you-can-save/',

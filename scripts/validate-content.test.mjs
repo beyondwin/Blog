@@ -104,7 +104,7 @@ coverState: "unknown"
       stderr: expect.stringContaining('coverState hold forbids coverMedia'),
     });
     await expect(execFileAsync(process.execPath, [validatorPath], { cwd: root })).rejects.toMatchObject({
-      stderr: expect.stringContaining('published review coverState must be verified or hold'),
+      stderr: expect.stringContaining('coverState Invalid option'),
     });
   });
 

@@ -1,10 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { extname, join, relative } from 'node:path';
 import matter from 'gray-matter';
 
 if (process.env.BEYONDWIN_CONTENT_VALIDATOR_TSX !== '1') {
-  const result = spawnSync(process.execPath, ['--import', 'tsx', process.argv[1], ...process.argv.slice(2)], {
+  const tsxLoaderPath = fileURLToPath(new URL('../node_modules/tsx/dist/loader.mjs', import.meta.url));
+  const result = spawnSync(process.execPath, ['--import', tsxLoaderPath, process.argv[1], ...process.argv.slice(2)], {
     cwd: process.cwd(),
     env: { ...process.env, BEYONDWIN_CONTENT_VALIDATOR_TSX: '1' },
     stdio: 'inherit',
