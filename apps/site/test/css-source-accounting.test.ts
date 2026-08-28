@@ -136,12 +136,15 @@ describe('route-scoped critical CSS source accounting', () => {
     expect(root).not.toContain('criticalCssForPath');
     expect(reviewIndex).toContain("import('../../src/ui/styles/route-index.css?inline')");
     expect(reviewIndex).toContain('criticalCss: `${indexCss}${reviewCss}`');
-    expect(thoughtIndex).toContain("import('../../src/ui/styles/route-index.css?inline')");
-    expect(thoughtIndex).toContain('criticalCss: `${indexCss}${routeReadingCss}${readingCss}`');
+    expect(thoughtIndex).toContain("import('../../src/ui/styles/route-thought.css?inline')");
+    expect(thoughtIndex).toContain('criticalCss: thoughtCss');
+    expect(thoughtIndex).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
     expect(reviewDetail).toContain("import('../../src/ui/styles/route-detail.css?inline')");
     expect(reviewDetail).toContain('criticalCss: `${detailCss}${routeReadingCss}${readingCss}${reviewCss}`');
     expect(thoughtDetail).toContain("import('../../src/ui/styles/route-detail.css?inline')");
-    expect(thoughtDetail).toContain('criticalCss: `${detailCss}${routeReadingCss}${readingCss}`');
+    expect(thoughtDetail).toContain("import('../../src/ui/styles/route-thought.css?inline')");
+    expect(thoughtDetail).toContain('criticalCss: `${detailCss}${thoughtCss}`');
+    expect(thoughtDetail).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
     expect(search).toContain('criticalCss: `${readingCss}${collectionsCss}`');
     expect(search).not.toMatch(/route-(?:index|detail|search)\.css\?inline/u);
   });

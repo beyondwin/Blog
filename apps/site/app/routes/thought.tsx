@@ -11,11 +11,10 @@ import {
 } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [detailCss, routeReadingCss, readingCss] = import.meta.env.SSR ? await Promise.all([
+const [detailCss, thoughtCss] = import.meta.env.SSR ? await Promise.all([
   import('../../src/ui/styles/route-detail.css?inline').then((module) => module.default),
-  import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
-  import('../../src/ui/styles/reading.css?inline').then((module) => module.default),
-]) : ['', '', ''];
+  import('../../src/ui/styles/route-thought.css?inline').then((module) => module.default),
+]) : ['', ''];
 
 type ThoughtRecord = Extract<PublicRecord, { collection: 'thoughts' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
@@ -25,7 +24,7 @@ export interface ThoughtData {
   featuredAsset?: ReleaseAsset;
 }
 
-export const handle: RouteCriticalCssHandle = { criticalCss: `${detailCss}${routeReadingCss}${readingCss}` };
+export const handle: RouteCriticalCssHandle = { criticalCss: `${detailCss}${thoughtCss}` };
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<ThoughtData> {
   const release = await loadVerifiedRelease();
@@ -49,7 +48,9 @@ export function ThoughtPresentation({ data }: { data: ThoughtData }) {
     <ResponsivePicture
       asset={data.featuredAsset}
       alt={data.featuredAsset.alt}
-      sizes="(max-width: 720px) calc(100vw - 48px), 42em"
+      className="thought-detail__hero-image"
+      eager
+      sizes="(max-width: 767px) 100vw, (max-width: 1179px) 40vw, 500px"
     />
   ) : undefined;
   return (
@@ -59,7 +60,7 @@ export function ThoughtPresentation({ data }: { data: ThoughtData }) {
         description={data.record.description}
         title={publicMetadataTitle(data.record.title)}
       />
-      <SiteShell currentSection={null}>
+      <SiteShell currentSection="thoughts">
         <ThoughtReadingPage record={data.record} media={media} />
       </SiteShell>
     </>

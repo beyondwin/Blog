@@ -127,8 +127,11 @@ describe('React Router current-behavior static route contract', () => {
     expect(reviewSource).toContain("import('../../src/ui/styles/route-review.css?inline')");
     expect(reviewSource).toContain("import('../../src/ui/styles/reading.css?inline')");
     expect(reviewSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
-    expect(thoughtsIndexSource).toContain("import('../../src/ui/styles/route-index.css?inline')");
+    expect(thoughtsIndexSource).toContain("import('../../src/ui/styles/route-thought.css?inline')");
+    expect(thoughtsIndexSource).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
     expect(thoughtSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
+    expect(thoughtSource).toContain("import('../../src/ui/styles/route-thought.css?inline')");
+    expect(thoughtSource).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
     expect(memorySource).toContain("import('../../src/ui/styles/route-memory.css?inline')");
     expect(searchSource).toContain("import('../../src/ui/styles/route-collections.css?inline')");
     expect(searchSource).not.toMatch(/route-(?:index|detail|search)\.css\?inline/u);
@@ -282,14 +285,20 @@ describe('React Router current-behavior static route contract', () => {
     ));
     const detailHtml = renderToStaticMarkup(createElement(thought.ThoughtPresentation, { data: detailData }));
 
-    expect(indexHtml).toContain(`href="/thoughts/${THOUGHT_ID}/"`);
-    expect(indexHtml).toContain('2026-08-16');
+    expect(indexHtml.match(/data-thought-cell=/gu)).toHaveLength(6);
+    expect(indexHtml.match(new RegExp(`href="/thoughts/${THOUGHT_ID}/"`, 'gu'))).toHaveLength(1);
+    expect(indexHtml.match(/data-thought-cell="empty"[^>]*aria-hidden="true"[^>]*inert=""/gu)).toHaveLength(5);
+    expect(indexHtml).toContain('2026.08.16');
     expect(indexHtml).toContain('<picture>');
-    expect(detailHtml).toContain('<h1 id="thought-title">AI 시대에, 나는 왜 책을 읽는가</h1>');
+    expect(detailHtml).toContain('<h1>AI 시대에, 나는 왜 책을 읽는가</h1>');
     expect(detailHtml).toContain('AI 때문에 책을 읽기 시작했다.');
-    expect(detailHtml).toContain('<time dateTime="2026-08-16T00:00:00.000Z">2026-08-16</time>');
-    expect(detailHtml).toContain(`<a href="/thoughts/">생각 목록으로</a>`);
+    expect(detailHtml).toContain('<time dateTime="2026-08-16T00:00:00.000Z">2026.08.16</time>');
+    expect(detailHtml).toContain('좋아요 · 준비 중');
+    expect(detailHtml).not.toMatch(/article-toc|article-colophon|생각 목록으로/u);
     expect(detailHtml).toContain(`<link rel="canonical" href="/thoughts/${THOUGHT_ID}/"/>`);
+    for (const html of [indexHtml, detailHtml]) {
+      expect(html).toContain('href="/thoughts/" aria-current="page"');
+    }
     for (const html of [indexHtml, detailHtml]) {
       expect(html).not.toContain('data-discover=');
       expect(html).not.toContain('memory/thoughts');

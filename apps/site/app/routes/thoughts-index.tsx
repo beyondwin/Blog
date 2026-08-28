@@ -3,13 +3,11 @@ import { ThoughtIndexPage } from '../../src/ui/thoughts/ThoughtIndexPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
 import { loadVerifiedRelease, recordsForCollection } from '../release.server';
 
-const [indexCss, routeReadingCss, readingCss] = import.meta.env.SSR ? await Promise.all([
-  import('../../src/ui/styles/route-index.css?inline').then((module) => module.default),
-  import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
-  import('../../src/ui/styles/reading.css?inline').then((module) => module.default),
-]) : ['', '', ''];
+const thoughtCss = import.meta.env.SSR
+  ? await import('../../src/ui/styles/route-thought.css?inline').then((module) => module.default)
+  : '';
 
-export const handle: RouteCriticalCssHandle = { criticalCss: `${indexCss}${routeReadingCss}${readingCss}` };
+export const handle: RouteCriticalCssHandle = { criticalCss: thoughtCss };
 
 export async function loader() {
   const release = await loadVerifiedRelease();
@@ -23,7 +21,7 @@ export function ThoughtsIndexPresentation({ data }: { data: Awaited<ReturnType<t
   return (
     <>
       <DocumentMetadata canonical="/thoughts/" description="읽고 남은 생각." title={publicMetadataTitle('생각')} />
-      <SiteShell currentSection={null}>
+      <SiteShell currentSection="thoughts">
         <ThoughtIndexPage records={data.records} assets={new Map(Object.entries(data.assets))} />
       </SiteShell>
     </>

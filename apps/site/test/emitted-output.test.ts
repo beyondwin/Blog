@@ -135,10 +135,11 @@ describe('React Router emitted critical output', () => {
     expect(routeCss.reviewsIndex).not.toContain('.reading-sheet');
     expect(routeCss.reviewDetail).toContain('.review-detail__verdict');
     expect(routeCss.reviewDetail).toContain('.review-detail__cover-stage');
-    expect(routeCss.thoughtsIndex).toContain('.article-topic-filter');
-    expect(routeCss.thoughtsIndex).toContain('.reading-sheet');
-    expect(routeCss.thoughtDetail).toContain('.article-colophon');
-    expect(routeCss.thoughtDetail).toContain('.reading-threshold');
+    expect(routeCss.thoughtsIndex).toContain('.thought-index__grid');
+    expect(routeCss.thoughtsIndex).not.toMatch(/\.article-topic-filter|\.reading-sheet/u);
+    expect(routeCss.thoughtDetail).toContain('.editorial-detail-frame__prose .prose');
+    expect(routeCss.thoughtDetail).toContain('.thought-detail__type');
+    expect(routeCss.thoughtDetail).not.toContain('.reading-threshold');
     expect(routeCss.memoryDetail).toContain('.memory-thought');
     expect(routeCss.memoryDetail).toContain('.reading-threshold');
     expect(routeCss.memoryDetail).toContain('.context-return');
