@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { lstat, readFile, readdir, realpath, stat } from 'node:fs/promises';
-import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
 import { parse as parseYaml } from 'yaml';
@@ -348,6 +348,202 @@ async function validateManifest(root, absolutePath, state) {
   }
 }
 
+function generatedClaimKey(decisionPath, candidateId) {
+  return `${decisionPath}\0${candidateId}`;
+}
+
+function sourceEntries(root, state) {
+  const entries = [];
+  for (const [manifestAbsolutePath, manifest] of state.manifests) {
+    const match = repoPath(root, manifestAbsolutePath).match(
+      /^src\/assets\/content\/(analysis|articles|ideas|reviews|travel|thoughts)\/([a-z0-9][a-z0-9-]*)\/media\.yml$/,
+    );
+    if (!match) continue;
+    for (const item of manifest.items) {
+      entries.push({
+        collection: match[1],
+        recordId: match[2],
+        item,
+        sourcePath: repoPath(root, resolve(dirname(manifestAbsolutePath), item.file)),
+      });
+    }
+  }
+  return entries;
+}
+
+function decisionShapeErrors(decision, decisionPath, batchId) {
+  const errors = [];
+  if (!decision || typeof decision !== 'object' || decision.version !== 1) {
+    return [`${decisionPath}: generated decision manifest must use version 1`];
+  }
+  if (decision.batchId !== batchId) errors.push(`${decisionPath}: batchId must match its canonical evidence directory`);
+  if (!decision.approval || typeof decision.approval !== 'object') {
+    errors.push(`${decisionPath}: approval is required`);
+    return errors;
+  }
+  if (decision.approval.state !== 'approved') return errors;
+  const roles = Array.isArray(decision.approval.approvedBy) ? decision.approval.approvedBy : [];
+  if (
+    roles.length !== 2
+    || new Set(roles).size !== roles.length
+    || !roles.includes('controller')
+    || !roles.includes('independent-visual-reviewer')
+  ) {
+    errors.push(`${decisionPath}: approvedBy must contain exactly controller and independent-visual-reviewer`);
+  }
+  const selected = Array.isArray(decision.approval.selectedCandidateIds)
+    ? decision.approval.selectedCandidateIds
+    : [];
+  const assets = Array.isArray(decision.assets) ? decision.assets : [];
+  const assetIds = assets.map((asset) => asset?.candidateId);
+  if (
+    selected.length === 0
+    || assets.length === 0
+    || selected.length !== new Set(selected).size
+    || assetIds.length !== new Set(assetIds).size
+    || selected.length !== assetIds.length
+    || selected.some((candidateId) => !assetIds.includes(candidateId))
+  ) {
+    errors.push(`${decisionPath}: approved selection must exactly match unique approved assets`);
+  }
+  const expectedContact = `docs/notes/project/assets/form-and-thought-generated/${batchId}/approved-contact-sheet.png`;
+  if (decision.approvedContactSheet?.path !== expectedContact) {
+    errors.push(`${decisionPath}: approvedContactSheet path must be the canonical PNG in the same batch`);
+  }
+  return errors;
+}
+
+async function validateGeneratedInventory(root, state) {
+  const evidenceRoot = join(root, 'docs', 'notes', 'project', 'assets', 'form-and-thought-generated');
+  const evidenceTree = await scanTree(evidenceRoot);
+  for (const path of evidenceTree.symlinks) {
+    state.errors.add(`${repoPath(root, path)}: symbolic link is not allowed`);
+  }
+  const approved = new Map();
+  for (const absolutePath of evidenceTree.files) {
+    const decisionPath = repoPath(root, absolutePath);
+    const match = decisionPath.match(
+      /^docs\/notes\/project\/assets\/form-and-thought-generated\/([a-z0-9][a-z0-9-]*)\/decision-manifest\.yml$/,
+    );
+    if (!match) continue;
+    let bytes;
+    let decision;
+    try {
+      bytes = await readFile(absolutePath);
+      decision = parseYaml(bytes.toString('utf8'));
+    } catch (error) {
+      state.errors.add(`${decisionPath}: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    const shapeErrors = decisionShapeErrors(decision, decisionPath, match[1]);
+    for (const error of shapeErrors) state.errors.add(error);
+    if (shapeErrors.length > 0 || decision.approval?.state !== 'approved') continue;
+    const decisionChecksum = sha256(bytes);
+    for (const asset of decision.assets) {
+      const key = generatedClaimKey(decisionPath, asset.candidateId);
+      if (approved.has(key)) state.errors.add(`${decisionPath}: generated candidate ${asset.candidateId} is duplicated`);
+      approved.set(key, { asset, decision, decisionPath, decisionChecksum });
+    }
+    const contactPath = resolve(root, decision.approvedContactSheet.path);
+    if (!isInside(root, contactPath) || await inspectRepositoryFile(root, contactPath, root) !== 'ok') {
+      state.errors.add(`${decisionPath}: approved contact sheet is missing`);
+    } else if (sha256(await readFile(contactPath)) !== decision.approvedContactSheet.checksum) {
+      state.errors.add(`${decisionPath}: approved contact sheet checksum changed`);
+    }
+  }
+  if (approved.size === 0) return;
+
+  const entries = sourceEntries(root, state);
+  const expectedByIdentity = new Map();
+  const approvedPaths = new Map();
+  for (const entry of approved.values()) {
+    const identity = `${entry.asset.collection}/${entry.asset.recordId}/${entry.asset.mediaId}`;
+    if (expectedByIdentity.has(identity)) state.errors.add(`${identity}: selected by more than one approved generated decision`);
+    expectedByIdentity.set(identity, entry);
+    if (approvedPaths.has(entry.asset.sourcePath)) {
+      state.errors.add(`${entry.asset.sourcePath}: selected by more than one approved generated decision`);
+    }
+    approvedPaths.set(entry.asset.sourcePath, entry);
+  }
+
+  const claims = new Map();
+  for (const source of entries) {
+    const identity = `${source.collection}/${source.recordId}/${source.item.id}`;
+    const expected = expectedByIdentity.get(identity);
+    if (expected) {
+      const label = `approved generated asset ${identity}`;
+      if (source.item.sourceKind !== 'repository-generated' || !source.item.generation) {
+        state.errors.add(`${label}: source media must remain repository-generated with generation binding`);
+      } else {
+        const actual = {
+          collection: source.collection,
+          recordId: source.recordId,
+          mediaId: source.item.id,
+          file: source.item.file,
+          sourcePath: source.sourcePath,
+          checksum: source.item.checksum,
+          width: source.item.width,
+          height: source.item.height,
+        };
+        for (const field of ['collection', 'recordId', 'mediaId', 'file', 'sourcePath', 'checksum', 'width', 'height']) {
+          if (expected.asset[field] !== actual[field]) state.errors.add(`${label}: ${field} does not match the approved inventory`);
+        }
+        if (source.item.sourcePath !== expected.decisionPath) {
+          state.errors.add(`${label}: source decision path does not match the approved inventory`);
+        }
+        if (source.item.generation.candidateId !== expected.asset.candidateId) {
+          state.errors.add(`${label}: generated candidate does not match the approved decision`);
+        }
+        if (source.item.generation.decisionManifestChecksum !== expected.decisionChecksum) {
+          state.errors.add(`${label}: decision manifest checksum changed`);
+        }
+        for (const field of ['provider', 'generator', 'model', 'modelVersion', 'promptVersion']) {
+          if (source.item.generation[field] !== expected.decision.generator?.[field]) {
+            state.errors.add(`${label}: generation ${field} does not match the approved decision`);
+          }
+        }
+        const rightsNote = expected.decision.rightsReview?.decision === 'approve-repository-publication'
+          ? `Repository publication approved with caveat: ${expected.decision.rightsReview.caveat}`
+          : undefined;
+        if (!rightsNote || expected.decision.rightsReview?.state !== 'approved' || source.item.rightsNote !== rightsNote) {
+          state.errors.add(`${label}: rightsNote does not match the approved decision`);
+        }
+      }
+    }
+
+    const pathOwner = approvedPaths.get(source.sourcePath);
+    if (pathOwner && expected !== pathOwner) {
+      const kind = source.item.sourceKind === 'repository-generated' ? 'generated media' : 'ordinary media';
+      state.errors.add(`${kind} ${identity} reuses approved generated source path ${source.sourcePath}`);
+    }
+    if (source.item.generation && source.item.sourcePath) {
+      const key = generatedClaimKey(source.item.sourcePath, source.item.generation.candidateId);
+      const candidates = claims.get(key) ?? [];
+      candidates.push(source);
+      claims.set(key, candidates);
+      if (!approved.has(key)) {
+        state.errors.add(`${identity}: generated candidate ${source.item.generation.candidateId} is not in an approved decision inventory`);
+      }
+    }
+  }
+
+  for (const [key, expected] of approved) {
+    const identity = `${expected.asset.collection}/${expected.asset.recordId}/${expected.asset.mediaId}`;
+    const source = entries.find((candidate) => (
+      candidate.collection === expected.asset.collection
+      && candidate.recordId === expected.asset.recordId
+      && candidate.item.id === expected.asset.mediaId
+    ));
+    if (!source) state.errors.add(`approved generated asset ${identity}: source media record is missing`);
+    const claimed = claims.get(key) ?? [];
+    if (claimed.length > 1) {
+      state.errors.add(`${expected.decisionPath}: generated candidate ${expected.asset.candidateId} is claimed more than once`);
+    } else if (source && (claimed.length !== 1 || claimed[0] !== source)) {
+      state.errors.add(`approved generated asset ${identity}: generation binding is missing`);
+    }
+  }
+}
+
 async function validateContentFile(root, absolutePath, targets, state, strict) {
   const path = repoPath(root, absolutePath);
   let parsed;
@@ -433,6 +629,8 @@ export async function validateMediaRepository(root, { strict = false } = {}) {
   for (const manifestPath of manifestFiles) {
     await validateManifest(repositoryRoot, manifestPath, state);
   }
+
+  await validateGeneratedInventory(repositoryRoot, state);
 
   for (const [checksum, declarations] of state.checksumDeclarations) {
     if (declarations.length > 1) {

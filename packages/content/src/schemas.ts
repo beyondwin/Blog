@@ -333,7 +333,9 @@ export const generatedMediaDecisionManifestSchema = z.object({
   if (manifest.approval.state === 'approved') {
     const approvalRoles = new Set(manifest.approval.approvedBy);
     if (
-      approvalRoles.size !== 2
+      manifest.approval.approvedBy.length !== 2
+      || approvalRoles.size !== manifest.approval.approvedBy.length
+      || approvalRoles.size !== 2
       || !approvalRoles.has('controller')
       || !approvalRoles.has('independent-visual-reviewer')
     ) {

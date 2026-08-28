@@ -19,6 +19,7 @@ import {
   type ReleaseMediaAsset,
   type SourceMediaBuildInput,
 } from '../media/build-responsive-media';
+import { validateGeneratedMediaInventory } from '../media/validate-generated-media-inventory';
 import { analyzeTrustedMdx, renderTrustedMdx } from '../mdx/render';
 import type { SourceRecord } from '../schemas';
 import { loadPublicMemoryRecords, loadSourceRecords } from '../source-records';
@@ -494,6 +495,8 @@ export async function buildPublicRelease(
   const root = resolve(options.root);
   const releasesRoot = resolve(options.releasesRoot ?? join(root, 'build', 'public-releases'));
   await mkdir(releasesRoot, { recursive: true });
+
+  await validateGeneratedMediaInventory(root);
 
   const sourceRecords = (await loadSourceRecords(root))
     .filter(isPublicRecord)

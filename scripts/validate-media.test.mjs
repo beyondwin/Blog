@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { stringify as stringifyYaml } from 'yaml';
 import { afterEach, describe, expect, it } from 'vitest';
 import { validateMediaRepository } from './validate-media.mjs';
 
@@ -78,6 +79,119 @@ function mediaManifest(items) {
   return `version: 1\nitems:\n${items.map((item) => `  - id: ${item.id}\n    file: ${item.file}\n    kind: ${item.kind}\n    alt: ${item.alt ?? '설명'}\n    credit: ${item.credit ?? '작성자'}\n    ${item.sourcePath ? `sourcePath: ${item.sourcePath}` : `sourceUrl: ${item.sourceUrl ?? 'https://example.com/source'}`}\n${item.isbn13 ? `    isbn13: "${item.isbn13}"\n` : ''}${item.edition ? `    edition: ${item.edition}\n` : ''}    verifiedAt: "${item.verifiedAt ?? '2026-08-12'}"\n    rightsNote: ${item.rightsNote ?? '재배포 권리 별도 확인 필요'}\n    checksum: ${item.checksum}\n`).join('')}`;
 }
 
+async function writeApprovedGeneratedInventory(root, mutation = 'valid') {
+  const evidencePath = 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml';
+  const contactPath = 'docs/notes/project/assets/form-and-thought-generated/calibration/approved-contact-sheet.png';
+  const sourcePath = 'src/assets/content/articles/note/unfeatured.png';
+  const image = validPng(2, 1);
+  const contact = Buffer.from('approved contact sheet');
+  const rightsNote = 'Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed';
+  await put(root, contactPath, contact);
+  const decision = {
+    version: 1,
+    batchId: 'calibration',
+    generator: {
+      provider: 'openai',
+      generator: 'codex-built-in-image-generation',
+      model: 'not-exposed-by-built-in-tool',
+      modelVersion: 'not-exposed-by-built-in-tool',
+      promptVersion: 'form-and-thought-calibration-v1',
+      generatedAt: '2026-08-29T02:53:35+09:00',
+    },
+    approval: {
+      state: 'approved',
+      selectedCandidateIds: ['H02'],
+      approvedBy: mutation === 'duplicate-roles'
+        ? ['controller', 'controller', 'independent-visual-reviewer']
+        : ['controller', 'independent-visual-reviewer'],
+      recordedAt: '2026-08-29T03:24:41+09:00',
+      evidence: 'Fixed test approval evidence.',
+    },
+    rightsReview: {
+      state: 'approved',
+      decision: 'approve-repository-publication',
+      checkedAt: '2026-08-29',
+      decidedBy: 'controller',
+      caveat: 'non-exclusive generated output; copyrightability/uniqueness not guaranteed',
+      sources: [{ url: 'https://openai.com/policies/terms-of-use', checkedAt: '2026-08-29' }],
+      inspection: {
+        externalImageInputs: false,
+        namedOrLivingArtist: false,
+        recognizablePersonOrProduct: false,
+        readableMark: false,
+      },
+    },
+    approvedContactSheet: { path: contactPath, checksum: checksum(contact) },
+    assets: [{
+      candidateId: 'H02',
+      slot: 'homeHero',
+      collection: 'articles',
+      recordId: 'note',
+      mediaId: 'unfeatured',
+      file: 'unfeatured.png',
+      sourcePath: mutation === 'decision-path-tamper'
+        ? 'src/assets/content/articles/note/tampered.png'
+        : sourcePath,
+      checksum: mutation === 'decision-checksum-tamper' ? `sha256:${'b'.repeat(64)}` : checksum(image),
+      width: 2,
+      height: 1,
+    }],
+  };
+  const decisionBytes = stringifyYaml(decision, { lineWidth: 0 });
+  await put(root, evidencePath, decisionBytes);
+
+  const item = {
+    id: 'unfeatured',
+    file: 'unfeatured.png',
+    kind: 'illustration',
+    alt: 'Approved unfeatured image',
+    credit: 'beyondwin test',
+    sourcePath: evidencePath,
+    sourceKind: 'repository-generated',
+    generation: {
+      provider: 'openai',
+      generator: 'codex-built-in-image-generation',
+      model: 'not-exposed-by-built-in-tool',
+      modelVersion: 'not-exposed-by-built-in-tool',
+      promptVersion: 'form-and-thought-calibration-v1',
+      candidateId: 'H02',
+      decisionManifestChecksum: checksum(decisionBytes),
+    },
+    verifiedAt: '2026-08-29',
+    rightsNote,
+    width: 2,
+    height: 1,
+    checksum: checksum(image),
+  };
+  const items = [];
+  if (mutation !== 'orphaned') {
+    if (mutation === 'downgraded') {
+      item.sourcePath = 'docs/source.md';
+      delete item.sourceKind;
+      delete item.generation;
+      await put(root, 'docs/source.md', '# ordinary source\n');
+    }
+    items.push(item);
+    await put(root, sourcePath, image);
+  }
+  if (mutation === 'ordinary-path-reuse') {
+    items.push({
+      ...item,
+      id: 'ordinary-reuse',
+      sourcePath: 'docs/source.md',
+      sourceKind: undefined,
+      generation: undefined,
+    });
+    await put(root, 'docs/source.md', '# ordinary source\n');
+  }
+  if (mutation === 'candidate-reuse') {
+    const impostor = validPng(3, 1);
+    items.push({ ...item, id: 'impostor', file: 'impostor.png', width: 3, checksum: checksum(impostor) });
+    await put(root, 'src/assets/content/articles/note/impostor.png', impostor);
+  }
+  await put(root, 'src/assets/content/articles/note/media.yml', stringifyYaml({ version: 1, items }, { lineWidth: 0 }));
+}
+
 describe('repository media validation', () => {
   it('reports missing manifest ids, orphan assets, checksum drift, hotlinks, and broken relationships', async () => {
     const root = await makeRepository();
@@ -118,26 +232,28 @@ describe('repository media validation', () => {
     ]);
   });
 
-  it('accepts generated-media provenance only through a canonical decision manifest', async () => {
+  it('accepts generated-media provenance only through a canonical approved decision inventory', async () => {
     const root = await makeRepository();
-    const image = validPng();
-    const evidencePath = 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml';
-    await put(root, evidencePath, 'version: 1\n');
-    await put(root, 'src/content/articles/note.mdx', '---\nfeaturedMedia: generated\n---\n');
-    await put(root, 'src/assets/content/articles/note/generated.png', image);
-    const manifest = mediaManifest([{
-      id: 'generated',
-      file: 'generated.png',
-      kind: 'illustration',
-      sourcePath: evidencePath,
-      checksum: checksum(image),
-    }]).replace(
-      '    verifiedAt:',
-      `    sourceKind: repository-generated\n    generation:\n      provider: openai\n      generator: codex-built-in-image-generation\n      model: not-exposed-by-built-in-tool\n      modelVersion: not-exposed-by-built-in-tool\n      promptVersion: form-and-thought-calibration-v1\n      candidateId: A03\n      decisionManifestChecksum: sha256:${'a'.repeat(64)}\n    verifiedAt:`,
-    );
-    await put(root, 'src/assets/content/articles/note/media.yml', manifest);
+    await writeApprovedGeneratedInventory(root);
 
     expect((await validateMediaRepository(root, { strict: true })).errors).toEqual([]);
+  });
+
+  it.each([
+    ['downgraded selected asset', 'downgraded', /approved generated asset.*unfeatured.*repository-generated/i],
+    ['orphaned selected asset', 'orphaned', /approved generated asset.*unfeatured.*missing/i],
+    ['tampered selected checksum', 'decision-checksum-tamper', /approved generated asset.*unfeatured.*checksum/i],
+    ['tampered selected source path', 'decision-path-tamper', /approved generated asset.*unfeatured.*sourcePath/i],
+    ['ordinary approved-path reuse', 'ordinary-path-reuse', /ordinary media.*approved generated source path/i],
+    ['duplicate candidate claim', 'candidate-reuse', /generated candidate.*H02.*claimed more than once/i],
+    ['duplicate exact approval role', 'duplicate-roles', /approvedBy.*controller.*independent-visual-reviewer/i],
+  ])('reverse inventory rejects %s', async (_name, mutation, error) => {
+    const root = await makeRepository();
+    await writeApprovedGeneratedInventory(root, mutation);
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(error),
+    ]));
   });
 
   it.each([

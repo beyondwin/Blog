@@ -32,6 +32,8 @@ async function writeGeneratedFixture(
     omitGeneration?: boolean;
     omitSourceKind?: boolean;
     rightsNote?: string;
+    unfeaturedState?: 'valid' | 'downgraded' | 'orphaned' | 'decision-checksum-tamper'
+      | 'decision-path-tamper' | 'ordinary-path-reuse' | 'candidate-reuse';
   } = {},
 ): Promise<void> {
   await writeReleaseFixture(root);
@@ -39,6 +41,9 @@ async function writeGeneratedFixture(
   const rightsState = options.rightsState ?? 'approved';
   const assetPath = 'src/assets/content/articles/public-fixture/hero.png';
   const assetBytes = await readFile(join(root, assetPath));
+  const unfeaturedAssetPath = 'src/assets/content/articles/public-fixture/unfeatured.png';
+  const unfeaturedAssetBytes = assetBytes;
+  await put(root, unfeaturedAssetPath, unfeaturedAssetBytes);
   const fixtureContactPath = options.contactPath ?? contactSheetPath;
   const contactSheetBytes = Buffer.from('approved-contact-sheet-fixture');
   await put(root, fixtureContactPath, contactSheetBytes);
@@ -55,7 +60,7 @@ async function writeGeneratedFixture(
     },
     approval: {
       state: approvalState,
-      selectedCandidateIds: ['H01'],
+      selectedCandidateIds: ['H01', 'H02'],
       approvedBy: options.approvalRoles ?? ['controller', 'independent-visual-reviewer'],
       recordedAt: '2026-08-29T03:24:41+09:00',
       evidence: 'Fixed test approval evidence.',
@@ -81,19 +86,39 @@ async function writeGeneratedFixture(
       path: fixtureContactPath,
       checksum: sha256(contactSheetBytes),
     },
-    assets: [{
-      candidateId: 'H01',
-      slot: 'homePick/indexLandscape',
-      collection: 'articles',
-      recordId: 'public-fixture',
-      mediaId: 'hero',
-      file: 'hero.png',
-      sourcePath: assetPath,
-      checksum: sha256(assetBytes),
-      width: 1,
-      height: 1,
-    }],
+    assets: [
+      {
+        candidateId: 'H01',
+        slot: 'homePick/indexLandscape',
+        collection: 'articles',
+        recordId: 'public-fixture',
+        mediaId: 'hero',
+        file: 'hero.png',
+        sourcePath: assetPath,
+        checksum: sha256(assetBytes),
+        width: 1,
+        height: 1,
+      },
+      {
+        candidateId: 'H02',
+        slot: 'homeHero',
+        collection: 'articles',
+        recordId: 'public-fixture',
+        mediaId: 'unfeatured',
+        file: 'unfeatured.png',
+        sourcePath: unfeaturedAssetPath,
+        checksum: sha256(unfeaturedAssetBytes),
+        width: 1,
+        height: 1,
+      },
+    ],
   };
+  const unfeaturedDecision = decision.assets[1];
+  if (options.unfeaturedState === 'decision-checksum-tamper') {
+    unfeaturedDecision.checksum = `sha256:${'b'.repeat(64)}`;
+  } else if (options.unfeaturedState === 'decision-path-tamper') {
+    unfeaturedDecision.sourcePath = 'src/assets/content/articles/public-fixture/tampered.png';
+  }
   const decisionBytes = stringifyYaml(decision, { lineWidth: 0 });
   await put(root, evidencePath, decisionBytes);
 
@@ -114,6 +139,55 @@ async function writeGeneratedFixture(
     };
   }
   media.items[0].rightsNote = options.rightsNote ?? boundedRightsNote;
+  const unfeaturedItem = {
+    id: 'unfeatured',
+    file: 'unfeatured.png',
+    kind: 'illustration',
+    alt: 'An approved unfeatured fixture',
+    credit: 'beyondwin test',
+    sourcePath: evidencePath,
+    sourceKind: 'repository-generated',
+    generation: {
+      provider: 'openai',
+      generator: 'codex-built-in-image-generation',
+      model: 'not-exposed-by-built-in-tool',
+      modelVersion: 'not-exposed-by-built-in-tool',
+      promptVersion: 'form-and-thought-calibration-v1',
+      candidateId: 'H02',
+      decisionManifestChecksum: sha256(decisionBytes),
+    },
+    verifiedAt: '2026-08-29',
+    rightsNote: boundedRightsNote,
+    width: 1,
+    height: 1,
+    checksum: sha256(unfeaturedAssetBytes),
+  };
+  if (options.unfeaturedState === 'downgraded') {
+    unfeaturedItem.sourcePath = 'docs/source.md';
+    delete (unfeaturedItem as Partial<typeof unfeaturedItem>).sourceKind;
+    delete (unfeaturedItem as Partial<typeof unfeaturedItem>).generation;
+    await put(root, 'docs/source.md', '# ordinary source\n');
+  }
+  if (options.unfeaturedState !== 'orphaned') media.items.push(unfeaturedItem);
+  if (options.unfeaturedState === 'ordinary-path-reuse') {
+    media.items.push({
+      ...unfeaturedItem,
+      id: 'ordinary-reuse',
+      sourcePath: 'docs/source.md',
+      sourceKind: undefined,
+      generation: undefined,
+    });
+    await put(root, 'docs/source.md', '# ordinary source\n');
+  }
+  if (options.unfeaturedState === 'candidate-reuse') {
+    const impostorPath = 'src/assets/content/articles/public-fixture/impostor.png';
+    await put(root, impostorPath, unfeaturedAssetBytes);
+    media.items.push({
+      ...unfeaturedItem,
+      id: 'impostor',
+      file: 'impostor.png',
+    });
+  }
   await writeFile(mediaPath, stringifyYaml(media, { lineWidth: 0 }));
 }
 
@@ -174,6 +248,7 @@ describe('generated media approval and immutable evidence', () => {
     ['missing independent reviewer', ['controller']],
     ['empty approval roles', []],
     ['extra approval role', ['controller', 'independent-visual-reviewer', 'publisher']],
+    ['duplicate approval role', ['controller', 'controller', 'independent-visual-reviewer']],
   ])('fails closed for %s', async (_name, approvalRoles) => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-roles-'));
     const sourceRoot = join(sandbox, 'source');
@@ -183,6 +258,24 @@ describe('generated media approval and immutable evidence', () => {
       root: sourceRoot,
       releasesRoot: join(sandbox, 'releases'),
     })).rejects.toThrow(/approvedBy.*controller.*independent-visual-reviewer/i);
+  });
+
+  it.each([
+    ['downgraded selected asset', 'downgraded' as const, /approved generated asset.*unfeatured.*repository-generated/i],
+    ['orphaned selected asset', 'orphaned' as const, /approved generated asset.*unfeatured.*missing/i],
+    ['tampered selected checksum', 'decision-checksum-tamper' as const, /approved generated asset.*unfeatured.*checksum/i],
+    ['tampered selected source path', 'decision-path-tamper' as const, /approved generated asset.*unfeatured.*sourcePath/i],
+    ['ordinary approved-path reuse', 'ordinary-path-reuse' as const, /ordinary media.*approved generated source path/i],
+    ['duplicate candidate claim', 'candidate-reuse' as const, /generated candidate.*H02.*claimed more than once/i],
+  ])('reverse inventory rejects %s even when the asset is unfeatured', async (_name, unfeaturedState, error) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-reverse-inventory-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot, { unfeaturedState });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(error);
   });
 
   it.each([
