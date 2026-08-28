@@ -133,8 +133,8 @@ describe('React Router current-behavior static route contract', () => {
     expect(thoughtSource).toContain("import('../../src/ui/styles/route-thought.css?inline')");
     expect(thoughtSource).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
     expect(memorySource).toContain("import('../../src/ui/styles/route-memory.css?inline')");
-    expect(searchSource).toContain("import('../../src/ui/styles/route-collections.css?inline')");
-    expect(searchSource).not.toMatch(/route-(?:index|detail|search)\.css\?inline/u);
+    expect(searchSource).toContain("import('../../src/ui/styles/route-search.css?inline')");
+    expect(searchSource).not.toMatch(/route-(?:reading|collections|index|detail)\.css\?inline/u);
     expect(root.resolveCriticalCssForRender('route', null, 'tokens', 'shell'))
       .toBe('tokensshellroute');
     expect(root.resolveCriticalCssForRender('', 'server-rendered', '', ''))
@@ -303,6 +303,28 @@ describe('React Router current-behavior static route contract', () => {
       expect(html).not.toContain('data-discover=');
       expect(html).not.toContain('memory/thoughts');
     }
+  });
+
+  it('loads one primary-only search corpus with a bounded GET query and fixed lane discovery records', async () => {
+    const search = await candidateModule<any>('app/routes/search.tsx');
+    const data = await search.loader({ request: new Request('https://beyondwin.test/search/?q=%20Graphify%20') });
+
+    expect(data.initialQuery).toBe('Graphify');
+    expect(new Set(data.inventory.map((item: { kind: string }) => item.kind))).toEqual(
+      new Set(['article', 'review', 'thought']),
+    );
+    expect(data.discovery.map((item: { kind: string }) => item.kind)).toEqual([
+      'review', 'article', 'thought',
+    ]);
+    expect(data.inventory.every((item: { id: string }) => (
+      /^(?:articles|reviews|thoughts)\//u.test(item.id)
+    ))).toBe(true);
+
+    const html = renderToStaticMarkup(createElement(search.SearchPresentation, { data }));
+    expect(html).toContain('<title>검색 · FORM &amp; THOUGHT</title>');
+    expect(html).toContain('content="서평, 아티클, 생각을 검색합니다."');
+    expect(html).toContain('href="/search/" aria-current="page"');
+    expect(html).not.toMatch(/>찾기<|>글<|>책<|>문장</u);
   });
 
   it('uses FORM & THOUGHT metadata for established article and review records', async () => {

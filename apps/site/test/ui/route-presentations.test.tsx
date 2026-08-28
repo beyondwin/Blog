@@ -159,14 +159,19 @@ describe('full public route expansion', () => {
     expect(collectionHtml).toContain(`href="${article.href}"`);
 
     const inventory = releaseModule.searchInventory(active);
-    const searchHtml = renderToStaticMarkup(createElement(SearchPage, { initialQuery: 'Graphify', inventory }));
+    const discovery = releaseModule.searchDiscovery(active);
+    const searchHtml = renderToStaticMarkup(createElement(SearchPage, {
+      discovery,
+      initialQuery: 'Graphify',
+      inventory,
+    }));
     expect(searchHtml).toContain('Graphify');
-    expect(searchHtml).toContain('검색어와 제목이 일치합니다');
+    expect(searchHtml).toContain('제목이 검색어와 일치합니다');
     expect(searchHtml).toContain('href="/articles/graphify-code-knowledge-graph-deep-dive/"');
     expect(JSON.stringify(inventory)).not.toMatch(/bodyHtml|releaseId|rendererVersion|rawPrompt|privatePath/u);
 
-    const emptySearchHtml = renderToStaticMarkup(createElement(SearchPage, { initialQuery: '', inventory }));
-    expect(emptySearchHtml).toContain('글, 책, 문장과 주제를 찾습니다.');
+    const emptySearchHtml = renderToStaticMarkup(createElement(SearchPage, { discovery, initialQuery: '', inventory }));
+    expect(emptySearchHtml).toContain('찾는 키워드에서 서평과 아티클, 생각의 다음 질문을 발견해 보세요.');
     expect(emptySearchHtml).not.toContain('__bw_');
 
     const memoryHtml = renderToStaticMarkup(createElement(MemoryIndexPage, { records: [memory] }));
@@ -277,15 +282,21 @@ describe('full public route expansion', () => {
     ]));
   });
 
-  it('preserves raw search typing, keeps topic links clean, and detects safe tag-anchor collisions', async () => {
+  it('preserves raw search typing, creates a bounded primary-result origin, and detects safe tag-anchor collisions', async () => {
     const search = await candidateModule<any>('src/ui/search/SearchPage.tsx');
     const anchors = await candidateModule<any>('src/ui/navigation/search-anchor.ts');
-    const topic = { id: 'tag/AI 설계', anchorId: 'tag-safe', href: '/tags/AI%20%EC%84%A4%EA%B3%84/', kind: 'topic', title: 'AI 설계', description: 'topic', topics: ['AI 설계'] };
-    const html = renderToStaticMarkup(createElement(search.SearchPage, { initialQuery: 'AI 설계 ', inventory: [topic] }));
+    const article = { id: 'articles/AI-design', anchorId: 'record-articles-ai-design', href: '/articles/ai-design/', kind: 'article', title: 'AI 설계', description: '설명', topics: ['AI 설계'] };
+    const html = renderToStaticMarkup(createElement(search.SearchPage, {
+      discovery: [article, article, article],
+      initialQuery: 'AI 설계 ',
+      inventory: [article],
+    }));
 
     expect(html).toContain('value="AI 설계 "');
     expect(search.boundedSearchQuery('AI 설계 ')).toBe('AI 설계');
-    expect(search.searchOriginForItem(topic, 'AI 설계 ')).toBeNull();
+    expect(search.searchOriginForItem(article, 'AI 설계 ')).toEqual({
+      kind: 'search', query: 'AI 설계', anchorId: 'record-articles-ai-design',
+    });
     expect(anchors.safeSearchAnchor('AI 설계')).toMatch(/^tag-[a-f0-9]{16}$/u);
     expect(anchors.safeSearchAnchor('AI 설계')).not.toBe(anchors.safeSearchAnchor('ai 설계'));
     expect(() => anchors.safeSearchAnchors(['한국어', 'space label'], () => 'tag-collision'))
@@ -315,7 +326,7 @@ describe('full public route expansion', () => {
 
     const cases = [
       ['app/routes/memory-index.tsx', 'MemoryIndexPresentation', '<title>문장 · FORM &amp; THOUGHT</title>', '글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.'],
-      ['app/routes/search.tsx', 'SearchPresentation', '<title>찾기 · FORM &amp; THOUGHT</title>', '글, 책, 문장을 찾습니다.'],
+      ['app/routes/search.tsx', 'SearchPresentation', '<title>검색 · FORM &amp; THOUGHT</title>', '서평, 아티클, 생각을 검색합니다.'],
       ['app/routes/tags-index.tsx', 'TagsIndexPresentation', '<title>FORM &amp; THOUGHT</title>', '찾기로 이어진 단어들.'],
     ] as const;
     for (const [path, presentationName, title, description] of cases) {
@@ -323,7 +334,11 @@ describe('full public route expansion', () => {
       const data = path.includes('memory-index')
         ? { records: releaseModule.summariesForCollection(active, 'memory') }
         : path.includes('search')
-          ? { inventory: releaseModule.searchInventory(active) }
+          ? {
+              discovery: releaseModule.searchDiscovery(active),
+              initialQuery: '',
+              inventory: releaseModule.searchInventory(active),
+            }
           : { tags: releaseModule.exactPublicTags(active) };
       const html = renderToStaticMarkup(createElement(route[presentationName], { data }));
       expect(html).toContain(title);

@@ -145,7 +145,8 @@ describe('route-scoped critical CSS source accounting', () => {
     expect(thoughtDetail).toContain("import('../../src/ui/styles/route-thought.css?inline')");
     expect(thoughtDetail).toContain('criticalCss: `${detailCss}${thoughtCss}`');
     expect(thoughtDetail).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
-    expect(search).toContain('criticalCss: `${readingCss}${collectionsCss}`');
-    expect(search).not.toMatch(/route-(?:index|detail|search)\.css\?inline/u);
+    expect(search).toContain("import('../../src/ui/styles/route-search.css?inline')");
+    expect(search).toContain('criticalCss: searchCss');
+    expect(search).not.toMatch(/route-(?:reading|collections|index|detail)\.css\?inline/u);
   });
 });

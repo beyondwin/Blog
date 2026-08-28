@@ -11,11 +11,14 @@ import {
   readBoundActiveRelease,
 } from '../release-binding';
 import type { RecordSummary } from '../src/ui/collections/RecordRow';
-import type { SearchInventoryItem, SearchKind } from '../src/ui/search/SearchPage';
+import type {
+  SearchDiscoveryItem,
+  SearchInventoryItem,
+  SearchKind,
+} from '../src/ui/search/SearchPage';
 import type { PublicTag } from '../src/ui/tags/TagsPage';
 import { PREFERRED_PUBLIC_ARTICLE_LEAD_ID } from '../src/ui/articles/articlePresentation';
 import { recordAnchor as createRecordAnchor } from '../src/ui/navigation/record-anchor';
-import { safeSearchAnchors } from '../src/ui/navigation/search-anchor';
 
 export type CandidateRelease = Pick<VerifiedActivePublicRelease, 'manifest' | 'releasePath'>;
 export type CandidateCollection = PublicCollection;
@@ -167,45 +170,64 @@ export function recordsForTag(release: CandidateRelease, tag: string): RecordSum
     .map(recordSummary);
 }
 
-function searchKindForRecord(record: PublicRecord): SearchKind {
+const PRIMARY_SEARCH_COLLECTIONS = ['articles', 'reviews', 'thoughts'] as const;
+const SEARCH_DISCOVERY_SELECTIONS = [
+  { collection: 'reviews', id: 'black-swan', kind: 'review' },
+  {
+    collection: 'articles',
+    id: 'graphify-code-knowledge-graph-deep-dive',
+    kind: 'article',
+    mediaId: 'editorial-home-hero',
+  },
+  { collection: 'thoughts', id: 'why-i-read-in-the-ai-era', kind: 'thought' },
+] as const;
+type PrimarySearchCollection = (typeof PRIMARY_SEARCH_COLLECTIONS)[number];
+type PrimarySearchRecord = Extract<PublicRecord, { collection: PrimarySearchCollection }>;
+
+function searchKindForRecord(record: PrimarySearchRecord): SearchKind {
   switch (record.collection) {
-    case 'reviews': return 'book';
-    case 'memory': return 'sentence';
-    case 'analysis':
-    case 'articles':
-    case 'ideas':
-    case 'travel':
-    case 'thoughts': return 'writing';
+    case 'articles': return 'article';
+    case 'reviews': return 'review';
+    case 'thoughts': return 'thought';
   }
 }
 
+function searchItem(record: PrimarySearchRecord): SearchInventoryItem {
+  return {
+    id: `${record.collection}/${record.id}`,
+    anchorId: recordAnchor(record.collection, record.id),
+    href: record.href,
+    kind: searchKindForRecord(record),
+    title: record.title,
+    description: record.description,
+    topics: [...record.tags],
+  };
+}
+
 export function searchInventory(release: CandidateRelease): SearchInventoryItem[] {
-  const records = Object.values(release.manifest.records)
-    .filter(hasPublicPublicationState)
+  return PRIMARY_SEARCH_COLLECTIONS
+    .flatMap((collection) => recordsForCollection(release, collection))
     .sort((left, right) => left.href.localeCompare(right.href))
-    .map((record): SearchInventoryItem => ({
-      id: `${record.collection}/${record.id}`,
-      anchorId: recordAnchor(record.collection, record.id),
-      href: record.href,
-      kind: searchKindForRecord(record),
-      title: record.collection === 'memory' ? record.claimKo : record.title,
-      description: record.description,
-      topics: record.collection === 'memory'
-        ? [...record.topics, ...record.theses, ...record.tags]
-        : [...record.tags],
-    }));
-  const tags = exactPublicTags(release);
-  const tagAnchors = safeSearchAnchors(tags.map((tag) => tag.label));
-  const topics = tags.map((tag): SearchInventoryItem => ({
-    id: `tag/${tag.label}`,
-    anchorId: tagAnchors.get(tag.label)!,
-    href: tag.href,
-    kind: 'topic',
-    title: tag.label,
-    description: `${tag.count}개의 공개 기록에서 쓰인 태그`,
-    topics: [tag.label],
-  }));
-  return [...records, ...topics];
+    .map(searchItem);
+}
+
+export function searchDiscovery(release: CandidateRelease): SearchDiscoveryItem[] {
+  return SEARCH_DISCOVERY_SELECTIONS.map((selection) => {
+    const record = release.manifest.records[`${selection.collection}/${selection.id}`];
+    if (!record
+      || record.collection !== selection.collection
+      || !hasPublicPublicationState(record)
+      || record.href !== `/${selection.collection}/${selection.id}/`) {
+      throw new Error(`Verified release is missing fixed search discovery ${selection.collection}/${selection.id}`);
+    }
+    const item: SearchDiscoveryItem = searchItem(record as PrimarySearchRecord);
+    if (!('mediaId' in selection)) return item;
+    const media = release.manifest.assets[`${selection.collection}/${selection.id}/${selection.mediaId}`];
+    if (!media) {
+      throw new Error(`Verified release is missing fixed search media ${selection.collection}/${selection.id}/${selection.mediaId}`);
+    }
+    return { ...item, media };
+  });
 }
 
 export function recordForRoute<C extends CandidateCollection>(
