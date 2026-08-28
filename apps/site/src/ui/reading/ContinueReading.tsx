@@ -6,6 +6,7 @@ const KIND_LABELS: Record<ContinuationItem['kind'], string> = {
   idea: '아이디어',
   review: '책',
   travel: '여행',
+  thought: '생각',
   memory: '기억',
 };
 

@@ -11,7 +11,7 @@ import {
 import { sourceMediaManifestSchema, type VerifiableSourceInputFormat } from '../schemas';
 import { resolveSourceMedia } from '../source-records';
 
-type SourceCollection = 'analysis' | 'articles' | 'ideas' | 'reviews' | 'travel';
+type SourceCollection = 'analysis' | 'articles' | 'ideas' | 'reviews' | 'travel' | 'thoughts';
 export type ResponsiveMediaRole = 'figure' | 'intrinsic';
 
 export interface ReleaseMediaCandidate {

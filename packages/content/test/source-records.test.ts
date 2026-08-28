@@ -30,7 +30,6 @@ const expectedPublicIds = [
   'articles/postgresql-bm25-pg-search',
   'articles/shared-ai-conversation-evidence-boundaries',
   'articles/uncle-bob-ai-code-review-evidence',
-  'articles/why-i-read-in-the-ai-era',
   'memory/agent-harnesses-are-operating-systems',
   'memory/agent-workflows-need-review-gates',
   'memory/ai-design-tools-need-judgment-loops',
@@ -56,6 +55,7 @@ const expectedPublicIds = [
   'reviews/nevertheless',
   'reviews/poor-charlies-almanack',
   'reviews/siddhartha',
+  'thoughts/why-i-read-in-the-ai-era',
 ] as const;
 
 const expectedNonPublicIds = [
@@ -120,6 +120,27 @@ describe('source record parsing', () => {
     });
     expect('privatePath' in parsed).toBe(false);
     expect('jobPrompt' in parsed).toBe(false);
+  });
+
+  it('accepts a thought source record with optional featured media', () => {
+    const thought = parseSourceRecord({
+      collection: 'thoughts',
+      id: 'why-i-read-in-the-ai-era',
+      title: 'AI 시대에, 나는 왜 책을 읽는가',
+      description: '빠른 답이 넘칠수록 읽는 시간은 판단의 근육이 된다.',
+      createdAt: '2026-08-16',
+      updatedAt: '2026-08-26',
+      tags: ['reading'],
+      status: 'published',
+      draft: false,
+      featuredMedia: 'reading-desk-cobalt',
+    });
+
+    expect(thought).toMatchObject({
+      collection: 'thoughts',
+      href: '/thoughts/why-i-read-in-the-ai-era/',
+      featuredMedia: 'reading-desk-cobalt',
+    });
   });
 
   it('preserves the current analysis source-colophon fields', () => {
@@ -371,11 +392,9 @@ describe('framework-neutral corpus loading', () => {
   it('parses all 41 MDX records without Astro imports and preserves authored bodies', () => {
     expect(records).toHaveLength(41);
     expect(records.find((record) => record.id === 'why-i-read-in-the-ai-era')).toMatchObject({
-      collection: 'articles',
+      collection: 'thoughts',
       status: 'published',
       draft: false,
-      recordKind: 'essay',
-      evidenceState: 'personal',
       featuredMedia: 'reading-desk-cobalt',
     });
     expect(records.find((record) => record.id === 'why-i-read-in-the-ai-era')?.body).toContain('나는 AI 때문에 책을 읽기 시작했다.');
@@ -390,7 +409,11 @@ describe('framework-neutral corpus loading', () => {
 
     expect(actualPublicIds).toEqual(expectedPublicIds);
     for (const record of publicContent) {
-      expect(baselineRoutes.has(record.href), `${record.collection}/${record.id} missing from baseline`).toBe(true);
+      if (record.collection === 'thoughts') {
+        expect(baselineRoutes.has(record.href), `${record.collection}/${record.id} must not retain the old Astro route`).toBe(false);
+      } else {
+        expect(baselineRoutes.has(record.href), `${record.collection}/${record.id} missing from baseline`).toBe(true);
+      }
     }
     for (const record of memoryRecords) {
       expect(baselineRoutes.has(record.href), `memory/${record.id} missing from baseline`).toBe(true);
@@ -428,11 +451,11 @@ describe('framework-neutral corpus loading', () => {
   });
 
   it('resolves current public media with dimensions and immutable provenance but no source path', async () => {
-    const lead = await resolveSourceMedia(root, 'articles', 'why-i-read-in-the-ai-era', 'reading-desk-cobalt');
+    const lead = await resolveSourceMedia(root, 'thoughts', 'why-i-read-in-the-ai-era', 'reading-desk-cobalt');
     const cover = await resolveSourceMedia(root, 'reviews', 'black-swan', 'cover');
 
     expect(lead).toMatchObject({
-      src: '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
+      src: '/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
       width: 1536,
       height: 1024,
       format: 'png',

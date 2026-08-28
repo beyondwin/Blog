@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const publicAssetHref = z.string().regex(
-  /^\/assets\/content\/(?:analysis|articles|ideas|reviews|travel)\/[a-z0-9][a-z0-9-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)+\.(?:jpg|jpeg|png|webp|avif)$/,
+  /^\/assets\/content\/(?:analysis|articles|ideas|reviews|travel|thoughts)\/[a-z0-9][a-z0-9-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)+\.(?:jpg|jpeg|png|webp|avif)$/,
   'media src must be a canonical public content asset path',
 );
 

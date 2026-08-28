@@ -1,19 +1,19 @@
 import { z } from 'zod';
 import { publicMediaSchema } from './media';
 
-export const publicCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel', 'memory'] as const;
+export const publicCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts', 'memory'] as const;
 
 const idSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*$/);
 const isoDateSchema = z.iso.datetime({ offset: true });
 const externalUrlSchema = z.url().refine((value) => ['http:', 'https:'].includes(new URL(value).protocol));
 const publicContentRouteSchema = z.string().regex(
-  /^\/(?:analysis|articles|ideas|reviews|travel)\/[a-z0-9][a-z0-9-]*\/$/,
+  /^\/(?:analysis|articles|ideas|reviews|travel|thoughts)\/[a-z0-9][a-z0-9-]*\/$/,
   'href must be an approved public content route',
 );
 const publicContentSourceHrefSchema = z.union([publicContentRouteSchema, externalUrlSchema]);
 
 export const publicRelationshipSchema = z.object({
-  target: z.string().regex(/^(analysis|articles|ideas|reviews|travel|memory)\/[a-z0-9][a-z0-9-]*$/),
+  target: z.string().regex(/^(analysis|articles|ideas|reviews|travel|thoughts|memory)\/[a-z0-9][a-z0-9-]*$/),
   relation: z.enum(['supports', 'extends', 'instantiates', 'refines', 'contradicts', 'related']),
   reason: z.string().trim().min(1).max(160),
 });
@@ -53,6 +53,12 @@ const articlePublicRecordSchema = z.object({
   ...commonPublicFields,
   recordKind: z.enum(['technical-note', 'research', 'essay']).optional(),
   evidenceState: z.enum(['personal', 'source-grounded', 'verified']).optional(),
+  featuredMedia: idSchema.optional(),
+});
+
+const thoughtPublicRecordSchema = z.object({
+  collection: z.literal('thoughts'),
+  ...commonPublicFields,
   featuredMedia: idSchema.optional(),
 });
 
@@ -115,6 +121,7 @@ const memoryPublicRecordSchema = z.object({
 export const publicRecordSchema = z.discriminatedUnion('collection', [
   analysisPublicRecordSchema,
   articlePublicRecordSchema,
+  thoughtPublicRecordSchema,
   ideaPublicRecordSchema,
   reviewPublicRecordSchema,
   travelPublicRecordSchema,

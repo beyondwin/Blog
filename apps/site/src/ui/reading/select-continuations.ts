@@ -1,6 +1,6 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 
-export type ContinuationKind = 'analysis' | 'article' | 'idea' | 'review' | 'travel' | 'memory';
+export type ContinuationKind = 'analysis' | 'article' | 'idea' | 'review' | 'travel' | 'thought' | 'memory';
 
 export interface ContinuationItem {
   href: string;
@@ -15,6 +15,7 @@ const KIND_BY_COLLECTION: Record<PublicRecord['collection'], ContinuationKind> =
   ideas: 'idea',
   reviews: 'review',
   travel: 'travel',
+  thoughts: 'thought',
   memory: 'memory',
 };
 

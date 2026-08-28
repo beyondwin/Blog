@@ -1,4 +1,3 @@
-import type { PublicCollection } from '@beyondwin/contracts';
 import { RecordRow, type RecordSummary } from './RecordRow';
 
 const ORIGIN_KIND = {
@@ -9,7 +8,7 @@ const ORIGIN_KIND = {
   travel: 'travel',
 } as const;
 
-type CollectionLane = Exclude<PublicCollection, 'memory'>;
+type CollectionLane = keyof typeof ORIGIN_KIND;
 
 export function CollectionPage({
   collection,

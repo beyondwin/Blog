@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-export const sourceCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel'] as const;
+export const sourceCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts'] as const;
 
 const idSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*$/);
 const isoDate = z.coerce.date().transform((value) => value.toISOString());
 const externalUrl = z.url().refine((value) => ['http:', 'https:'].includes(new URL(value).protocol));
 
 const relationshipSchema = z.object({
-  target: z.string().regex(/^(analysis|articles|ideas|reviews|travel|memory)\/[a-z0-9][a-z0-9-]*$/),
+  target: z.string().regex(/^(analysis|articles|ideas|reviews|travel|thoughts|memory)\/[a-z0-9][a-z0-9-]*$/),
   relation: z.enum(['supports', 'extends', 'instantiates', 'refines', 'contradicts', 'related']),
   reason: z.string().trim().min(1).max(160),
 });
@@ -42,6 +42,11 @@ const articleSourceRecordSchema = z.object({
   ...sharedFields('articles'),
   recordKind: z.enum(['technical-note', 'research', 'essay']).optional(),
   evidenceState: z.enum(['personal', 'source-grounded', 'verified']).optional(),
+  featuredMedia: z.string().trim().min(1).optional(),
+});
+
+const thoughtSourceRecordSchema = z.object({
+  ...sharedFields('thoughts'),
   featuredMedia: z.string().trim().min(1).optional(),
 });
 
@@ -86,6 +91,7 @@ const travelSourceRecordSchema = z.object({
 export const sourceRecordSchema = z.discriminatedUnion('collection', [
   analysisSourceRecordSchema,
   articleSourceRecordSchema,
+  thoughtSourceRecordSchema,
   ideaSourceRecordSchema,
   reviewSourceRecordSchema,
   travelSourceRecordSchema,

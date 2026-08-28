@@ -93,7 +93,7 @@ export async function loadSourceRecords(root: string): Promise<SourceRecord[]> {
 
 function publicSourceHref(source: PublicMemoryProjection['sources'][number]): string | null {
   if (source.url) return source.url;
-  const match = source.path?.match(/^src\/content\/(analysis|articles|ideas|reviews|travel)\/([a-z0-9][a-z0-9-]*)\.mdx?$/);
+  const match = source.path?.match(/^src\/content\/(analysis|articles|ideas|reviews|travel|thoughts)\/([a-z0-9][a-z0-9-]*)\.mdx?$/);
   return match ? `/${match[1]}/${match[2]}/` : null;
 }
 

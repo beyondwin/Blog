@@ -5,7 +5,7 @@ import type { PublicRecord } from '../src/content';
 const publicMediaFixture = {
   id: 'reading-desk-cobalt',
   kind: 'illustration',
-  src: '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
+  src: '/assets/content/articles/article-render/reading-desk-cobalt.png',
   alt: '밝은 회백색 책상 위에 펼친 책과 은색 노트북',
   caption: '판단을 위해 천천히 읽는 장면',
   credit: 'beyondwin',
@@ -111,7 +111,7 @@ describe('public record allowlists', () => {
     expect(parsed.media[0]).toEqual({
       id: 'reading-desk-cobalt',
       kind: 'illustration',
-      src: '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
+      src: '/assets/content/articles/article-render/reading-desk-cobalt.png',
       alt: '밝은 회백색 책상 위에 펼친 책과 은색 노트북',
       caption: '판단을 위해 천천히 읽는 장면',
       credit: 'beyondwin',
@@ -136,8 +136,9 @@ describe('public record allowlists', () => {
   });
 
   it.each([
-    '/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
+    '/assets/content/articles/article-render/reading-desk-cobalt.png',
     '/assets/content/reviews/black-swan/cover.avif',
+    '/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png',
   ])('accepts a canonical public media src: %s', (src) => {
     expect(parsePublicRecord(articleWithMediaSrc(src)).media[0].src).toBe(src);
   });
@@ -159,6 +160,7 @@ describe('public record allowlists', () => {
     '/ideas/public-idea/',
     '/reviews/black-swan/',
     '/travel/tokyo/',
+    '/thoughts/why-i-read-in-the-ai-era/',
     'https://example.com/public-source',
   ])('accepts an approved public memory source href: %s', (href) => {
     const parsed = parsePublicRecord(memoryWithSourceHref(href));
@@ -204,6 +206,25 @@ describe('public record allowlists', () => {
       featuredMedia: 'reading-desk-cobalt',
     });
     expect('sourceTitle' in parsed).toBe(false);
+  });
+
+  it('parses a public thought at its canonical route', () => {
+    const thought = parsePublicRecord({
+      collection: 'thoughts',
+      id: 'why-i-read-in-the-ai-era',
+      href: '/thoughts/why-i-read-in-the-ai-era/',
+      title: 'AI 시대에, 나는 왜 책을 읽는가',
+      description: '빠른 답이 넘칠수록 읽는 시간은 판단의 근육이 된다.',
+      createdAt: '2026-08-16T00:00:00.000Z',
+      updatedAt: '2026-08-26T00:00:00.000Z',
+      tags: ['reading'],
+      media: [],
+      relationships: [],
+      memoryLinks: [],
+      bodyHtml: '<p>읽기는 판단을 늦추는 일이다.</p>',
+    });
+
+    expect(thought.href).toBe('/thoughts/why-i-read-in-the-ai-era/');
   });
 
   it('normalizes a review author to the public author list and keeps render fields', () => {

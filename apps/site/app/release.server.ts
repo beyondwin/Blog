@@ -114,6 +114,7 @@ function detailForRecord(record: PublicRecord): string | undefined {
     case 'ideas': return record.maturity;
     case 'travel': return record.location;
     case 'articles':
+    case 'thoughts':
     case 'memory': return undefined;
   }
 }
@@ -171,7 +172,8 @@ function searchKindForRecord(record: PublicRecord): SearchKind {
     case 'analysis':
     case 'articles':
     case 'ideas':
-    case 'travel': return 'writing';
+    case 'travel':
+    case 'thoughts': return 'writing';
   }
 }
 

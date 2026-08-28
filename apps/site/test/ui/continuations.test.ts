@@ -61,6 +61,24 @@ function memory(id: string, overrides: Record<string, unknown> = {}): PublicReco
 }
 
 describe('selectContinuations', () => {
+  it('keeps a public thought relationship as a thought continuation', () => {
+    const current = article('current', {
+      relationships: [{ target: 'thoughts/reflection', relation: 'extends', reason: '생각을 이어 간다.' }],
+    });
+    const thought = {
+      ...article('reflection'),
+      collection: 'thoughts',
+      href: '/thoughts/reflection/',
+    } as unknown as PublicRecord;
+
+    expect(selectContinuations(current, {
+      'articles/current': current,
+      'thoughts/reflection': thought,
+    })).toEqual([
+      { href: '/thoughts/reflection/', title: '글 reflection', reason: '생각을 이어 간다.', kind: 'thought' },
+    ]);
+  });
+
   it('keeps authored order before exact public-memory links and derives truthful target kinds', () => {
     const current = article('current', {
       relationships: [

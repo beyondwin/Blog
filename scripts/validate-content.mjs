@@ -1,42 +1,23 @@
+import { spawnSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
-import { extname, join } from 'node:path';
+import { extname, join, relative } from 'node:path';
 import matter from 'gray-matter';
+
+if (process.env.BEYONDWIN_CONTENT_VALIDATOR_TSX !== '1') {
+  const result = spawnSync(process.execPath, ['--import', 'tsx', process.argv[1], ...process.argv.slice(2)], {
+    cwd: process.cwd(),
+    env: { ...process.env, BEYONDWIN_CONTENT_VALIDATOR_TSX: '1' },
+    stdio: 'inherit',
+  });
+  if (result.error) throw result.error;
+  process.exit(result.status ?? 1);
+}
+
+const { parseSourceRecord } = await import('@beyondwin/content');
+const { sourceCollections } = await import('@beyondwin/content/schemas');
 
 const root = process.cwd();
 const contentRoot = join(root, 'src', 'content');
-
-const requiredFields = {
-  analysis: [
-    'title',
-    'description',
-    'createdAt',
-    'updatedAt',
-    'tags',
-    'status',
-    'sourceUrl',
-    'sourceTitle',
-    'comment',
-    'format',
-  ],
-  articles: ['title', 'description', 'createdAt', 'updatedAt', 'tags', 'status'],
-  ideas: ['title', 'description', 'createdAt', 'updatedAt', 'tags', 'status', 'maturity'],
-  reviews: [
-    'title',
-    'description',
-    'createdAt',
-    'updatedAt',
-    'tags',
-    'status',
-    'itemType',
-    'itemTitle',
-  ],
-  travel: ['title', 'description', 'createdAt', 'updatedAt', 'tags', 'status', 'location'],
-};
-
-const allowedFormats = new Set(['research-report', 'essay', 'visual-page']);
-const allowedMaturities = new Set(['seed', 'sketch', 'proposal']);
-const allowedStatuses = new Set(['review', 'published', 'archived']);
-const allowedCoverStates = new Set(['verified', 'hold']);
 
 async function collectMdxFiles(directory) {
   const files = [];
@@ -54,112 +35,10 @@ async function collectMdxFiles(directory) {
       }
     }
   } catch (error) {
-    if (error.code !== 'ENOENT') {
-      throw error;
-    }
+    if (error.code !== 'ENOENT') throw error;
   }
 
   return files;
-}
-
-function validateRequiredFields(collection, filePath, data) {
-  const errors = [];
-
-  for (const field of requiredFields[collection]) {
-    if (data[field] === undefined || data[field] === null || data[field] === '') {
-      errors.push(`${filePath}: missing required frontmatter field "${field}"`);
-    }
-  }
-
-  return errors;
-}
-
-function validateAnalysis(filePath, data) {
-  const errors = [];
-
-  errors.push(...validateSourceUrl(filePath, data));
-
-  if (data.format && !allowedFormats.has(data.format)) {
-    errors.push(`${filePath}: format must be research-report, essay, or visual-page`);
-  }
-
-  return errors;
-}
-
-function validateSourceUrl(filePath, data) {
-  const errors = [];
-
-  for (const field of ['sourceUrl', 'coverImage']) {
-    if (!data[field]) {
-      continue;
-    }
-
-    try {
-      new URL(data[field]);
-    } catch {
-      errors.push(`${filePath}: ${field} must be a valid URL`);
-    }
-  }
-
-  return errors;
-}
-
-function validateIdeas(filePath, data) {
-  const errors = [];
-
-  if (data.maturity && !allowedMaturities.has(data.maturity)) {
-    errors.push(`${filePath}: maturity must be seed, sketch, or proposal`);
-  }
-
-  return errors;
-}
-
-function validatePublishedReview(filePath, data) {
-  const errors = [];
-  if (data.status !== 'published') return errors;
-
-  const required = ['itemAuthor', 'isbn13', 'publisher', 'verdict', 'coverState'];
-  if (required.some((field) => data[field] === undefined || data[field] === null || data[field] === '')) {
-    errors.push(`${filePath}: published review requires itemAuthor, isbn13, publisher, verdict, and coverState`);
-  }
-  if (data.coverState && !allowedCoverStates.has(data.coverState)) {
-    errors.push(`${filePath}: published review coverState must be verified or hold`);
-  }
-  if (data.coverState === 'verified' && !data.coverMedia) {
-    errors.push(`${filePath}: coverState verified requires coverMedia`);
-  }
-  if (data.coverState === 'hold' && data.coverMedia) {
-    errors.push(`${filePath}: coverState hold forbids coverMedia`);
-  }
-
-  return errors;
-}
-
-function validatePublishedTravel(filePath, data) {
-  if (data.status === 'published' && (data.privacyReviewed !== true || !data.leadMedia)) {
-    return [`${filePath}: published travel requires privacyReviewed true and leadMedia`];
-  }
-  return [];
-}
-
-function validateShared(filePath, data) {
-  const errors = [];
-
-  if (data.status && !allowedStatuses.has(data.status)) {
-    errors.push(`${filePath}: status must be review, published, or archived`);
-  }
-
-  if (!Array.isArray(data.tags)) {
-    errors.push(`${filePath}: tags must be an array`);
-  }
-
-  const createdAt = new Date(data.createdAt);
-  const updatedAt = new Date(data.updatedAt);
-  if (!Number.isNaN(createdAt.getTime()) && !Number.isNaN(updatedAt.getTime()) && updatedAt < createdAt) {
-    errors.push(`${filePath}: updatedAt must be on or after createdAt`);
-  }
-
-  return errors;
 }
 
 function validateQuoteLength(filePath, content) {
@@ -181,43 +60,41 @@ function validateQuoteLength(filePath, content) {
   return errors;
 }
 
+function schemaErrors(filePath, error) {
+  if (!Array.isArray(error?.issues)) return [`${filePath}: ${error instanceof Error ? error.message : String(error)}`];
+  return error.issues.map((issue) => {
+    const path = issue.path.length > 0 ? ` ${issue.path.join('.')}` : '';
+    return `${filePath}:${path} ${issue.message}`;
+  });
+}
+
 const errors = [];
 
-for (const collection of Object.keys(requiredFields)) {
+for (const collection of sourceCollections) {
   const directory = join(contentRoot, collection);
   const files = await collectMdxFiles(directory);
 
   for (const filePath of files) {
     const raw = await readFile(filePath, 'utf8');
     const parsed = matter(raw);
-    errors.push(...validateRequiredFields(collection, filePath, parsed.data));
-    errors.push(...validateShared(filePath, parsed.data));
+    const id = relative(directory, filePath).replace(/\.mdx$/, '');
+
+    if (id.includes('/')) {
+      errors.push(`${filePath}: nested content IDs are not supported by the public route contract`);
+    } else {
+      try {
+        parseSourceRecord({ ...parsed.data, collection, id, body: parsed.content });
+      } catch (error) {
+        errors.push(...schemaErrors(filePath, error));
+      }
+    }
     errors.push(...validateQuoteLength(filePath, parsed.content));
-
-    if (collection === 'analysis') {
-      errors.push(...validateAnalysis(filePath, parsed.data));
-    }
-
-    if (collection === 'reviews') {
-      errors.push(...validateSourceUrl(filePath, parsed.data));
-      errors.push(...validatePublishedReview(filePath, parsed.data));
-    }
-
-    if (collection === 'ideas') {
-      errors.push(...validateIdeas(filePath, parsed.data));
-    }
-
-    if (collection === 'travel') {
-      errors.push(...validatePublishedTravel(filePath, parsed.data));
-    }
   }
 }
 
 if (errors.length > 0) {
   console.error('Content validation failed:');
-  for (const error of errors) {
-    console.error(`- ${error}`);
-  }
+  for (const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
 

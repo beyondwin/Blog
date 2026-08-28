@@ -12,9 +12,9 @@ describe('public release selection', () => {
 
   it('removes private path, prompt, embedding, raw source, and job fields from JSON', () => {
     const publicRecord = parsePublicRecord({
-      collection: 'articles',
+      collection: 'thoughts',
       id: 'malicious-fixture',
-      href: '/articles/malicious-fixture/',
+      href: '/thoughts/malicious-fixture/',
       title: 'Safe',
       description: 'Safe',
       createdAt: '2026-08-21T00:00:00.000Z',

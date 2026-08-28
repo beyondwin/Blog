@@ -22,5 +22,6 @@ references:
     checksum: sha256:a4f7c15891ee6d6e90865354cf7782058d0354060ac3edc145a45a2bb84d4128
     intent: Show the same selected object expanding into a non-modal Continuity Zoom state with image-first hierarchy, reading actions, and quiet provenance.
 productionLead:
-  file: ../../../../../src/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png
+  file: ../../../../../src/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png
+  formerFile: ../../../../../src/assets/content/articles/why-i-read-in-the-ai-era/reading-desk-cobalt.png
   checksum: sha256:aafdd214e2586dd5622aaa1c49d90d5b84dd6b5223a5500d915248a62327ca56

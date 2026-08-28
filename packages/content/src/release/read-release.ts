@@ -17,11 +17,11 @@ import {
 const releaseIdSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const PUBLIC_RELEASE_VERIFICATION_POLICY_VERSION = 1 as const;
 const canonicalAssetHrefSchema = z.string().regex(
-  /^\/assets\/content\/(?:analysis|articles|ideas|reviews|travel)\/[a-z0-9][a-z0-9-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)+\.(?:jpg|jpeg|png|webp|avif)$/,
+  /^\/assets\/content\/(?:analysis|articles|ideas|reviews|travel|thoughts)\/[a-z0-9][a-z0-9-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)+\.(?:jpg|jpeg|png|webp|avif)$/,
 );
 const checksumSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 const externalOrContentUrlSchema = z.string().refine((value) => {
-  if (/^\/(?:analysis|articles|ideas|reviews|travel)\/[a-z0-9][a-z0-9-]*\/$/.test(value)) return true;
+  if (/^\/(?:analysis|articles|ideas|reviews|travel|thoughts)\/[a-z0-9][a-z0-9-]*\/$/.test(value)) return true;
   try {
     return ['http:', 'https:'].includes(new URL(value).protocol);
   } catch {
@@ -48,7 +48,7 @@ const responsiveSourcesSchema = z.array(z.object({
 
 const releaseMediaAssetSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
-  collection: z.enum(['analysis', 'articles', 'ideas', 'reviews', 'travel']),
+  collection: z.enum(['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts']),
   recordId: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
   kind: z.enum(['book-cover', 'photo', 'diagram', 'screenshot', 'illustration']),
   alt: z.string().trim().min(1),

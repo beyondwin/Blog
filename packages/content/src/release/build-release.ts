@@ -276,7 +276,9 @@ function referencedMedia(
   figureMediaIds: Iterable<string>,
 ): Map<string, 'figure' | 'intrinsic'> {
   const references = new Map<string, 'figure' | 'intrinsic'>();
-  if (record.collection === 'articles' && record.featuredMedia) references.set(record.featuredMedia, 'intrinsic');
+  if ((record.collection === 'articles' || record.collection === 'thoughts') && record.featuredMedia) {
+    references.set(record.featuredMedia, 'intrinsic');
+  }
   if (record.collection === 'reviews' && record.coverMedia) references.set(record.coverMedia, 'intrinsic');
   if (record.collection === 'travel' && record.leadMedia) references.set(record.leadMedia, 'intrinsic');
   for (const mediaId of figureMediaIds) references.set(mediaId, 'figure');
@@ -334,6 +336,10 @@ function publicRecordInput(
     ...common,
     ...optional('recordKind', record.recordKind),
     ...optional('evidenceState', record.evidenceState),
+    ...optional('featuredMedia', record.featuredMedia),
+  };
+  if (record.collection === 'thoughts') return {
+    ...common,
     ...optional('featuredMedia', record.featuredMedia),
   };
   if (record.collection === 'ideas') return { ...common, maturity: record.maturity };

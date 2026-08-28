@@ -39,7 +39,7 @@ export async function writeReleaseFixture(
   const mediaRoot = join(root, 'src', 'assets', 'content', 'articles', 'public-fixture');
 
   await Promise.all([
-    ...['analysis', 'articles', 'ideas', 'reviews', 'travel'].map((collection) => (
+    ...['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts'].map((collection) => (
       mkdir(join(contentRoot, collection), { recursive: true })
     )),
     mkdir(join(root, 'src', 'data'), { recursive: true }),
