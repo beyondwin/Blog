@@ -1,23 +1,31 @@
 import { expect, test, type Browser } from '@playwright/test';
-import { APPROVED_VIEWPORTS, canonicalUrl, expectNoHorizontalOverflow } from './support';
+import { expectNoHorizontalOverflow } from './support';
+
+const BASE_URL = 'http://127.0.0.1:4397';
+const PRIMARY_HREFS = ['/reviews/', '/articles/', '/thoughts/', '/search/'] as const;
 
 async function noJsPage(browser: Browser, viewport: { width: number; height: number }) {
-  const context = await browser.newContext({ javaScriptEnabled: false, viewport });
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport, baseURL: BASE_URL });
   return { context, page: await context.newPage() };
 }
 
-for (const viewport of [APPROVED_VIEWPORTS.desktop, APPROVED_VIEWPORTS.mobile390]) {
-  test(`${viewport.width}px no-JS scene records remain canonical and detail fallback is usable`, async ({ browser }) => {
+for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+  test(`${viewport.width}px no-JS Home keeps real editorial selections and canonical navigation`, async ({ browser }) => {
     const { context, page } = await noJsPage(browser, viewport);
     try {
-      await page.goto(canonicalUrl('/'));
-      const article = page.locator('[data-scene-object="reading-desk-cobalt"]');
-      const review = page.locator('[data-scene-object="black-swan"]');
-      await expect(article).toHaveAttribute('href', '/articles/why-i-read-in-the-ai-era/');
-      await expect(review).toHaveAttribute('href', '/reviews/black-swan/');
-      await article.click();
-      await expect(page).toHaveURL(canonicalUrl('/articles/why-i-read-in-the-ai-era/'));
-      await expect(page.getByRole('link', { name: '글 목록으로' })).toHaveAttribute('href', '/articles/');
+      await page.goto('/');
+      const hero = page.getByRole('link', { name: /이 글 읽기/u });
+      await expect(hero).toHaveAttribute('href', '/articles/graphify-code-knowledge-graph-deep-dive/');
+      await expect(page.getByRole('list', { name: '편집 선택' }).getByRole('link')).toHaveCount(3);
+      const fallbackNavigation = viewport.width < 768
+        ? page.getByRole('navigation', { name: '모바일 주 탐색' })
+        : page.getByRole('navigation', { name: '주 탐색' });
+      expect(await fallbackNavigation.getByRole('link').evaluateAll((links) => (
+        links.map((link) => link.getAttribute('href'))
+      ))).toEqual(PRIMARY_HREFS);
+      await hero.click();
+      await expect(page).toHaveURL(`${BASE_URL}/articles/graphify-code-knowledge-graph-deep-dive/`);
+      await expect(page.getByRole('link', { name: '아티클 전체 보기' })).toHaveAttribute('href', '/articles/');
       await expectNoHorizontalOverflow(page);
     } finally {
       await context.close();
@@ -25,31 +33,18 @@ for (const viewport of [APPROVED_VIEWPORTS.desktop, APPROVED_VIEWPORTS.mobile390
   });
 }
 
-for (const flow of [
-  {
-    viewport: APPROVED_VIEWPORTS.mobile390,
-    list: '/articles/',
-    row: 'record-articles-why-i-read-in-the-ai-era',
-    detail: '/articles/why-i-read-in-the-ai-era/',
-    fallback: '글 목록으로',
-  },
-  {
-    viewport: APPROVED_VIEWPORTS.mobile426,
-    list: '/reviews/',
-    row: 'record-reviews-black-swan',
-    detail: '/reviews/black-swan/',
-    fallback: '책 목록으로',
-  },
-] as const) {
-  test(`${flow.viewport.width}px no-JS collection anchor and fallback remain canonical`, async ({ browser }) => {
-    const { context, page } = await noJsPage(browser, flow.viewport);
+for (const viewport of [{ width: 768, height: 900 }, { width: 390, height: 844 }]) {
+  test(`${viewport.width}px no-JS article ledger and detail fallback remain canonical`, async ({ browser }) => {
+    const { context, page } = await noJsPage(browser, viewport);
     try {
-      await page.goto(canonicalUrl(flow.list));
-      const link = page.locator(`#${flow.row}`).getByRole('link');
-      await expect(link).toHaveAttribute('href', flow.detail);
+      await page.goto('/articles/');
+      await expect(page.locator('.article-topic-filter a')).toHaveCount(6);
+      await expect(page.locator('.article-index__ledger > li')).toHaveCount(17);
+      const link = page.locator('#record-articles-graphify-code-knowledge-graph-deep-dive').getByRole('link');
+      await expect(link).toHaveAttribute('href', '/articles/graphify-code-knowledge-graph-deep-dive/');
       await link.click();
-      await expect(page).toHaveURL(canonicalUrl(flow.detail));
-      await expect(page.getByRole('link', { name: flow.fallback })).toHaveAttribute('href', flow.list);
+      await expect(page).toHaveURL(`${BASE_URL}/articles/graphify-code-knowledge-graph-deep-dive/`);
+      await expect(page.getByRole('link', { name: '아티클 전체 보기' })).toHaveAttribute('href', '/articles/');
       await expectNoHorizontalOverflow(page);
     } finally {
       await context.close();
