@@ -180,6 +180,9 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#F2EFE9" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="preload" as="font" type="font/woff2" href="/fonts/form-thought-display-ko.woff2" crossOrigin="anonymous" />
+        <link rel="preload" as="font" type="font/woff2" href="/fonts/form-thought-wordmark.woff2" crossOrigin="anonymous" />
+        <link rel="preload" as="font" type="font/woff2" href="/fonts/form-thought-ui-ko.woff2" crossOrigin="anonymous" />
         <CriticalStyles />
         <Meta />
         <Links />

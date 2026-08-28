@@ -1,0 +1,259 @@
+schema_version: 1
+name: FORM & THOUGHT reference and typography calibration
+status: selected-and-integrated
+calibrated_at: 2026-08-29
+authority:
+  adr: docs/notes/project/adr/0007-form-and-thought-react-only-editorial-system.md
+  visual_spec: docs/notes/project/form-and-thought-visual-spec.md
+  manifest: docs/notes/project/assets/form-and-thought-reference/manifest.yml
+  note: Calibration maps each bitmap to a comparison viewport; bitmap pixels are not treated as CSS pixels without the recorded scale.
+environment:
+  os: macOS Darwin 25.5.0 arm64
+  browser: HeadlessChrome 152.0.0.0
+  user_agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/152.0.0.0 Safari/537.36
+  capture_device_pixel_ratio: 1
+  desktop_capture_viewport_css: [1440, 900]
+  mobile_capture_viewport_css: [390, 844]
+  horizontal_overflow_css_px: 0
+captures:
+  html: docs/notes/project/assets/form-and-thought-type-calibration/type-calibration.html
+  combined_png: docs/notes/project/assets/form-and-thought-type-calibration/type-calibration.png
+  combined_png_sha256: 069bf580dac6a4b69f4f1d6797e7fc371accb2ca51f087bd4705ebc70a8eb2b2
+  combined_png_dimensions_px: [1694, 1896]
+  desktop_source_dimensions_px: [1280, 951]
+  mobile_source_dimensions_px: [390, 1896]
+  note: Source screenshots are full main-element captures made after sizing the browser to the recorded CSS viewport.
+reference_calibration:
+  - id: reference-01-search
+    file: reference-01-search.png
+    verified_sha256: ef07b8561c02ccd7272f3edd3764312b82e53189cc149af495952dfd6e41469b
+    bitmap_dimensions_px: [1122, 1402]
+    page_shell_crop_px: [52, 72, 1014, 1260]
+    comparison_viewport_css: [1120, 1400]
+    device_pixel_ratio: 1
+    bitmap_to_css_scale: [1.001786, 1.001429]
+    authority: primary
+    route_state: /search/ empty-query-discovery
+  - id: reference-02-thought-index
+    file: reference-02-thought-index.png
+    verified_sha256: a4a7a0c183bdc6fc52230fff35897a1d05e41d37d3df654527408e89af96bdc2
+    bitmap_dimensions_px: [1122, 1402]
+    page_shell_crop_px: [42, 36, 1037, 1300]
+    comparison_viewport_css: [1120, 1400]
+    device_pixel_ratio: 1
+    bitmap_to_css_scale: [1.001786, 1.001429]
+    authority: primary-with-user-override
+    route_state: /thoughts/ one-real-five-reserved
+  - id: reference-03-detail
+    file: reference-03-detail.png
+    verified_sha256: adc16c2b4ea1bfda448ca7f433a6464ec023639f2d51811a7089ecb591bbb8ee
+    bitmap_dimensions_px: [1122, 1402]
+    page_shell_crop_px: [29, 28, 1062, 1342]
+    comparison_viewport_css: [1120, 1400]
+    device_pixel_ratio: 1
+    bitmap_to_css_scale: [1.001786, 1.001429]
+    authority: primary
+    route_state: /articles/:slug and /thoughts/:slug detail-with-hero-media
+  - id: reference-04-article-index
+    file: reference-04-article-index.png
+    verified_sha256: 2b2371ef6b500ffbac0e5c668b56af7329f65c82b231be41a164128067b111dd
+    bitmap_dimensions_px: [1086, 1448]
+    page_shell_crop_px: [47, 39, 992, 1367]
+    comparison_viewport_css: [1080, 1440]
+    device_pixel_ratio: 1
+    bitmap_to_css_scale: [1.005556, 1.005556]
+    authority: primary
+    route_state: /articles/ all-filter
+  - id: reference-05-home
+    file: reference-05-home.png
+    verified_sha256: a69c3f0fcc1803f781c2be4a4c4965b49296325bc51c6361cb7e505f7c609086
+    bitmap_dimensions_px: [1448, 1086]
+    page_shell_crop_px: [75, 45, 1298, 996]
+    comparison_viewport_css: [1440, 1080]
+    device_pixel_ratio: 1
+    bitmap_to_css_scale: [1.005556, 1.005556]
+    authority: primary
+    route_state: / editorial-home
+    wordmark_observed_ink_bbox_px: [117, 71, 93, 39]
+    wordmark_observed_ink_width_css_px: 92.49
+  - id: reference-06-review-index-left
+    file: reference-06-review-and-detail.jpg
+    verified_sha256: 744d8e9321defb0e1f51d4c552d57f0b6ae010d29756011158736654de68ffe3
+    bitmap_dimensions_px: [1792, 1008]
+    page_shell_crop_px: [39, 35, 840, 933]
+    comparison_viewport_css: [840, 933]
+    device_pixel_ratio: 1
+    bitmap_to_css_scale: [1, 1]
+    authority: primary-region
+    route_state: /reviews/ review-ledger
+  - id: reference-06-review-detail-right
+    file: reference-06-review-and-detail.jpg
+    verified_sha256: 744d8e9321defb0e1f51d4c552d57f0b6ae010d29756011158736654de68ffe3
+    bitmap_dimensions_px: [1792, 1008]
+    page_shell_crop_px: [911, 35, 841, 933]
+    comparison_viewport_css: [841, 933]
+    device_pixel_ratio: 1
+    bitmap_to_css_scale: [1, 1]
+    authority: primary-region
+    route_state: /reviews/:slug detail-with-hero-media
+  - id: reference-07-surface-set
+    file: reference-07-surface-set.jpg
+    verified_sha256: e35e9286836317fca6a3f772b24307ed13cf0d1b2e32b55bfddd8eaac5570935
+    bitmap_dimensions_px: [1600, 1200]
+    page_shell_crop_px: null
+    comparison_viewport_css: null
+    device_pixel_ratio: null
+    bitmap_to_css_scale: null
+    authority: secondary-tone-board
+    route_state: not-applicable-composite-board
+font_sources:
+  maru_buri:
+    official_page: https://hangeul.naver.com/fonts/search?f=maru
+    official_download: https://campaign-cdn.pstatic.net/0/hangeul/2022/zip_v2/maruburi.zip
+    license: Naver open license; official page states commercial use is allowed
+    source_filename: MaruBuri-Regular.otf
+    source_sha256: 5a849f92307bc6e705319577f6a6c92ffae04f54277d1eb01a7d52ca7e5e3e6c
+    source_bytes: 960344
+    hold: Exact redistribution text is not bundled in the official zip, and the publisher does not provide a WOFF2; release conversion and redistribution need explicit verification.
+  cormorant_garamond:
+    official_page: https://github.com/CatharsisFonts/Cormorant
+    official_google_fonts_page: https://github.com/google/fonts/tree/main/ofl/cormorantgaramond
+    license: SIL Open Font License 1.1
+    source_filename: cormorant-wordmark.woff2
+    source_sha256: 87214d09732935c8730efb191cdf3d47d65108ee35e10c171d7a247f4605c09d
+    source_bytes: 2408
+    calibration_subset: FORM & THOUGHT, weight 500, generated by the official Google Fonts CSS API
+    hold: null
+  pretendard:
+    official_page: https://github.com/orioncactus/pretendard
+    official_release: https://github.com/orioncactus/pretendard/releases/tag/v1.3.9
+    license: SIL Open Font License 1.1
+    source_filename: Pretendard-Regular.woff2
+    source_sha256: fad853f7f47c6c8b103171e7193fa095708cdcd70850a71d93aa5379e8a61d63
+    source_bytes: 765892
+    hold: null
+  noto_serif_kr:
+    official_page: https://github.com/google/fonts/tree/main/ofl/notoserifkr
+    license: SIL Open Font License 1.1
+    source_filename: noto-serif-calibration.woff2
+    source_sha256: dd40d30afb21687149606eed2765901a25a1c925d7ab2b2bb1ba3f1c4f23305e
+    source_bytes: 17380
+    calibration_subset: Exact title and body specimen glyphs, weight 400, generated by the official Google Fonts CSS API
+    hold: null
+  noto_sans_kr:
+    official_page: https://github.com/google/fonts/tree/main/ofl/notosanskr
+    license: SIL Open Font License 1.1
+    source_filename: noto-sans-calibration.woff2
+    source_sha256: c2ae5c61845a2fa65b7971bdbe7bf4c5fb0633954e923925dfa077bf070742c2
+    source_bytes: 5820
+    calibration_subset: Exact lane, date, and wordmark specimen glyphs, weight 400, generated by the official Google Fonts CSS API
+    hold: null
+  kopub_batang:
+    official_page: https://www.kopus.org/biz-electronic-font2/
+    official_download: https://www.kopus.org/wp-content/uploads/2026/04/KOPUBWORLD_TTF_FONTS2026.zip
+    official_license_pdf: https://www.kopus.org/wp-content/uploads/2021/04/서체_라이선스.pdf
+    license: KoPub World custom license
+    source_filename: KoPubWorld Batang Medium.ttf
+    source_sha256: f2c31ffd195ea0fe74c9e720592930ed528c52ee7876baffaeff24d42c133d6d
+    source_bytes: 12148596
+    hold: Publisher states server embedding requires separate approval and font modification is prohibited; no official WOFF2 is supplied.
+  libre_baskerville:
+    official_page: https://github.com/google/fonts/tree/main/ofl/librebaskerville
+    license: SIL Open Font License 1.1
+    source_filename: libre-wordmark.woff2
+    source_sha256: c59ddb19df76120b03031ba282731f73b4dcad226c7329fc19f16e9464b4bfd1
+    source_bytes: 1720
+    calibration_subset: FORM & THOUGHT, weight 400, generated by the official Google Fonts CSS API
+    hold: null
+stack_measurements:
+  - id: 1
+    stack: MaruBuri + Cormorant Garamond + Pretendard
+    desktop_wordmark_width_css_px: 105.73
+    mobile_wordmark_width_css_px: 96.13
+    desktop_korean_title_lines: 2
+    mobile_korean_title_lines: 2
+    desktop_body_measure_em: 39.53
+    mobile_body_measure_em: 21.63
+    calibration_font_bytes: 1728644
+    hold: MaruBuri release conversion and redistribution verification
+  - id: 2
+    stack: Noto Serif KR + Cormorant Garamond + Noto Sans KR
+    desktop_wordmark_width_css_px: 105.73
+    mobile_wordmark_width_css_px: 96.13
+    desktop_korean_title_lines: 2
+    mobile_korean_title_lines: 2
+    desktop_body_measure_em: 39.53
+    mobile_body_measure_em: 21.63
+    calibration_font_bytes: 25608
+    hold: null
+  - id: 3
+    stack: KoPub Batang + Libre Baskerville + Pretendard
+    desktop_wordmark_width_css_px: 130.30
+    mobile_wordmark_width_css_px: 118.45
+    desktop_korean_title_lines: 2
+    mobile_korean_title_lines: 2
+    desktop_body_measure_em: 39.53
+    mobile_body_measure_em: 21.63
+    calibration_font_bytes: 12916208
+    hold: KoPub server embedding approval and no-modification restriction
+recommendation:
+  stack_id: 2
+  rationale:
+    - Only stack with no licensing or WOFF2 conversion hold across all three roles.
+    - Cormorant wordmark is 18.86 percent narrower than Libre Baskerville at the fixed desktop role size and is closer to the approved reference silhouette.
+    - Korean title preserves the same two-line wrap at desktop and mobile, with stable body color and no observed collision or horizontal overflow.
+  selection_authority: delegated controller after independent visual review
+selection:
+  selected_stack_id: 2
+  selected_stack: Noto Serif KR 400 + Cormorant Garamond 400 + Noto Sans KR 400
+  decision: SELECT_STACK_2
+  authority: delegated controller
+  independent_visual_review: agreed
+  mobile_measure_ruling:
+    viewport_css_px: 390
+    side_inset_css_px: 22
+    body_font_size_css_px: 16
+    measured_body_width_em: 21.63
+    note: Preserve the approved inset and body size; do not shrink type or force overflow.
+production:
+  total_font_bytes: 247556
+  font_display: swap
+  preload: all three semantic WOFF2 roles, once each, anonymous CORS
+  remote_font_requests: 0
+  artifacts:
+    - file: apps/site/public/fonts/form-thought-display-ko.woff2
+      family: Noto Serif KR
+      weight: 400
+      bytes: 164384
+      sha256: e947ea52090b52c69864c431eda9aa4c4dd6cba1877119af927929f812c17c17
+      hold: null
+    - file: apps/site/public/fonts/form-thought-wordmark.woff2
+      family: Cormorant Garamond
+      weight: 400
+      bytes: 2408
+      sha256: 96ba19a6327e841dcf9fefc29b4827c5cd6dc80c7469aeb80fa70eca7411609f
+      hold: null
+    - file: apps/site/public/fonts/form-thought-ui-ko.woff2
+      family: Noto Sans KR
+      weight: 400
+      bytes: 80764
+      sha256: ca472485e483c69a74dfdaee95d79bdc3a998b6730f627808bc12935088b24d4
+      hold: null
+  wordmark_optical_calibration:
+    reference_ink_width_css_px: 92.49
+    measurement: Canvas TextMetrics actualBoundingBoxLeft plus actualBoundingBoxRight with production WOFF2 loaded
+    weight: 400
+    letter_spacing_em: -0.04
+    candidates:
+      - font_size_css_px: 19
+        optical_ink_width_css_px: 88.33098
+        delta_percent: -4.4967
+      - font_size_css_px: 20
+        optical_ink_width_css_px: 92.98003
+        delta_percent: 0.5298
+      - font_size_css_px: 21
+        optical_ink_width_css_px: 97.62899
+        delta_percent: 5.5563
+    selected_font_size_css_px: 20
+    selected_delta_percent: 0.5298
+    tolerance_percent: 4

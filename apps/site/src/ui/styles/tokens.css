@@ -1,10 +1,50 @@
+@font-face {
+  font-family: "FORM THOUGHT Display";
+  src: url("/fonts/form-thought-display-ko.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "FORM THOUGHT Wordmark";
+  src: url("/fonts/form-thought-wordmark.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "FORM THOUGHT UI";
+  src: url("/fonts/form-thought-ui-ko.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
 :root {
   color-scheme: light;
-  --bw-mineral: #F2F4F7;
-  --bw-white: #FFFFFF;
-  --bw-ink: #151619;
-  --bw-cobalt: #2B63E8;
-  --bw-soft-ink: color-mix(in srgb, var(--bw-ink) 68%, transparent);
-  --bw-line: color-mix(in srgb, var(--bw-ink) 18%, transparent);
-  --bw-font: "Source Han Sans K", "Noto Sans KR", "Apple SD Gothic Neo", "Source Sans 3", ui-sans-serif, sans-serif;
+  --ft-canvas: #E8E1D8;
+  --ft-paper: #F2EFE9;
+  --ft-paper-bright: #F7F3ED;
+  --ft-ink: #11100F;
+  --ft-ink-soft: #5E554E;
+  --ft-rule: #D3C9BF;
+  --ft-terracotta: #AF6047;
+  --ft-terracotta-dark: #7D3F30;
+  --ft-brown: #241712;
+  --ft-blush: #DDB4A5;
+  --ft-on-terracotta: #FFFFFF;
+  --ft-font-display: "FORM THOUGHT Display", "Noto Serif KR", "AppleMyungjo", "Batang", serif;
+  --ft-font-wordmark: "FORM THOUGHT Wordmark", "Cormorant Garamond", "Times New Roman", serif;
+  --ft-font-ui: "FORM THOUGHT UI", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+
+  /* Task 13 removes these after every legacy consumer has moved to --ft-* roles. */
+  --bw-mineral: var(--ft-canvas);
+  --bw-white: var(--ft-paper-bright);
+  --bw-ink: var(--ft-ink);
+  --bw-cobalt: var(--ft-terracotta-dark);
+  --bw-soft-ink: var(--ft-ink-soft);
+  --bw-line: var(--ft-rule);
+  --bw-font: var(--ft-font-ui);
 }

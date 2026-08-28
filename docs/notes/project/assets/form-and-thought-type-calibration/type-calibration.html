@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FORM &amp; THOUGHT typography calibration</title>
+  <style>
+    @font-face { font-family: "Cal Maru"; src: url("../../../../../output/form-and-thought-type-calibration/fonts/MaruBuri-Regular.otf") format("opentype"); font-display: block; font-style: normal; font-weight: 400; }
+    @font-face { font-family: "Cal Cormorant"; src: url("../../../../../output/form-and-thought-type-calibration/fonts/cormorant-wordmark.woff2") format("woff2"); font-display: block; font-style: normal; font-weight: 500; }
+    @font-face { font-family: "Cal Pretendard"; src: url("../../../../../output/form-and-thought-type-calibration/fonts/Pretendard-Regular.woff2") format("woff2"); font-display: block; font-style: normal; font-weight: 400; }
+    @font-face { font-family: "Cal Noto Serif KR"; src: url("../../../../../output/form-and-thought-type-calibration/fonts/noto-serif-calibration.woff2") format("woff2"); font-display: block; font-style: normal; font-weight: 400; }
+    @font-face { font-family: "Cal Noto Sans KR"; src: url("../../../../../output/form-and-thought-type-calibration/fonts/noto-sans-calibration.woff2") format("woff2"); font-display: block; font-style: normal; font-weight: 400; }
+    @font-face { font-family: "Cal KoPub Batang"; src: url("../../../../../output/form-and-thought-type-calibration/fonts/KoPubWorld-Batang-Medium.ttf") format("truetype"); font-display: block; font-style: normal; font-weight: 500; }
+    @font-face { font-family: "Cal Libre Baskerville"; src: url("../../../../../output/form-and-thought-type-calibration/fonts/libre-wordmark.woff2") format("woff2"); font-display: block; font-style: normal; font-weight: 400; }
+
+    :root { color-scheme: light; --canvas: #e8e1d8; --paper: #f2efe9; --paper-bright: #f7f3ed; --ink: #11100f; --soft: #5e554e; --rule: #d3c9bf; --terra: #af6047; }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--canvas); text-size-adjust: 100%; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); font-family: "Cal Pretendard", sans-serif; }
+    main { width: min(1280px, calc(100% - 64px)); margin: 36px auto; padding: 34px 42px 40px; background: var(--paper); box-shadow: 0 18px 44px rgb(36 23 18 / 14%); }
+    header { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; padding-bottom: 24px; border-bottom: 1px solid var(--rule); }
+    h1 { max-width: 18ch; margin: 0; font-family: "Cal Cormorant", serif; font-size: 32px; font-weight: 500; line-height: .92; letter-spacing: -.02em; }
+    .subtitle { max-width: 46ch; margin: 0; color: var(--soft); font-size: 13px; line-height: 1.55; text-align: right; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 18px 0 8px; color: var(--soft); font-size: 12px; line-height: 1.5; }
+    .legend strong { color: var(--ink); font-weight: 500; }
+    .stack { --display: serif; --wordmark: serif; --ui: sans-serif; display: grid; grid-template-columns: 146px 330px minmax(0, 1fr); gap: 24px; align-items: start; padding: 26px 0; border-bottom: 1px solid var(--rule); }
+    .stack > *, .stack-meta > *, .title-sample, .body-sample { min-width: 0; }
+    .stack:last-child { border-bottom: 0; }
+    .stack--one { --display: "Cal Maru", serif; --wordmark: "Cal Cormorant", serif; --ui: "Cal Pretendard", sans-serif; }
+    .stack--two { --display: "Cal Noto Serif KR", serif; --wordmark: "Cal Cormorant", serif; --ui: "Cal Noto Sans KR", sans-serif; }
+    .stack--three { --display: "Cal KoPub Batang", serif; --wordmark: "Cal Libre Baskerville", serif; --ui: "Cal Pretendard", sans-serif; }
+    .stack-meta { font-family: var(--ui); }
+    .stack-index { margin: 0 0 14px; color: var(--terra); font-size: 12px; line-height: 1.4; letter-spacing: .08em; }
+    .wordmark { display: inline-flex; flex-direction: column; width: max-content; font-family: var(--wordmark); font-size: 22px; font-weight: 500; line-height: .9; letter-spacing: -.025em; }
+    .wordmark span { display: block; }
+    .stack-name { margin: 17px 0 4px; font-size: 12px; font-weight: 500; line-height: 1.45; }
+    .status { margin: 0; color: var(--soft); font-size: 11px; line-height: 1.45; }
+    .title-sample { min-width: 0; font-family: var(--display); }
+    .lane { margin: 0 0 18px; font-family: var(--ui); font-size: 14px; line-height: 1.5; }
+    .representative-title { width: 330px; max-width: 100%; margin: 0; font-size: 48px; font-weight: 400; line-height: 1.16; letter-spacing: -.02em; word-break: keep-all; overflow-wrap: normal; }
+    .body-sample { width: 40em; max-width: 100%; font-family: var(--display); font-size: 17px; font-weight: 400; line-height: 1.9; letter-spacing: 0; }
+    .body-sample p { margin: 0 0 12px; }
+    .body-sample p:last-child { margin-bottom: 0; }
+    .measure { margin-top: 13px; font-family: var(--ui); color: var(--soft); font-size: 11px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+    ::selection { background: rgb(175 96 71 / 28%); color: var(--ink); }
+
+    @media (max-width: 767px) {
+      main { width: 100%; margin: 0; padding: 24px 22px 32px; box-shadow: none; }
+      header { grid-template-columns: 1fr; gap: 14px; padding-bottom: 20px; }
+      h1 { font-size: 27px; }
+      .subtitle { max-width: none; text-align: left; }
+      .legend { margin-top: 16px; }
+      .stack { grid-template-columns: 1fr; gap: 24px; padding: 30px 0; }
+      .stack-meta { display: grid; grid-template-columns: 130px 1fr; gap: 0 22px; align-items: start; }
+      .stack-index { grid-column: 1 / -1; }
+      .stack-name { margin-top: 0; }
+      .wordmark { font-size: 20px; }
+      .representative-title { width: 100%; font-size: 38px; line-height: 1.2; }
+      .body-sample { width: 100%; max-width: none; font-size: 16px; line-height: 1.86; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>FORM &amp;<br>THOUGHT<br>TYPE STUDY</h1>
+      <p class="subtitle">Approved reference geometry, real Korean copy, and fixed role sizes. Visual selection is delegated; this sheet does not approve a stack.</p>
+    </header>
+    <div class="legend" aria-label="Calibration conditions">
+      <span><strong>Desktop</strong> 1440×900 @ 1x</span>
+      <span><strong>Mobile</strong> 390×844 @ 1x</span>
+      <span><strong>Title</strong> 48/1.16 → 38/1.2</span>
+      <span><strong>Body</strong> 17/1.9 → 16/1.86</span>
+    </div>
+
+    <section class="stack stack--one" data-stack="1">
+      <div class="stack-meta">
+        <p class="stack-index">STACK 01</p>
+        <div class="wordmark" data-measure="wordmark"><span>FORM &amp;</span><span>THOUGHT</span></div>
+        <div>
+          <p class="stack-name">MaruBuri<br>Cormorant Garamond<br>Pretendard</p>
+          <p class="status">Naver open-license claim; exact redistribution terms require release-note review.</p>
+        </div>
+      </div>
+      <div class="title-sample">
+        <p class="lane">아티클</p>
+        <h2 class="representative-title" data-measure="title">AI 시대에, 나는 왜 책을 읽는가</h2>
+      </div>
+      <div>
+        <div class="body-sample" data-measure="body">
+          <p>요즘 종종 질문을 받는다. 갑자기 왜 그렇게 책을 읽느냐고.</p>
+          <p>이유는 조금 이상하다. 나는 AI 때문에 책을 읽기 시작했다.</p>
+        </div>
+        <p class="measure" aria-live="off"></p>
+      </div>
+    </section>
+
+    <section class="stack stack--two" data-stack="2">
+      <div class="stack-meta">
+        <p class="stack-index">STACK 02</p>
+        <div class="wordmark" data-measure="wordmark"><span>FORM &amp;</span><span>THOUGHT</span></div>
+        <div>
+          <p class="stack-name">Noto Serif KR<br>Cormorant Garamond<br>Noto Sans KR</p>
+          <p class="status">SIL Open Font License 1.1.</p>
+        </div>
+      </div>
+      <div class="title-sample">
+        <p class="lane">아티클</p>
+        <h2 class="representative-title" data-measure="title">AI 시대에, 나는 왜 책을 읽는가</h2>
+      </div>
+      <div>
+        <div class="body-sample" data-measure="body">
+          <p>요즘 종종 질문을 받는다. 갑자기 왜 그렇게 책을 읽느냐고.</p>
+          <p>이유는 조금 이상하다. 나는 AI 때문에 책을 읽기 시작했다.</p>
+        </div>
+        <p class="measure" aria-live="off"></p>
+      </div>
+    </section>
+
+    <section class="stack stack--three" data-stack="3">
+      <div class="stack-meta">
+        <p class="stack-index">STACK 03 · HOLD</p>
+        <div class="wordmark" data-measure="wordmark"><span>FORM &amp;</span><span>THOUGHT</span></div>
+        <div>
+          <p class="stack-name">KoPub Batang<br>Libre Baskerville<br>Pretendard</p>
+          <p class="status">Publisher requires separate approval for server embedding; font modification is prohibited.</p>
+        </div>
+      </div>
+      <div class="title-sample">
+        <p class="lane">아티클</p>
+        <h2 class="representative-title" data-measure="title">AI 시대에, 나는 왜 책을 읽는가</h2>
+      </div>
+      <div>
+        <div class="body-sample" data-measure="body">
+          <p>요즘 종종 질문을 받는다. 갑자기 왜 그렇게 책을 읽느냐고.</p>
+          <p>이유는 조금 이상하다. 나는 AI 때문에 책을 읽기 시작했다.</p>
+        </div>
+        <p class="measure" aria-live="off"></p>
+      </div>
+    </section>
+  </main>
+  <script>
+    document.fonts.ready.then(() => {
+      for (const stack of document.querySelectorAll('.stack')) {
+        const wordmark = stack.querySelector('[data-measure="wordmark"]');
+        const title = stack.querySelector('[data-measure="title"]');
+        const body = stack.querySelector('[data-measure="body"]');
+        const titleStyle = getComputedStyle(title);
+        const bodyStyle = getComputedStyle(body);
+        const lines = Math.round(title.getBoundingClientRect().height / parseFloat(titleStyle.lineHeight));
+        const measure = body.getBoundingClientRect().width / parseFloat(bodyStyle.fontSize);
+        stack.querySelector('.measure').textContent = `wordmark ${wordmark.getBoundingClientRect().width.toFixed(2)}px · title ${lines} lines · body ${measure.toFixed(2)}em`;
+      }
+      document.documentElement.dataset.fontsReady = 'true';
+    });
+  </script>
+</body>
+</html>
