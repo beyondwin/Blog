@@ -7,6 +7,7 @@ items:
     caption: 빠른 답 앞에서 판단할 시간을 만드는 느린 독서
     credit: OpenAI image generation for beyondwin
     sourcePath: docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml
+    sourceKind: repository-generated
     generation:
       provider: openai
       generator: codex-built-in-image-generation

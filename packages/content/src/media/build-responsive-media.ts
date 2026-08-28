@@ -14,6 +14,7 @@ import {
 } from '../allowlisted-source-file';
 import {
   generatedMediaDecisionManifestSchema,
+  generatedMediaRightsNote,
   sourceMediaManifestSchema,
   type SourceMediaManifest,
   type VerifiableSourceInputFormat,
@@ -81,7 +82,7 @@ async function loadGeneratedMediaEvidence(
   mediaDirectory: string,
   item: SourceMediaManifest['items'][number],
   publicMedia: PublicMedia,
-): Promise<GeneratedMediaEvidenceReceipt | undefined> {
+): Promise<{ receipt: GeneratedMediaEvidenceReceipt; rightsNote: string } | undefined> {
   if (!item.generation) return undefined;
   if (!item.sourcePath) throw new Error(`${collection}/${recordId}/${item.id}: generated media decision manifest is missing`);
 
@@ -96,6 +97,10 @@ async function loadGeneratedMediaEvidence(
   }
   if (decision.rightsReview.state !== 'approved' || decision.rightsReview.decision !== 'approve-repository-publication') {
     throw new Error(`${collection}/${recordId}/${item.id}: generated media rights review must be approved for repository publication`);
+  }
+  const rightsNote = generatedMediaRightsNote(decision.rightsReview);
+  if (item.rightsNote !== rightsNote) {
+    throw new Error(`${collection}/${recordId}/${item.id}: rightsNote must exactly match the approved decision`);
   }
 
   for (const field of ['provider', 'generator', 'model', 'modelVersion', 'promptVersion'] as const) {
@@ -128,11 +133,14 @@ async function loadGeneratedMediaEvidence(
   if (checksum(contactSheetBytes) !== decision.approvedContactSheet.checksum) {
     throw new Error(`${collection}/${recordId}/${item.id}: approved contact sheet checksum changed`);
   }
-  return generatedMediaEvidenceReceiptSchema.parse({
-    decisionManifest: item.sourcePath,
-    decisionManifestChecksum: decisionChecksum,
-    candidateId: item.generation.candidateId,
-  });
+  return {
+    receipt: generatedMediaEvidenceReceiptSchema.parse({
+      decisionManifest: item.sourcePath,
+      decisionManifestChecksum: decisionChecksum,
+      candidateId: item.generation.candidateId,
+    }),
+    rightsNote,
+  };
 }
 
 function publicAssetPath(releaseRoot: string, href: string): string {
@@ -191,7 +199,7 @@ export async function loadSourceMediaBuildInput(
   ));
   const item = manifest.items.find((candidate) => candidate.id === mediaId);
   if (!item) throw new Error(`unknown public media ${collection}/${recordId}/${mediaId}`);
-  const generationEvidence = await loadGeneratedMediaEvidence(
+  const generatedApproval = await loadGeneratedMediaEvidence(
     root,
     collection,
     recordId,
@@ -199,16 +207,19 @@ export async function loadSourceMediaBuildInput(
     item,
     publicMedia,
   );
+  const approvedPublicMedia = generatedApproval
+    ? { ...publicMedia, rightsNote: generatedApproval.rightsNote }
+    : publicMedia;
 
   return {
-    publicMedia,
+    publicMedia: approvedPublicMedia,
     collection,
     recordId,
     role,
     provenanceUrl: item.sourceUrl ?? `/${collection}/${recordId}/`,
     repositoryRoot: root,
     sourceRelativePath: `${mediaDirectory}/${item.file}`,
-    ...(generationEvidence ? { generationEvidence } : {}),
+    ...(generatedApproval ? { generationEvidence: generatedApproval.receipt } : {}),
   };
 }
 

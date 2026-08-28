@@ -49,6 +49,7 @@ const mediaItemSchema = z
     credit: z.string().trim().min(1),
     sourceUrl: externalUrlSchema.optional(),
     sourcePath: safeRelativePath('sourcePath').optional(),
+    sourceKind: z.literal('repository-generated').optional(),
     generation: generatedMediaSourceSchema.optional(),
     isbn13: z.string().regex(/^97[89]\d{10}$/).optional(),
     edition: z.string().trim().min(1).optional(),
@@ -72,6 +73,30 @@ const mediaItemSchema = z
         code: 'custom',
         message: 'media item dimensions require both width and height',
         path: ['width'],
+      });
+    }
+    const decisionBound = Boolean(
+      item.sourcePath && generatedDecisionManifestPathSchema.safeParse(item.sourcePath).success,
+    );
+    if (decisionBound && item.sourceKind !== 'repository-generated') {
+      context.addIssue({
+        code: 'custom',
+        message: 'decision-bound media requires sourceKind repository-generated',
+        path: ['sourceKind'],
+      });
+    }
+    if (item.sourceKind === 'repository-generated' && !item.generation) {
+      context.addIssue({
+        code: 'custom',
+        message: 'repository-generated sourceKind requires generation metadata',
+        path: ['generation'],
+      });
+    }
+    if (item.generation && item.sourceKind !== 'repository-generated') {
+      context.addIssue({
+        code: 'custom',
+        message: 'sourceKind must be repository-generated when generation metadata is present',
+        path: ['sourceKind'],
       });
     }
     if (item.generation && (!item.sourcePath || !generatedDecisionManifestPathSchema.safeParse(item.sourcePath).success)) {

@@ -10,6 +10,7 @@ import { writeReleaseFixture } from './helpers/release-fixture';
 
 const evidencePath = 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml';
 const contactSheetPath = 'docs/notes/project/assets/form-and-thought-generated/calibration/approved-contact-sheet.png';
+const boundedRightsNote = 'Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed';
 
 function sha256(bytes: Buffer | string): string {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
@@ -23,15 +24,24 @@ async function put(root: string, relativePath: string, contents: Buffer | string
 
 async function writeGeneratedFixture(
   root: string,
-  options: { approvalState?: 'approved' | 'pending'; rightsState?: 'approved' | 'pending' } = {},
+  options: {
+    approvalState?: 'approved' | 'pending';
+    rightsState?: 'approved' | 'pending';
+    approvalRoles?: string[];
+    contactPath?: string;
+    omitGeneration?: boolean;
+    omitSourceKind?: boolean;
+    rightsNote?: string;
+  } = {},
 ): Promise<void> {
   await writeReleaseFixture(root);
   const approvalState = options.approvalState ?? 'approved';
   const rightsState = options.rightsState ?? 'approved';
   const assetPath = 'src/assets/content/articles/public-fixture/hero.png';
   const assetBytes = await readFile(join(root, assetPath));
+  const fixtureContactPath = options.contactPath ?? contactSheetPath;
   const contactSheetBytes = Buffer.from('approved-contact-sheet-fixture');
-  await put(root, contactSheetPath, contactSheetBytes);
+  await put(root, fixtureContactPath, contactSheetBytes);
   const decision = {
     version: 1,
     batchId: 'calibration',
@@ -46,7 +56,7 @@ async function writeGeneratedFixture(
     approval: {
       state: approvalState,
       selectedCandidateIds: ['H01'],
-      approvedBy: ['controller', 'independent-visual-reviewer'],
+      approvedBy: options.approvalRoles ?? ['controller', 'independent-visual-reviewer'],
       recordedAt: '2026-08-29T03:24:41+09:00',
       evidence: 'Fixed test approval evidence.',
     },
@@ -68,7 +78,7 @@ async function writeGeneratedFixture(
       },
     },
     approvedContactSheet: {
-      path: contactSheetPath,
+      path: fixtureContactPath,
       checksum: sha256(contactSheetBytes),
     },
     assets: [{
@@ -91,15 +101,19 @@ async function writeGeneratedFixture(
   const media = parseYaml(await readFile(mediaPath, 'utf8'));
   delete media.items[0].sourceUrl;
   media.items[0].sourcePath = evidencePath;
-  media.items[0].generation = {
-    provider: 'openai',
-    generator: 'codex-built-in-image-generation',
-    model: 'not-exposed-by-built-in-tool',
-    modelVersion: 'not-exposed-by-built-in-tool',
-    promptVersion: 'form-and-thought-calibration-v1',
-    candidateId: 'H01',
-    decisionManifestChecksum: sha256(decisionBytes),
-  };
+  if (!options.omitSourceKind) media.items[0].sourceKind = 'repository-generated';
+  if (!options.omitGeneration) {
+    media.items[0].generation = {
+      provider: 'openai',
+      generator: 'codex-built-in-image-generation',
+      model: 'not-exposed-by-built-in-tool',
+      modelVersion: 'not-exposed-by-built-in-tool',
+      promptVersion: 'form-and-thought-calibration-v1',
+      candidateId: 'H01',
+      decisionManifestChecksum: sha256(decisionBytes),
+    };
+  }
+  media.items[0].rightsNote = options.rightsNote ?? boundedRightsNote;
   await writeFile(mediaPath, stringifyYaml(media, { lineWidth: 0 }));
 }
 
@@ -119,12 +133,70 @@ describe('generated media approval and immutable evidence', () => {
     expect(publicMedia).not.toHaveProperty('generation');
     expect(publicMedia).not.toHaveProperty('provider');
     expect(publicMedia).not.toHaveProperty('promptVersion');
+    expect(publicMedia?.rightsNote).toBe(boundedRightsNote);
     expect(releaseAsset?.generationEvidence).toEqual({
       decisionManifest: evidencePath,
       decisionManifestChecksum: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       candidateId: 'H01',
     });
     expect(built.manifest).toEqual(active.manifest);
+  });
+
+  it.each([
+    ['generation metadata', { omitGeneration: true }, /repository-generated.*generation/i],
+    ['explicit source kind', { omitSourceKind: true }, /sourceKind.*repository-generated/i],
+    ['both generated markers', { omitGeneration: true, omitSourceKind: true }, /decision-bound.*repository-generated/i],
+  ])('fails closed when decision-bound media omits %s', async (_name, options, error) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-omission-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot, options);
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(error);
+  });
+
+  it('fails closed when source rights text is stronger than the bounded decision ruling', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-rights-note-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot, {
+      rightsNote: 'Exclusive ownership and full indemnity guaranteed.',
+    });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/rightsNote.*approved decision/i);
+  });
+
+  it.each([
+    ['missing independent reviewer', ['controller']],
+    ['empty approval roles', []],
+    ['extra approval role', ['controller', 'independent-visual-reviewer', 'publisher']],
+  ])('fails closed for %s', async (_name, approvalRoles) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-roles-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot, { approvalRoles });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/approvedBy.*controller.*independent-visual-reviewer/i);
+  });
+
+  it.each([
+    ['an arbitrary repository file', 'package.json'],
+    ['a different evidence batch', 'docs/notes/project/assets/form-and-thought-generated/other/approved-contact-sheet.png'],
+  ])('fails closed when the approved contact sheet points to %s', async (_name, contactPath) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-contact-path-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot, { contactPath });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/approvedContactSheet.*same batch/i);
   });
 
   it.each([

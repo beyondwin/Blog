@@ -188,6 +188,7 @@ export const sourceMediaManifestSchema = z.object({
     credit: z.string().trim().min(1),
     sourceUrl: externalUrl.optional(),
     sourcePath: safeRelativePath('sourcePath').optional(),
+    sourceKind: z.literal('repository-generated').optional(),
     generation: generatedMediaSourceSchema.optional(),
     isbn13: z.string().regex(/^97[89]\d{10}$/).optional(),
     edition: z.string().trim().min(1).optional(),
@@ -210,7 +211,31 @@ export const sourceMediaManifestSchema = z.object({
         message: `book-cover ${item.id} requires sourceUrl, isbn13 and edition`,
       });
     }
+    const decisionBound = Boolean(
+      item.sourcePath && generatedDecisionManifestPathSchema.safeParse(item.sourcePath).success,
+    );
+    if (decisionBound && item.sourceKind !== 'repository-generated') {
+      context.addIssue({
+        code: 'custom',
+        path: ['sourceKind'],
+        message: 'decision-bound media requires sourceKind repository-generated',
+      });
+    }
+    if (item.sourceKind === 'repository-generated' && !item.generation) {
+      context.addIssue({
+        code: 'custom',
+        path: ['generation'],
+        message: 'repository-generated sourceKind requires generation metadata',
+      });
+    }
     if (item.generation) {
+      if (item.sourceKind !== 'repository-generated') {
+        context.addIssue({
+          code: 'custom',
+          path: ['sourceKind'],
+          message: 'sourceKind must be repository-generated when generation metadata is present',
+        });
+      }
       if (!item.sourcePath || !generatedDecisionManifestPathSchema.safeParse(item.sourcePath).success) {
         context.addIssue({
           code: 'custom',
@@ -251,7 +276,7 @@ export const generatedMediaDecisionManifestSchema = z.object({
   approval: z.object({
     state: z.enum(['pending', 'approved', 'rejected']),
     selectedCandidateIds: z.array(generatedCandidateIdSchema),
-    approvedBy: z.array(z.string().trim().min(1)),
+    approvedBy: z.array(z.string().trim().min(1)).min(1),
     recordedAt: z.iso.datetime({ offset: true }),
     evidence: z.string().trim().min(1),
   }).strict(),
@@ -305,7 +330,38 @@ export const generatedMediaDecisionManifestSchema = z.object({
   ) {
     context.addIssue({ code: 'custom', path: ['approval', 'selectedCandidateIds'], message: 'approved selection must exactly match approved assets' });
   }
+  if (manifest.approval.state === 'approved') {
+    const approvalRoles = new Set(manifest.approval.approvedBy);
+    if (
+      approvalRoles.size !== 2
+      || !approvalRoles.has('controller')
+      || !approvalRoles.has('independent-visual-reviewer')
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['approval', 'approvedBy'],
+        message: 'approvedBy must contain exactly controller and independent-visual-reviewer',
+      });
+    }
+  }
+  const expectedContactSheet = `docs/notes/project/assets/form-and-thought-generated/${manifest.batchId}/approved-contact-sheet.png`;
+  if (manifest.approvedContactSheet.path !== expectedContactSheet) {
+    context.addIssue({
+      code: 'custom',
+      path: ['approvedContactSheet', 'path'],
+      message: 'approvedContactSheet path must be the canonical PNG in the same batch',
+    });
+  }
 });
+
+export function generatedMediaRightsNote(
+  decision: GeneratedMediaDecisionManifest['rightsReview'],
+): string {
+  const ruling = decision.decision === 'approve-repository-publication'
+    ? 'Repository publication approved'
+    : 'Repository publication held';
+  return `${ruling} with caveat: ${decision.caveat}`;
+}
 
 const memoryThoughtSchema = z.object({
   slug: idSchema,

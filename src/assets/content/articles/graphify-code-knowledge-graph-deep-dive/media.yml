@@ -7,6 +7,7 @@ items:
     caption: 천천히 읽고 스스로 생각하는 자리로 들어가는 문턱
     credit: OpenAI image generation for beyondwin
     sourcePath: docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml
+    sourceKind: repository-generated
     generation:
       provider: openai
       generator: codex-built-in-image-generation
@@ -27,6 +28,7 @@ items:
     caption: 구조를 보여주는 지도와 실제로 이어지는 경로 사이의 작은 간극
     credit: OpenAI image generation for beyondwin
     sourcePath: docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml
+    sourceKind: repository-generated
     generation:
       provider: openai
       generator: codex-built-in-image-generation

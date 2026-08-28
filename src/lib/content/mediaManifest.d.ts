@@ -13,8 +13,32 @@ interface MediaItemBase {
   checksum: string;
 }
 
-type ExternalProvenance = { sourceUrl: string; sourcePath?: never };
-type RepositoryProvenance = { sourceUrl?: never; sourcePath: string };
+type ExternalProvenance = {
+  sourceUrl: string;
+  sourcePath?: never;
+  sourceKind?: never;
+  generation?: never;
+};
+type RepositoryProvenance = {
+  sourceUrl?: never;
+  sourcePath: string;
+  sourceKind?: never;
+  generation?: never;
+};
+type GeneratedRepositoryProvenance = {
+  sourceUrl?: never;
+  sourcePath: string;
+  sourceKind: 'repository-generated';
+  generation: {
+    provider: 'openai';
+    generator: 'codex-built-in-image-generation';
+    model: string;
+    modelVersion: string;
+    promptVersion: string;
+    candidateId: string;
+    decisionManifestChecksum: string;
+  };
+};
 
 export type MediaItem =
   | (MediaItemBase &
@@ -24,7 +48,7 @@ export type MediaItem =
         edition: string;
       })
   | (MediaItemBase &
-      (ExternalProvenance | RepositoryProvenance) & {
+      (ExternalProvenance | RepositoryProvenance | GeneratedRepositoryProvenance) & {
         kind: Exclude<MediaKind, 'book-cover'>;
         isbn13?: string;
         edition?: string;
