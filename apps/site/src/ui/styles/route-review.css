@@ -50,7 +50,7 @@
   max-width: 11.5rem;
   height: auto;
   aspect-ratio: 2 / 3;
-  object-fit: cover;
+  object-fit: contain;
   background: var(--bw-white);
 }
 

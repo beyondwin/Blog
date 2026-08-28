@@ -4,7 +4,7 @@
 .context-return::before { content: "←"; margin-right: .48em; }
 .reading-threshold__media { grid-row: 2 / 4; grid-column: 2; width: clamp(6.5rem, 13vw, 9rem); margin: 0; align-self: start; }
 .reading-threshold__media picture, .reading-threshold__media img { display: block; width: 100%; height: auto; }
-.reading-threshold__media-image--review { aspect-ratio: 2 / 3; object-fit: cover; box-shadow: 0 8px 18px color-mix(in srgb, var(--bw-ink) 18%, transparent); }
+.reading-threshold__media-image--review { aspect-ratio: 2 / 3; object-fit: contain; box-shadow: 0 8px 18px color-mix(in srgb, var(--bw-ink) 18%, transparent); }
 .reading-threshold__identity { min-width: 0; }
 .reading-threshold__identity p { margin: 0 0 8px; color: var(--bw-soft-ink); font-size: 13px; }
 .reading-threshold__identity h1 { margin: 0; }
