@@ -15,6 +15,12 @@ import {
   type GeneratedMediaDecisionManifest,
   type SourceMediaManifest,
 } from '../schemas';
+import {
+  assertGeneratedMediaRegistrySelections,
+  GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,
+  parseGeneratedMediaApprovalRegistry,
+  type GeneratedMediaApprovalRegistry,
+} from './generated-media-approval-registry.mjs';
 
 const evidenceRoot = 'docs/notes/project/assets/form-and-thought-generated';
 const assetRoot = 'src/assets/content';
@@ -55,8 +61,59 @@ async function optionalDirectory(root: string, path: string) {
   }
 }
 
-async function discoverApproved(root: string): Promise<Map<string, ApprovedEntry>> {
+async function loadRequiredRegistry(root: string): Promise<GeneratedMediaApprovalRegistry> {
+  let source: string;
+  try {
+    source = await readAllowlistedTextFile(root, GENERATED_MEDIA_APPROVAL_REGISTRY_PATH);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(`${GENERATED_MEDIA_APPROVAL_REGISTRY_PATH}: generated media approval registry is missing`);
+    }
+    throw error;
+  }
+  return parseGeneratedMediaApprovalRegistry(source, GENERATED_MEDIA_APPROVAL_REGISTRY_PATH);
+}
+
+async function discoverApproved(
+  root: string,
+  registry: GeneratedMediaApprovalRegistry,
+): Promise<Map<string, ApprovedEntry>> {
   const approved = new Map<string, ApprovedEntry>();
+  const registeredByPath = new Map(registry.batches.map((batch) => [batch.decisionManifest, batch]));
+
+  for (const registered of registry.batches) {
+    let decisionBytes: Buffer;
+    try {
+      decisionBytes = await readAllowlistedRegularFile(root, registered.decisionManifest);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error(`required generated approval batch ${registered.batchId}: decision manifest is missing`);
+      }
+      throw error;
+    }
+    const decisionChecksum = checksum(decisionBytes);
+    if (decisionChecksum !== registered.decisionManifestChecksum) {
+      throw new Error(`required generated approval batch ${registered.batchId}: decision manifest checksum changed`);
+    }
+    const decision = generatedMediaDecisionManifestSchema.parse(parseYaml(decisionBytes.toString('utf8')));
+    if (decision.batchId !== registered.batchId) {
+      throw new Error(`required generated approval batch ${registered.batchId}: decision batchId does not match the registry`);
+    }
+    if (decision.approval.state !== 'approved') {
+      throw new Error(`required generated approval batch ${registered.batchId}: approval must be approved`);
+    }
+    assertGeneratedMediaRegistrySelections(registered, decision.assets);
+    for (const asset of decision.assets) {
+      const key = claimKey(registered.decisionManifest, asset.candidateId);
+      approved.set(key, {
+        asset,
+        decision,
+        decisionPath: registered.decisionManifest,
+        decisionChecksum,
+      });
+    }
+  }
+
   const evidenceEntries = await optionalDirectory(root, evidenceRoot);
   const unsafeEvidenceEntry = evidenceEntries.find((entry) => entry.isSymbolicLink());
   if (unsafeEvidenceEntry) throw new Error(`${evidenceRoot}/${unsafeEvidenceEntry.name}: generated evidence must not be a symbolic link`);
@@ -66,6 +123,9 @@ async function discoverApproved(root: string): Promise<Map<string, ApprovedEntry
 
   for (const batch of batches) {
     const decisionPath = `${evidenceRoot}/${batch.name}/decision-manifest.yml`;
+    if (!registeredByPath.has(decisionPath)) {
+      throw new Error(`unregistered generated approval batch ${batch.name}: ${decisionPath}`);
+    }
     let decisionBytes: Buffer;
     try {
       decisionBytes = await readAllowlistedRegularFile(root, decisionPath);
@@ -75,16 +135,8 @@ async function discoverApproved(root: string): Promise<Map<string, ApprovedEntry
       }
       throw error;
     }
-    const decision = generatedMediaDecisionManifestSchema.parse(parseYaml(decisionBytes.toString('utf8')));
-    if (decision.batchId !== batch.name) {
-      throw new Error(`${decisionPath}: batchId must match its canonical evidence directory`);
-    }
-    if (decision.approval.state !== 'approved') continue;
-    const decisionChecksum = checksum(decisionBytes);
-    for (const asset of decision.assets) {
-      const key = claimKey(decisionPath, asset.candidateId);
-      if (approved.has(key)) throw new Error(`${decisionPath}: generated candidate ${asset.candidateId} is duplicated`);
-      approved.set(key, { asset, decision, decisionPath, decisionChecksum });
+    if (checksum(decisionBytes) !== registeredByPath.get(decisionPath)?.decisionManifestChecksum) {
+      throw new Error(`required generated approval batch ${batch.name}: decision manifest checksum changed`);
     }
   }
   return approved;
@@ -180,8 +232,8 @@ async function assertSourceFile(root: string, approved: ApprovedEntry): Promise<
 }
 
 export async function validateGeneratedMediaInventory(root: string): Promise<void> {
-  const approved = await discoverApproved(root);
-  if (approved.size === 0) return;
+  const registry = await loadRequiredRegistry(root);
+  const approved = await discoverApproved(root, registry);
   const sources = await discoverSourceEntries(root);
   const expectedByIdentity = new Map<string, ApprovedEntry>();
   const approvedPaths = new Map<string, ApprovedEntry>();

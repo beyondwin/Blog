@@ -43,6 +43,7 @@ export async function writeReleaseFixture(
       mkdir(join(contentRoot, collection), { recursive: true })
     )),
     mkdir(join(root, 'src', 'data'), { recursive: true }),
+    mkdir(join(root, 'packages', 'content'), { recursive: true }),
     mkdir(mediaRoot, { recursive: true }),
   ]);
 
@@ -97,4 +98,8 @@ export async function writeReleaseFixture(
     sources: [],
     edges: [],
   }));
+  await writeFile(
+    join(root, 'packages', 'content', 'generated-media-approval-batches.json'),
+    '{"version":1,"batches":[]}\n',
+  );
 }

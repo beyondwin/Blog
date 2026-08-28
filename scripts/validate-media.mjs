@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
 import { parse as parseYaml } from 'yaml';
 import { parseMediaManifest } from '../src/lib/content/mediaManifest.mjs';
+import {
+  assertGeneratedMediaRegistrySelections,
+  GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,
+  parseGeneratedMediaApprovalRegistry,
+} from '../packages/content/src/media/generated-media-approval-registry.mjs';
 
 const contentExtensions = new Set(['.md', '.mdx']);
 const rasterExtensions = new Set(['.jpg', '.jpeg', '.png']);
@@ -414,44 +419,86 @@ function decisionShapeErrors(decision, decisionPath, batchId) {
 }
 
 async function validateGeneratedInventory(root, state) {
+  const registryPath = join(root, ...GENERATED_MEDIA_APPROVAL_REGISTRY_PATH.split('/'));
+  let registry;
+  try {
+    if (await inspectRepositoryFile(root, registryPath, root) !== 'ok') {
+      state.errors.add(`${GENERATED_MEDIA_APPROVAL_REGISTRY_PATH}: generated media approval registry is missing`);
+      return;
+    }
+    registry = parseGeneratedMediaApprovalRegistry(
+      await readFile(registryPath, 'utf8'),
+      GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,
+    );
+  } catch (error) {
+    state.errors.add(error instanceof Error ? error.message : String(error));
+    return;
+  }
+
   const evidenceRoot = join(root, 'docs', 'notes', 'project', 'assets', 'form-and-thought-generated');
   const evidenceTree = await scanTree(evidenceRoot);
   for (const path of evidenceTree.symlinks) {
     state.errors.add(`${repoPath(root, path)}: symbolic link is not allowed`);
   }
   const approved = new Map();
+  const registeredByPath = new Map(registry.batches.map((batch) => [batch.decisionManifest, batch]));
+
+  for (const registered of registry.batches) {
+    const absolutePath = resolve(root, registered.decisionManifest);
+    let bytes;
+    let decision;
+    if (!isInside(root, absolutePath) || await inspectRepositoryFile(root, absolutePath, root) !== 'ok') {
+      state.errors.add(`required generated approval batch ${registered.batchId}: decision manifest is missing`);
+      continue;
+    }
+    try {
+      bytes = await readFile(absolutePath);
+      if (sha256(bytes) !== registered.decisionManifestChecksum) {
+        state.errors.add(`required generated approval batch ${registered.batchId}: decision manifest checksum changed`);
+        continue;
+      }
+      decision = parseYaml(bytes.toString('utf8'));
+    } catch (error) {
+      state.errors.add(`${registered.decisionManifest}: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    const shapeErrors = decisionShapeErrors(decision, registered.decisionManifest, registered.batchId);
+    for (const error of shapeErrors) state.errors.add(error);
+    if (shapeErrors.length > 0 || decision.approval?.state !== 'approved') continue;
+    try {
+      assertGeneratedMediaRegistrySelections(registered, decision.assets);
+    } catch (error) {
+      state.errors.add(error instanceof Error ? error.message : String(error));
+      continue;
+    }
+
+    const decisionChecksum = sha256(bytes);
+    for (const asset of decision.assets) {
+      approved.set(generatedClaimKey(registered.decisionManifest, asset.candidateId), {
+        asset,
+        decision,
+        decisionPath: registered.decisionManifest,
+        decisionChecksum,
+      });
+    }
+    const contactPath = resolve(root, decision.approvedContactSheet.path);
+    if (!isInside(root, contactPath) || await inspectRepositoryFile(root, contactPath, root) !== 'ok') {
+      state.errors.add(`${registered.decisionManifest}: approved contact sheet is missing`);
+    } else if (sha256(await readFile(contactPath)) !== decision.approvedContactSheet.checksum) {
+      state.errors.add(`${registered.decisionManifest}: approved contact sheet checksum changed`);
+    }
+  }
+
   for (const absolutePath of evidenceTree.files) {
     const decisionPath = repoPath(root, absolutePath);
     const match = decisionPath.match(
       /^docs\/notes\/project\/assets\/form-and-thought-generated\/([a-z0-9][a-z0-9-]*)\/decision-manifest\.yml$/,
     );
     if (!match) continue;
-    let bytes;
-    let decision;
-    try {
-      bytes = await readFile(absolutePath);
-      decision = parseYaml(bytes.toString('utf8'));
-    } catch (error) {
-      state.errors.add(`${decisionPath}: ${error instanceof Error ? error.message : String(error)}`);
-      continue;
-    }
-    const shapeErrors = decisionShapeErrors(decision, decisionPath, match[1]);
-    for (const error of shapeErrors) state.errors.add(error);
-    if (shapeErrors.length > 0 || decision.approval?.state !== 'approved') continue;
-    const decisionChecksum = sha256(bytes);
-    for (const asset of decision.assets) {
-      const key = generatedClaimKey(decisionPath, asset.candidateId);
-      if (approved.has(key)) state.errors.add(`${decisionPath}: generated candidate ${asset.candidateId} is duplicated`);
-      approved.set(key, { asset, decision, decisionPath, decisionChecksum });
-    }
-    const contactPath = resolve(root, decision.approvedContactSheet.path);
-    if (!isInside(root, contactPath) || await inspectRepositoryFile(root, contactPath, root) !== 'ok') {
-      state.errors.add(`${decisionPath}: approved contact sheet is missing`);
-    } else if (sha256(await readFile(contactPath)) !== decision.approvedContactSheet.checksum) {
-      state.errors.add(`${decisionPath}: approved contact sheet checksum changed`);
+    if (!registeredByPath.has(decisionPath)) {
+      state.errors.add(`unregistered generated approval batch ${match[1]}: ${decisionPath}`);
     }
   }
-  if (approved.size === 0) return;
 
   const entries = sourceEntries(root, state);
   const expectedByIdentity = new Map();

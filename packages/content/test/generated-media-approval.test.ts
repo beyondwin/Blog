@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -100,7 +100,7 @@ async function writeGeneratedFixture(
         height: 1,
       },
       {
-        candidateId: 'H02',
+        candidateId: 'A03',
         slot: 'homeHero',
         collection: 'articles',
         recordId: 'public-fixture',
@@ -111,8 +111,21 @@ async function writeGeneratedFixture(
         width: 1,
         height: 1,
       },
+      {
+        candidateId: 'T01',
+        slot: 'detailHero',
+        collection: 'articles',
+        recordId: 'public-fixture',
+        mediaId: 'third',
+        file: 'third.png',
+        sourcePath: 'src/assets/content/articles/public-fixture/third.png',
+        checksum: sha256(unfeaturedAssetBytes),
+        width: 1,
+        height: 1,
+      },
     ],
   };
+  decision.approval.selectedCandidateIds = ['H01', 'A03', 'T01'];
   const unfeaturedDecision = decision.assets[1];
   if (options.unfeaturedState === 'decision-checksum-tamper') {
     unfeaturedDecision.checksum = `sha256:${'b'.repeat(64)}`;
@@ -121,6 +134,20 @@ async function writeGeneratedFixture(
   }
   const decisionBytes = stringifyYaml(decision, { lineWidth: 0 });
   await put(root, evidencePath, decisionBytes);
+  await put(root, 'packages/content/generated-media-approval-batches.json', `${JSON.stringify({
+    version: 1,
+    batches: [{
+      batchId: 'calibration',
+      decisionManifest: evidencePath,
+      decisionManifestChecksum: sha256(decisionBytes),
+      selections: decision.assets.map(({ candidateId, collection, recordId, mediaId }) => ({
+        candidateId,
+        collection,
+        recordId,
+        mediaId,
+      })),
+    }],
+  })}\n`);
 
   const mediaPath = join(root, 'src/assets/content/articles/public-fixture/media.yml');
   const media = parseYaml(await readFile(mediaPath, 'utf8'));
@@ -153,7 +180,7 @@ async function writeGeneratedFixture(
       model: 'not-exposed-by-built-in-tool',
       modelVersion: 'not-exposed-by-built-in-tool',
       promptVersion: 'form-and-thought-calibration-v1',
-      candidateId: 'H02',
+      candidateId: 'A03',
       decisionManifestChecksum: sha256(decisionBytes),
     },
     verifiedAt: '2026-08-29',
@@ -162,6 +189,13 @@ async function writeGeneratedFixture(
     height: 1,
     checksum: sha256(unfeaturedAssetBytes),
   };
+  const thirdItem = {
+    ...unfeaturedItem,
+    id: 'third',
+    file: 'third.png',
+    generation: { ...unfeaturedItem.generation, candidateId: 'T01' },
+  };
+  await put(root, 'src/assets/content/articles/public-fixture/third.png', unfeaturedAssetBytes);
   if (options.unfeaturedState === 'downgraded') {
     unfeaturedItem.sourcePath = 'docs/source.md';
     delete (unfeaturedItem as Partial<typeof unfeaturedItem>).sourceKind;
@@ -169,6 +203,7 @@ async function writeGeneratedFixture(
     await put(root, 'docs/source.md', '# ordinary source\n');
   }
   if (options.unfeaturedState !== 'orphaned') media.items.push(unfeaturedItem);
+  media.items.push(thirdItem);
   if (options.unfeaturedState === 'ordinary-path-reuse') {
     media.items.push({
       ...unfeaturedItem,
@@ -189,6 +224,20 @@ async function writeGeneratedFixture(
     });
   }
   await writeFile(mediaPath, stringifyYaml(media, { lineWidth: 0 }));
+}
+
+async function downgradeAllGeneratedEntriesAndDeleteEvidence(root: string): Promise<void> {
+  const mediaPath = join(root, 'src/assets/content/articles/public-fixture/media.yml');
+  const media = parseYaml(await readFile(mediaPath, 'utf8'));
+  await put(root, 'docs/source.md', '# ordinary source\n');
+  for (const item of media.items) {
+    delete item.sourceKind;
+    delete item.generation;
+    delete item.sourceUrl;
+    item.sourcePath = 'docs/source.md';
+  }
+  await writeFile(mediaPath, stringifyYaml(media, { lineWidth: 0 }));
+  await rm(join(root, 'docs/notes/project/assets/form-and-thought-generated/calibration'), { recursive: true });
 }
 
 describe('generated media approval and immutable evidence', () => {
@@ -266,7 +315,7 @@ describe('generated media approval and immutable evidence', () => {
     ['tampered selected checksum', 'decision-checksum-tamper' as const, /approved generated asset.*unfeatured.*checksum/i],
     ['tampered selected source path', 'decision-path-tamper' as const, /approved generated asset.*unfeatured.*sourcePath/i],
     ['ordinary approved-path reuse', 'ordinary-path-reuse' as const, /ordinary media.*approved generated source path/i],
-    ['duplicate candidate claim', 'candidate-reuse' as const, /generated candidate.*H02.*claimed more than once/i],
+    ['duplicate candidate claim', 'candidate-reuse' as const, /generated candidate.*A03.*claimed more than once/i],
   ])('reverse inventory rejects %s even when the asset is unfeatured', async (_name, unfeaturedState, error) => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-reverse-inventory-'));
     const sourceRoot = join(sandbox, 'source');
@@ -276,6 +325,77 @@ describe('generated media approval and immutable evidence', () => {
       root: sourceRoot,
       releasesRoot: join(sandbox, 'releases'),
     })).rejects.toThrow(error);
+  });
+
+  it('fails closed when the registered evidence batch is deleted and all three selected sources are downgraded', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-deleted-batch-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot);
+    await downgradeAllGeneratedEntriesAndDeleteEvidence(sourceRoot);
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/required generated approval batch.*calibration.*missing/i);
+  });
+
+  it('fails closed when a required registered decision manifest is missing', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-missing-manifest-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot);
+    await rm(join(sourceRoot, evidencePath));
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/required generated approval batch.*calibration.*manifest.*missing/i);
+  });
+
+  it('rejects an unregistered generated approval batch', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-unregistered-batch-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot);
+    const decision = parseYaml(await readFile(join(sourceRoot, evidencePath), 'utf8'));
+    decision.batchId = 'unregistered';
+    decision.approvedContactSheet.path = 'docs/notes/project/assets/form-and-thought-generated/unregistered/approved-contact-sheet.png';
+    await put(sourceRoot, decision.approvedContactSheet.path, Buffer.from('unregistered contact'));
+    decision.approvedContactSheet.checksum = sha256(Buffer.from('unregistered contact'));
+    await put(
+      sourceRoot,
+      'docs/notes/project/assets/form-and-thought-generated/unregistered/decision-manifest.yml',
+      stringifyYaml(decision, { lineWidth: 0 }),
+    );
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/unregistered generated approval batch.*unregistered/i);
+  });
+
+  it('fails closed when a registered selected tuple does not exist in the decision manifest', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-selection-anchor-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot);
+    const registryPath = join(sourceRoot, 'packages/content/generated-media-approval-batches.json');
+    const registry = JSON.parse(await readFile(registryPath, 'utf8'));
+    registry.batches[0].selections[1].mediaId = 'missing-selection';
+    await writeFile(registryPath, `${JSON.stringify(registry)}\n`);
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/required generated approval batch.*calibration.*registered selection/i);
+  });
+
+  it('keeps ordinary release repositories compatible through an explicit empty registry', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-ordinary-media-registry-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).resolves.toMatchObject({ manifest: { schemaVersion: 1 } });
   });
 
   it.each([

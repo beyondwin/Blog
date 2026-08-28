@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "batches": [
+    {
+      "batchId": "calibration",
+      "decisionManifest": "docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml",
+      "decisionManifestChecksum": "sha256:80fb861e545737616134022e4241bce204b7640b5cab251f724319be942beaf4",
+      "selections": [
+        {
+          "candidateId": "H01",
+          "collection": "articles",
+          "recordId": "graphify-code-knowledge-graph-deep-dive",
+          "mediaId": "editorial-home-hero"
+        },
+        {
+          "candidateId": "A03",
+          "collection": "articles",
+          "recordId": "graphify-code-knowledge-graph-deep-dive",
+          "mediaId": "editorial-hero"
+        },
+        {
+          "candidateId": "T01",
+          "collection": "thoughts",
+          "recordId": "why-i-read-in-the-ai-era",
+          "mediaId": "editorial-reading"
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { stringify as stringifyYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { afterEach, describe, expect, it } from 'vitest';
 import { validateMediaRepository } from './validate-media.mjs';
 
@@ -16,6 +16,7 @@ async function makeRepository() {
   const root = await mkdtemp(join(tmpdir(), 'validate-media-'));
   roots.push(root);
   await put(root, 'src/data/memory.public.json', '{"thoughts":[]}\n');
+  await put(root, 'packages/content/generated-media-approval-batches.json', '{"version":1,"batches":[]}\n');
   return root;
 }
 
@@ -83,7 +84,9 @@ async function writeApprovedGeneratedInventory(root, mutation = 'valid') {
   const evidencePath = 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml';
   const contactPath = 'docs/notes/project/assets/form-and-thought-generated/calibration/approved-contact-sheet.png';
   const sourcePath = 'src/assets/content/articles/note/unfeatured.png';
+  const heroImage = validPng(1, 1);
   const image = validPng(2, 1);
+  const thirdImage = validPng(3, 1);
   const contact = Buffer.from('approved contact sheet');
   const rightsNote = 'Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed';
   await put(root, contactPath, contact);
@@ -100,7 +103,7 @@ async function writeApprovedGeneratedInventory(root, mutation = 'valid') {
     },
     approval: {
       state: 'approved',
-      selectedCandidateIds: ['H02'],
+      selectedCandidateIds: ['H01', 'A03', 'T01'],
       approvedBy: mutation === 'duplicate-roles'
         ? ['controller', 'controller', 'independent-visual-reviewer']
         : ['controller', 'independent-visual-reviewer'],
@@ -122,23 +125,63 @@ async function writeApprovedGeneratedInventory(root, mutation = 'valid') {
       },
     },
     approvedContactSheet: { path: contactPath, checksum: checksum(contact) },
-    assets: [{
-      candidateId: 'H02',
-      slot: 'homeHero',
-      collection: 'articles',
-      recordId: 'note',
-      mediaId: 'unfeatured',
-      file: 'unfeatured.png',
-      sourcePath: mutation === 'decision-path-tamper'
-        ? 'src/assets/content/articles/note/tampered.png'
-        : sourcePath,
-      checksum: mutation === 'decision-checksum-tamper' ? `sha256:${'b'.repeat(64)}` : checksum(image),
-      width: 2,
-      height: 1,
-    }],
+    assets: [
+      {
+        candidateId: 'H01',
+        slot: 'homeHero',
+        collection: 'articles',
+        recordId: 'note',
+        mediaId: 'hero',
+        file: 'hero.png',
+        sourcePath: 'src/assets/content/articles/note/hero.png',
+        checksum: checksum(heroImage),
+        width: 1,
+        height: 1,
+      },
+      {
+        candidateId: 'A03',
+        slot: 'homePick/indexLandscape',
+        collection: 'articles',
+        recordId: 'note',
+        mediaId: 'unfeatured',
+        file: 'unfeatured.png',
+        sourcePath: mutation === 'decision-path-tamper'
+          ? 'src/assets/content/articles/note/tampered.png'
+          : sourcePath,
+        checksum: mutation === 'decision-checksum-tamper' ? `sha256:${'b'.repeat(64)}` : checksum(image),
+        width: 2,
+        height: 1,
+      },
+      {
+        candidateId: 'T01',
+        slot: 'detailHero',
+        collection: 'articles',
+        recordId: 'note',
+        mediaId: 'third',
+        file: 'third.png',
+        sourcePath: 'src/assets/content/articles/note/third.png',
+        checksum: checksum(thirdImage),
+        width: 3,
+        height: 1,
+      },
+    ],
   };
   const decisionBytes = stringifyYaml(decision, { lineWidth: 0 });
   await put(root, evidencePath, decisionBytes);
+  await put(root, 'packages/content/generated-media-approval-batches.json', `${JSON.stringify({
+    version: 1,
+    batches: [{
+      batchId: 'calibration',
+      decisionManifest: evidencePath,
+      decisionManifestChecksum: checksum(decisionBytes),
+      selections: decision.assets.map(({ candidateId, collection, recordId, mediaId }) => ({
+        candidateId,
+        collection,
+        recordId,
+        mediaId,
+      })),
+    }],
+  })}\n`);
 
   const item = {
     id: 'unfeatured',
@@ -154,7 +197,7 @@ async function writeApprovedGeneratedInventory(root, mutation = 'valid') {
       model: 'not-exposed-by-built-in-tool',
       modelVersion: 'not-exposed-by-built-in-tool',
       promptVersion: 'form-and-thought-calibration-v1',
-      candidateId: 'H02',
+      candidateId: 'A03',
       decisionManifestChecksum: checksum(decisionBytes),
     },
     verifiedAt: '2026-08-29',
@@ -163,7 +206,20 @@ async function writeApprovedGeneratedInventory(root, mutation = 'valid') {
     height: 1,
     checksum: checksum(image),
   };
-  const items = [];
+  const boundItem = (id, file, candidateId, width, bytes) => ({
+    ...item,
+    id,
+    file,
+    generation: { ...item.generation, candidateId },
+    width,
+    checksum: checksum(bytes),
+  });
+  const items = [
+    boundItem('hero', 'hero.png', 'H01', 1, heroImage),
+    boundItem('third', 'third.png', 'T01', 3, thirdImage),
+  ];
+  await put(root, 'src/assets/content/articles/note/hero.png', heroImage);
+  await put(root, 'src/assets/content/articles/note/third.png', thirdImage);
   if (mutation !== 'orphaned') {
     if (mutation === 'downgraded') {
       item.sourcePath = 'docs/source.md';
@@ -185,8 +241,8 @@ async function writeApprovedGeneratedInventory(root, mutation = 'valid') {
     await put(root, 'docs/source.md', '# ordinary source\n');
   }
   if (mutation === 'candidate-reuse') {
-    const impostor = validPng(3, 1);
-    items.push({ ...item, id: 'impostor', file: 'impostor.png', width: 3, checksum: checksum(impostor) });
+    const impostor = validPng(4, 1);
+    items.push({ ...item, id: 'impostor', file: 'impostor.png', width: 4, checksum: checksum(impostor) });
     await put(root, 'src/assets/content/articles/note/impostor.png', impostor);
   }
   await put(root, 'src/assets/content/articles/note/media.yml', stringifyYaml({ version: 1, items }, { lineWidth: 0 }));
@@ -245,7 +301,7 @@ describe('repository media validation', () => {
     ['tampered selected checksum', 'decision-checksum-tamper', /approved generated asset.*unfeatured.*checksum/i],
     ['tampered selected source path', 'decision-path-tamper', /approved generated asset.*unfeatured.*sourcePath/i],
     ['ordinary approved-path reuse', 'ordinary-path-reuse', /ordinary media.*approved generated source path/i],
-    ['duplicate candidate claim', 'candidate-reuse', /generated candidate.*H02.*claimed more than once/i],
+    ['duplicate candidate claim', 'candidate-reuse', /generated candidate.*A03.*claimed more than once/i],
     ['duplicate exact approval role', 'duplicate-roles', /approvedBy.*controller.*independent-visual-reviewer/i],
   ])('reverse inventory rejects %s', async (_name, mutation, error) => {
     const root = await makeRepository();
@@ -254,6 +310,76 @@ describe('repository media validation', () => {
     expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
       expect.stringMatching(error),
     ]));
+  });
+
+  it('fails closed when the registered batch directory is deleted and all three selected sources are downgraded', async () => {
+    const root = await makeRepository();
+    await writeApprovedGeneratedInventory(root);
+    const mediaPath = 'src/assets/content/articles/note/media.yml';
+    const media = parseYaml(await readFile(join(root, mediaPath), 'utf8'));
+    await put(root, 'docs/source.md', '# ordinary source\n');
+    for (const item of media.items) {
+      delete item.sourceKind;
+      delete item.generation;
+      item.sourcePath = 'docs/source.md';
+    }
+    await put(root, mediaPath, stringifyYaml(media, { lineWidth: 0 }));
+    await rm(join(root, 'docs/notes/project/assets/form-and-thought-generated/calibration'), { recursive: true });
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/required generated approval batch.*calibration.*missing/i),
+    ]));
+  });
+
+  it('fails closed when a required registered decision manifest is missing', async () => {
+    const root = await makeRepository();
+    await writeApprovedGeneratedInventory(root);
+    await rm(join(root, 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml'));
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/required generated approval batch.*calibration.*manifest.*missing/i),
+    ]));
+  });
+
+  it('rejects an unregistered generated approval batch', async () => {
+    const root = await makeRepository();
+    await writeApprovedGeneratedInventory(root);
+    const original = parseYaml(await readFile(join(root, 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml'), 'utf8'));
+    original.batchId = 'unregistered';
+    original.approvedContactSheet.path = 'docs/notes/project/assets/form-and-thought-generated/unregistered/approved-contact-sheet.png';
+    const contact = Buffer.from('unregistered contact');
+    original.approvedContactSheet.checksum = checksum(contact);
+    await put(root, original.approvedContactSheet.path, contact);
+    await put(root, 'docs/notes/project/assets/form-and-thought-generated/unregistered/decision-manifest.yml', stringifyYaml(original, { lineWidth: 0 }));
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/unregistered generated approval batch.*unregistered/i),
+    ]));
+  });
+
+  it('fails closed when a registered selected tuple does not exist in the decision manifest', async () => {
+    const root = await makeRepository();
+    await writeApprovedGeneratedInventory(root);
+    const registryPath = 'packages/content/generated-media-approval-batches.json';
+    const registry = JSON.parse(await readFile(join(root, registryPath), 'utf8'));
+    registry.batches[0].selections[1].mediaId = 'missing-selection';
+    await put(root, registryPath, `${JSON.stringify(registry)}\n`);
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/required generated approval batch.*calibration.*registered selection/i),
+    ]));
+  });
+
+  it('keeps ordinary media compatible through an explicit empty generated approval registry', async () => {
+    const root = await makeRepository();
+    const image = validPng();
+    await put(root, 'docs/source.md', '# source\n');
+    await put(root, 'src/assets/content/articles/note/ordinary.png', image);
+    await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([{
+      id: 'ordinary', file: 'ordinary.png', kind: 'illustration', sourcePath: 'docs/source.md', checksum: checksum(image),
+    }]));
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual([]);
   });
 
   it.each([
