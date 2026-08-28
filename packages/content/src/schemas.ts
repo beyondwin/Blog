@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { reviewCoverRedistributionReceiptSchema } from './media/review-cover-redistribution.mjs';
 
 export const sourceCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts'] as const;
 
@@ -194,6 +195,7 @@ export const sourceMediaManifestSchema = z.object({
     edition: z.string().trim().min(1).optional(),
     verifiedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     rightsNote: z.string().trim().min(1),
+    redistributionApproval: reviewCoverRedistributionReceiptSchema.optional(),
     width: z.number().int().positive().optional(),
     height: z.number().int().positive().optional(),
     checksum: checksumSchema,
@@ -209,6 +211,13 @@ export const sourceMediaManifestSchema = z.object({
         code: 'custom',
         path: ['kind'],
         message: `book-cover ${item.id} requires sourceUrl, isbn13 and edition`,
+      });
+    }
+    if (item.redistributionApproval && item.kind !== 'book-cover') {
+      context.addIssue({
+        code: 'custom',
+        path: ['redistributionApproval'],
+        message: 'redistribution approval is only valid for book-cover media',
       });
     }
     const decisionBound = Boolean(

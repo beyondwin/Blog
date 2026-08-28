@@ -8,6 +8,7 @@ import {
 } from '../root';
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { ReviewReadingPage } from '../../src/ui/reading/ReviewReadingPage';
+import { hasApprovedCoverRedistribution } from '../../src/ui/reviews/bookshelfPresentation';
 import { selectContinuations, type ContinuationItem } from '../../src/ui/reading/select-continuations';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
@@ -56,9 +57,10 @@ export async function loader({ params }: { params: { slug?: string } }): Promise
   const release = await loadVerifiedRelease();
   const record = params.slug ? recordForRoute(release, 'reviews', params.slug) : null;
   if (!record) throw new Response('Not Found', { status: 404 });
-  const coverAsset = record.coverState === 'verified' && record.readEditionVerified && record.coverMedia
+  const candidateCover = record.coverState === 'verified' && record.readEditionVerified && record.coverMedia
     ? release.manifest.assets[`reviews/${record.id}/${record.coverMedia}`]
     : undefined;
+  const coverAsset = hasApprovedCoverRedistribution(candidateCover) ? candidateCover : undefined;
   return {
     record,
     continuations: selectContinuations(record, release.manifest.records),
@@ -75,11 +77,12 @@ export function meta({ data }: { data?: ReviewData }) {
 }
 
 export function ReviewPresentation({ data }: { data: ReviewData }) {
-  const preload = reviewCoverPreload(data.coverAsset);
-  const cover = data.coverAsset ? (
+  const approvedCover = hasApprovedCoverRedistribution(data.coverAsset) ? data.coverAsset : undefined;
+  const preload = reviewCoverPreload(approvedCover);
+  const cover = approvedCover ? (
     <ResponsivePicture
-      asset={data.coverAsset}
-      alt={data.coverAsset.alt}
+      asset={approvedCover}
+      alt={approvedCover.alt}
       className="review-detail__cover-image"
       eager
       sizes={REVIEW_COVER_SIZES}
@@ -93,7 +96,7 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
         description={reviewDescription(data.record)}
         title={publicMetadataTitle(data.record.title)}
       />
-      <SiteShell currentSection="reviews" inverseHeader={Boolean(data.coverAsset)}>
+      <SiteShell currentSection="reviews" inverseHeader={Boolean(approvedCover)}>
         <ReviewReadingPage record={data.record} cover={cover} continuations={data.continuations} />
       </SiteShell>
     </>

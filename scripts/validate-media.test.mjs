@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { afterEach, describe, expect, it } from 'vitest';
 import { validateMediaRepository } from './validate-media.mjs';
+import { writeReviewCoverFixture } from '../packages/content/test/helpers/release-fixture.ts';
 
 const roots = [];
 
@@ -286,6 +287,27 @@ describe('repository media validation', () => {
     expect(result.warnings).toEqual([
       'src/assets/content/reviews/book/cover.jpg: redistribution rights are not independently verified',
     ]);
+  });
+
+  it('rejects a review coverMedia reference that disguises its bytes as a non-cover kind', async () => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { approved: false, kind: 'illustration' });
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/coverMedia.*kind.*book-cover/i),
+    ]));
+  });
+
+  it('accepts an approved review cover only through its canonical checksum-bound decision', async () => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root);
+
+    const result = await validateMediaRepository(root, { strict: true });
+
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
   });
 
   it('accepts generated-media provenance only through a canonical approved decision inventory', async () => {

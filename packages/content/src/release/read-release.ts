@@ -5,6 +5,7 @@ import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import {
   generatedMediaEvidenceReceiptSchema,
   parsePublicRecord,
+  reviewCoverRedistributionEvidenceSchema,
   type PublicRecord,
 } from '@beyondwin/contracts';
 import { z } from 'zod';
@@ -62,6 +63,7 @@ const releaseMediaAssetSchema = z.object({
   height: z.number().int().positive(),
   sourceChecksum: checksumSchema,
   generationEvidence: generatedMediaEvidenceReceiptSchema.optional(),
+  redistributionEvidence: reviewCoverRedistributionEvidenceSchema.optional(),
   sources: responsiveSourcesSchema,
   fallback: z.object({
     src: canonicalAssetHrefSchema,
@@ -325,6 +327,26 @@ export function parseReleaseManifest(input: unknown): PublicReleaseManifest {
       throw new Error(`${key}: manifest asset key does not match the public asset`);
     }
   }
+  for (const [key, asset] of Object.entries(envelope.assets)) {
+    if (asset.redistributionEvidence && (asset.collection !== 'reviews' || asset.kind !== 'book-cover')) {
+      throw new Error(`${key}: redistribution evidence is only valid for review book-cover assets`);
+    }
+    if (asset.collection === 'reviews' && asset.kind === 'book-cover' && !asset.redistributionEvidence) {
+      throw new Error(`${key}: review book-cover asset requires approved redistribution evidence`);
+    }
+    if (asset.redistributionEvidence) {
+      const evidence = asset.redistributionEvidence;
+      if (evidence.sourceAsset !== asset.fallback.src) {
+        throw new Error(`${key}: redistribution evidence source asset does not match the release asset`);
+      }
+      if (evidence.sourceChecksum !== asset.sourceChecksum) {
+        throw new Error(`${key}: redistribution evidence source checksum does not match the release asset`);
+      }
+      if (evidence.width !== asset.width || evidence.height !== asset.height) {
+        throw new Error(`${key}: redistribution evidence dimensions do not match the release asset`);
+      }
+    }
+  }
   const evidenceReceipts = new Set<string>();
   for (const [key, asset] of Object.entries(envelope.assets)) {
     if (!asset.generationEvidence) continue;
@@ -353,6 +375,7 @@ export function parseReleaseManifest(input: unknown): PublicReleaseManifest {
         width: media.width,
         height: media.height,
         sourceChecksum: media.checksum,
+        ...(media.redistributionEvidence ? { redistributionEvidence: media.redistributionEvidence } : {}),
         fallback: {
           src: media.src,
           format: media.format,
@@ -370,6 +393,7 @@ export function parseReleaseManifest(input: unknown): PublicReleaseManifest {
         width: asset.width,
         height: asset.height,
         sourceChecksum: asset.sourceChecksum,
+        ...(asset.redistributionEvidence ? { redistributionEvidence: asset.redistributionEvidence } : {}),
         fallback: {
           src: asset.fallback.src,
           format: asset.fallback.format,

@@ -26,6 +26,10 @@ const coverAsset = {
   width: 458,
   height: 671,
   sourceChecksum: `sha256:${'0'.repeat(64)}`,
+  redistributionEvidence: {
+    state: 'approved',
+    decision: 'approve-public-redistribution',
+  },
   sources: [{
     type: 'image/avif',
     candidates: [{
@@ -46,7 +50,7 @@ const coverAsset = {
       checksum: `sha256:${'2'.repeat(64)}`,
     }],
   },
-} satisfies ReleaseAsset;
+} as ReleaseAsset;
 
 const reviewRecord = {
   collection: 'reviews',
@@ -123,6 +127,19 @@ describe('current review route cover styling', () => {
       html,
       '.review-detail__cover-stage img',
     )).resolves.toEqual(['contain']);
+  });
+
+  it('keeps a forged cover asset without verified redistribution evidence text-led', async () => {
+    const html = renderToStaticMarkup(createElement(ReviewPresentation, {
+      data: {
+        record: reviewRecord,
+        coverAsset: { ...coverAsset, redistributionEvidence: undefined } as ReleaseAsset,
+        continuations: [],
+      },
+    }));
+
+    expect(html).toContain('판본 확인 · 표지 공개 권리 미확인');
+    expect(html).not.toContain('/assets/content/reviews/black-swan/cover');
   });
 
   it('does not apply review containment to article landscape media', async () => {

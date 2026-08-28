@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { stringify as stringifyYaml } from 'yaml';
 
 const transparentPng = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -9,6 +10,128 @@ const transparentPng = Buffer.from(
 );
 
 export const fixtureChecksum = `sha256:${createHash('sha256').update(transparentPng).digest('hex')}`;
+
+export type ReviewCoverDecisionMutation =
+  | 'hold'
+  | 'asset-path'
+  | 'asset-checksum'
+  | 'dimensions'
+  | 'isbn13'
+  | 'edition';
+
+export async function writeReviewCoverFixture(
+  root: string,
+  options: {
+    approved?: boolean;
+    kind?: 'book-cover' | 'illustration' | 'photo';
+    mutation?: ReviewCoverDecisionMutation;
+    omitDecision?: boolean;
+    receiptChecksum?: string;
+    rightsNote?: string;
+  } = {},
+): Promise<{ decisionPath: string; mediaChecksum: string }> {
+  const recordId = 'approved-review';
+  const mediaId = 'cover';
+  const file = 'cover.png';
+  const isbn13 = '9788990247674';
+  const edition = 'Test Publisher 2026 edition';
+  const mediaDirectory = `src/assets/content/reviews/${recordId}`;
+  const sourceAssetPath = `${mediaDirectory}/${file}`;
+  const decisionPath = `docs/notes/project/assets/review-cover-rights/${recordId}/redistribution-decision.yml`;
+  const coverBytes = await sharp({
+    create: {
+      width: 320,
+      height: 480,
+      channels: 4,
+      background: { r: 28, g: 22, b: 18, alpha: 1 },
+    },
+  }).png().toBuffer();
+  const mediaChecksum = `sha256:${createHash('sha256').update(coverBytes).digest('hex')}`;
+  const mutation = options.mutation;
+  const approved = options.approved ?? true;
+  const decision = {
+    version: 1,
+    state: mutation === 'hold' || !approved ? 'hold' : 'approved',
+    decision: mutation === 'hold' || !approved ? 'hold' : 'approve-public-redistribution',
+    recordId,
+    mediaId,
+    asset: {
+      path: mutation === 'asset-path' ? `${mediaDirectory}/forged.png` : sourceAssetPath,
+      checksum: mutation === 'asset-checksum' ? `sha256:${'b'.repeat(64)}` : mediaChecksum,
+      width: mutation === 'dimensions' ? 319 : 320,
+      height: 480,
+      kind: 'book-cover',
+    },
+    edition: {
+      isbn13: mutation === 'isbn13' ? '9788934985068' : isbn13,
+      label: mutation === 'edition' ? 'Different edition' : edition,
+    },
+    evidence: {
+      decidedAt: '2026-08-29',
+      decidedBy: 'rights-controller',
+      sources: [{ url: 'https://example.com/rights-evidence', checkedAt: '2026-08-29' }],
+      note: 'Fixture evidence approves only this exact edition and source asset.',
+    },
+  };
+  const decisionBytes = stringifyYaml(decision, { lineWidth: 0 });
+  const decisionChecksum = `sha256:${createHash('sha256').update(decisionBytes).digest('hex')}`;
+
+  await mkdir(join(root, ...mediaDirectory.split('/')), { recursive: true });
+  await writeFile(join(root, ...sourceAssetPath.split('/')), coverBytes);
+  if (!options.omitDecision) {
+    await mkdir(join(root, ...decisionPath.split('/')).replace(/\/redistribution-decision\.yml$/u, ''), { recursive: true });
+    await writeFile(join(root, ...decisionPath.split('/')), decisionBytes);
+  }
+  await writeFile(join(root, ...mediaDirectory.split('/'), 'media.yml'), stringifyYaml({
+    version: 1,
+    items: [{
+      id: mediaId,
+      file,
+      kind: options.kind ?? 'book-cover',
+      alt: '승인 테스트 판본 표지',
+      credit: 'Test bookseller',
+      sourceUrl: 'https://example.com/approved-cover.png',
+      isbn13,
+      edition,
+      verifiedAt: '2026-08-29',
+      rightsNote: options.rightsNote ?? 'Free text never grants redistribution rights.',
+      width: 320,
+      height: 480,
+      checksum: mediaChecksum,
+      ...(approved ? {
+        redistributionApproval: {
+          decisionDocument: decisionPath,
+          decisionChecksum: options.receiptChecksum ?? decisionChecksum,
+        },
+      } : {}),
+    }],
+  }, { lineWidth: 0 }));
+  await writeFile(join(root, 'src', 'content', 'reviews', `${recordId}.mdx`), [
+    '---',
+    'title: Approved review',
+    'description: A review cover approval fixture.',
+    'createdAt: "2026-08-29"',
+    'updatedAt: "2026-08-29"',
+    'status: published',
+    'draft: false',
+    'itemType: book',
+    'itemTitle: Approved review',
+    'itemAuthor: Test Author',
+    `isbn13: "${isbn13}"`,
+    'publisher: Test Publisher',
+    `editionLabel: ${edition}`,
+    'readEditionVerified: true',
+    'verdict: The verdict remains visible.',
+    'coverState: verified',
+    `coverMedia: ${mediaId}`,
+    '---',
+    '',
+    'The review body remains visible.',
+    '',
+  ].join('\n'));
+
+  return { decisionPath, mediaChecksum };
+}
 
 export async function writeReleaseFixture(
   root: string,

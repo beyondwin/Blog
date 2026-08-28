@@ -1,5 +1,6 @@
 import { z } from 'astro/zod';
 import { parse } from 'yaml';
+import { reviewCoverRedistributionReceiptSchema } from '../../../packages/content/src/media/review-cover-redistribution.mjs';
 
 const mediaKindSchema = z.enum(['book-cover', 'photo', 'diagram', 'screenshot', 'illustration']);
 const mediaFileSchema = safeRelativePath('file').refine(
@@ -55,6 +56,7 @@ const mediaItemSchema = z
     edition: z.string().trim().min(1).optional(),
     verifiedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     rightsNote: z.string().trim().min(1),
+    redistributionApproval: reviewCoverRedistributionReceiptSchema.optional(),
     width: z.number().int().positive().optional(),
     height: z.number().int().positive().optional(),
     checksum: z.string().regex(/^sha256:[a-f0-9]{64}$/),
@@ -73,6 +75,13 @@ const mediaItemSchema = z
         code: 'custom',
         message: 'media item dimensions require both width and height',
         path: ['width'],
+      });
+    }
+    if (item.redistributionApproval && item.kind !== 'book-cover') {
+      context.addIssue({
+        code: 'custom',
+        message: 'redistribution approval is only valid for book-cover media',
+        path: ['redistributionApproval'],
       });
     }
     const decisionBound = Boolean(

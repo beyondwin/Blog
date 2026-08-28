@@ -10,6 +10,10 @@ import {
   GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,
   parseGeneratedMediaApprovalRegistry,
 } from '../packages/content/src/media/generated-media-approval-registry.mjs';
+import {
+  canonicalReviewCoverDecisionPath,
+  reviewCoverRedistributionDecisionSchema,
+} from '../packages/content/src/media/review-cover-redistribution.mjs';
 
 const contentExtensions = new Set(['.md', '.mdx']);
 const rasterExtensions = new Set(['.jpg', '.jpeg', '.png']);
@@ -292,6 +296,9 @@ async function validateManifest(root, absolutePath, state) {
 
   const manifestDirectory = await realpath(resolve(absolutePath, '..'));
   state.manifests.set(absolutePath, manifest);
+  const reviewManifest = manifestPath.match(
+    /^src\/assets\/content\/reviews\/([a-z0-9][a-z0-9-]*)\/media\.yml$/,
+  );
 
   for (const item of manifest.items) {
     const assetPath = resolve(manifestDirectory, item.file);
@@ -322,8 +329,10 @@ async function validateManifest(root, absolutePath, state) {
     }
 
     const extension = extname(item.file).toLowerCase();
+    let actualDimensions = null;
     if (rasterExtensions.has(extension)) {
       const dimensions = rasterDimensions(bytes, extension);
+      actualDimensions = dimensions;
       if (!dimensions) {
         state.errors.add(`${assetRepoPath}: cannot read ${extension.slice(1).toUpperCase()} dimensions from file header`);
       } else if (dimensions.width === 0 || dimensions.height === 0) {
@@ -342,12 +351,67 @@ async function validateManifest(root, absolutePath, state) {
       }
     }
 
+    let redistributionApproved = false;
+    if (item.redistributionApproval) {
+      const recordId = reviewManifest?.[1];
+      const label = `${manifestPath}: media item ${item.id}`;
+      if (!recordId || item.kind !== 'book-cover') {
+        state.errors.add(`${label}: redistribution approval is only valid for review book-cover media`);
+      } else {
+        const receipt = item.redistributionApproval;
+        const expectedDecisionPath = canonicalReviewCoverDecisionPath(recordId);
+        if (receipt.decisionDocument !== expectedDecisionPath) {
+          state.errors.add(`${label}: redistribution decision document must use the canonical record path`);
+        } else {
+          const decisionPath = resolve(root, receipt.decisionDocument);
+          if (!isInside(root, decisionPath) || await inspectRepositoryFile(root, decisionPath, root) !== 'ok') {
+            state.errors.add(`${label}: redistribution decision document is missing`);
+          } else {
+            try {
+              const decisionBytes = await readFile(decisionPath);
+              if (sha256(decisionBytes) !== receipt.decisionChecksum) {
+                state.errors.add(`${label}: redistribution decision checksum changed`);
+              } else {
+                const decision = reviewCoverRedistributionDecisionSchema.parse(parseYaml(decisionBytes.toString('utf8')));
+                if (decision.state !== 'approved' || decision.decision !== 'approve-public-redistribution') {
+                  state.errors.add(`${label}: redistribution decision must be approved for public redistribution`);
+                } else {
+                  const expectedAsset = {
+                    path: assetRepoPath,
+                    checksum: item.checksum,
+                    width: item.width ?? actualDimensions?.width,
+                    height: item.height ?? actualDimensions?.height,
+                    kind: 'book-cover',
+                  };
+                  const mismatched = ['path', 'checksum', 'width', 'height', 'kind']
+                    .find((field) => decision.asset[field] !== expectedAsset[field]);
+                  if (decision.recordId !== recordId || decision.mediaId !== item.id) {
+                    state.errors.add(`${label}: redistribution decision identity does not match the review cover`);
+                  } else if (mismatched) {
+                    state.errors.add(`${label}: asset ${mismatched} does not match the approved redistribution decision`);
+                  } else if (decision.edition.isbn13 !== item.isbn13) {
+                    state.errors.add(`${label}: edition isbn13 does not match the approved redistribution decision`);
+                  } else if (decision.edition.label !== item.edition) {
+                    state.errors.add(`${label}: edition label does not match the approved redistribution decision`);
+                  } else {
+                    redistributionApproved = true;
+                  }
+                }
+              }
+            } catch (error) {
+              state.errors.add(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+            }
+          }
+        }
+      }
+    }
+
     if (item.sourcePath) {
       const sourcePath = resolve(root, item.sourcePath);
       if (!isInside(root, sourcePath) || await inspectRepositoryFile(root, sourcePath, root) !== 'ok') {
         state.errors.add(`${manifestPath}: sourcePath "${item.sourcePath}" does not exist`);
       }
-    } else if (item.sourceUrl && item.rightsNote.trim()) {
+    } else if (item.sourceUrl && item.rightsNote.trim() && !redistributionApproved) {
       state.warnings.add(`${assetRepoPath}: redistribution rights are not independently verified`);
     }
   }
@@ -622,6 +686,23 @@ async function validateContentFile(root, absolutePath, targets, state, strict) {
     if (field === 'coverMedia' && parsed.data.coverState === 'hold') continue;
     if (typeof id === 'string' && !manifest?.items.some((item) => item.id === id)) {
       state.errors.add(`${path}: ${field} "${id}" has no media manifest item`);
+    }
+  }
+  if (typeof parsed.data.coverMedia === 'string') {
+    const cover = manifest?.items.find((item) => item.id === parsed.data.coverMedia);
+    if (cover && cover.kind !== 'book-cover') {
+      state.errors.add(`${path}: coverMedia "${parsed.data.coverMedia}" must resolve to kind book-cover`);
+    }
+    if (cover?.redistributionApproval) {
+      if (parsed.data.readEditionVerified !== true) {
+        state.errors.add(`${path}: approved cover redistribution requires readEditionVerified true`);
+      }
+      if (parsed.data.isbn13 !== cover.isbn13) {
+        state.errors.add(`${path}: review ISBN does not match approved cover edition identity`);
+      }
+      if (parsed.data.editionLabel !== cover.edition) {
+        state.errors.add(`${path}: review edition does not match approved cover edition identity`);
+      }
     }
   }
 

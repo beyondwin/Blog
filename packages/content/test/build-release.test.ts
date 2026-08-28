@@ -4,7 +4,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildPublicRelease } from '../src/release/build-release';
 import { readActiveRelease } from '../src/release/read-release';
-import { fixtureChecksum, writeReleaseFixture } from './helpers/release-fixture';
+import {
+  fixtureChecksum,
+  writeReleaseFixture,
+  writeReviewCoverFixture,
+  type ReviewCoverDecisionMutation,
+} from './helpers/release-fixture';
 
 describe('immutable public release building', () => {
   it('builds every approved generated media selection needed by the fixed home and detail projections', async () => {
@@ -118,6 +123,90 @@ describe('immutable public release building', () => {
       'rights-warning-review',
       'cover.png',
     ))).rejects.toThrow();
+  });
+
+  it.each(['illustration', 'photo'] as const)(
+    'rejects a review coverMedia reference whose source media kind is %s rather than exactly book-cover',
+    async (kind) => {
+      const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-kind-bypass-'));
+      const sourceRoot = join(sandbox, 'source');
+      await writeReleaseFixture(sourceRoot);
+      await writeReviewCoverFixture(sourceRoot, { approved: false, kind });
+
+      await expect(buildPublicRelease({
+        root: sourceRoot,
+        releasesRoot: join(sandbox, 'releases'),
+      })).rejects.toThrow(/coverMedia.*kind.*book-cover/i);
+    },
+  );
+
+  it('releases one synthetic cover only through its exact checksum-bound redistribution decision', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-approved-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    const { decisionPath, mediaChecksum } = await writeReviewCoverFixture(sourceRoot);
+
+    const built = await buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    });
+    const record = built.manifest.records['reviews/approved-review'];
+    const asset = built.manifest.assets['reviews/approved-review/cover'];
+
+    expect(record).toMatchObject({
+      collection: 'reviews',
+      coverMedia: 'cover',
+      readEditionVerified: true,
+      media: [expect.objectContaining({ id: 'cover', kind: 'book-cover', checksum: mediaChecksum })],
+    });
+    expect(asset).toMatchObject({
+      collection: 'reviews',
+      recordId: 'approved-review',
+      id: 'cover',
+      kind: 'book-cover',
+      sourceChecksum: mediaChecksum,
+      redistributionEvidence: {
+        state: 'approved',
+        decision: 'approve-public-redistribution',
+        decisionDocument: decisionPath,
+        decisionChecksum: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+        sourceAsset: '/assets/content/reviews/approved-review/cover.png',
+        sourceChecksum: mediaChecksum,
+        width: 320,
+        height: 480,
+        isbn13: '9788990247674',
+        edition: 'Test Publisher 2026 edition',
+      },
+    });
+    await expect(readFile(join(
+      built.releasePath,
+      'assets',
+      'content',
+      'reviews',
+      'approved-review',
+      'cover.png',
+    ))).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it.each([
+    ['missing decision document', { omitDecision: true }, /redistribution decision.*missing/i],
+    ['forged receipt checksum', { receiptChecksum: `sha256:${'c'.repeat(64)}` }, /decision.*checksum.*changed/i],
+    ['held decision', { mutation: 'hold' as ReviewCoverDecisionMutation }, /redistribution decision.*approved/i],
+    ['wrong approved asset path', { mutation: 'asset-path' as ReviewCoverDecisionMutation }, /asset path.*approved/i],
+    ['wrong approved asset checksum', { mutation: 'asset-checksum' as ReviewCoverDecisionMutation }, /asset checksum.*approved/i],
+    ['wrong approved dimensions', { mutation: 'dimensions' as ReviewCoverDecisionMutation }, /asset width.*approved/i],
+    ['wrong approved ISBN', { mutation: 'isbn13' as ReviewCoverDecisionMutation }, /edition isbn13.*approved/i],
+    ['wrong approved edition label', { mutation: 'edition' as ReviewCoverDecisionMutation }, /edition label.*approved/i],
+  ])('rejects a review cover approval with %s', async (_name, mutation, error) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-decision-tamper-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot, mutation);
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(error);
   });
 
   it('derives a deterministic ID from public inputs and changes it when a public field changes', async () => {

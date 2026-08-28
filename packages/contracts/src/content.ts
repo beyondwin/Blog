@@ -138,6 +138,24 @@ export const publicRecordSchema = z.discriminatedUnion('collection', [
       message: 'updatedAt must be on or after createdAt',
     });
   }
+  if (record.collection === 'reviews' && record.coverMedia) {
+    const cover = record.media.find((media) => media.id === record.coverMedia);
+    if (cover) {
+      if (cover.kind !== 'book-cover') {
+        context.addIssue({ code: 'custom', path: ['coverMedia'], message: 'coverMedia must resolve to kind book-cover' });
+      }
+      if (!cover.redistributionEvidence) {
+        context.addIssue({ code: 'custom', path: ['coverMedia'], message: 'public cover media requires approved redistribution evidence' });
+      } else {
+        if (record.isbn13 !== cover.redistributionEvidence.isbn13) {
+          context.addIssue({ code: 'custom', path: ['isbn13'], message: 'review ISBN must match approved cover edition identity' });
+        }
+        if (record.editionLabel !== cover.redistributionEvidence.edition) {
+          context.addIssue({ code: 'custom', path: ['editionLabel'], message: 'review edition must match approved cover edition identity' });
+        }
+      }
+    }
+  }
 });
 
 export type PublicRecord = z.infer<typeof publicRecordSchema>;

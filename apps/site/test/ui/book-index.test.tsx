@@ -10,6 +10,7 @@ type ReleaseAsset = PublicReleaseManifest['assets'][string];
 
 const approvedCover = {
   id: 'cover',
+  kind: 'book-cover',
   alt: '블랙 스완 표지',
   width: 400,
   height: 600,
@@ -21,6 +22,19 @@ const approvedCover = {
     src: '/assets/content/reviews/black-swan/cover.jpg',
     candidates: [{ src: '/assets/content/reviews/black-swan/cover.jpg', width: 400 }],
   },
+  redistributionEvidence: {
+    state: 'approved',
+    decision: 'approve-public-redistribution',
+  },
+} as ReleaseAsset;
+
+const forgedCoverWithoutEvidence = {
+  ...approvedCover,
+  fallback: {
+    ...approvedCover.fallback,
+    src: '/assets/content/reviews/warning-cover/cover.jpg',
+  },
+  redistributionEvidence: undefined,
 } as ReleaseAsset;
 
 function review(id: string, overrides: Record<string, unknown> = {}): ReviewRecord {
@@ -63,7 +77,10 @@ describe('public review editorial ledger', () => {
           coverMedia: 'cover',
         }),
       ],
-      assets: new Map([['reviews/black-swan/cover', approvedCover]]),
+      assets: new Map([
+        ['reviews/black-swan/cover', approvedCover],
+        ['reviews/warning-cover/cover', forgedCoverWithoutEvidence],
+      ]),
     }));
 
     expect(html).toContain('<h1>서평</h1>');

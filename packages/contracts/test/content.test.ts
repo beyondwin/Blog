@@ -263,6 +263,45 @@ describe('public record allowlists', () => {
     expect('itemAuthor' in parsed).toBe(false);
   });
 
+  it('preserves only the canonical checksum-bound public cover redistribution evidence', () => {
+    const evidence = {
+      state: 'approved',
+      decision: 'approve-public-redistribution',
+      decisionDocument: 'docs/notes/project/assets/review-cover-rights/review-render/redistribution-decision.yml',
+      decisionChecksum: `sha256:${'1'.repeat(64)}`,
+      sourceAsset: '/assets/content/reviews/review-render/cover.png',
+      sourceChecksum: `sha256:${'2'.repeat(64)}`,
+      width: 320,
+      height: 480,
+      isbn13: '9788990247674',
+      edition: '2018 edition',
+    };
+    const parsed = parsePublicRecord({
+      ...commonFields('reviews', 'review-render'),
+      media: [{
+        ...publicMediaFixture,
+        id: 'cover',
+        kind: 'book-cover',
+        src: '/assets/content/reviews/review-render/cover.png',
+        checksum: evidence.sourceChecksum,
+        width: evidence.width,
+        height: evidence.height,
+        redistributionEvidence: evidence,
+      }],
+      itemType: 'book',
+      authors: ['Nassim Nicholas Taleb'],
+      isbn13: evidence.isbn13,
+      editionLabel: evidence.edition,
+      readEditionVerified: true,
+      publisher: 'Dongnyeok Science',
+      coverState: 'verified',
+      coverMedia: 'cover',
+      verdict: 'A public verdict',
+    });
+
+    expect(parsed.media[0]).toMatchObject({ redistributionEvidence: evidence });
+  });
+
   it('keeps idea maturity but omits prompts because the current route does not render them', () => {
     const parsed = parsePublicRecord({
       ...commonFields('ideas', 'idea-render'),

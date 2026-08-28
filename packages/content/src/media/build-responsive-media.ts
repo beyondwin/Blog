@@ -3,8 +3,10 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
 import {
   generatedMediaEvidenceReceiptSchema,
+  reviewCoverRedistributionEvidenceSchema,
   type GeneratedMediaEvidenceReceipt,
   type PublicMedia,
+  type ReviewCoverRedistributionEvidence,
 } from '@beyondwin/contracts';
 import sharp from 'sharp';
 import { parse as parseYaml } from 'yaml';
@@ -20,6 +22,11 @@ import {
   type VerifiableSourceInputFormat,
 } from '../schemas';
 import { resolveSourceMedia } from '../source-records';
+import {
+  canonicalReviewCoverDecisionPath,
+  reviewCoverRedistributionDecisionSchema,
+  type ReviewCoverRedistributionReceipt,
+} from './review-cover-redistribution.mjs';
 
 type SourceCollection = 'analysis' | 'articles' | 'ideas' | 'reviews' | 'travel' | 'thoughts';
 export type ResponsiveMediaRole = 'figure' | 'intrinsic';
@@ -51,6 +58,7 @@ export interface ReleaseMediaAsset {
   height: number;
   sourceChecksum: string;
   generationEvidence?: GeneratedMediaEvidenceReceipt;
+  redistributionEvidence?: ReviewCoverRedistributionEvidence;
   sources: ReleaseMediaSource[];
   fallback: {
     src: string;
@@ -69,6 +77,7 @@ export interface SourceMediaBuildInput {
   repositoryRoot: string;
   sourceRelativePath: string;
   generationEvidence?: GeneratedMediaEvidenceReceipt;
+  redistributionEvidence?: ReviewCoverRedistributionEvidence;
 }
 
 function checksum(buffer: Buffer): string {
@@ -143,6 +152,74 @@ async function loadGeneratedMediaEvidence(
   };
 }
 
+async function loadReviewCoverRedistributionEvidence(
+  root: string,
+  collection: SourceCollection,
+  recordId: string,
+  mediaDirectory: string,
+  item: SourceMediaManifest['items'][number],
+  publicMedia: PublicMedia,
+): Promise<ReviewCoverRedistributionEvidence | undefined> {
+  const receipt = item.redistributionApproval as ReviewCoverRedistributionReceipt | undefined;
+  if (!receipt) return undefined;
+  const label = `${collection}/${recordId}/${item.id}`;
+  if (collection !== 'reviews' || item.kind !== 'book-cover') {
+    throw new Error(`${label}: redistribution approval is only valid for review book-cover media`);
+  }
+  const expectedDecisionPath = canonicalReviewCoverDecisionPath(recordId);
+  if (receipt.decisionDocument !== expectedDecisionPath) {
+    throw new Error(`${label}: redistribution decision document must use the canonical record path`);
+  }
+  let decisionBytes: Buffer;
+  try {
+    decisionBytes = await readAllowlistedRegularFile(root, receipt.decisionDocument);
+  } catch {
+    throw new Error(`${label}: redistribution decision document is missing`);
+  }
+  const decisionChecksum = checksum(decisionBytes);
+  if (decisionChecksum !== receipt.decisionChecksum) {
+    throw new Error(`${label}: redistribution decision checksum changed`);
+  }
+  const decision = reviewCoverRedistributionDecisionSchema.parse(parseYaml(decisionBytes.toString('utf8')));
+  if (decision.state !== 'approved' || decision.decision !== 'approve-public-redistribution') {
+    throw new Error(`${label}: redistribution decision must be approved for public redistribution`);
+  }
+  if (decision.recordId !== recordId) throw new Error(`${label}: decision recordId does not match the approved review`);
+  if (decision.mediaId !== item.id) throw new Error(`${label}: decision mediaId does not match the approved cover`);
+
+  const expectedAsset = {
+    path: `${mediaDirectory}/${item.file}`,
+    checksum: publicMedia.checksum,
+    width: publicMedia.width,
+    height: publicMedia.height,
+    kind: 'book-cover',
+  } as const;
+  for (const field of ['path', 'checksum', 'width', 'height', 'kind'] as const) {
+    if (decision.asset[field] !== expectedAsset[field]) {
+      throw new Error(`${label}: asset ${field} does not match the approved redistribution decision`);
+    }
+  }
+  if (decision.edition.isbn13 !== item.isbn13) {
+    throw new Error(`${label}: edition isbn13 does not match the approved redistribution decision`);
+  }
+  if (decision.edition.label !== item.edition) {
+    throw new Error(`${label}: edition label does not match the approved redistribution decision`);
+  }
+
+  return reviewCoverRedistributionEvidenceSchema.parse({
+    state: 'approved',
+    decision: 'approve-public-redistribution',
+    decisionDocument: receipt.decisionDocument,
+    decisionChecksum,
+    sourceAsset: publicMedia.src,
+    sourceChecksum: publicMedia.checksum,
+    width: publicMedia.width,
+    height: publicMedia.height,
+    isbn13: decision.edition.isbn13,
+    edition: decision.edition.label,
+  });
+}
+
 function publicAssetPath(releaseRoot: string, href: string): string {
   if (!href.startsWith('/assets/content/')) throw new Error(`invalid public asset href: ${href}`);
   return join(releaseRoot, ...href.slice(1).split('/'));
@@ -207,9 +284,19 @@ export async function loadSourceMediaBuildInput(
     item,
     publicMedia,
   );
-  const approvedPublicMedia = generatedApproval
-    ? { ...publicMedia, rightsNote: generatedApproval.rightsNote }
-    : publicMedia;
+  const redistributionEvidence = await loadReviewCoverRedistributionEvidence(
+    root,
+    collection,
+    recordId,
+    mediaDirectory,
+    item,
+    publicMedia,
+  );
+  const approvedPublicMedia = {
+    ...publicMedia,
+    ...(generatedApproval ? { rightsNote: generatedApproval.rightsNote } : {}),
+    ...(redistributionEvidence ? { redistributionEvidence } : {}),
+  };
 
   return {
     publicMedia: approvedPublicMedia,
@@ -220,6 +307,7 @@ export async function loadSourceMediaBuildInput(
     repositoryRoot: root,
     sourceRelativePath: `${mediaDirectory}/${item.file}`,
     ...(generatedApproval ? { generationEvidence: generatedApproval.receipt } : {}),
+    ...(redistributionEvidence ? { redistributionEvidence } : {}),
   };
 }
 
@@ -229,6 +317,7 @@ export function publicMediaHashInput(input: SourceMediaBuildInput): object {
     provenanceUrl: input.provenanceUrl,
     role: input.role,
     ...(input.generationEvidence ? { generationEvidence: input.generationEvidence } : {}),
+    ...(input.redistributionEvidence ? { redistributionEvidence: input.redistributionEvidence } : {}),
   };
 }
 
@@ -296,6 +385,7 @@ export async function buildResponsiveMedia(
     height: input.publicMedia.height,
     sourceChecksum: input.publicMedia.checksum,
     ...(input.generationEvidence ? { generationEvidence: input.generationEvidence } : {}),
+    ...(input.redistributionEvidence ? { redistributionEvidence: input.redistributionEvidence } : {}),
     sources: modernSources,
     fallback: {
       src: input.publicMedia.src,

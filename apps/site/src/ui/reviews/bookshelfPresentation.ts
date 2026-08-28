@@ -17,6 +17,15 @@ export interface BookShelfRecord {
   coverAsset?: ReleaseAsset;
 }
 
+export function hasApprovedCoverRedistribution(asset: ReleaseAsset | undefined): asset is ReleaseAsset {
+  return Boolean(
+    asset
+    && asset.kind === 'book-cover'
+    && asset.redistributionEvidence?.state === 'approved'
+    && asset.redistributionEvidence.decision === 'approve-public-redistribution',
+  );
+}
+
 export function getOneSentenceJudgment(text: string): string {
   const normalized = text.trim().replace(/\s+/g, ' ');
   return normalized.match(/^.*?[.!?](?=\s|$)/u)?.[0] ?? normalized;
@@ -39,11 +48,12 @@ function toShelfRecord(
   record: ReviewRecord,
   assets: ReadonlyMap<string, ReleaseAsset>,
 ): BookShelfRecord {
-  const resolvedCover = record.coverState === 'verified'
+  const candidateCover = record.coverState === 'verified'
     && record.readEditionVerified
     && record.coverMedia
     ? assets.get(`reviews/${record.id}/${record.coverMedia}`)
     : undefined;
+  const resolvedCover = hasApprovedCoverRedistribution(candidateCover) ? candidateCover : undefined;
   const rightsState: CoverRightsState = record.coverState === 'hold'
     ? 'hold'
     : !record.readEditionVerified

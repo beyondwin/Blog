@@ -12,7 +12,7 @@ import {
 } from '../src/release/build-release';
 import { findPublicBoundaryHits, readActiveRelease } from '../src/release/read-release';
 import { renderTrustedMdx } from '../src/mdx/render';
-import { writeReleaseFixture } from './helpers/release-fixture';
+import { writeReleaseFixture, writeReviewCoverFixture } from './helpers/release-fixture';
 import { buildPublicRelease } from '../src/release/build-release';
 
 const renameRace = vi.hoisted(() => ({
@@ -247,6 +247,23 @@ describe('active public release boundary', { timeout: 30_000 }, () => {
     await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
 
     await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/source checksum|public media/i);
+  });
+
+  it('rejects forged review-cover redistribution evidence at the read boundary', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-evidence-forge-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
+      assets: Record<string, { redistributionEvidence?: { sourceChecksum: string } }>;
+    };
+    manifest.assets['reviews/approved-review/cover']!.redistributionEvidence!.sourceChecksum = `sha256:${'b'.repeat(64)}`;
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/redistribution evidence.*source checksum/i);
   });
 
   it('rejects an unmanifested file anywhere in the immutable release directory', async () => {

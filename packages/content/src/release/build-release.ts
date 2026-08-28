@@ -323,13 +323,35 @@ async function loadReleaseSelectedMedia(
   return inputs;
 }
 
-function publicArtifactMedia(inputs: readonly SourceMediaBuildInput[]): SourceMediaBuildInput[] {
-  // A book-cover manifest proves byte identity and edition provenance, not
-  // public redistribution rights. The repository has no approved sourced-cover
-  // rights receipt yet, and generated substitutes are forbidden, so covers
-  // fail closed at the immutable artifact boundary while their source files
-  // and honest validation warnings remain intact.
-  return inputs.filter((input) => input.publicMedia.kind !== 'book-cover');
+function publicArtifactMedia(
+  record: SourceRecord,
+  inputs: readonly SourceMediaBuildInput[],
+): SourceMediaBuildInput[] {
+  if (record.collection === 'reviews' && record.coverMedia) {
+    const cover = inputs.find((input) => input.publicMedia.id === record.coverMedia);
+    if (!cover) throw new Error(`${record.id}: coverMedia ${record.coverMedia} did not resolve`);
+    if (cover.publicMedia.kind !== 'book-cover') {
+      throw new Error(`${record.id}: coverMedia ${record.coverMedia} must resolve to kind book-cover`);
+    }
+    if (cover.redistributionEvidence) {
+      if (!record.readEditionVerified) {
+        throw new Error(`${record.id}: approved cover redistribution requires readEditionVerified true`);
+      }
+      if (record.isbn13 !== cover.redistributionEvidence.isbn13) {
+        throw new Error(`${record.id}: review ISBN does not match approved cover edition identity`);
+      }
+      if (record.editionLabel !== cover.redistributionEvidence.edition) {
+        throw new Error(`${record.id}: review edition does not match approved cover edition identity`);
+      }
+    }
+  }
+
+  // A source manifest without exact decision evidence proves identity only.
+  // Cover bytes fail closed until the canonical checksum-bound decision is
+  // verified; generated or free-text substitutes never grant approval.
+  return inputs.filter((input) => (
+    input.publicMedia.kind !== 'book-cover' || Boolean(input.redistributionEvidence)
+  ));
 }
 
 function optional<T extends object, K extends string, V>(key: K, value: V | undefined): T | Record<K, V> {
@@ -540,7 +562,7 @@ export async function buildPublicRelease(
       .map((selection) => selection.mediaId);
     recordMedia.set(
       `${record.collection}/${record.id}`,
-      publicArtifactMedia(await loadReleaseSelectedMedia(root, record, selectedMediaIds)),
+      publicArtifactMedia(record, await loadReleaseSelectedMedia(root, record, selectedMediaIds)),
     );
   }
 

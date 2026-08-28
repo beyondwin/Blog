@@ -237,7 +237,7 @@ function sourceImageDimensions(buffer: Buffer, format: VerifiableSourceInputForm
 }
 
 type SourceCollection = (typeof sourceCollections)[number];
-const resolvedSourceMediaSchema = publicMediaSchema.extend({ format: verifiableSourceInputFormatSchema });
+const resolvedSourceMediaSchema = publicMediaSchema.safeExtend({ format: verifiableSourceInputFormatSchema });
 export type ResolvedSourceMedia = ReturnType<typeof resolvedSourceMediaSchema.parse>;
 
 export async function resolveSourceMedia(

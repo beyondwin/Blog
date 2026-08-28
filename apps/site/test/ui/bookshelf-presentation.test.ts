@@ -12,7 +12,18 @@ type ReleaseAsset = PublicReleaseManifest['assets'][string];
 
 const approvedCover = {
   id: 'cover',
+  kind: 'book-cover',
   fallback: { src: '/assets/content/reviews/a/cover.jpg' },
+  redistributionEvidence: {
+    state: 'approved',
+    decision: 'approve-public-redistribution',
+  },
+} as ReleaseAsset;
+
+const forgedCoverWithoutEvidence = {
+  id: 'cover',
+  kind: 'book-cover',
+  fallback: { src: '/assets/content/reviews/warning-cover/cover.jpg' },
 } as ReleaseAsset;
 
 function review(id: string, overrides: Record<string, unknown> = {}): ReviewRecord {
@@ -74,6 +85,7 @@ describe('review editorial presentation', () => {
       }),
     ], new Map([
       ['reviews/approved-cover/cover', approvedCover],
+      ['reviews/warning-cover/cover', forgedCoverWithoutEvidence],
       ['reviews/unverified-edition/cover', approvedCover],
     ]));
 
