@@ -6,6 +6,19 @@ const mediaFileSchema = safeRelativePath('file').refine(
   (value) => /\.(?:jpg|jpeg|png|webp|avif)$/.test(value),
   'file must use a lowercase .jpg, .jpeg, .png, .webp or .avif extension',
 );
+const generatedDecisionManifestPathSchema = safeRelativePath('generated media decision manifest').refine(
+  (value) => /^docs\/notes\/project\/assets\/form-and-thought-generated\/[a-z0-9][a-z0-9-]*\/decision-manifest\.yml$/.test(value),
+  'generated media decision manifest must use the durable FORM & THOUGHT evidence path',
+);
+const generatedMediaSourceSchema = z.object({
+  provider: z.literal('openai'),
+  generator: z.literal('codex-built-in-image-generation'),
+  model: z.string().trim().min(1),
+  modelVersion: z.string().trim().min(1),
+  promptVersion: z.string().trim().min(1),
+  candidateId: z.string().regex(/^[A-Z][0-9]{2}$/),
+  decisionManifestChecksum: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+}).strict();
 
 function safeRelativePath(field) {
   return z
@@ -36,6 +49,7 @@ const mediaItemSchema = z
     credit: z.string().trim().min(1),
     sourceUrl: externalUrlSchema.optional(),
     sourcePath: safeRelativePath('sourcePath').optional(),
+    generation: generatedMediaSourceSchema.optional(),
     isbn13: z.string().regex(/^97[89]\d{10}$/).optional(),
     edition: z.string().trim().min(1).optional(),
     verifiedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -58,6 +72,20 @@ const mediaItemSchema = z
         code: 'custom',
         message: 'media item dimensions require both width and height',
         path: ['width'],
+      });
+    }
+    if (item.generation && (!item.sourcePath || !generatedDecisionManifestPathSchema.safeParse(item.sourcePath).success)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'generated media requires its durable decision manifest as sourcePath',
+        path: ['sourcePath'],
+      });
+    }
+    if (item.generation && item.sourceUrl) {
+      context.addIssue({
+        code: 'custom',
+        message: 'generated media must not use sourceUrl',
+        path: ['sourceUrl'],
       });
     }
   });

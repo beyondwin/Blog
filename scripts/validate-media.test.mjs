@@ -118,6 +118,28 @@ describe('repository media validation', () => {
     ]);
   });
 
+  it('accepts generated-media provenance only through a canonical decision manifest', async () => {
+    const root = await makeRepository();
+    const image = validPng();
+    const evidencePath = 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml';
+    await put(root, evidencePath, 'version: 1\n');
+    await put(root, 'src/content/articles/note.mdx', '---\nfeaturedMedia: generated\n---\n');
+    await put(root, 'src/assets/content/articles/note/generated.png', image);
+    const manifest = mediaManifest([{
+      id: 'generated',
+      file: 'generated.png',
+      kind: 'illustration',
+      sourcePath: evidencePath,
+      checksum: checksum(image),
+    }]).replace(
+      '    verifiedAt:',
+      `    generation:\n      provider: openai\n      generator: codex-built-in-image-generation\n      model: not-exposed-by-built-in-tool\n      modelVersion: not-exposed-by-built-in-tool\n      promptVersion: form-and-thought-calibration-v1\n      candidateId: A03\n      decisionManifestChecksum: sha256:${'a'.repeat(64)}\n    verifiedAt:`,
+    );
+    await put(root, 'src/assets/content/articles/note/media.yml', manifest);
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual([]);
+  });
+
   it('rejects unsupported media extensions while parsing before reading the declared asset', async () => {
     const root = await makeRepository();
     await put(root, 'src/assets/content/articles/note/media.yml', mediaManifest([

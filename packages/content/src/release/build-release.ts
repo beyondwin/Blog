@@ -32,7 +32,7 @@ import {
   type PublicReleaseManifest,
 } from './read-release';
 
-export const PUBLIC_RELEASE_RENDERER_VERSION = 'mdx-3.1.1-sharp-0.35.3-v3';
+export const PUBLIC_RELEASE_RENDERER_VERSION = 'mdx-3.1.1-sharp-0.35.3-v4';
 
 type SourceCollection = Exclude<SourceRecord['collection'], 'memory'>;
 

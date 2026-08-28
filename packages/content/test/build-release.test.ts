@@ -7,7 +7,7 @@ import { readActiveRelease } from '../src/release/read-release';
 import { writeReleaseFixture } from './helpers/release-fixture';
 
 describe('immutable public release building', () => {
-  it('builds the migrated thought featured media and omits its old article key', async () => {
+  it('builds the approved article and thought featured media while keeping the home hero unreferenced', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-thought-round-trip-'));
     const releasesRoot = join(sandbox, 'releases');
     const built = await buildPublicRelease({ root: process.cwd(), releasesRoot });
@@ -16,14 +16,20 @@ describe('immutable public release building', () => {
     expect(active.manifest.records['thoughts/why-i-read-in-the-ai-era']).toMatchObject({
       collection: 'thoughts',
       href: '/thoughts/why-i-read-in-the-ai-era/',
-      featuredMedia: 'reading-desk-cobalt',
+      featuredMedia: 'editorial-reading',
     });
     expect(active.manifest.records['articles/why-i-read-in-the-ai-era']).toBeUndefined();
-    expect(active.manifest.assets['thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt']).toMatchObject({
+    expect(active.manifest.assets['thoughts/why-i-read-in-the-ai-era/editorial-reading']).toMatchObject({
       collection: 'thoughts',
       recordId: 'why-i-read-in-the-ai-era',
-      fallback: { src: '/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png' },
+      fallback: { src: '/assets/content/thoughts/why-i-read-in-the-ai-era/editorial-reading.png' },
     });
+    expect(active.manifest.records['articles/graphify-code-knowledge-graph-deep-dive']).toMatchObject({
+      collection: 'articles',
+      featuredMedia: 'editorial-hero',
+    });
+    expect(active.manifest.assets['articles/graphify-code-knowledge-graph-deep-dive/editorial-hero']).toBeDefined();
+    expect(active.manifest.assets['articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero']).toBeUndefined();
     expect(built.manifest).toEqual(active.manifest);
   }, 30_000);
 

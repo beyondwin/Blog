@@ -160,6 +160,23 @@ const sourceMediaInputFileSchema = safeRelativePath('source media file').refine(
   'source media input must use a verifiable PNG, JPEG, or WebP file',
 );
 
+const checksumSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
+const generatedCandidateIdSchema = z.string().regex(/^[A-Z][0-9]{2}$/);
+const generatedDecisionManifestPathSchema = safeRelativePath('generated media decision manifest').refine(
+  (value) => /^docs\/notes\/project\/assets\/form-and-thought-generated\/[a-z0-9][a-z0-9-]*\/decision-manifest\.yml$/.test(value),
+  'generated media decision manifest must use the durable FORM & THOUGHT evidence path',
+);
+
+const generatedMediaSourceSchema = z.object({
+  provider: z.literal('openai'),
+  generator: z.literal('codex-built-in-image-generation'),
+  model: z.string().trim().min(1),
+  modelVersion: z.string().trim().min(1),
+  promptVersion: z.string().trim().min(1),
+  candidateId: generatedCandidateIdSchema,
+  decisionManifestChecksum: checksumSchema,
+}).strict();
+
 export const sourceMediaManifestSchema = z.object({
   version: z.literal(1),
   items: z.array(z.object({
@@ -171,13 +188,14 @@ export const sourceMediaManifestSchema = z.object({
     credit: z.string().trim().min(1),
     sourceUrl: externalUrl.optional(),
     sourcePath: safeRelativePath('sourcePath').optional(),
+    generation: generatedMediaSourceSchema.optional(),
     isbn13: z.string().regex(/^97[89]\d{10}$/).optional(),
     edition: z.string().trim().min(1).optional(),
     verifiedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     rightsNote: z.string().trim().min(1),
     width: z.number().int().positive().optional(),
     height: z.number().int().positive().optional(),
-    checksum: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+    checksum: checksumSchema,
   }).superRefine((item, context) => {
     if (Number(Boolean(item.sourceUrl)) + Number(Boolean(item.sourcePath)) !== 1) {
       context.addIssue({ code: 'custom', path: ['sourceUrl'], message: 'media item requires exactly one source' });
@@ -192,7 +210,101 @@ export const sourceMediaManifestSchema = z.object({
         message: `book-cover ${item.id} requires sourceUrl, isbn13 and edition`,
       });
     }
+    if (item.generation) {
+      if (!item.sourcePath || !generatedDecisionManifestPathSchema.safeParse(item.sourcePath).success) {
+        context.addIssue({
+          code: 'custom',
+          path: ['sourcePath'],
+          message: 'generated media requires its durable decision manifest as sourcePath',
+        });
+      }
+      if (item.sourceUrl) {
+        context.addIssue({
+          code: 'custom',
+          path: ['sourceUrl'],
+          message: 'generated media must not use sourceUrl',
+        });
+      }
+    }
   })),
+});
+
+const generatedPlacementSchema = z.object({
+  slot: z.enum(['homeHero', 'homePick', 'indexLandscape', 'detailHero']),
+  desktopCrop: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().positive(), z.number().int().positive()]),
+  mobileCrop: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().positive(), z.number().int().positive()]),
+  focalPoint: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
+  safeArea: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative(), z.number().int().positive(), z.number().int().positive()]).nullable(),
+}).strict();
+
+export const generatedMediaDecisionManifestSchema = z.object({
+  version: z.literal(1),
+  batchId: idSchema,
+  generator: z.object({
+    provider: z.literal('openai'),
+    generator: z.literal('codex-built-in-image-generation'),
+    model: z.string().trim().min(1),
+    modelVersion: z.string().trim().min(1),
+    promptVersion: z.string().trim().min(1),
+    generatedAt: z.iso.datetime({ offset: true }),
+  }).strict(),
+  approval: z.object({
+    state: z.enum(['pending', 'approved', 'rejected']),
+    selectedCandidateIds: z.array(generatedCandidateIdSchema),
+    approvedBy: z.array(z.string().trim().min(1)),
+    recordedAt: z.iso.datetime({ offset: true }),
+    evidence: z.string().trim().min(1),
+  }).strict(),
+  rightsReview: z.object({
+    state: z.enum(['pending', 'approved', 'hold']),
+    decision: z.enum(['approve-repository-publication', 'hold']),
+    checkedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    decidedBy: z.string().trim().min(1),
+    caveat: z.string().trim().min(1),
+    sources: z.array(z.object({
+      url: externalUrl,
+      checkedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }).strict()).min(1),
+    inspection: z.object({
+      externalImageInputs: z.boolean(),
+      namedOrLivingArtist: z.boolean(),
+      recognizablePersonOrProduct: z.boolean(),
+      readableMark: z.boolean(),
+    }).strict(),
+  }).strict(),
+  approvedContactSheet: z.object({
+    path: safeRelativePath('approved contact sheet path'),
+    checksum: checksumSchema,
+  }).strict(),
+  assets: z.array(z.object({
+    candidateId: generatedCandidateIdSchema,
+    slot: z.enum(['homeHero', 'homePick/indexLandscape', 'detailHero']),
+    collection: z.enum(['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts']),
+    recordId: idSchema,
+    mediaId: idSchema,
+    file: sourceMediaInputFileSchema,
+    sourcePath: safeRelativePath('approved generated source path'),
+    checksum: checksumSchema,
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    promptId: z.string().trim().min(1).optional(),
+    placements: z.array(generatedPlacementSchema).default([]),
+  }).strict()).min(1),
+}).strict().superRefine((manifest, context) => {
+  const selected = new Set(manifest.approval.selectedCandidateIds);
+  if (selected.size !== manifest.approval.selectedCandidateIds.length) {
+    context.addIssue({ code: 'custom', path: ['approval', 'selectedCandidateIds'], message: 'selected candidate IDs must be unique' });
+  }
+  const assetCandidates = new Set(manifest.assets.map((asset) => asset.candidateId));
+  if (assetCandidates.size !== manifest.assets.length) {
+    context.addIssue({ code: 'custom', path: ['assets'], message: 'approved generated assets must have unique candidate IDs' });
+  }
+  if (
+    manifest.approval.state === 'approved'
+    && (selected.size !== assetCandidates.size || [...selected].some((id) => !assetCandidates.has(id)))
+  ) {
+    context.addIssue({ code: 'custom', path: ['approval', 'selectedCandidateIds'], message: 'approved selection must exactly match approved assets' });
+  }
 });
 
 const memoryThoughtSchema = z.object({
@@ -227,4 +339,5 @@ export const publicMemoryProjectionSchema = z.object({
 });
 
 export type SourceMediaManifest = z.infer<typeof sourceMediaManifestSchema>;
+export type GeneratedMediaDecisionManifest = z.infer<typeof generatedMediaDecisionManifestSchema>;
 export type PublicMemoryProjection = z.infer<typeof publicMemoryProjectionSchema>;

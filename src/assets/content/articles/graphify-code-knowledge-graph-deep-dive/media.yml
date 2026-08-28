@@ -1,0 +1,42 @@
+version: 1
+items:
+  - id: editorial-home-hero
+    file: editorial-home-hero.png
+    kind: illustration
+    alt: 어두운 벽과 따뜻한 콘크리트 곡선 경사로 사이를 한 사람이 천천히 걷는 장면
+    caption: 천천히 읽고 스스로 생각하는 자리로 들어가는 문턱
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-calibration-v1
+      candidateId: H01
+      decisionManifestChecksum: sha256:80fb861e545737616134022e4241bce204b7640b5cab251f724319be942beaf4
+    verifiedAt: "2026-08-29"
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:12b437a5c9c5601a9999537cbe169093d7d5c67c6330d2678b7e89f1654e7d91
+  - id: editorial-hero
+    file: editorial-hero.png
+    kind: illustration
+    alt: 높이가 다른 콘크리트 구조물 사이에서 검은 다리가 맞은편에 닿기 직전 멈춘 장면
+    caption: 구조를 보여주는 지도와 실제로 이어지는 경로 사이의 작은 간극
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-calibration-v1
+      candidateId: A03
+      decisionManifestChecksum: sha256:80fb861e545737616134022e4241bce204b7640b5cab251f724319be942beaf4
+    verifiedAt: "2026-08-29"
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:2fb5b356f40608a602c620747dd96a27ae63f7cea6b3214c837d2abdff9fb625

@@ -1,7 +1,26 @@
 import { describe, expect, it } from 'vitest';
+import { generatedMediaEvidenceReceiptSchema } from '../src/media';
 import { isPublicRecord, parsePublicRecord } from '../src/public-release';
 
 describe('public release selection', () => {
+  it('accepts only a canonical docs evidence locator and checksum for generated media receipts', () => {
+    expect(generatedMediaEvidenceReceiptSchema.parse({
+      decisionManifest: 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml',
+      decisionManifestChecksum: `sha256:${'a'.repeat(64)}`,
+      candidateId: 'H01',
+    })).toEqual({
+      decisionManifest: 'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml',
+      decisionManifestChecksum: `sha256:${'a'.repeat(64)}`,
+      candidateId: 'H01',
+    });
+
+    expect(() => generatedMediaEvidenceReceiptSchema.parse({
+      decisionManifest: '/Users/example/private/decision-manifest.yml',
+      decisionManifestChecksum: `sha256:${'a'.repeat(64)}`,
+      candidateId: 'H01',
+    })).toThrow();
+  });
+
   it('publishes only published and non-draft records', () => {
     expect(isPublicRecord({ status: 'published', draft: false })).toBe(true);
     expect(isPublicRecord({ status: 'review', draft: false })).toBe(false);

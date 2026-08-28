@@ -133,13 +133,13 @@ describe('source record parsing', () => {
       tags: ['reading'],
       status: 'published',
       draft: false,
-      featuredMedia: 'reading-desk-cobalt',
+      featuredMedia: 'editorial-reading',
     });
 
     expect(thought).toMatchObject({
       collection: 'thoughts',
       href: '/thoughts/why-i-read-in-the-ai-era/',
-      featuredMedia: 'reading-desk-cobalt',
+      featuredMedia: 'editorial-reading',
     });
   });
 
@@ -395,7 +395,7 @@ describe('framework-neutral corpus loading', () => {
       collection: 'thoughts',
       status: 'published',
       draft: false,
-      featuredMedia: 'reading-desk-cobalt',
+      featuredMedia: 'editorial-reading',
     });
     expect(records.find((record) => record.id === 'why-i-read-in-the-ai-era')?.body).toContain('나는 AI 때문에 책을 읽기 시작했다.');
   });

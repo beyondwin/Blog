@@ -1,5 +1,25 @@
 version: 1
 items:
+  - id: editorial-reading
+    file: editorial-reading.png
+    kind: illustration
+    alt: 따뜻한 흙빛 벽과 나무 탁자 위에 글자 없는 책 한 권이 펼쳐진 장면
+    caption: 빠른 답 앞에서 판단할 시간을 만드는 느린 독서
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-calibration-v1
+      candidateId: T01
+      decisionManifestChecksum: sha256:80fb861e545737616134022e4241bce204b7640b5cab251f724319be942beaf4
+    verifiedAt: "2026-08-29"
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:73b348bc33daa1f0fadb61814fe41196fd736a197f82e6a6fac7f44931b71ec2
   - id: reading-desk-cobalt
     file: reading-desk-cobalt.png
     kind: illustration

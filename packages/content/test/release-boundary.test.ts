@@ -91,9 +91,9 @@ describe('active public release boundary', { timeout: 30_000 }, () => {
       href: '/thoughts/why-i-read-in-the-ai-era/',
     });
     expect(active.manifest.records['articles/why-i-read-in-the-ai-era']).toBeUndefined();
-    expect(active.manifest.assets['thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt']).toMatchObject({
+    expect(active.manifest.assets['thoughts/why-i-read-in-the-ai-era/editorial-reading']).toMatchObject({
       collection: 'thoughts',
-      fallback: { src: '/assets/content/thoughts/why-i-read-in-the-ai-era/reading-desk-cobalt.png' },
+      fallback: { src: '/assets/content/thoughts/why-i-read-in-the-ai-era/editorial-reading.png' },
     });
   });
 

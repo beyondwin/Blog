@@ -1,0 +1,91 @@
+version: 1
+batchId: calibration
+generator:
+  provider: openai
+  generator: codex-built-in-image-generation
+  model: not-exposed-by-built-in-tool
+  modelVersion: not-exposed-by-built-in-tool
+  promptVersion: form-and-thought-calibration-v1
+  generatedAt: "2026-08-29T02:53:35+09:00"
+approval:
+  state: approved
+  selectedCandidateIds: [H01, A03, T01]
+  approvedBy: [controller, independent-visual-reviewer]
+  recordedAt: "2026-08-29T03:24:41+09:00"
+  evidence: "Controller and independent visual reviewer selected H01/A03/T01 and confirmed the set visually approved."
+rightsReview:
+  state: approved
+  decision: approve-repository-publication
+  checkedAt: "2026-08-29"
+  decidedBy: controller
+  caveat: "non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+  sources:
+    - url: https://openai.com/policies/terms-of-use
+      checkedAt: "2026-08-29"
+    - url: https://openai.com/policies/service-terms/
+      checkedAt: "2026-08-29"
+  inspection:
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+approvedContactSheet:
+  path: docs/notes/project/assets/form-and-thought-generated/calibration/approved-contact-sheet.png
+  checksum: sha256:97fdca5f0373e4ca57716b183f156ede72233af1c704e49e90c10f461efea711
+assets:
+  - candidateId: H01
+    slot: homeHero
+    collection: articles
+    recordId: graphify-code-knowledge-graph-deep-dive
+    mediaId: editorial-home-hero
+    file: editorial-home-hero.png
+    sourcePath: src/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero.png
+    checksum: sha256:12b437a5c9c5601a9999537cbe169093d7d5c67c6330d2678b7e89f1654e7d91
+    width: 1536
+    height: 1024
+    promptId: home-ramp-v1
+    placements:
+      - slot: homeHero
+        desktopCrop: [0, 137, 1536, 886]
+        mobileCrop: [717, 0, 1536, 1024]
+        focalPoint: [0.78, 0.64]
+        safeArea: [0, 137, 650, 886]
+  - candidateId: A03
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: graphify-code-knowledge-graph-deep-dive
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-hero.png
+    checksum: sha256:2fb5b356f40608a602c620747dd96a27ae63f7cea6b3214c837d2abdff9fb625
+    width: 1536
+    height: 1024
+    promptId: article-bridge-gap-v1
+    placements:
+      - slot: homePick
+        desktopCrop: [86, 0, 1451, 1024]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.53, 0.49]
+        safeArea: null
+      - slot: indexLandscape
+        desktopCrop: [0, 46, 1536, 977]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.53, 0.49]
+        safeArea: null
+  - candidateId: T01
+    slot: detailHero
+    collection: thoughts
+    recordId: why-i-read-in-the-ai-era
+    mediaId: editorial-reading
+    file: editorial-reading.png
+    sourcePath: src/assets/content/thoughts/why-i-read-in-the-ai-era/editorial-reading.png
+    checksum: sha256:73b348bc33daa1f0fadb61814fe41196fd736a197f82e6a6fac7f44931b71ec2
+    width: 1536
+    height: 1024
+    promptId: thought-open-book-v1
+    placements:
+      - slot: detailHero
+        desktopCrop: [0, 220, 1536, 951]
+        mobileCrop: [171, 0, 1536, 1024]
+        focalPoint: [0.74, 0.70]
+        safeArea: [0, 220, 650, 951]

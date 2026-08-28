@@ -3,6 +3,7 @@ import { constants as fsConstants } from 'node:fs';
 import { lstat, open, readdir, realpath, type FileHandle } from 'node:fs/promises';
 import { dirname, extname, join, relative, resolve, sep } from 'node:path';
 import {
+  generatedMediaEvidenceReceiptSchema,
   parsePublicRecord,
   type PublicRecord,
 } from '@beyondwin/contracts';
@@ -60,6 +61,7 @@ const releaseMediaAssetSchema = z.object({
   width: z.number().int().positive(),
   height: z.number().int().positive(),
   sourceChecksum: checksumSchema,
+  generationEvidence: generatedMediaEvidenceReceiptSchema.optional(),
   sources: responsiveSourcesSchema,
   fallback: z.object({
     src: canonicalAssetHrefSchema,
@@ -322,6 +324,15 @@ export function parseReleaseManifest(input: unknown): PublicReleaseManifest {
     if (key !== `${asset.collection}/${asset.recordId}/${asset.id}`) {
       throw new Error(`${key}: manifest asset key does not match the public asset`);
     }
+  }
+  const evidenceReceipts = new Set<string>();
+  for (const [key, asset] of Object.entries(envelope.assets)) {
+    if (!asset.generationEvidence) continue;
+    const receiptKey = `${asset.generationEvidence.decisionManifest}\0${asset.generationEvidence.candidateId}`;
+    if (evidenceReceipts.has(receiptKey)) {
+      throw new Error(`${key}: generated media evidence receipt is reused by multiple release assets`);
+    }
+    evidenceReceipts.add(receiptKey);
   }
   const manifest: PublicReleaseManifest = { ...envelope, records };
   const linkedAssets = new Set<string>();
