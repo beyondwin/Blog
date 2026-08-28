@@ -2,10 +2,12 @@
 
 - Status: accepted
 - Date: 2026-08-23
-- Last amended: 2026-08-25
+- Last amended: 2026-08-28
 - Decision owners: user / project
 - Supersedes: none
-- Superseded by: none
+- Superseded by: ADR-0007 for Astro retention and public-renderer rollback only
+
+> Amendment resolution (2026-08-28): modular-monolith, immutable public projection, public/private boundary와 React Router 선택은 유지한다. 아래의 Astro rollback retention, parity-after-selection, renderer rollback 지시는 역사적 migration evidence이며 현재 제거 순서는 ADR-0007과 FORM & THOUGHT 구현 계획이 대체한다.
 
 ## Context
 
@@ -160,7 +162,7 @@ deploy/
 - React/TypeScript를 사용하면서 공개 읽기와 비공개 작업의 서로 다른 rendering 요구를 존중한다.
 - API와 worker는 process isolation을 가지되 domain rule과 transaction을 중복 구현하지 않는다.
 - PostgreSQL 하나로 시작해 backup, migration, search, job 운영 surface를 줄인다.
-- Astro 제거를 big-bang rewrite가 아니라 parity가 증명된 마지막 단계로 미룬다.
+- 당시에는 Astro 제거를 parity가 증명된 마지막 단계로 미뤘다. ADR-0007 이후에는 React-only acceptance와 recovery-contract 이전을 먼저 통과한 뒤 같은 전환에서 Astro를 제거한다.
 
 ### 지불하는 비용
 
@@ -212,7 +214,7 @@ Public과 작업실, API를 한 Next.js application으로 합치면 시작은 �
 - [Node/React 모듈러 모놀리스 상세 설계](../node-react-modular-monolith-design.md)를 구현 가능한 boundary와 migration gate의 source로 사용한다.
 - 첫 implementation plan은 parity manifest와 framework-neutral content package부터 시작한다.
 - public vertical slice의 홈, article, review, memory route 비교와 decision gate는 React Router 선택으로 완료됐다. 후속 작업은 `apps/site` 하나에 승인된 reading continuity를 구현한다.
-- Astro는 route, content, media, browser parity와 rollback evidence가 모두 통과한 뒤 마지막에 제거한다.
+- Historical: 이 ADR의 Astro rollback 조건은 기존 migration에서 사용됐다. 현재 제거 gate는 ADR-0007의 React route/content/media/static-host/no-JS/browser/performance acceptance와 React-only clean-host recovery 계약이다.
 
 ## Primary references
 

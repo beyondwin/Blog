@@ -49,9 +49,9 @@
   type: reference
   language: ko
   status: organized
-  summary: 현재 Astro built truth와 승인된 Node/React 목표 구조, local setup, publishing workflow, architecture reference로 이어지는 프로젝트 문서 허브.
+  summary: 현재 built truth와 승인된 FORM & THOUGHT React-only 목표, local setup, publishing workflow, architecture reference로 이어지는 프로젝트 문서 허브.
   source: README.md
-  updated: 2026-08-23
+  updated: 2026-08-28
 
 - title: beyondwin 시작하기
   path: docs/notes/project/getting-started.md
@@ -73,15 +73,55 @@
   source: src/content.config.ts
   updated: 2026-06-30
 
+- title: FORM & THOUGHT 공개 사이트 설계
+  path: docs/notes/project/form-and-thought-public-site-design.md
+  topic: project
+  type: product-design
+  language: ko
+  status: organized
+  summary: 승인된 reference를 실제 홈, 서평, 아티클, 생각, 검색과 상세 화면, 콘텐츠 편집, React-only 전환으로 구현하는 전체 설계.
+  source: ADR-0007 and user approvals 2026-08-28
+  updated: 2026-08-28
+
+- title: FORM & THOUGHT 시각 스펙
+  path: docs/notes/project/form-and-thought-visual-spec.md
+  topic: project
+  type: visual-specification
+  language: ko
+  status: organized
+  summary: 일곱 승인 시안의 권한, palette, typography, geometry, image behavior, 금지 목록과 screenshot QA 기준을 고정한 시각 스펙.
+  source: ADR-0007 and user-provided reference set 2026-08-28
+  updated: 2026-08-28
+
+- title: FORM & THOUGHT 이미지 아트 디렉션
+  path: docs/notes/project/form-and-thought-image-art-direction.md
+  topic: project
+  type: visual-specification
+  language: ko
+  status: organized
+  summary: 대표 이미지의 공통 문법, 콘텐츠별 은유, 생성 후보 contact sheet, 승인, provenance와 public integration 경계를 정의한다.
+  source: ADR-0007 and user-provided reference set 2026-08-28
+  updated: 2026-08-28
+
+- title: FORM & THOUGHT React-only 공개 사이트 구현 계획
+  path: docs/notes/project/form-and-thought-implementation-plan.md
+  topic: project
+  type: implementation-plan
+  language: ko
+  status: organized
+  summary: thoughts와 release migration, reference calibration, route·content·media, Astro 삭제 전 acceptance, React-only delivery 이전과 exact removal을 TDD task로 나눈 승인 계획.
+  source: ADR-0007 and docs/notes/project/form-and-thought-public-site-design.md
+  updated: 2026-08-28
+
 - title: 서평 제외 아티클 전면 개선 설계
   path: docs/notes/project/non-review-article-improvement-design.md
   topic: project
   type: workflow
   language: ko
   status: organized
-  summary: 서평과 예시 파일을 제외한 실제 아티클 18편의 최신 근거 재검증, 장르별 한국어 편집, review 글 공개 전환과 검증 경계를 정의한 승인 설계.
+  summary: 2026-08-26 당시 실제 article 18편의 근거 재검증과 편집을 기록한 설계. ADR-0007 이후 분류는 아티클 17편과 생각 1편이다.
   source: user decisions 2026-08-26
-  updated: 2026-08-26
+  updated: 2026-08-28
 
 - title: 서평 제외 아티클 전면 개선 구현 계획
   path: docs/notes/project/non-review-article-improvement-implementation-plan.md
@@ -89,9 +129,9 @@
   type: implementation-plan
   language: ko
   status: organized
-  summary: 승인된 설계를 글별 근거 재검증, 한국어 편집, 조건부 공개 전환, 전체 validation과 browser 검사 task로 나눈 실행 계획.
+  summary: 2026-08-26 당시 article 18편 편집의 retired execution snapshot. 체크박스는 현재 상태가 아니며 새 lane과 React-only 전환은 ADR-0007 후속 계획이 담당한다.
   source: docs/notes/project/non-review-article-improvement-design.md
-  updated: 2026-08-26
+  updated: 2026-08-28
 
 - title: Agent Runbook
   path: docs/notes/project/agent-runbook.md
@@ -111,7 +151,7 @@
   status: organized
   summary: Index, status model, template, and maintenance workflow for durable beyondwin product, architecture, boundary, publishing-policy, and UX decisions.
   source: AGENTS.md
-  updated: 2026-08-23
+  updated: 2026-08-28
 
 - title: 'ADR-0000: ADR 관리 규칙'
   path: docs/notes/project/adr/0000-adr-governance.md
@@ -139,9 +179,9 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Records rejected analog, developer-tool, and kinetic-typography directions and sets consumer-grade visual knowledge products as the next UX quality bar.
+  summary: Superseded visual exploration guardrail retained as historical context; ADR-0007 now defines the approved public visual authority.
   source: user feedback 2026-08-22
-  updated: 2026-08-22
+  updated: 2026-08-28
 
 - title: 'ADR-0003: Visual Storyworld 경험 모델'
   path: docs/notes/project/adr/0003-visual-storyworld-experience-model.md
@@ -149,9 +189,9 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Establishes Public Visual Storyworld, Private Material Field, Resurface, and continuity across approved canonical knowledge objects.
+  summary: Superseded Public Visual Storyworld model retained as historical context after the FORM & THOUGHT information architecture replaced it.
   source: user decision 2026-08-22
-  updated: 2026-08-22
+  updated: 2026-08-28
 
 - title: 'ADR-0004: Public Atlas의 기본 구성을 Staged Aperture로 사용'
   path: docs/notes/project/adr/0004-staged-aperture-public-composition.md
@@ -159,9 +199,9 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Selects Staged Aperture as the first Public Atlas desktop composition and fixes the responsive and Continuity Zoom translation rules.
+  summary: Superseded Staged Aperture and Continuity Zoom composition retained as historical implementation evidence.
   source: user decision 2026-08-22
-  updated: 2026-08-22
+  updated: 2026-08-28
 
 - title: 'ADR-0005: Node/React 모듈러 모놀리스와 분리된 공개 projection'
   path: docs/notes/project/adr/0005-node-react-modular-monolith.md
@@ -171,7 +211,7 @@
   status: organized
   summary: Fixes the Node/React app boundaries, Fastify modular monolith, immutable public release, and accepted numeric renderer quality gate with fail-closed raw-sample, provenance, and median/MAD evidence.
   source: user decisions 2026-08-23 and 2026-08-24
-  updated: 2026-08-24
+  updated: 2026-08-28
 
 - title: 'ADR-0006: 하나의 public visual world 안에서 탐색과 독서 모드를 분리'
   path: docs/notes/project/adr/0006-unified-public-reading-continuity.md
@@ -179,9 +219,19 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Unifies the public visual material, chrome, contextual return, and continued-reading grammar while preserving distinct scene and reading modes.
+  summary: Superseded mineral reading-continuity decision retained as historical context after the FORM & THOUGHT editorial system replaced it.
   source: user decision 2026-08-23
-  updated: 2026-08-23
+  updated: 2026-08-28
+
+- title: 'ADR-0007: FORM & THOUGHT React-only 공개 편집 시스템'
+  path: docs/notes/project/adr/0007-form-and-thought-react-only-editorial-system.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Fixes the approved visual references, public nouns and routes, thoughts collection, editorial content model, React-only cutover, and Astro removal.
+  source: user decisions 2026-08-28
+  updated: 2026-08-28
 
 - title: Node/React 모듈러 모놀리스 상세 설계
   path: docs/notes/project/node-react-modular-monolith-design.md

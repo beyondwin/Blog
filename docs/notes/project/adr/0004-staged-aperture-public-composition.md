@@ -1,10 +1,12 @@
 # ADR-0004: Public Atlas의 기본 구성을 Staged Aperture로 사용
 
-- Status: accepted
+- Status: superseded
 - Date: 2026-08-22
 - Decision owners: user / project
 - Supersedes: none
-- Superseded by: none
+- Superseded by: ADR-0007
+
+> Historical resolution (2026-08-28): Staged Aperture, scene support object, exact-return motion과 아래 follow-up은 retired visual history다. 현재 composition authority는 ADR-0007과 일곱 FORM & THOUGHT reference다.
 
 ## Context
 
@@ -101,8 +103,7 @@ Continuity Zoom을 가장 분명히 예고하지만 context 밀도가 부족하�
 
 - 첫 slice의 geometry motion은 focus 480ms, return 360ms이고 70%-progress panel reveal, reduced-motion 즉시 전환, mobile first-frame depth까지 browser 검증했다. 여러 scene의 route와 전환 grammar는 별도 결정이 필요하다.
 
-## Follow-up
+## Historical follow-up
 
-- [Public Atlas Visual Storyworld vertical slice 설계](../visual-storyworld-public-atlas-design.md)에 구현과 browser-verified built truth를 유지한다.
-- 승인된 desktop, mobile, focus 시안과 provenance는 [tracked visual references](../assets/public-atlas/README.md)에 보존한다. `.impeccable/`은 재현 가능한 source of truth가 아니라 로컬 작업 공간으로만 취급한다.
-- future composition change는 support-object exact-return gate와 public projection boundary를 다시 검증한다.
+- [Public Atlas Visual Storyworld vertical slice 설계](../visual-storyworld-public-atlas-design.md)와 [tracked visual references](../assets/public-atlas/README.md)는 당시 구현/evidence로 보존한다.
+- 현재 composition 변경은 [ADR-0007](0007-form-and-thought-react-only-editorial-system.md)과 [FORM & THOUGHT 시각 스펙](../form-and-thought-visual-spec.md)을 따른다.

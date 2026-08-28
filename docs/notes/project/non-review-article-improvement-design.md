@@ -1,5 +1,7 @@
 # 서평 제외 아티클 전면 개선 설계
 
+> Historical scope note (2026-08-28): 이 작업 당시의 18편에는 `why-i-read-in-the-ai-era`가 article로 포함됐다. [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)은 이 글을 `thoughts`로 이동하고, 이후 공개 분류를 아티클 17편·생각 1편으로 바꾼다. 아래 내용은 2026-08-26에 완료된 편집 작업의 설계 기록이며 현재 실행 지침이 아니다.
+
 - Status: approved, implemented
 - Approved: 2026-08-26
 - Implemented: 2026-08-26
@@ -209,4 +211,4 @@ git diff --check
 - 모든 검증 명령과 route 확인 결과가 기록됐다.
 - 해결하지 못한 근거 문제와 검증하지 못한 항목이 명시됐다.
 
-이 문서 승인 뒤 별도 구현 계획에서 글별 조사 순서, evidence packet read set, 편집 단계, 검증 명령과 review checkpoint를 실행 가능한 작업으로 나눈다.
+이 설계의 후속 구현 계획은 2026-08-26에 실행됐다. 실제 편집은 `0c841af`부터 `1594c98`까지의 article 개선 commit 흐름에 보존된다. 현재 lane 이동, 새 지면과 재검토는 [FORM & THOUGHT 구현 계획](form-and-thought-implementation-plan.md)이 담당한다.

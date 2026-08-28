@@ -1,0 +1,129 @@
+schema_version: 2
+name: FORM & THOUGHT approved visual references
+status: approved-design-authority
+provided_by: user
+source_type: user-provided-generated-mockups
+received: 2026-08-28
+approved: 2026-08-28
+approved_by: user
+approval_evidence: docs/notes/project/adr/0007-form-and-thought-react-only-editorial-system.md
+usage: docs-only
+public_asset: false
+repository_storage_authorization: explicitly requested by user on 2026-08-28
+rights_status: generator terms and license unverified; docs-only design reference, never a public asset
+derivative_rule: design may reproduce composition, but depicted text, people, and imagery are not public assets
+authority_order:
+  - explicit-user-overrides-in-ADR-0007
+  - route-primary-reference-region
+  - written-visual-spec
+  - secondary-consistency-board
+notes:
+  - Bitmap dimensions are evidence dimensions, not assumed CSS viewport dimensions.
+  - CSS viewport and DPR must be recorded by the calibration task before pixel-diff acceptance.
+  - Fictional text, people, titles, and dates inside mockups must not be copied.
+  - Thought index is explicitly overridden to one real cell and five completely empty reserved cells.
+assets:
+  - id: reference-01-search
+    file: reference-01-search.png
+    source_name: ChatGPT Image 2026년 8월 28일 오후 09_52_32 (5).png
+    declared_origin: ChatGPT image generation; exact model and prompt not provided
+    sha256: ef07b8561c02ccd7272f3edd3764312b82e53189cc149af495952dfd6e41469b
+    width: 1122
+    height: 1402
+    comparison_frame_px: [0, 0, 1122, 1402]
+    viewport_css: pending-calibration
+    device_pixel_ratio: unknown
+    route: /search/
+    state: empty-query-discovery
+    authority: primary
+    role: search canonical composition
+  - id: reference-02-thought-index
+    file: reference-02-thought-index.png
+    source_name: ChatGPT Image 2026년 8월 28일 오후 09_52_31 (4).png
+    declared_origin: ChatGPT image generation; exact model and prompt not provided
+    sha256: a4a7a0c183bdc6fc52230fff35897a1d05e41d37d3df654527408e89af96bdc2
+    width: 1122
+    height: 1402
+    comparison_frame_px: [0, 0, 1122, 1402]
+    viewport_css: pending-calibration
+    device_pixel_ratio: unknown
+    route: /thoughts/
+    state: one-real-five-reserved
+    authority: primary-with-user-override
+    role: thought index geometry and cell rhythm
+  - id: reference-03-detail
+    file: reference-03-detail.png
+    source_name: ChatGPT Image 2026년 8월 28일 오후 09_52_31 (3).png
+    declared_origin: ChatGPT image generation; exact model and prompt not provided
+    sha256: adc16c2b4ea1bfda448ca7f433a6464ec023639f2d51811a7089ecb591bbb8ee
+    width: 1122
+    height: 1402
+    comparison_frame_px: [0, 0, 1122, 1402]
+    viewport_css: pending-calibration
+    device_pixel_ratio: unknown
+    route: /articles/:slug and /thoughts/:slug
+    state: detail-with-hero-media
+    authority: primary
+    role: article and thought detail canonical composition
+  - id: reference-04-article-index
+    file: reference-04-article-index.png
+    source_name: ChatGPT Image 2026년 8월 28일 오후 09_52_30 (2).png
+    declared_origin: ChatGPT image generation; exact model and prompt not provided
+    sha256: 2b2371ef6b500ffbac0e5c668b56af7329f65c82b231be41a164128067b111dd
+    width: 1086
+    height: 1448
+    comparison_frame_px: [0, 0, 1086, 1448]
+    viewport_css: pending-calibration
+    device_pixel_ratio: unknown
+    route: /articles/
+    state: all-filter
+    authority: primary
+    role: article index canonical composition
+  - id: reference-05-home
+    file: reference-05-home.png
+    source_name: ChatGPT Image 2026년 8월 28일 오후 09_52_29 (1).png
+    declared_origin: ChatGPT image generation; exact model and prompt not provided
+    sha256: a69c3f0fcc1803f781c2be4a4c4965b49296325bc51c6361cb7e505f7c609086
+    width: 1448
+    height: 1086
+    comparison_frame_px: [0, 0, 1448, 1086]
+    viewport_css: pending-calibration
+    device_pixel_ratio: unknown
+    route: /
+    state: editorial-home
+    authority: primary
+    role: home canonical composition including inverse header
+  - id: reference-06-review-and-detail
+    file: reference-06-review-and-detail.jpg
+    source_name: grok-image-da402d2f-bebd-4d4c-b752-0b80b253cfc8.jpg
+    declared_origin: Grok image generation; exact model and prompt not provided
+    sha256: 744d8e9321defb0e1f51d4c552d57f0b6ae010d29756011158736654de68ffe3
+    width: 1792
+    height: 1008
+    viewport_css: pending-calibration
+    device_pixel_ratio: unknown
+    authority: primary-by-region
+    region_status: provisional shell bounds; finalize in the calibration artifact
+    regions:
+      - id: review-index-left
+        comparison_frame_px: [39, 35, 840, 933]
+        route: /reviews/
+        state: review-ledger
+        role: review index canonical composition
+      - id: review-detail-right
+        comparison_frame_px: [911, 35, 841, 933]
+        route: /reviews/:slug
+        state: detail-with-hero-media
+        role: review detail canonical composition
+  - id: reference-07-surface-set
+    file: reference-07-surface-set.jpg
+    source_name: grok-image-6476a929-66b6-409c-a048-f249511920dc.jpg
+    declared_origin: Grok image generation; exact model and prompt not provided
+    sha256: e35e9286836317fca6a3f772b24307ed13cf0d1b2e32b55bfddd8eaac5570935
+    width: 1600
+    height: 1200
+    comparison_frame_px: [0, 0, 1600, 1200]
+    viewport_css: not-applicable-composite-board
+    device_pixel_ratio: unknown
+    authority: secondary
+    role: cross-route tone and consistency board; never overrides a route primary

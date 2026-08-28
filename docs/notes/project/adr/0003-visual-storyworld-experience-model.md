@@ -1,10 +1,12 @@
 # ADR-0003: Visual Storyworld 경험 모델
 
-- Status: accepted
+- Status: superseded
 - Date: 2026-08-22
 - Decision owners: user / project
 - Supersedes: none
-- Superseded by: none
+- Superseded by: ADR-0007
+
+> Historical resolution (2026-08-28): 이 ADR의 Visual Storyworld, scene route, zoom/continuity와 follow-up은 retired implementation history다. 현재 공개 디자인과 실행 authority는 ADR-0007과 FORM & THOUGHT 구현 계획이다.
 
 ## Context
 
@@ -89,8 +91,7 @@ Private에서는 실제 source, 책, PDF, screenshot, note를 모으고 장면�
 - Public scene이 여러 개로 늘어날 때의 route와 scene selection policy는 첫 vertical slice 검증 후 확정한다.
 - 기존 book cover 중 redistribution rights warning이 있는 asset은 public scene 사용 전에 별도 권리 검토가 필요하다.
 
-## Follow-up
+## Historical follow-up
 
-- 첫 sub-project는 [Public Atlas Visual Storyworld vertical slice](../visual-storyworld-public-atlas-design.md)다.
-- 첫 vertical slice가 승인되기 전 Private Studio editor나 RAG backend를 구현하지 않는다.
-- 구현이 완료되면 built world를 기준으로 `DESIGN.md`와 surface brief를 교체한다.
+- 당시 첫 sub-project는 [Public Atlas Visual Storyworld vertical slice](../visual-storyworld-public-atlas-design.md)였고 그 결과는 역사적 evidence로 남긴다.
+- 현재 공개 UI 작업은 [ADR-0007](0007-form-and-thought-react-only-editorial-system.md)과 [FORM & THOUGHT 구현 계획](../form-and-thought-implementation-plan.md)을 따른다.

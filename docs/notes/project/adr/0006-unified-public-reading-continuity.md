@@ -1,10 +1,12 @@
 # ADR-0006: 하나의 public visual world 안에서 탐색과 독서 모드를 분리
 
-- Status: accepted
+- Status: superseded
 - Date: 2026-08-23
 - Decision owners: user / project
 - Supersedes: none
-- Superseded by: none
+- Superseded by: ADR-0007
+
+> Historical resolution (2026-08-28): mineral reading continuity, scene/detail handoff, Astro parity/cutover follow-up은 retired implementation history다. 현재 공개 UX와 전환 순서는 ADR-0007과 FORM & THOUGHT 구현 계획이 대체한다.
 
 ## Context
 
@@ -95,7 +97,7 @@ Article figure, review cover, memory text object를 중심으로 lane마다 다�
 
 - Component와 stylesheet의 최종 파일 이름 및 내부 분리는 public renderer decision gate가 끝난 뒤 선택된 React framework의 boundary에 맞춰 정한다.
 
-## Follow-up
+## Historical follow-up
 
-- [Public reading continuity 상세 설계](../public-reading-continuity-design.md)를 implementation plan의 source of truth로 사용한다.
-- 구현 계획은 Astro parity manifest와 public renderer gate를 먼저 수행하고, 선택된 React renderer에서 focused RED/GREEN, full validation, desktop/mobile browser evidence, cutover/rollback, accepted ADR과 `DESIGN.md`의 built-truth 동기화를 수행한다.
+- [Public reading continuity 상세 설계](../public-reading-continuity-design.md)는 당시 migration evidence로 보존한다.
+- 현재 구현은 [ADR-0007](0007-form-and-thought-react-only-editorial-system.md)과 [FORM & THOUGHT 구현 계획](../form-and-thought-implementation-plan.md)의 React-only acceptance, recovery-contract 이전, exact Astro removal 순서를 따른다.

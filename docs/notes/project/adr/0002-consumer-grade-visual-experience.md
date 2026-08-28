@@ -1,10 +1,12 @@
 # ADR-0002: Consumer-grade visual experience를 UX 품질 기준으로 사용
 
-- Status: accepted guardrail
+- Status: superseded
 - Date: 2026-08-22
 - Decision owners: user / project
 - Supersedes: none
-- Superseded by: none
+- Superseded by: ADR-0007
+
+> Historical resolution (2026-08-28): ADR-0007 fully supersedes this document as current public visual authority. 아래의 consumer-quality 의도는 과거 문제 인식으로만 참고하며, spatial/zoom/continuity 또는 후속 ADR-0003을 현재 구현 규칙으로 사용하지 않는다.
 
 ## Context
 
@@ -29,7 +31,7 @@
 
 현재 조사 기준은 Cosmos, mymind, Muse, Kosmik, Fabric, Are.na 같은 visual collection과 spatial thinking product다. 이 제품들의 브랜드를 복제하지 않고 content-led composition, zoom/nesting, object continuity, serendipity interaction을 분석한다.
 
-이 ADR이 정한 품질 기준은 계속 유효하다. 구체적인 visual world와 interaction model은 후속 [ADR-0003](0003-visual-storyworld-experience-model.md)에서 승인됐다.
+당시에는 이 품질 기준을 유효한 guardrail로 두고 구체적인 visual world와 interaction model을 후속 [ADR-0003](0003-visual-storyworld-experience-model.md)에서 승인했다. 현재 기준은 ADR-0007의 exact editorial reference system이다.
 
 ## Decision evidence
 

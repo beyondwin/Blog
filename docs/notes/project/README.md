@@ -1,6 +1,6 @@
 # beyondwin 프로젝트 문서
 
-이 폴더는 `beyondwin` 코드베이스 자체를 설명한다. 현재 Astro 사이트와 승인된 Node/React 목표 구조, content collection, publishing workflow, public memory projection, validation gate, archive docs 규칙을 다룬다.
+이 폴더는 `beyondwin` 코드베이스 자체를 설명한다. 현재 built truth와 아직 구현 전인 승인된 `FORM & THOUGHT` React-only 목표, content collection, publishing workflow, public memory projection, validation gate, archive docs 규칙을 다룬다. 새 공개 디자인과 Astro 제거 결정은 [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)이 우선하지만, target 문서의 존재만으로 현재 코드나 production이 전환됐다고 판단하지 않는다.
 
 빠르게 작업하려면 아래 순서로 읽는다.
 
@@ -8,18 +8,22 @@
 
 | 문서 | 역할 | 읽는 시점 |
 | --- | --- | --- |
+| [FORM & THOUGHT 공개 사이트 설계](form-and-thought-public-site-design.md) | Product design | 승인된 화면 구성, 콘텐츠 lane, 편집 계약, React-only 전환 범위를 구현할 때 |
+| [FORM & THOUGHT 시각 스펙](form-and-thought-visual-spec.md) | Visual specification | 승인 시안과 같은 geometry, palette, typography, responsive behavior를 재현하고 visual QA할 때 |
+| [FORM & THOUGHT 이미지 아트 디렉션](form-and-thought-image-art-direction.md) | Image direction | 대표 이미지 후보, contact sheet, provenance, 승인 경계를 운영할 때 |
+| [FORM & THOUGHT React-only 공개 사이트 구현 계획](form-and-thought-implementation-plan.md) | Implementation plan | thoughts migration, representative visual gate, 전체 route·콘텐츠, Astro 제거와 final acceptance를 순서대로 실행할 때 |
 | [시작하기](getting-started.md) | Tutorial | 처음 checkout한 뒤 사이트를 실행하고 콘텐츠 한 건이 route로 이어지는 과정을 확인할 때 |
 | [콘텐츠 운영](publishing-workflows.md) | How-to | 글, 리뷰, queue item, source-grounded article, memory, archive docs를 실제로 추가하거나 고칠 때 |
-| [서평 제외 아티클 전면 개선 설계](non-review-article-improvement-design.md) | Editorial design | 서평과 예시 파일을 제외한 실제 아티클 18편의 근거 재검증, 장르별 편집, 공개 전환과 검증 범위를 확인할 때 |
-| [서평 제외 아티클 전면 개선 구현 계획](non-review-article-improvement-implementation-plan.md) | Implementation plan | 18편 글별 근거 재검증, 한국어 편집, review 글 조건부 공개, 전체 validation과 browser 검사를 task로 실행할 때 |
+| [서평 제외 아티클 전면 개선 설계](non-review-article-improvement-design.md) | Historical editorial design | 2026-08-26 당시 article 18편 편집의 근거를 확인할 때. 현재 분류는 ADR-0007의 아티클 17편·생각 1편이다. |
+| [서평 제외 아티클 전면 개선 구현 계획](non-review-article-improvement-implementation-plan.md) | Retired historical plan | 2026-08-26 편집 당시 계획 snapshot과 commit 흐름을 확인할 때. 체크박스는 현재 상태가 아니며 새 lane과 React-only 전환에는 재사용하지 않는다. |
 | [Agent Runbook](agent-runbook.md) | Agent task map | 에이전트가 작업 유형별 read order, 수정 표면, 위험 경계, 검증 명령을 빠르게 확인해야 할 때 |
 | [Architecture Decision Records](adr/README.md) | Decision log | 제품, 아키텍처, 데이터 경계, 공개 정책, durable UX의 현재 판단과 폐기한 대안을 확인하거나 갱신할 때 |
-| [Node/React 모듈러 모놀리스 설계](node-react-modular-monolith-design.md) | Target architecture | 승인됐지만 아직 구현되지 않은 Node/React 앱 경계, PostgreSQL·worker, public release와 단계적 Astro 제거 계획을 확인할 때 |
-| [`판단` 공개 탐색 화면 설계](visual-storyworld-public-atlas-design.md) | Product design | 승인된 첫 public vertical slice, interaction, data contract, 검증 범위를 구현할 때 |
-| [Public reading continuity 설계](public-reading-continuity-design.md) | Product design | 장면에서 list·search·detail로 이어지는 공통 visual world, contextual return, continued discovery를 구현할 때 |
-| [Public reading continuity 구현 계획](public-reading-continuity-implementation-plan.md) | Implementation plan | React renderer 비교, 선택된 renderer의 UX 구현, 전체 route 이관, cutover evidence와 Astro 제거를 순서대로 실행할 때 |
-| [공개 글·책 독서 지면 설계](reading-surface-density-design.md) | Product design | React 글 팸플릿, 조사 글 절 목록, 책 표지와 연도 일기의 밀도를 mineral reading mode로 옮길 때 |
-| [공개 글·책 독서 지면 구현 계획](reading-surface-density-implementation-plan.md) | Implementation plan | 글/책 presentation, 표 접힘, 목록 UI, browser evidence와 DESIGN.md built truth를 task로 실행할 때 |
+| [Node/React 모듈러 모놀리스 설계](node-react-modular-monolith-design.md) | Target architecture | 유지되는 Node/React 앱 경계, PostgreSQL·worker, public release 구조를 확인할 때. Astro retention 조항은 ADR-0007이 대체한다. |
+| [`판단` 공개 탐색 화면 설계](visual-storyworld-public-atlas-design.md) | Superseded design | 과거 Public Atlas의 구현 근거와 변경 이력을 확인할 때 |
+| [Public reading continuity 설계](public-reading-continuity-design.md) | Superseded design | 과거 mineral reading world의 판단과 변경 이력을 확인할 때 |
+| [Public reading continuity 구현 계획](public-reading-continuity-implementation-plan.md) | Historical implementation plan | React renderer 선택과 이전 migration evidence를 확인할 때 |
+| [공개 글·책 독서 지면 설계](reading-surface-density-design.md) | Superseded design | 과거 글·책 독서 지면의 구현 근거를 확인할 때 |
+| [공개 글·책 독서 지면 구현 계획](reading-surface-density-implementation-plan.md) | Historical implementation plan | 과거 reading surface 작업과 검증 경로를 확인할 때 |
 | [Public reading continuity migration 작업 회고](public-reading-continuity-migration-retrospective.md) | Retrospective | 대형 migration의 검증 반복을 줄이고 review·source freeze·evidence 재사용 순서를 잡을 때 |
 | [Public renderer 비교 근거](evidence/public-renderer-comparison.md) | Evidence | React Router 선택·승격의 sealed raw sample, deterministic run, mandatory/variance 계산, rejected source 경계를 확인할 때 |
 | [아키텍처 레퍼런스](architecture-reference.md) | Reference | route, schema, script, test, data contract의 정확한 값이 필요할 때 |
@@ -29,9 +33,11 @@
 
 ## 코드에서 확인한 핵심 계약
 
-- 공개 콘텐츠는 [src/content.config.ts](../../../src/content.config.ts)의 collection schema를 통과해야 한다.
-- 공개 route는 [src/pages/](../../../src/pages/) 아래에서 생성한다.
-- collection 공통 동작은 [src/lib/content.ts](../../../src/lib/content.ts)가 맡는다.
+아래 항목은 2026-08-28 현재 구현된 built truth다. FORM & THOUGHT 구현이 완료되고 Task 15 문서 동기화가 통과할 때까지 target 경로로 미리 바꾸지 않는다.
+
+- React Router 공개 renderer와 route slice는 [`apps/site`](../../../apps/site/)에 구현돼 있고 framework-neutral release는 `packages/content`와 `packages/contracts`가 소유한다.
+- Astro [src/pages/](../../../src/pages/)와 [src/content.config.ts](../../../src/content.config.ts)는 현재 rollback/baseline과 일부 남은 validation 책임으로 공존한다. Task 14 acceptance와 책임 이전 전에는 제거하지 않는다.
+- legacy Astro collection 공통 동작은 [src/lib/content.ts](../../../src/lib/content.ts)가 맡으며, 제거 전 exact replacement owner가 필요하다.
 - `/memory`는 `memory/**`를 직접 읽지 않고 [src/data/memory.public.json](../../../src/data/memory.public.json)만 읽는다.
 - `npm run validate`가 문서와 콘텐츠 변경의 기본 완료 기준이다.
 - curated docs를 추가하거나 옮기면 [docs/_index/catalog.yml](../../_index/catalog.yml), [docs/_index/topics.yml](../../_index/topics.yml), [docs/INDEX.md](../../INDEX.md)를 같이 맞춘다.

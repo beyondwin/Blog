@@ -10,11 +10,12 @@ ADR은 회의록이나 일일 작업 로그가 아니다. 미래 구현을 제�
 | --- | --- | --- | --- | --- |
 | [ADR-0000](0000-adr-governance.md) | ADR 관리 규칙 | accepted | 2026-08-22 | ADR을 언제 읽고 만들고 갱신하는지 정의한다. |
 | [ADR-0001](0001-private-first-knowledge-product.md) | Private-first knowledge product와 curated public projection | accepted | 2026-08-22 | 새 제품의 private/public 경계를 고정한다. |
-| [ADR-0002](0002-consumer-grade-visual-experience.md) | Consumer-grade visual experience를 UX 품질 기준으로 사용 | accepted guardrail | 2026-08-22 | 거부된 시각 방향과 다음 디자인이 지켜야 할 경계를 기록한다. 구체적인 visual world는 아직 proposed다. |
-| [ADR-0003](0003-visual-storyworld-experience-model.md) | Visual Storyworld 경험 모델 | accepted | 2026-08-22 | Public Storyworld, Private Material Field, Resurface의 역할과 공통 object continuity를 고정한다. |
-| [ADR-0004](0004-staged-aperture-public-composition.md) | Public Atlas의 기본 구성을 Staged Aperture로 사용 | accepted | 2026-08-22 | 첫 public scene의 desktop composition과 responsive/focus 번역 원칙을 고정한다. |
-| [ADR-0005](0005-node-react-modular-monolith.md) | Node/React 모듈러 모놀리스와 분리된 공개 projection | accepted | 2026-08-25 | Node/React runtime, 앱 경계, immutable public release, fail-closed 품질 게이트와 측정으로 선택된 React Router public renderer를 고정한다. |
-| [ADR-0006](0006-unified-public-reading-continuity.md) | 하나의 public visual world 안에서 탐색과 독서 모드를 분리 | accepted | 2026-08-23 | Storyworld와 reading surface가 공통 visual material, chrome, return, continuation grammar를 공유하도록 고정한다. |
+| [ADR-0002](0002-consumer-grade-visual-experience.md) | Consumer-grade visual experience를 UX 품질 기준으로 사용 | superseded | 2026-08-28 | 이전 시각 방향 탐색의 guardrail. 새 공개 visual authority는 ADR-0007이 대체한다. |
+| [ADR-0003](0003-visual-storyworld-experience-model.md) | Visual Storyworld 경험 모델 | superseded | 2026-08-28 | 과거 Public Storyworld 모델. FORM & THOUGHT 공개 정보 구조가 대체한다. |
+| [ADR-0004](0004-staged-aperture-public-composition.md) | Public Atlas의 기본 구성을 Staged Aperture로 사용 | superseded | 2026-08-28 | 과거 scene composition. 승인 reference 기반 route composition이 대체한다. |
+| [ADR-0005](0005-node-react-modular-monolith.md) | Node/React 모듈러 모놀리스와 분리된 공개 projection | accepted | 2026-08-28 | Node/React runtime과 public projection은 유지한다. Astro retention과 rollback 조항만 ADR-0007이 대체한다. |
+| [ADR-0006](0006-unified-public-reading-continuity.md) | 하나의 public visual world 안에서 탐색과 독서 모드를 분리 | superseded | 2026-08-28 | 과거 mineral reading continuity. FORM & THOUGHT 편집 지면이 대체한다. |
+| [ADR-0007](0007-form-and-thought-react-only-editorial-system.md) | FORM & THOUGHT React-only 공개 편집 시스템 | accepted | 2026-08-28 | 승인 reference, 공개 명사, 콘텐츠 lane, React-only 전환과 Astro 제거를 고정한다. |
 
 ## 상태
 

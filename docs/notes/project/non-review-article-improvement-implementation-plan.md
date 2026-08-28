@@ -1,6 +1,8 @@
 # 서평 제외 아티클 전면 개선 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Status: historical / retired. 이 계획의 18편 article 분류와 Astro route 검증은 2026-08-26 당시의 실행 snapshot이다. 체크박스는 원래 계획 형식을 보존한 것이며 현재 완료 상태나 실행 명령이 아니다. [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)이 `why-i-read-in-the-ai-era`를 `thoughts`로 이동하고 React-only 공개 시스템으로 전환한다.
+
+> Completion evidence: article 개선 commit 흐름 `0c841af` … `1594c98`. 현재 작업에는 이 문서를 재실행하지 말고 [FORM & THOUGHT 구현 계획](form-and-thought-implementation-plan.md)을 사용한다.
 
 **Goal:** 서평과 예시 파일을 제외한 실제 아티클 18편을 최신 1차 자료로 재검증하고, 장르별 목소리를 보존한 채 한국어 문장과 구조를 개선하며, 근거와 검증을 통과한 review 상태 5편만 로컬에서 `published && !draft`로 전환한다.
 
@@ -160,7 +162,7 @@ Do not create new content files. Do not edit `docs/_index/topics.yml` unless a t
   - https://agentskills.io/specification
   - https://developers.openai.com/blog/eval-skills
   - https://arxiv.org/html/2606.15828v2
-- Local intake `/Users/user/Downloads/agents_md_skills_review.html` is an intake artifact, not a publishable primary source. If it is missing, do not invent its contents; use the primary URLs.
+- A local intake HTML artifact was reviewed but intentionally not retained in the repository and is not a publishable primary source. Its absence must never be filled by invented contents; the durable article relies on the recorded primary URLs.
 
 - [ ] **Step 1: Read the current article, packet, and Global Constraints.** Confirm the nine required headings and that percentages in the body are scoped to Vercel vs Next.js public table.
 
