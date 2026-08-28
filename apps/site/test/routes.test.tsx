@@ -190,15 +190,7 @@ describe('React Router current-behavior static route contract', () => {
     expect(review.meta({ data: verdictReviewData })).toContainEqual({
       name: 'description', content: '예술 도둑은 중독에 관한 기록이다.',
     });
-    expect(review.reviewCoverPreload(reviewData.coverAsset)).toEqual({
-      rel: 'preload',
-      as: 'image',
-      href: '/assets/content/reviews/black-swan/cover-458w.avif',
-      type: 'image/avif',
-      imageSrcSet: '/assets/content/reviews/black-swan/cover-458w.avif 458w',
-      imageSizes: '(max-width: 720px) 30vw, 9rem',
-      fetchPriority: 'high',
-    });
+    expect(review.reviewCoverPreload(reviewData.coverAsset)).toBeNull();
     expect(review.reviewCoverPreload(coverlessReviewData.coverAsset)).toBeNull();
     expect(memory.meta({ data: memoryData })).toContainEqual({
       tagName: 'link', rel: 'canonical', href: `/memory/${MEMORY_ID}/`,
@@ -243,9 +235,10 @@ describe('React Router current-behavior static route contract', () => {
     expect(articleHtml).toContain('width="1536" height="1024"');
     expect(articleHtml).toContain('Graphify는 분명 쓸모가 있다.');
     expect(reviewHtml).toContain('<h1>블랙스완</h1>');
-    expect(reviewHtml).toContain('<a class="context-return" href="/reviews/">책 목록으로</a>');
-    expect(reviewHtml).toContain('<a class="continue-reading__collection" href="/reviews/">책 전체 보기</a>');
-    expect(reviewHtml).toContain('width="458" height="671"');
+    expect(reviewHtml).toContain('판본 확인 · 표지 공개 권리 미확인');
+    expect(reviewHtml).toContain('<a class="continue-reading__collection" href="/reviews/">서평 전체 보기</a>');
+    expect(reviewHtml).not.toContain('<a class="context-return" href="/reviews/">');
+    expect(reviewHtml).not.toContain('/assets/content/reviews/black-swan/cover');
     expect(memoryHtml).toContain('href="/articles/lazycodex-agent-harness-analysis/"');
     expect(memoryHtml).toContain('href="/memory/agent-workflows-need-review-gates/"');
     for (const html of [homeHtml]) {

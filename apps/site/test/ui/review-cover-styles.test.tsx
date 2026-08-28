@@ -100,15 +100,13 @@ async function computedObjectFits(html: string, selector: string): Promise<strin
 }
 
 describe('current review route cover styling', () => {
-  it('preserves the full cover in both review-index presentations', async () => {
+  it('preserves the full cover in the canonical review ledger', async () => {
     const html = renderToStaticMarkup(createElement(BookIndexPage, {
       records: [reviewRecord],
       assets: new Map([['reviews/black-swan/cover', coverAsset]]),
     }));
 
-    await expect(computedObjectFits(html, '.book-objects img.book-cover'))
-      .resolves.toEqual(['contain']);
-    await expect(computedObjectFits(html, '.book-diary img.book-cover'))
+    await expect(computedObjectFits(html, '.review-index .editorial-list-row__media img'))
       .resolves.toEqual(['contain']);
   });
 
@@ -123,7 +121,7 @@ describe('current review route cover styling', () => {
 
     await expect(computedObjectFits(
       html,
-      '.review-reading-page img.reading-threshold__media-image--review',
+      '.review-detail__cover-stage img',
     )).resolves.toEqual(['contain']);
   });
 

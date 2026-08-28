@@ -22,7 +22,7 @@ const [detailCss, routeReadingCss, readingCss, reviewCss] = import.meta.env.SSR
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
-const REVIEW_COVER_SIZES = '(max-width: 720px) 30vw, 9rem';
+const REVIEW_COVER_SIZES = '(max-width: 767px) 72vw, min(38vw, 420px)';
 export interface ReviewData {
   record: ReviewRecord;
   coverAsset?: ReleaseAsset;
@@ -56,12 +56,9 @@ export async function loader({ params }: { params: { slug?: string } }): Promise
   const release = await loadVerifiedRelease();
   const record = params.slug ? recordForRoute(release, 'reviews', params.slug) : null;
   if (!record) throw new Response('Not Found', { status: 404 });
-  const coverAsset = record.coverMedia
+  const coverAsset = record.coverState === 'verified' && record.readEditionVerified && record.coverMedia
     ? release.manifest.assets[`reviews/${record.id}/${record.coverMedia}`]
     : undefined;
-  if (record.coverMedia && !coverAsset) {
-    throw new Error(`Verified release is missing reviews/${record.id}/${record.coverMedia}`);
-  }
   return {
     record,
     continuations: selectContinuations(record, release.manifest.records),
@@ -83,7 +80,7 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
     <ResponsivePicture
       asset={data.coverAsset}
       alt={data.coverAsset.alt}
-      className="reading-threshold__media-image reading-threshold__media-image--review"
+      className="review-detail__cover-image"
       eager
       sizes={REVIEW_COVER_SIZES}
     />
@@ -96,7 +93,7 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
         description={reviewDescription(data.record)}
         title={publicMetadataTitle(data.record.title)}
       />
-      <SiteShell currentSection="reviews">
+      <SiteShell currentSection="reviews" inverseHeader={Boolean(data.coverAsset)}>
         <ReviewReadingPage record={data.record} cover={cover} continuations={data.continuations} />
       </SiteShell>
     </>

@@ -323,6 +323,15 @@ async function loadReleaseSelectedMedia(
   return inputs;
 }
 
+function publicArtifactMedia(inputs: readonly SourceMediaBuildInput[]): SourceMediaBuildInput[] {
+  // A book-cover manifest proves byte identity and edition provenance, not
+  // public redistribution rights. The repository has no approved sourced-cover
+  // rights receipt yet, and generated substitutes are forbidden, so covers
+  // fail closed at the immutable artifact boundary while their source files
+  // and honest validation warnings remain intact.
+  return inputs.filter((input) => input.publicMedia.kind !== 'book-cover');
+}
+
 function optional<T extends object, K extends string, V>(key: K, value: V | undefined): T | Record<K, V> {
   return value === undefined ? {} as T : { [key]: value } as Record<K, V>;
 }
@@ -531,7 +540,7 @@ export async function buildPublicRelease(
       .map((selection) => selection.mediaId);
     recordMedia.set(
       `${record.collection}/${record.id}`,
-      await loadReleaseSelectedMedia(root, record, selectedMediaIds),
+      publicArtifactMedia(await loadReleaseSelectedMedia(root, record, selectedMediaIds)),
     );
   }
 

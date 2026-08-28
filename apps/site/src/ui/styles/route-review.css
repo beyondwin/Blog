@@ -1,157 +1,161 @@
-.review-reading-page .content-figure { margin: 2em 0; }
-
-.book-index {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(40px, 6vw, 72px);
-}
-
-.book-objects {
+.review-index .editorial-list-row__media {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(20px, 3vw, 36px) clamp(16px, 2.4vw, 28px);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  place-items: center;
+  padding: 24px;
+  background: var(--ft-brown);
 }
 
-.book-objects li,
-.book-diary li {
-  scroll-margin-top: 6rem;
-}
-
-.book-card {
+.review-index .editorial-list-row__media picture {
+  width: 100%;
+  height: 100%;
   display: grid;
-  align-content: start;
-  gap: 0.45em;
-  min-width: 0;
-  color: inherit;
-  text-decoration: none;
+  place-items: center;
 }
 
-.book-card:hover .book-title,
-.book-diary a:hover .book-title {
-  text-decoration: underline;
-  text-decoration-color: var(--bw-cobalt);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.16em;
-}
-
-.book-objects picture,
-.book-diary picture {
-  display: block;
-  width: 100%;
-  max-width: 11.5rem;
-}
-
-.book-cover {
-  display: block;
-  width: 100%;
-  max-width: 11.5rem;
-  height: auto;
-  aspect-ratio: 2 / 3;
+.review-index .editorial-list-row__media img {
+  width: auto;
+  max-width: min(76%, 190px);
+  height: 100%;
+  max-height: 202px;
   object-fit: contain;
-  background: var(--bw-white);
+  box-shadow: 0 8px 12px rgb(17 16 15 / 24%);
 }
 
-img.book-cover {
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--bw-ink) 18%, transparent);
+.review-detail {
+  background: var(--ft-paper);
+  color: var(--ft-ink);
 }
 
-.book-cover--set {
+.review-detail__hero {
+  background: var(--ft-paper);
+}
+
+.review-detail__cover-stage {
+  min-height: min(58vw, 680px);
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: clamp(36px, 6vw, 72px);
+  overflow: hidden;
+  background: var(--ft-brown);
+}
+
+.review-detail__cover-stage picture {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.review-detail__cover-stage img {
+  width: auto;
+  max-width: min(38%, 420px);
+  height: 100%;
+  max-height: 540px;
+  display: block;
+  object-fit: contain;
+  box-shadow: 0 10px 12px rgb(17 16 15 / 28%);
+}
+
+.review-detail__introduction {
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: 0.35em;
-  padding: 0.75em;
-  border: 1px solid var(--bw-line);
-  box-shadow: none;
-  color: var(--bw-ink);
-  font-size: 0.82rem;
-  line-height: 1.3;
-  word-break: keep-all;
+  align-items: center;
+  padding: clamp(48px, 7vw, 88px) clamp(24px, 5vw, 64px);
+  text-align: center;
 }
 
-.book-cover--set em {
-  color: var(--bw-soft-ink);
-  font-style: normal;
+.review-detail--text-led .review-detail__introduction {
+  padding-block-start: clamp(72px, 10vw, 128px);
 }
 
-.book-cover--small,
-.book-diary picture {
-  width: 42px;
-  max-width: 42px;
+.review-detail__lane {
+  margin: 0 0 20px;
+  color: var(--ft-terracotta-dark);
+  font-size: 14px;
+  font-weight: 700;
 }
 
-.book-cover--small.book-cover--set {
-  padding: 0.28em;
-  font-size: 0.48rem;
-  line-height: 1.2;
-}
-
-.book-title {
-  font-weight: 600;
-  line-height: 1.35;
+.review-detail__introduction h1 {
+  max-width: 18ch;
+  margin: 0;
+  font-family: var(--ft-font-display);
+  font-size: clamp(48px, 5vw, 68px);
+  font-weight: 400;
+  line-height: 1.16;
+  letter-spacing: -.03em;
   overflow-wrap: anywhere;
   word-break: keep-all;
 }
 
-.book-card .book-title {
-  font-size: 0.98rem;
+.review-detail__identity {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  margin-block-start: 28px;
+  color: var(--ft-ink-soft);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
 }
 
-.book-author {
-  color: var(--bw-soft-ink);
-  font-size: 0.82rem;
-  font-style: normal;
-  line-height: 1.4;
-}
-
-.book-verdict {
-  color: var(--bw-ink);
-  font-size: 0.92rem;
-  line-height: 1.55;
-}
-
-.book-diary h2 {
-  margin: 0 0 0.85em;
-  color: var(--bw-soft-ink);
-  font-size: 0.92rem;
-  font-weight: 500;
-}
-
-.book-diary ol {
+.review-detail__identity p {
   margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.book-diary li + li {
-  margin-top: 1.05em;
+.review-detail__rights {
+  flex-basis: 100%;
 }
 
-.book-diary a {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  column-gap: 0.9rem;
-  align-items: start;
-  color: inherit;
-  text-decoration: none;
+.review-detail__verdict {
+  margin: 0 0 2.2em;
+  padding-block-end: 1.5em;
+  border-bottom: 1px solid var(--ft-rule);
+  font-family: var(--ft-font-display);
+  font-size: clamp(22px, 2.3vw, 30px);
+  line-height: 1.55;
+  word-break: keep-all;
 }
 
-.book-diary__copy {
-  display: grid;
-  gap: 0.2em;
-  min-width: 0;
+.review-detail__prose .prose > :first-child {
+  margin-block-start: 0;
 }
 
-.book-diary .book-title {
-  font-size: 1rem;
-}
+@media (max-width: 767px) {
+  .review-index .editorial-list-row__media {
+    min-height: 250px;
+    padding: 28px 22px;
+  }
 
-@media (max-width: 720px) {
-  .book-objects {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 16px;
+  .review-index .editorial-list-row__media img {
+    max-width: min(68%, 176px);
+    max-height: 210px;
+  }
+
+  .review-detail__cover-stage {
+    min-height: 380px;
+    padding: 32px 22px;
+  }
+
+  .review-detail__cover-stage img {
+    max-width: min(72%, 240px);
+    max-height: 316px;
+  }
+
+  .review-detail__introduction,
+  .review-detail--text-led .review-detail__introduction {
+    align-items: flex-start;
+    padding: 48px 22px;
+    text-align: start;
+  }
+
+  .review-detail__introduction h1 {
+    font-size: clamp(36px, 11vw, 48px);
+  }
+
+  .review-detail__identity {
+    justify-content: flex-start;
   }
 }

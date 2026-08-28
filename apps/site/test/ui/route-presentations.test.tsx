@@ -330,4 +330,42 @@ describe('full public route expansion', () => {
       expect(html).toContain(`content="${description}"`);
     }
   });
+
+  it('renders all reviews as a latest-first editorial ledger with the exact public noun', async () => {
+    const route = await candidateModule<any>('app/routes/reviews-index.tsx');
+    const data = await route.loader();
+    const html = renderToStaticMarkup(createElement(route.ReviewsIndexPresentation, { data }));
+
+    expect(data.records).toHaveLength(18);
+    expect(data.records.map(({ id }: { id: string }) => id).slice(0, 3)).toEqual([
+      'changing-their-minds',
+      'lord-of-the-flies',
+      'black-swan',
+    ]);
+    expect(html).toContain('<title>서평 · FORM &amp; THOUGHT</title>');
+    expect(html).toContain('<h1>서평</h1>');
+    expect(html.match(/class="editorial-list-row(?: |")/gu)).toHaveLength(18);
+    expect(html).toContain('우리는 현실을 보는가, 현실에 대해 만든 이야기를 보는가.');
+    expect(html).toContain('<time dateTime="2026-05-27">2026.05.27</time>');
+    expect(html).not.toMatch(/book-cover--set|book-objects|book-diary/u);
+    expect(html).not.toContain('/assets/content/reviews/black-swan/cover');
+  }, 30_000);
+
+  it('uses the verdict-led review detail and keeps warning covers text-led', async () => {
+    const route = await candidateModule<any>('app/routes/review.tsx');
+    const data = await route.loader({ params: { slug: 'black-swan' } });
+    const html = renderToStaticMarkup(createElement(route.ReviewPresentation, { data }));
+
+    expect(data.coverAsset).toBeUndefined();
+    expect(html).toContain('<h1>블랙스완</h1>');
+    expect(html).toContain('나심 니콜라스 탈레브');
+    expect(html).toContain('동녘사이언스 2018 개정증보판, 차익종·김현구 옮김');
+    expect(html).toContain('<time dateTime="2026-05-27T00:00:00.000Z">2026.05.27</time>');
+    expect(html).toContain('표지 공개 권리 미확인');
+    expect(html).toContain('<a class="continue-reading__collection" href="/reviews/">서평 전체 보기</a>');
+    expect(html.indexOf('우리는 현실을 보는가, 현실에 대해 만든 이야기를 보는가.'))
+      .toBeLessThan(html.indexOf('나심 니콜라스 탈레브의 블랙 스완은'));
+    expect(html).not.toContain('/assets/content/reviews/black-swan/cover');
+    expect(html).not.toMatch(/>책(?: 목록으로| 전체 보기|<)/u);
+  }, 30_000);
 });

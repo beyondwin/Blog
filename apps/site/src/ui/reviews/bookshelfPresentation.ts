@@ -3,13 +3,17 @@ import type { PublicReleaseManifest } from '@beyondwin/content/release';
 
 export type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 export type ReleaseAsset = PublicReleaseManifest['assets'][string];
+export type CoverRightsState = 'approved' | 'warning' | 'hold' | 'unverified';
+
 export interface BookShelfRecord {
   id: string;
   href: string;
   title: string;
   authors: readonly string[];
   verdict: string;
-  year: number;
+  date: string;
+  edition?: string;
+  rightsState: CoverRightsState;
   coverAsset?: ReleaseAsset;
 }
 
@@ -22,42 +26,53 @@ export function reviewSortDate(record: ReviewRecord): string {
   return record.completedAt ?? record.createdAt;
 }
 
+export function formatReviewDate(value: string): string {
+  return value.slice(0, 10).replaceAll('-', '.');
+}
+
+function reviewEdition(record: ReviewRecord): string | undefined {
+  if (record.editionLabel) return record.editionLabel;
+  return record.publisher;
+}
+
 function toShelfRecord(
   record: ReviewRecord,
   assets: ReadonlyMap<string, ReleaseAsset>,
 ): BookShelfRecord {
-  const coverAsset = record.coverState === 'verified' && record.coverMedia
+  const resolvedCover = record.coverState === 'verified'
+    && record.readEditionVerified
+    && record.coverMedia
     ? assets.get(`reviews/${record.id}/${record.coverMedia}`)
     : undefined;
+  const rightsState: CoverRightsState = record.coverState === 'hold'
+    ? 'hold'
+    : !record.readEditionVerified
+      ? 'unverified'
+      : resolvedCover
+        ? 'approved'
+        : 'warning';
+
   return {
     id: record.id,
     href: record.href,
     title: record.title,
     authors: record.authors,
     verdict: getOneSentenceJudgment(record.verdict ?? record.description),
-    year: new Date(reviewSortDate(record)).getUTCFullYear(),
-    ...(coverAsset ? { coverAsset } : {}),
+    date: reviewSortDate(record),
+    ...(reviewEdition(record) ? { edition: reviewEdition(record) } : {}),
+    rightsState,
+    ...(resolvedCover ? { coverAsset: resolvedCover } : {}),
   };
 }
 
 export function buildBookshelfPresentation(
   records: readonly ReviewRecord[],
   assets: ReadonlyMap<string, ReleaseAsset>,
-): {
-  shelfTiers: BookShelfRecord[][];
-  diary: Array<{ year: number; entries: BookShelfRecord[] }>;
-} {
-  const ordered = [...records].sort((left, right) => {
-    const date = Date.parse(reviewSortDate(right)) - Date.parse(reviewSortDate(left));
-    return date || left.id.localeCompare(right.id);
-  }).map((record) => toShelfRecord(record, assets));
-  const shelf = ordered.slice(0, 8);
-  const shelfTiers = [shelf.slice(0, 4), shelf.slice(4, 8)].filter((tier) => tier.length > 0);
-  const diary: Array<{ year: number; entries: BookShelfRecord[] }> = [];
-  for (const entry of ordered) {
-    const current = diary.at(-1);
-    if (!current || current.year !== entry.year) diary.push({ year: entry.year, entries: [entry] });
-    else current.entries.push(entry);
-  }
-  return { shelfTiers, diary };
+): BookShelfRecord[] {
+  return [...records]
+    .sort((left, right) => {
+      const date = Date.parse(reviewSortDate(right)) - Date.parse(reviewSortDate(left));
+      return date || left.id.localeCompare(right.id);
+    })
+    .map((record) => toShelfRecord(record, assets));
 }

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildPublicRelease } from '../src/release/build-release';
 import { readActiveRelease } from '../src/release/read-release';
-import { writeReleaseFixture } from './helpers/release-fixture';
+import { fixtureChecksum, writeReleaseFixture } from './helpers/release-fixture';
 
 describe('immutable public release building', () => {
   it('builds every approved generated media selection needed by the fixed home and detail projections', async () => {
@@ -37,6 +37,88 @@ describe('immutable public release building', () => {
     });
     expect(built.manifest).toEqual(active.manifest);
   }, 30_000);
+
+  it('excludes a rights-warning review cover from both the manifest and immutable artifact bytes', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-rights-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    const reviewMediaRoot = join(sourceRoot, 'src', 'assets', 'content', 'reviews', 'rights-warning-review');
+    await mkdir(reviewMediaRoot, { recursive: true });
+    const coverBytes = await readFile(join(
+      sourceRoot,
+      'src',
+      'assets',
+      'content',
+      'articles',
+      'public-fixture',
+      'hero.png',
+    ));
+    await writeFile(join(reviewMediaRoot, 'cover.png'), coverBytes);
+    await writeFile(join(reviewMediaRoot, 'media.yml'), [
+      'version: 1',
+      'items:',
+      '  - id: cover',
+      '    file: cover.png',
+      '    kind: book-cover',
+      '    alt: 권리 경고 판본 표지',
+      '    credit: Test bookseller',
+      '    sourceUrl: https://example.com/rights-warning-cover.png',
+      '    isbn13: "9788990247674"',
+      '    edition: Test Publisher 2026 edition',
+      '    verifiedAt: "2026-08-29"',
+      '    rightsNote: Edition identification only; public redistribution is not approved.',
+      '    width: 1',
+      '    height: 1',
+      `    checksum: ${fixtureChecksum}`,
+      '',
+    ].join('\n'));
+    await writeFile(join(sourceRoot, 'src', 'content', 'reviews', 'rights-warning-review.mdx'), [
+      '---',
+      'title: Rights warning review',
+      'description: The review remains public without its cover bytes.',
+      'createdAt: "2026-08-29"',
+      'updatedAt: "2026-08-29"',
+      'status: published',
+      'draft: false',
+      'itemType: book',
+      'itemTitle: Rights warning review',
+      'itemAuthor: Test Author',
+      'isbn13: "9788990247674"',
+      'publisher: Test Publisher',
+      'editionLabel: Test Publisher 2026 edition',
+      'readEditionVerified: true',
+      'verdict: The verdict remains visible.',
+      'coverState: verified',
+      'coverMedia: cover',
+      '---',
+      '',
+      'The review body remains visible without its cover.',
+      '',
+    ].join('\n'));
+
+    const built = await buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    });
+    const record = built.manifest.records['reviews/rights-warning-review'];
+
+    expect(record).toMatchObject({
+      collection: 'reviews',
+      coverState: 'verified',
+      coverMedia: 'cover',
+      readEditionVerified: true,
+      media: [],
+    });
+    expect(built.manifest.assets['reviews/rights-warning-review/cover']).toBeUndefined();
+    await expect(readFile(join(
+      built.releasePath,
+      'assets',
+      'content',
+      'reviews',
+      'rights-warning-review',
+      'cover.png',
+    ))).rejects.toThrow();
+  });
 
   it('derives a deterministic ID from public inputs and changes it when a public field changes', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-build-'));

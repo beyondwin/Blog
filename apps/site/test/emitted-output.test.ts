@@ -131,11 +131,10 @@ describe('React Router emitted critical output', () => {
     expect(routeCss.articleDetail).toContain('.article-toc');
     expect(routeCss.articleDetail).not.toMatch(/\.reading-sheet|\.reading-threshold|\.public-scene/u);
     expect(routeCss.reviewsIndex).toContain('.article-topic-filter');
-    expect(routeCss.reviewsIndex).toContain('.book-index');
-    expect(routeCss.reviewsIndex).toContain('.reading-sheet');
-    expect(routeCss.reviewDetail).toContain('.article-colophon');
-    expect(routeCss.reviewDetail).toContain('.reading-threshold');
-    expect(routeCss.reviewDetail).toContain('.review-reading-page .content-figure');
+    expect(routeCss.reviewsIndex).toContain('.review-index');
+    expect(routeCss.reviewsIndex).not.toContain('.reading-sheet');
+    expect(routeCss.reviewDetail).toContain('.review-detail__verdict');
+    expect(routeCss.reviewDetail).toContain('.review-detail__cover-stage');
     expect(routeCss.thoughtsIndex).toContain('.article-topic-filter');
     expect(routeCss.thoughtsIndex).toContain('.reading-sheet');
     expect(routeCss.thoughtDetail).toContain('.article-colophon');
@@ -207,25 +206,16 @@ describe('React Router emitted critical output', () => {
     }
   });
 
-  it('preloads only the verified review AVIF candidates declared by its exact picture sizes', async () => {
+  it('does not emit or preload warning-state review cover bytes', () => {
     const imagePreload = reviewHtml.match(
       /<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u,
     )?.[0];
     const picture = reviewHtml.match(/<picture>[\s\S]*?<\/picture>/u)?.[0];
-    const avifSource = picture?.match(/<source\b[^>]*type="image\/avif"[^>]*>/u)?.[0];
 
-    expect(imagePreload).toBeDefined();
-    expect(avifSource).toBeDefined();
-    expect(attribute(imagePreload ?? '', 'imageSizes')).toBe('(max-width: 720px) 30vw, 9rem');
-    expect(attribute(imagePreload ?? '', 'imageSizes')).toBe(attribute(avifSource ?? '', 'sizes'));
-    const preloadCandidates = srcSetCandidates(attribute(imagePreload ?? '', 'imageSrcSet'));
-    const pictureCandidates = srcSetCandidates(attribute(avifSource ?? '', 'srcSet'));
-    expect(preloadCandidates).toEqual(pictureCandidates);
-    expect(preloadCandidates).toContain(attribute(imagePreload ?? '', 'href'));
-    for (const candidate of preloadCandidates) {
-      await expect(access(join(candidateRoot, 'build/client', candidate.replace(/^\//u, ''))))
-        .resolves.toBeUndefined();
-    }
+    expect(imagePreload).toBeUndefined();
+    expect(picture).toBeUndefined();
+    expect(reviewHtml).not.toContain('/assets/content/reviews/');
+    expect(reviewHtml).toContain('판본 확인 · 표지 공개 권리 미확인');
   });
 
   it('keeps inlined critical CSS out of the hydration chunks', async () => {

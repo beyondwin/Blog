@@ -1,26 +1,14 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { BookIndexPage } from '../../src/ui/reviews/BookIndexPage';
-import { buildBookshelfPresentation } from '../../src/ui/reviews/bookshelfPresentation';
-
-vi.mock('../../src/ui/reviews/bookshelfPresentation', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/ui/reviews/bookshelfPresentation')>();
-  return {
-    ...actual,
-    buildBookshelfPresentation: vi.fn((
-      records: Parameters<typeof actual.buildBookshelfPresentation>[0],
-      assets: Parameters<typeof actual.buildBookshelfPresentation>[1],
-    ) => actual.buildBookshelfPresentation(records, assets)),
-  };
-});
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 
-const cover = {
+const approvedCover = {
   id: 'cover',
   alt: '블랙 스완 표지',
   width: 400,
@@ -56,71 +44,49 @@ function review(id: string, overrides: Record<string, unknown> = {}): ReviewReco
   } as ReviewRecord;
 }
 
-describe('book index objects and diary', () => {
-  it('renders cover objects, a yearly diary, record anchors, and a hold plate', () => {
+describe('public review editorial ledger', () => {
+  it('renders one canonical row per review with truthful approved-cover and text-led variants', () => {
     const html = renderToStaticMarkup(createElement(BookIndexPage, {
       records: [
+        review('warning-cover', {
+          title: '권리 경고 표지',
+          completedAt: '2026-08-28T00:00:00.000Z',
+          verdict: '표지 없이 판정을 남긴다.',
+          coverState: 'verified',
+          coverMedia: 'cover',
+        }),
         review('black-swan', {
           title: '블랙 스완',
-          completedAt: '2026-05-27T00:00:00.000Z',
+          completedAt: '2026-08-29T00:00:00.000Z',
           verdict: '불확실성을 몸으로 읽는다.',
           coverState: 'verified',
           coverMedia: 'cover',
         }),
-        review('devotion-of-suspect-x', {
-          title: '용의자 X의 헌신',
-          completedAt: '2026-03-01T00:00:00.000Z',
-          verdict: '헌신의 형태를 남긴다.',
-          coverState: 'hold',
-        }),
       ],
-      assets: new Map([['reviews/black-swan/cover', cover]]),
+      assets: new Map([['reviews/black-swan/cover', approvedCover]]),
     }));
-    expect(html).toContain('class="book-objects"');
-    expect(html).toContain('class="book-diary"');
-    expect(html).toContain('<h2>2026</h2>');
-    expect(html).toContain('id="record-reviews-black-swan"');
-    expect(html).toContain('href="/reviews/black-swan/"');
-    expect(html).toMatch(/class="book-cover book-cover--set"[^>]*>[\s\S]*용의자 X의 헌신/u);
-    expect(html).not.toContain('record-row');
+
+    expect(html).toContain('<h1>서평</h1>');
+    expect(html.match(/class="editorial-list-row(?: |")/gu)).toHaveLength(2);
+    expect(html.indexOf('블랙 스완')).toBeLessThan(html.indexOf('권리 경고 표지'));
+    expect(html).toContain('불확실성을 몸으로 읽는다.');
+    expect(html).toContain('표지 없이 판정을 남긴다.');
+    expect(html).toContain('<time dateTime="2026-08-29">2026.08.29</time>');
+    expect(html).toContain('data-media-fit="contain"');
+    expect(html).toContain('width="400" height="600"');
+    expect(html.match(/href="\/reviews\/black-swan\/"/gu)).toHaveLength(1);
+    expect(html.match(/href="\/reviews\/warning-cover\/"/gu)).toHaveLength(1);
+    expect(html).not.toContain('/assets/content/reviews/warning-cover/');
+    expect(html).not.toMatch(/book-cover--set|book-objects|book-diary/u);
   });
 
-  it('renders the empty copy when there are no reviews', () => {
+  it('uses the exact review noun in the empty state', () => {
     const html = renderToStaticMarkup(createElement(BookIndexPage, {
       records: [],
       assets: new Map(),
     }));
-    expect(html).toContain('아직 공개한 책이 없습니다.');
-    expect(html).not.toContain('class="book-objects"');
-    expect(html).not.toContain('class="book-diary"');
-  });
-
-  it('renders the diary when the shelf is empty', () => {
-    vi.mocked(buildBookshelfPresentation).mockReturnValueOnce({
-      shelfTiers: [],
-      diary: [{
-        year: 2026,
-        entries: [{
-          id: 'black-swan',
-          href: '/reviews/black-swan/',
-          title: '블랙 스완',
-          authors: ['저자'],
-          verdict: '불확실성을 몸으로 읽는다.',
-          year: 2026,
-        }],
-      }],
-    });
-    const html = renderToStaticMarkup(createElement(BookIndexPage, {
-      records: [review('black-swan', {
-        title: '블랙 스완',
-        completedAt: '2026-05-27T00:00:00.000Z',
-      })],
-      assets: new Map(),
-    }));
-    expect(html).toContain('class="book-diary"');
-    expect(html).toContain('<h2>2026</h2>');
-    expect(html).toContain('id="record-reviews-black-swan"');
-    expect(html).not.toContain('아직 공개한 책이 없습니다.');
-    expect(html).not.toContain('class="book-objects"');
+    expect(html).toContain('<h1>서평</h1>');
+    expect(html).toContain('아직 공개한 서평이 없습니다.');
+    expect(html).not.toContain('아직 공개한 책');
   });
 });

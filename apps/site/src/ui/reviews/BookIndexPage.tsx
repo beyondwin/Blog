@@ -1,42 +1,16 @@
 import { ResponsivePicture } from '../../../app/root';
-import { OriginLink } from '../navigation/OriginLink';
+import { EditorialListRow } from '../editorial/EditorialListRow';
+import { EditorialPageHeader } from '../editorial/EditorialPageHeader';
 import { recordAnchor } from '../navigation/record-anchor';
 import {
   buildBookshelfPresentation,
-  type BookShelfRecord,
+  formatReviewDate,
   type ReleaseAsset,
   type ReviewRecord,
 } from './bookshelfPresentation';
 
-const COVER_SIZES = '(max-width: 720px) 42vw, 11.5rem';
-
-function BookCover({
-  eager = false,
-  item,
-  small = false,
-}: {
-  eager?: boolean;
-  item: BookShelfRecord;
-  small?: boolean;
-}) {
-  const className = small ? 'book-cover book-cover--small' : 'book-cover';
-  if (item.coverAsset) {
-    return (
-      <ResponsivePicture
-        asset={item.coverAsset}
-        alt={small ? '' : item.coverAsset.alt}
-        className={className}
-        eager={eager}
-        sizes={COVER_SIZES}
-      />
-    );
-  }
-  return (
-    <span className={`${className} book-cover--set`} aria-hidden="true">
-      <b>{item.title}</b>
-      {item.authors.length > 0 ? <em>{item.authors.join(' · ')}</em> : null}
-    </span>
-  );
+function rowDescription(authors: readonly string[], verdict: string): string {
+  return authors.length > 0 ? `${authors.join(' · ')} — ${verdict}` : verdict;
 }
 
 export function BookIndexPage({
@@ -46,64 +20,42 @@ export function BookIndexPage({
   assets: ReadonlyMap<string, ReleaseAsset>;
   records: readonly ReviewRecord[];
 }) {
-  const { diary, shelfTiers } = buildBookshelfPresentation(records, assets);
-  const objects = shelfTiers.flat();
-  const shelfIds = new Set(objects.map((item) => item.id));
-  if (objects.length === 0 && diary.length === 0) {
-    return (
-      <section className="reading-sheet book-index">
-        <p>아직 공개한 책이 없습니다.</p>
-      </section>
-    );
-  }
+  const rows = buildBookshelfPresentation(records, assets);
+  let renderedMedia = 0;
 
   return (
-    <section className="reading-sheet book-index">
-      <h1 className="visually-hidden">책</h1>
-      {objects.length > 0 ? (
-        <ol className="book-objects">
-          {objects.map((item, index) => {
-            const anchorId = recordAnchor('reviews', item.id);
+    <section className="article-index review-index">
+      <EditorialPageHeader
+        title="서평"
+        description="읽고 난 뒤에도 남은 한 문장과 판단을 기록합니다."
+      />
+      {rows.length > 0 ? (
+        <ol className="article-index__ledger review-index__ledger">
+          {rows.map((item) => {
+            const eager = item.coverAsset ? renderedMedia++ === 0 : false;
+            const media = item.coverAsset ? (
+              <ResponsivePicture
+                asset={item.coverAsset}
+                alt={item.coverAsset.alt}
+                eager={eager}
+                sizes="(max-width: 767px) 100vw, (max-width: 1179px) 37vw, 430px"
+              />
+            ) : undefined;
             return (
-              <li key={item.id} id={anchorId}>
-                <OriginLink
-                  className="book-card"
+              <li key={item.id} id={recordAnchor('reviews', item.id)}>
+                <EditorialListRow
                   href={item.href}
-                  origin={{ kind: 'reviews', anchorId }}
-                >
-                  <BookCover eager={index < 4} item={item} />
-                  <strong className="book-title">{item.title}</strong>
-                  {item.authors.length > 0 ? (
-                    <em className="book-author">{item.authors.join(' · ')}</em>
-                  ) : null}
-                  <span className="book-verdict">{item.verdict}</span>
-                </OriginLink>
+                  title={item.title}
+                  description={rowDescription(item.authors, item.verdict)}
+                  date={formatReviewDate(item.date)}
+                  media={media}
+                  variant="review"
+                />
               </li>
             );
           })}
         </ol>
-      ) : null}
-      {diary.map(({ year, entries }) => (
-        <section className="book-diary" id={`reviews-${year}`} key={year}>
-          <h2>{year}</h2>
-          <ol>
-            {entries.map((item) => {
-              const anchorId = recordAnchor('reviews', item.id);
-              return (
-                <li key={item.id} id={shelfIds.has(item.id) ? undefined : anchorId}>
-                  <OriginLink href={item.href} origin={{ kind: 'reviews', anchorId }}>
-                    <BookCover item={item} small />
-                    <span className="book-diary__copy">
-                      <strong className="book-title">{item.title}</strong>
-                      <span className="book-verdict">{item.verdict}</span>
-                    </span>
-                  </OriginLink>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      ))}
+      ) : <p className="article-index__empty">아직 공개한 서평이 없습니다.</p>}
     </section>
   );
 }

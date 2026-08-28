@@ -135,7 +135,7 @@ describe('route-scoped critical CSS source accounting', () => {
     ]);
     expect(root).not.toContain('criticalCssForPath');
     expect(reviewIndex).toContain("import('../../src/ui/styles/route-index.css?inline')");
-    expect(reviewIndex).toContain('criticalCss: `${indexCss}${readingCss}${reviewCss}`');
+    expect(reviewIndex).toContain('criticalCss: `${indexCss}${reviewCss}`');
     expect(thoughtIndex).toContain("import('../../src/ui/styles/route-index.css?inline')");
     expect(thoughtIndex).toContain('criticalCss: `${indexCss}${routeReadingCss}${readingCss}`');
     expect(reviewDetail).toContain("import('../../src/ui/styles/route-detail.css?inline')");
