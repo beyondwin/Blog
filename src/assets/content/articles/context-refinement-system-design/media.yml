@@ -1,0 +1,23 @@
+version: 1
+items:
+  - id: editorial-hero
+    file: editorial-hero.png
+    kind: illustration
+    alt: 거친 벽면들이 중앙의 작은 테라코타 받침대로 모이는 장면
+    caption: 거친 요청이 정밀한 실행 기준으로 좁혀지는 과정
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-agents.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-v1
+      candidateId: AG02
+      decisionManifestChecksum: sha256:9c32d3f29efc9bc0f81f8201745bfc38b83c86106aca024f6a97eef2b03088c2
+    verifiedAt: 2026-08-29
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:e2e2ad499cd0235eed936fec243f4cc524ab4253dbc28778974215c63ad5f166

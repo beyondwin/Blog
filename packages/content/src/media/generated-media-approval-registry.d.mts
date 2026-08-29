@@ -24,6 +24,11 @@ export function parseGeneratedMediaApprovalRegistry(
   path?: string,
 ): GeneratedMediaApprovalRegistry;
 
+export function generatedMediaContactSheetPath(
+  decisionManifest: string,
+  batchId: string,
+): string;
+
 export function assertGeneratedMediaRegistrySelections(
   registered: GeneratedMediaApprovalRegistryBatch,
   assets: GeneratedMediaApprovalRegistrySelection[],

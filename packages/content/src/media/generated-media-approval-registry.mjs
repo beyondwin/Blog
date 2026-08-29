@@ -5,7 +5,25 @@ export const GENERATED_MEDIA_APPROVAL_REGISTRY_PATH = 'packages/content/generate
 const id = z.string().regex(/^[a-z0-9][a-z0-9-]*$/);
 const checksum = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 const collection = z.enum(['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts']);
-const candidateId = z.string().regex(/^[A-Z][0-9]{2}$/);
+const candidateId = z.string().regex(/^[A-Z]{1,2}[0-9]{2}$/);
+
+function canonicalDecisionPaths(batchId) {
+  return [
+    `docs/notes/project/assets/form-and-thought-generated/${batchId}/decision-manifest.yml`,
+    `docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-${batchId}.yml`,
+  ];
+}
+
+export function generatedMediaContactSheetPath(decisionManifest, batchId) {
+  const [legacyDecision, articleDecision] = canonicalDecisionPaths(batchId);
+  if (decisionManifest === legacyDecision) {
+    return `docs/notes/project/assets/form-and-thought-generated/${batchId}/approved-contact-sheet.png`;
+  }
+  if (decisionManifest === articleDecision) {
+    return `docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-${batchId}.png`;
+  }
+  throw new Error(`registered decision manifest must match a canonical batch path for ${batchId}`);
+}
 
 const selection = z.object({
   candidateId,
@@ -16,14 +34,14 @@ const selection = z.object({
 
 const batch = z.object({
   batchId: id,
-  decisionManifest: z.string().regex(
-    /^docs\/notes\/project\/assets\/form-and-thought-generated\/[a-z0-9][a-z0-9-]*\/decision-manifest\.yml$/,
-  ),
+  decisionManifest: z.string().refine((value) => (
+    /^docs\/notes\/project\/assets\/form-and-thought-generated\/[a-z0-9][a-z0-9-]*\/decision-manifest\.yml$/.test(value)
+      || /^docs\/notes\/project\/assets\/form-and-thought-generated\/articles\/decision-manifest-[a-z0-9][a-z0-9-]*\.yml$/.test(value)
+  ), 'registered decision manifest must use a canonical generated-media path'),
   decisionManifestChecksum: checksum,
   selections: z.array(selection).min(1),
 }).strict().superRefine((value, context) => {
-  const expectedPath = `docs/notes/project/assets/form-and-thought-generated/${value.batchId}/decision-manifest.yml`;
-  if (value.decisionManifest !== expectedPath) {
+  if (!canonicalDecisionPaths(value.batchId).includes(value.decisionManifest)) {
     context.addIssue({
       code: 'custom',
       path: ['decisionManifest'],

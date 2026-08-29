@@ -162,9 +162,12 @@ const sourceMediaInputFileSchema = safeRelativePath('source media file').refine(
 );
 
 const checksumSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
-const generatedCandidateIdSchema = z.string().regex(/^[A-Z][0-9]{2}$/);
+const generatedCandidateIdSchema = z.string().regex(/^[A-Z]{1,2}[0-9]{2}$/);
 const generatedDecisionManifestPathSchema = safeRelativePath('generated media decision manifest').refine(
-  (value) => /^docs\/notes\/project\/assets\/form-and-thought-generated\/[a-z0-9][a-z0-9-]*\/decision-manifest\.yml$/.test(value),
+  (value) => (
+    /^docs\/notes\/project\/assets\/form-and-thought-generated\/[a-z0-9][a-z0-9-]*\/decision-manifest\.yml$/.test(value)
+      || /^docs\/notes\/project\/assets\/form-and-thought-generated\/articles\/decision-manifest-[a-z0-9][a-z0-9-]*\.yml$/.test(value)
+  ),
   'generated media decision manifest must use the durable FORM & THOUGHT evidence path',
 );
 
@@ -355,8 +358,11 @@ export const generatedMediaDecisionManifestSchema = z.object({
       });
     }
   }
-  const expectedContactSheet = `docs/notes/project/assets/form-and-thought-generated/${manifest.batchId}/approved-contact-sheet.png`;
-  if (manifest.approvedContactSheet.path !== expectedContactSheet) {
+  const expectedContactSheets = new Set([
+    `docs/notes/project/assets/form-and-thought-generated/${manifest.batchId}/approved-contact-sheet.png`,
+    `docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-${manifest.batchId}.png`,
+  ]);
+  if (!expectedContactSheets.has(manifest.approvedContactSheet.path)) {
     context.addIssue({
       code: 'custom',
       path: ['approvedContactSheet', 'path'],

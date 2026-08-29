@@ -8,6 +8,7 @@ import { parseMediaManifest } from '../src/lib/content/mediaManifest.mjs';
 import {
   assertGeneratedMediaRegistrySelections,
   GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,
+  generatedMediaContactSheetPath,
   parseGeneratedMediaApprovalRegistry,
 } from '../packages/content/src/media/generated-media-approval-registry.mjs';
 import {
@@ -558,7 +559,13 @@ function decisionShapeErrors(decision, decisionPath, batchId) {
   ) {
     errors.push(`${decisionPath}: approved selection must exactly match unique approved assets`);
   }
-  const expectedContact = `docs/notes/project/assets/form-and-thought-generated/${batchId}/approved-contact-sheet.png`;
+  let expectedContact;
+  try {
+    expectedContact = generatedMediaContactSheetPath(decisionPath, batchId);
+  } catch (error) {
+    errors.push(`${decisionPath}: ${error instanceof Error ? error.message : String(error)}`);
+    return errors;
+  }
   if (decision.approvedContactSheet?.path !== expectedContact) {
     errors.push(`${decisionPath}: approvedContactSheet path must be the canonical PNG in the same batch`);
   }
@@ -638,9 +645,13 @@ async function validateGeneratedInventory(root, state) {
 
   for (const absolutePath of evidenceTree.files) {
     const decisionPath = repoPath(root, absolutePath);
-    const match = decisionPath.match(
+    const legacyMatch = decisionPath.match(
       /^docs\/notes\/project\/assets\/form-and-thought-generated\/([a-z0-9][a-z0-9-]*)\/decision-manifest\.yml$/,
     );
+    const articleMatch = decisionPath.match(
+      /^docs\/notes\/project\/assets\/form-and-thought-generated\/articles\/decision-manifest-([a-z0-9][a-z0-9-]*)\.yml$/,
+    );
+    const match = legacyMatch ?? articleMatch;
     if (!match) continue;
     if (!registeredByPath.has(decisionPath)) {
       state.errors.add(`unregistered generated approval batch ${match[1]}: ${decisionPath}`);

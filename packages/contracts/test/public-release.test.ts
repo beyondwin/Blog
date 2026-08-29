@@ -14,6 +14,16 @@ describe('public release selection', () => {
       candidateId: 'H01',
     });
 
+    expect(generatedMediaEvidenceReceiptSchema.parse({
+      decisionManifest: 'docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-agents.yml',
+      decisionManifestChecksum: `sha256:${'b'.repeat(64)}`,
+      candidateId: 'AG01',
+    })).toEqual({
+      decisionManifest: 'docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-agents.yml',
+      decisionManifestChecksum: `sha256:${'b'.repeat(64)}`,
+      candidateId: 'AG01',
+    });
+
     expect(() => generatedMediaEvidenceReceiptSchema.parse({
       decisionManifest: '/Users/example/private/decision-manifest.yml',
       decisionManifestChecksum: `sha256:${'a'.repeat(64)}`,

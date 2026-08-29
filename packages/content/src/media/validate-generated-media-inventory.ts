@@ -18,6 +18,7 @@ import {
 import {
   assertGeneratedMediaRegistrySelections,
   GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,
+  generatedMediaContactSheetPath,
   parseGeneratedMediaApprovalRegistry,
   type GeneratedMediaApprovalRegistry,
 } from './generated-media-approval-registry.mjs';
@@ -108,6 +109,12 @@ async function discoverApproved(
     if (decision.approval.state !== 'approved') {
       throw new Error(`required generated approval batch ${registered.batchId}: approval must be approved`);
     }
+    if (decision.approvedContactSheet.path !== generatedMediaContactSheetPath(
+      registered.decisionManifest,
+      registered.batchId,
+    )) {
+      throw new Error(`required generated approval batch ${registered.batchId}: approved contact sheet path does not match the registered decision path`);
+    }
     assertGeneratedMediaRegistrySelections(registered, decision.assets);
     for (const asset of decision.assets) {
       const key = claimKey(registered.decisionManifest, asset.candidateId);
@@ -124,7 +131,7 @@ async function discoverApproved(
   const unsafeEvidenceEntry = evidenceEntries.find((entry) => entry.isSymbolicLink());
   if (unsafeEvidenceEntry) throw new Error(`${evidenceRoot}/${unsafeEvidenceEntry.name}: generated evidence must not be a symbolic link`);
   const batches = evidenceEntries
-    .filter((entry) => entry.isDirectory() && canonicalId.test(entry.name))
+    .filter((entry) => entry.isDirectory() && entry.name !== 'articles' && canonicalId.test(entry.name))
     .sort((left, right) => left.name.localeCompare(right.name));
 
   for (const batch of batches) {
@@ -143,6 +150,26 @@ async function discoverApproved(
     }
     if (checksum(decisionBytes) !== registeredByPath.get(decisionPath)?.decisionManifestChecksum) {
       throw new Error(`required generated approval batch ${batch.name}: decision manifest checksum changed`);
+    }
+  }
+
+  const articleEvidenceEntries = await optionalDirectory(root, `${evidenceRoot}/articles`);
+  const unsafeArticleEvidence = articleEvidenceEntries.find((entry) => entry.isSymbolicLink());
+  if (unsafeArticleEvidence) {
+    throw new Error(`${evidenceRoot}/articles/${unsafeArticleEvidence.name}: generated evidence must not be a symbolic link`);
+  }
+  const articleDecisions = articleEvidenceEntries
+    .filter((entry) => entry.isFile() && /^decision-manifest-[a-z0-9][a-z0-9-]*\.yml$/.test(entry.name))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  for (const decision of articleDecisions) {
+    const decisionPath = `${evidenceRoot}/articles/${decision.name}`;
+    const batchId = decision.name.slice('decision-manifest-'.length, -'.yml'.length);
+    if (!registeredByPath.has(decisionPath)) {
+      throw new Error(`unregistered generated approval batch ${batchId}: ${decisionPath}`);
+    }
+    const decisionBytes = await readAllowlistedRegularFile(root, decisionPath);
+    if (checksum(decisionBytes) !== registeredByPath.get(decisionPath)?.decisionManifestChecksum) {
+      throw new Error(`required generated approval batch ${batchId}: decision manifest checksum changed`);
     }
   }
   return approved;

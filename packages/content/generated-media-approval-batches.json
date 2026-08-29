@@ -25,6 +25,18 @@
           "mediaId": "editorial-reading"
         }
       ]
+    },
+    {
+      "batchId": "agents",
+      "decisionManifest": "docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-agents.yml",
+      "decisionManifestChecksum": "sha256:9c32d3f29efc9bc0f81f8201745bfc38b83c86106aca024f6a97eef2b03088c2",
+      "selections": [
+        { "candidateId": "AG01", "collection": "articles", "recordId": "andrej-karpathy-skills-analysis", "mediaId": "editorial-hero" },
+        { "candidateId": "AG02", "collection": "articles", "recordId": "context-refinement-system-design", "mediaId": "editorial-hero" },
+        { "candidateId": "AG03", "collection": "articles", "recordId": "hermes-agent-persistent-worker-runtime", "mediaId": "editorial-hero" },
+        { "candidateId": "AG04", "collection": "articles", "recordId": "lazycodex-agent-harness-analysis", "mediaId": "editorial-hero" },
+        { "candidateId": "AG05", "collection": "articles", "recordId": "ponytail-agent-minimalism-analysis", "mediaId": "editorial-hero" }
+      ]
     }
   ]
 }

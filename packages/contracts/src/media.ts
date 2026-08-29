@@ -3,12 +3,12 @@ import { z } from 'zod';
 const checksumSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 
 export const generatedMediaEvidenceReceiptSchema = z.object({
-  decisionManifest: z.string().regex(
-    /^docs\/notes\/project\/assets\/form-and-thought-generated\/[a-z0-9][a-z0-9-]*\/decision-manifest\.yml$/,
-    'generated media evidence must use a canonical FORM & THOUGHT decision manifest path',
-  ),
+  decisionManifest: z.string().refine((value) => (
+    /^docs\/notes\/project\/assets\/form-and-thought-generated\/[a-z0-9][a-z0-9-]*\/decision-manifest\.yml$/.test(value)
+      || /^docs\/notes\/project\/assets\/form-and-thought-generated\/articles\/decision-manifest-[a-z0-9][a-z0-9-]*\.yml$/.test(value)
+  ), 'generated media evidence must use a canonical FORM & THOUGHT decision manifest path'),
   decisionManifestChecksum: checksumSchema,
-  candidateId: z.string().regex(/^[A-Z][0-9]{2}$/),
+  candidateId: z.string().regex(/^[A-Z]{1,2}[0-9]{2}$/),
 }).strict();
 
 const publicAssetHref = z.string().regex(

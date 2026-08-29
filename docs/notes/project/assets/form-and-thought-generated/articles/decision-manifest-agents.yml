@@ -1,0 +1,292 @@
+version: 1
+batchId: agents
+generator:
+  provider: openai
+  generator: codex-built-in-image-generation
+  model: not-exposed-by-built-in-tool
+  modelVersion: not-exposed-by-built-in-tool
+  promptVersion: form-and-thought-articles-v1
+  generatedAt: 2026-08-29T00:35:16.770Z
+approval:
+  state: approved
+  selectedCandidateIds:
+    - AG01
+    - AG02
+    - AG03
+    - AG04
+    - AG05
+  approvedBy:
+    - controller
+    - independent-visual-reviewer
+  recordedAt: 2026-08-29T09:53:20+09:00
+  evidence: Controller and independent visual reviewer approved exactly AG01/AG02/AG03/AG04/AG05. No candidate in this batch remains on hold.
+rightsReview:
+  state: approved
+  decision: approve-repository-publication
+  checkedAt: 2026-08-29
+  decidedBy: controller
+  caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed
+  sources:
+    - url: https://openai.com/policies/terms-of-use/
+      checkedAt: 2026-08-29
+    - url: https://openai.com/policies/service-terms/
+      checkedAt: 2026-08-29
+  inspection:
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+approvedContactSheet:
+  path: docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-agents.png
+  checksum: sha256:a5b2c1c1032b238b2552802b9c12b9fba3e1a8b8fbbdc5cf729cd1343f1c470a
+assets:
+  - candidateId: AG01
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: andrej-karpathy-skills-analysis
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/andrej-karpathy-skills-analysis/editorial-hero.png
+    checksum: sha256:da935387386dd1c8a5da6e766572eed217d38c01da9c187e27aaf035755898e1
+    width: 1536
+    height: 1024
+    promptId: ag01-andrej-karpathy-skills-analysis-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.53
+          - 0.54
+        safeArea:
+          - 420
+          - 120
+          - 1260
+          - 930
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 146
+          - 1536
+          - 877
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.53
+          - 0.54
+        safeArea:
+          - 420
+          - 120
+          - 1260
+          - 930
+  - candidateId: AG02
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: context-refinement-system-design
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/context-refinement-system-design/editorial-hero.png
+    checksum: sha256:e2e2ad499cd0235eed936fec243f4cc524ab4253dbc28778974215c63ad5f166
+    width: 1536
+    height: 1024
+    promptId: ag02-context-refinement-system-design-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.49
+          - 0.67
+        safeArea:
+          - 280
+          - 120
+          - 1240
+          - 940
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 180
+          - 1536
+          - 911
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.49
+          - 0.67
+        safeArea:
+          - 280
+          - 120
+          - 1240
+          - 940
+  - candidateId: AG03
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: hermes-agent-persistent-worker-runtime
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/hermes-agent-persistent-worker-runtime/editorial-hero.png
+    checksum: sha256:49d3792950098b0bade991a9c2a498e4f5a6c975b6e2f88cbdc136ef16f312f4
+    width: 1536
+    height: 1024
+    promptId: ag03-hermes-agent-persistent-worker-runtime-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.55
+          - 0.68
+        safeArea:
+          - 220
+          - 120
+          - 1320
+          - 960
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 190
+          - 1536
+          - 921
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.55
+          - 0.68
+        safeArea:
+          - 220
+          - 120
+          - 1320
+          - 960
+  - candidateId: AG04
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: lazycodex-agent-harness-analysis
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/lazycodex-agent-harness-analysis/editorial-hero.png
+    checksum: sha256:ef1d83b12af0a00838cc5b8b830beca36dbdfb5033bf11800457917086139479
+    width: 1536
+    height: 1024
+    promptId: ag04-lazycodex-agent-harness-analysis-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.69
+          - 0.43
+        safeArea:
+          - 180
+          - 80
+          - 1370
+          - 900
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 100
+          - 1536
+          - 831
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.69
+          - 0.43
+        safeArea:
+          - 180
+          - 80
+          - 1370
+          - 900
+  - candidateId: AG05
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: ponytail-agent-minimalism-analysis
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/ponytail-agent-minimalism-analysis/editorial-hero.png
+    checksum: sha256:897af71d07cebeb499b858accce927eae9f18741cf696d546b3ea93b278b15ee
+    width: 1536
+    height: 1024
+    promptId: ag05-ponytail-agent-minimalism-analysis-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.43
+          - 0.72
+        safeArea:
+          - 260
+          - 260
+          - 1120
+          - 930
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 220
+          - 1536
+          - 951
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.43
+          - 0.72
+        safeArea:
+          - 260
+          - 260
+          - 1120
+          - 930

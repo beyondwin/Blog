@@ -1,0 +1,23 @@
+version: 1
+items:
+  - id: editorial-hero
+    file: editorial-hero.png
+    kind: illustration
+    alt: 네 개의 콘크리트 벽 사이에 검은 작업대가 놓인 장면
+    caption: 네 가지 규율이 지속적인 작업 구조를 만드는 방식
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-agents.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-v1
+      candidateId: AG01
+      decisionManifestChecksum: sha256:9c32d3f29efc9bc0f81f8201745bfc38b83c86106aca024f6a97eef2b03088c2
+    verifiedAt: 2026-08-29
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:da935387386dd1c8a5da6e766572eed217d38c01da9c187e27aaf035755898e1

@@ -1,0 +1,23 @@
+version: 1
+items:
+  - id: editorial-hero
+    file: editorial-hero.png
+    kind: illustration
+    alt: 낮은 콘크리트 통로와 검은 가로대 사이로 테라코타 블록이 놓인 장면
+    caption: 큰 작업을 검토 가능한 경로 안에 붙잡는 개발 하네스
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-agents.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-v1
+      candidateId: AG04
+      decisionManifestChecksum: sha256:9c32d3f29efc9bc0f81f8201745bfc38b83c86106aca024f6a97eef2b03088c2
+    verifiedAt: 2026-08-29
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:ef1d83b12af0a00838cc5b8b830beca36dbdfb5033bf11800457917086139479
