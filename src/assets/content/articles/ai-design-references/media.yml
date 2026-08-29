@@ -1,0 +1,23 @@
+version: 1
+items:
+  - id: editorial-hero
+    file: editorial-hero.png
+    kind: illustration
+    alt: 검은 종이 프레임 안에 테라코타와 밝은 재료 면이 겹쳐진 장면
+    caption: 도구 목록보다 판단 기준을 먼저 세우는 재료 프레임
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-design.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-v1
+      candidateId: DS01
+      decisionManifestChecksum: sha256:b8a70e991ba1e4589e350afcc35634223a10f8d95333797f2a05fa46163cf64c
+    verifiedAt: 2026-08-29
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:c1c191e5481bd8c7a2b82e5e0dd8109a5520bee12aee4e4cec61935364e84a95

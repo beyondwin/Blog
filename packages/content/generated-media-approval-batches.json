@@ -37,6 +37,15 @@
         { "candidateId": "AG04", "collection": "articles", "recordId": "lazycodex-agent-harness-analysis", "mediaId": "editorial-hero" },
         { "candidateId": "AG05", "collection": "articles", "recordId": "ponytail-agent-minimalism-analysis", "mediaId": "editorial-hero" }
       ]
+    },
+    {
+      "batchId": "design",
+      "decisionManifest": "docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-design.yml",
+      "decisionManifestChecksum": "sha256:b8a70e991ba1e4589e350afcc35634223a10f8d95333797f2a05fa46163cf64c",
+      "selections": [
+        { "candidateId": "DS01", "collection": "articles", "recordId": "ai-design-references", "mediaId": "editorial-hero" },
+        { "candidateId": "DS03", "collection": "articles", "recordId": "open-design-repo-analysis", "mediaId": "editorial-hero" }
+      ]
     }
   ]
 }

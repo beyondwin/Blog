@@ -1,0 +1,139 @@
+version: 1
+batchId: design
+generator:
+  provider: openai
+  generator: codex-built-in-image-generation
+  model: not-exposed-by-built-in-tool
+  modelVersion: not-exposed-by-built-in-tool
+  promptVersion: form-and-thought-articles-v1
+  generatedAt: 2026-08-29T00:35:17.069Z
+approval:
+  state: approved
+  selectedCandidateIds:
+    - DS01
+    - DS03
+  approvedBy:
+    - controller
+    - independent-visual-reviewer
+  recordedAt: 2026-08-29T09:53:20+09:00
+  evidence: Controller and independent visual reviewer approved exactly DS01/DS03. DS02 remains text-led because rounded blank cards read as UI tiles and soften the approved angular grammar.
+rightsReview:
+  state: approved
+  decision: approve-repository-publication
+  checkedAt: 2026-08-29
+  decidedBy: controller
+  caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed
+  sources:
+    - url: https://openai.com/policies/terms-of-use/
+      checkedAt: 2026-08-29
+    - url: https://openai.com/policies/service-terms/
+      checkedAt: 2026-08-29
+  inspection:
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+approvedContactSheet:
+  path: docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-design.png
+  checksum: sha256:edb45b9776703422dde8f369fb107a56c77f60c4bdcdb6af5a4976a4c7229f31
+assets:
+  - candidateId: DS01
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: ai-design-references
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/ai-design-references/editorial-hero.png
+    checksum: sha256:c1c191e5481bd8c7a2b82e5e0dd8109a5520bee12aee4e4cec61935364e84a95
+    width: 1536
+    height: 1024
+    promptId: ds01-ai-design-references-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.51
+          - 0.55
+        safeArea:
+          - 220
+          - 100
+          - 1280
+          - 930
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 120
+          - 1536
+          - 851
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.51
+          - 0.55
+        safeArea:
+          - 220
+          - 100
+          - 1280
+          - 930
+  - candidateId: DS03
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: open-design-repo-analysis
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/open-design-repo-analysis/editorial-hero.png
+    checksum: sha256:4b8f05b6b223be2f80374c1187b11bf4444e4f3a912935329aa061f96bd10df2
+    width: 1536
+    height: 1024
+    promptId: ds03-open-design-repo-analysis-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.69
+          - 0.52
+        safeArea:
+          - 360
+          - 50
+          - 1470
+          - 950
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 80
+          - 1536
+          - 811
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.69
+          - 0.52
+        safeArea:
+          - 360
+          - 50
+          - 1470
+          - 950
