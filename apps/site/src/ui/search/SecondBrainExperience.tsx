@@ -28,6 +28,10 @@ function ArrowIcon() {
 function AgentStage({ fixture }: { fixture: PublicAnswerFixture }) {
   const [imageFailed, setImageFailed] = useState(false);
   const stageRef = useRef<HTMLElement>(null);
+  const portraitRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    if (portraitRef.current?.complete && portraitRef.current.naturalWidth === 0) setImageFailed(true);
+  }, []);
   const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     if (typeof window !== 'undefined' && window.matchMedia(REDUCED_MOTION_QUERY).matches) return;
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -55,6 +59,7 @@ function AgentStage({ fixture }: { fixture: PublicAnswerFixture }) {
       <div className="agent-stage__rule" aria-hidden="true" />
       <div className="agent-stage__portrait-frame">
         <img
+          ref={portraitRef}
           className="agent-stage__portrait"
           src="/images/form-and-thought-agent-avatar-v1.png"
           alt="종이와 기록으로 구성된 인물"

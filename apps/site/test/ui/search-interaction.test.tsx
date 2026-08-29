@@ -12,6 +12,7 @@ import type { SearchInventoryItem } from '../../src/ui/search/searchModel';
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const searchPagePath = join(repositoryRoot, 'apps/site/src/ui/search/SearchPage.tsx');
 const siteShellPath = join(repositoryRoot, 'apps/site/src/ui/components/SiteShell.tsx');
+const shellStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/shell.css');
 const searchStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/route-search.css');
 
 const fixture: PublicAnswerFixture = {
@@ -43,7 +44,7 @@ const inventory: SearchInventoryItem[] = [{
   topics: ['Graphify', 'AI'],
 }];
 
-function clientPlugin(serverMarkup: string): Plugin {
+function clientPlugin(serverMarkup: string, options: { deferHydration?: boolean } = {}): Plugin {
   const entryId = '\0second-brain-search-client.tsx';
   return {
     name: 'second-brain-search-client',
@@ -58,10 +59,12 @@ function clientPlugin(serverMarkup: string): Plugin {
         import { hydrateRoot } from 'react-dom/client';
         import { SearchPage } from ${JSON.stringify(searchPagePath)};
         import { SiteShell } from ${JSON.stringify(siteShellPath)};
+        import ${JSON.stringify(shellStylesPath)};
         import ${JSON.stringify(searchStylesPath)};
         const fixture = ${JSON.stringify(fixture)};
         const inventory = ${JSON.stringify(inventory)};
-        hydrateRoot(document.querySelector('#root'), <SiteShell currentSection="search"><SearchPage fixture={fixture} initialQuery="" inventory={inventory} /></SiteShell>);
+        const hydrate = () => hydrateRoot(document.querySelector('#root'), <SiteShell currentSection="search"><SearchPage fixture={fixture} initialQuery="" inventory={inventory} /></SiteShell>);
+        ${options.deferHydration ? 'window.__hydrateSecondBrainSearch = hydrate;' : 'hydrate();'}
       `;
     },
     async transform(code, id) {
@@ -86,6 +89,123 @@ function clientPlugin(serverMarkup: string): Plugin {
 }
 
 describe('second-brain search client interaction', () => {
+  it('marks an avatar request that failed before hydration as an error without changing the stage geometry', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const markup = renderToString(createElement(SiteShell, {
+        currentSection: 'search',
+        children: createElement(SearchPage, { fixture, initialQuery: '', inventory }),
+      }));
+      server = await createServer({
+        configFile: false,
+        root: repositoryRoot,
+        publicDir: join(repositoryRoot, 'apps/site/public'),
+        logLevel: 'silent',
+        plugins: [clientPlugin(markup, { deferHydration: true })],
+        server: { host: '127.0.0.1', port: 0, strictPort: false },
+      });
+      await server.listen();
+      const address = server.httpServer?.address();
+      if (!address || typeof address === 'string') throw new Error('Vite did not bind an ephemeral port');
+
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.route('**/images/form-and-thought-agent-avatar-v1.png', (route) => route.abort('failed'));
+      await page.goto(`http://127.0.0.1:${address.port}/__second-brain-search/`, { waitUntil: 'domcontentloaded' });
+      await expect.poll(() => page.locator('.agent-stage__portrait').evaluate((image) => {
+        const portrait = image as HTMLImageElement;
+        return portrait.complete && portrait.naturalWidth === 0;
+      })).toBe(true);
+      const before = await page.locator('.agent-stage').evaluate((element) => element.getBoundingClientRect().toJSON());
+
+      await page.evaluate(() => (window as typeof window & { __hydrateSecondBrainSearch?: () => void }).__hydrateSecondBrainSearch?.());
+      await expect.poll(() => page.locator('.agent-stage').getAttribute('data-image-state'), { timeout: 4_000 }).toBe('error');
+      expect(await page.locator('.agent-stage').evaluate((element) => element.getBoundingClientRect().toJSON())).toEqual(before);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 60_000);
+
+  it('keeps the approved desktop and mobile search composition measurable', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const markup = renderToString(createElement(SiteShell, {
+        currentSection: 'search',
+        children: createElement(SearchPage, { fixture, initialQuery: '', inventory }),
+      }));
+      server = await createServer({
+        configFile: false,
+        root: repositoryRoot,
+        publicDir: join(repositoryRoot, 'apps/site/public'),
+        logLevel: 'silent',
+        plugins: [clientPlugin(markup)],
+        server: { host: '127.0.0.1', port: 0, strictPort: false },
+      });
+      await server.listen();
+      const address = server.httpServer?.address();
+      if (!address || typeof address === 'string') throw new Error('Vite did not bind an ephemeral port');
+
+      browser = await chromium.launch({ headless: true });
+      const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await desktop.emulateMedia({ reducedMotion: 'reduce' });
+      await desktop.goto(`http://127.0.0.1:${address.port}/__second-brain-search/`, { waitUntil: 'domcontentloaded' });
+      const desktopBounds = await desktop.evaluate(() => {
+        const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
+        return {
+          header: rect('.site-header__inner'),
+          stage: rect('.second-brain-search__stage'),
+          avatar: rect('.agent-stage'),
+          dialogue: rect('.second-brain-dialogue'),
+          order: Array.from(document.querySelector('.second-brain-search__stage')?.children ?? []).map((child) => child.className),
+        };
+      });
+      expect(desktopBounds.header?.height).toBeCloseTo(88, 1);
+      expect(desktopBounds.stage).toMatchObject({ x: 0, y: 88, width: 1440, height: 812 });
+      expect(desktopBounds.avatar?.width).toBeCloseTo(705.6, 1);
+      expect(desktopBounds.dialogue?.x).toBeCloseTo(705.6, 1);
+      expect(desktopBounds.dialogue?.width).toBeCloseTo(734.4, 1);
+      expect(desktopBounds.order).toEqual(['agent-stage', 'second-brain-dialogue']);
+      await desktop.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await desktop.getByRole('button', { name: '근거 3개 보기' }).click();
+      const panel = await desktop.locator('.evidence-panel').evaluate((element) => element.getBoundingClientRect().toJSON());
+      expect(panel).toMatchObject({ x: 0, y: 88, height: 812 });
+      expect(panel.width).toBeCloseTo(705.6, 1);
+
+      const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await mobile.emulateMedia({ reducedMotion: 'reduce' });
+      await mobile.goto(`http://127.0.0.1:${address.port}/__second-brain-search/`, { waitUntil: 'domcontentloaded' });
+      const mobileBounds = await mobile.evaluate(() => {
+        const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
+        return {
+          header: rect('.site-header__inner'),
+          stage: rect('.second-brain-search__stage'),
+          avatar: rect('.agent-stage'),
+          dialogue: rect('.second-brain-dialogue'),
+          order: Array.from(document.querySelector('.second-brain-search__stage')?.children ?? []).map((child) => child.className),
+        };
+      });
+      expect(mobileBounds.header?.height).toBeCloseTo(72, 1);
+      expect(mobileBounds.stage?.y).toBeCloseTo(72, 1);
+      expect(mobileBounds.avatar).toMatchObject({ x: 0, y: 72, width: 390 });
+      expect(mobileBounds.avatar?.height).toBeCloseTo(303.84, 1);
+      expect(mobileBounds.avatar?.height).toBeGreaterThanOrEqual(300);
+      expect(mobileBounds.dialogue?.y).toBeCloseTo(375.84, 1);
+      expect(mobileBounds.dialogue?.width).toBe(390);
+      expect(mobileBounds.order).toEqual(['agent-stage', 'second-brain-dialogue']);
+      await mobile.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await mobile.getByRole('button', { name: '근거 3개 보기' }).click();
+      const sheet = await mobile.locator('.evidence-panel').evaluate((element) => element.getBoundingClientRect().toJSON());
+      expect(sheet).toMatchObject({ x: 0, width: 390, bottom: 844 });
+      expect(sheet.height).toBeLessThanOrEqual(641.5);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 60_000);
+
   it('inerts every shell control and covers the header while evidence is open', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;
