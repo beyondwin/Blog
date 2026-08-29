@@ -1,7 +1,12 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { readActiveRelease } from '@beyondwin/content/release';
+import type { PublicRecord } from '@beyondwin/contracts';
+import { ArticleReadingPage } from '../../src/ui/reading/ArticleReadingPage';
 
 type Box = { height: number; width: number; x: number };
 type ContentBox = Box & { bottom: number };
@@ -9,6 +14,7 @@ type ContentBox = Box & { bottom: number };
 type Geometry = {
   detailIntro: Box;
   secondaryDetailIntro: Box;
+  thoughtDetailIntro: Box;
   filterTarget: Box;
   headerInner: Box;
   hero: Box;
@@ -56,7 +62,30 @@ type MobileDetailGeometry = {
   proseTop: number;
 };
 
+type MeasuredElement = ContentBox & {
+  clientHeight: number;
+  scrollHeight: number;
+  top: number;
+};
+
+type ProductionArticleGeometry = {
+  body: MeasuredElement;
+  documentWidth: number;
+  id: string;
+  introduction: MeasuredElement;
+  media: MeasuredElement;
+  metadata: MeasuredElement;
+  metadataFont: string;
+  summary: MeasuredElement;
+  title: MeasuredElement;
+  uiFontReady: boolean;
+  viewportWidth: number;
+};
+
+type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
+
 let browser: Browser;
+let publishedArticleMarkup: Array<{ id: string; html: string }>;
 let styles: string;
 
 beforeAll(async () => {
@@ -79,6 +108,19 @@ beforeAll(async () => {
     .replace('/fonts/form-thought-display-ko.woff2', `data:font/woff2;base64,${displayFont.toString('base64')}`)
     .replace('/fonts/form-thought-wordmark.woff2', `data:font/woff2;base64,${wordmarkFont.toString('base64')}`)
     .replace('/fonts/form-thought-ui-ko.woff2', `data:font/woff2;base64,${uiFont.toString('base64')}`);
+  const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+  const active = await readActiveRelease(join(repositoryRoot, 'build/public-releases'));
+  publishedArticleMarkup = Object.values(active.manifest.records)
+    .filter((record): record is ArticleRecord => record.collection === 'articles')
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((record) => ({
+      id: record.id,
+      html: renderToStaticMarkup(createElement(ArticleReadingPage, {
+        record,
+        continuations: [],
+        media: createElement('img', { src: '/approved-article-media.webp', alt: '승인된 아티클 미디어' }),
+      })),
+    }));
   browser = await chromium.launch({ headless: true });
 });
 
@@ -124,6 +166,9 @@ const fixture = `
       <article class="secondary-detail">
         <div class="editorial-detail-frame editorial-detail-frame--text-led"><header class="editorial-detail-frame__hero"><div class="editorial-detail-frame__introduction"><h1>Secondary detail</h1></div></header><div class="editorial-detail-frame__body"><div class="editorial-detail-frame__prose"><p>Secondary reading body.</p></div></div></div>
       </article>
+      <div class="thought-reading">
+        <article class="editorial-detail-frame editorial-detail-frame--split"><header class="editorial-detail-frame__hero"><div class="editorial-detail-frame__introduction"><h1>Thought detail</h1><p>생각의 요약</p><div class="editorial-detail-frame__metadata">2026.08.29</div></div><figure class="editorial-detail-frame__media"></figure></header><div class="editorial-detail-frame__body"><div class="editorial-detail-frame__prose"><p>Thought reading body.</p></div></div></article>
+      </div>
     </main>
   </div>`;
 
@@ -150,6 +195,7 @@ async function geometryAt(width: number, height = 900): Promise<Geometry> {
         secondaryRow: measuredBox('.secondary-index .editorial-list-row'),
         detailIntro: measuredBox('.article-detail .editorial-detail-frame__introduction'),
         secondaryDetailIntro: measuredBox('.secondary-detail .editorial-detail-frame__introduction'),
+        thoughtDetailIntro: measuredBox('.thought-reading .editorial-detail-frame__introduction'),
       };
     });
   } finally {
@@ -253,6 +299,50 @@ async function mobileDetailGeometry(): Promise<MobileDetailGeometry> {
   }
 }
 
+async function productionArticleGeometryAtDesktop(): Promise<ProductionArticleGeometry[]> {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  try {
+    const results: ProductionArticleGeometry[] = [];
+    for (const article of publishedArticleMarkup) {
+      await page.setContent(`<!doctype html><html><head><style>${styles}</style></head><body>${article.html}</body></html>`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await page.evaluate(async () => { await document.fonts.ready; });
+      results.push(await page.evaluate((id) => {
+        const measured = (selector: string) => {
+          const element = document.querySelector(selector) as HTMLElement;
+          const rect = element.getBoundingClientRect();
+          return {
+            x: rect.x,
+            width: rect.width,
+            height: rect.height,
+            top: rect.top,
+            bottom: rect.bottom,
+            clientHeight: element.clientHeight,
+            scrollHeight: element.scrollHeight,
+          };
+        };
+        return {
+          id,
+          introduction: measured('.editorial-detail-frame__introduction'),
+          media: measured('.editorial-detail-frame__media'),
+          title: measured('.editorial-detail-frame__introduction h1'),
+          summary: measured('.editorial-detail-frame__introduction > p'),
+          metadata: measured('.editorial-detail-frame__metadata'),
+          body: measured('.editorial-detail-frame__body'),
+          metadataFont: getComputedStyle(document.querySelector('.editorial-detail-frame__metadata')!).fontFamily,
+          uiFontReady: document.fonts.check('14px "FORM THOUGHT UI"', '아티클'),
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: document.documentElement.clientWidth,
+        };
+      }, article.id));
+    }
+    return results;
+  } finally {
+    await page.close();
+  }
+}
+
 describe('editorial density geometry', () => {
   const rectanglesOverlap = (first: ContentBox, second: ContentBox) => {
     const horizontal = first.x < second.x + second.width && second.x < first.x + first.width;
@@ -335,6 +425,7 @@ describe('editorial density geometry', () => {
     expect.soft(desktop.detailIntro.height).toBeGreaterThanOrEqual(400);
     expect.soft(desktop.detailIntro.height).toBeLessThanOrEqual(440);
     expect(desktop.secondaryDetailIntro.height).toBe(490);
+    expect(desktop.thoughtDetailIntro.height).toBe(420);
   });
 
   it.each([768, 1179])('keeps the tablet header gutter between 32px and 48px at %ipx', async (width) => {
@@ -420,5 +511,34 @@ describe('editorial density geometry', () => {
     expect(mobile.mediaTop).toBeLessThan(mobile.actionsTop);
     expect(mobile.actionsTop).toBeLessThan(mobile.proseTop);
     expect(mobile.proseFontSize).toBe('16px');
+  });
+
+  it('fits every published article introduction in the desktop split target without clipping copy', async () => {
+    const articles = await productionArticleGeometryAtDesktop();
+
+    expect(articles).toHaveLength(17);
+    expect(
+      articles
+        .filter((article) => article.introduction.height < 400 || article.introduction.height > 440)
+        .map((article) => `${article.id}:${article.introduction.height}`),
+      'published article introductions outside the 400–440px desktop target',
+    ).toEqual([]);
+    for (const article of articles) {
+      expect(article.introduction.height, article.id).toBeGreaterThanOrEqual(400);
+      expect(article.introduction.height, article.id).toBeLessThanOrEqual(440);
+      expect(article.media.height, article.id).toBe(article.introduction.height);
+      expect(article.body.top, article.id).toBeLessThan(900);
+      expect(article.uiFontReady, article.id).toBe(true);
+      expect(article.metadataFont, article.id).toContain('FORM THOUGHT UI');
+      expect(article.documentWidth, article.id).toBeLessThanOrEqual(article.viewportWidth);
+      expect(article.introduction.scrollHeight, article.id).toBe(article.introduction.clientHeight);
+      for (const [name, child] of Object.entries({ title: article.title, summary: article.summary, metadata: article.metadata })) {
+        expect(child.clientHeight, `${article.id}:${name}`).toBeLessThanOrEqual(Math.ceil(child.height));
+        expect(child.bottom, `${article.id}:${name}`).toBeLessThanOrEqual(article.introduction.bottom);
+        expect(child.bottom - child.height, `${article.id}:${name}`).toBeGreaterThanOrEqual(
+          article.introduction.bottom - article.introduction.height,
+        );
+      }
+    }
   });
 });

@@ -501,6 +501,27 @@
     gap: clamp(28px, 4vw, 56px);
     padding: clamp(52px, 6vw, 80px) clamp(24px, 5vw, 64px);
   }
+
+  .article-detail .editorial-detail-frame__introduction {
+    padding: 32px clamp(32px, 4vw, 48px);
+  }
+
+  .article-detail .editorial-detail-frame__introduction h1 {
+    max-width: none;
+    font-size: clamp(48px, 3.4vw, 52px);
+    line-height: 1.1;
+  }
+
+  .article-detail .editorial-detail-frame__introduction > p {
+    max-width: none;
+    margin-block-start: 12px;
+    font-size: 17px;
+    line-height: 1.55;
+  }
+
+  .article-detail .editorial-detail-frame__metadata {
+    margin-block-start: 12px;
+  }
 }
 
 .editorial-detail-frame__prose {
