@@ -349,6 +349,9 @@ describe('React Router current-behavior static route contract', () => {
     expect(data.initialQuery).toBe('Graphify');
     expect(data.fixture.question).toBe('AI 시대에도 왜 계속 책을 읽나요?');
     expect(data.fixture.evidence).toHaveLength(3);
+    expect(data.fixture.evidence.map((item: { locatorLabel: string }) => item.locatorLabel)).toEqual([
+      '문단 10', '문단 05', '문단 16',
+    ]);
     expect(data.fixture.evidence.every((item: { canonicalPath: string }) => (
       item.canonicalPath === '/thoughts/why-i-read-in-the-ai-era/'
     ))).toBe(true);
@@ -452,5 +455,19 @@ describe('React Router current-behavior static route contract', () => {
         /@react-router\/fs-routes|(?:^|\/)src\/content|(?:^|\/)\.\.\/\.\.\/memory(?:\/|$)|memory\.public\.json/u,
       );
     }
+  });
+
+  it('rejects a public answer fixture when an exact excerpt moves away from its declared paragraph', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const release = structuredClone(await releaseModule.loadVerifiedRelease());
+    const record = release.manifest.records['thoughts/why-i-read-in-the-ai-era'];
+    const paragraphs = record.bodyHtml.match(/<p(?:\s[^>]*)?>[\s\S]*?<\/p>/gu);
+    expect(paragraphs).toHaveLength(17);
+    [paragraphs[8], paragraphs[9]] = [paragraphs[9], paragraphs[8]];
+    record.bodyHtml = paragraphs.join('\n');
+
+    expect(() => releaseModule.publicSecondBrainFixture(release)).toThrow(
+      'Public answer fixture locator drifted: 문단 10',
+    );
   });
 });

@@ -196,6 +196,15 @@ describe('second-brain search client interaction', () => {
       expect(mobileBounds.dialogue?.width).toBe(390);
       expect(mobileBounds.order).toEqual(['agent-stage', 'second-brain-dialogue']);
       await mobile.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      const citationTarget = await mobile.getByRole('button', { name: '결론까지 가는 시간 근거 보기' })
+        .evaluate((element) => element.getBoundingClientRect().toJSON());
+      const evidenceTarget = await mobile.getByRole('button', { name: '근거 3개 보기' })
+        .evaluate((element) => element.getBoundingClientRect().toJSON());
+      for (const target of [citationTarget, evidenceTarget]) {
+        expect(target.width).toBeGreaterThanOrEqual(44);
+        expect(target.height).toBeGreaterThanOrEqual(44);
+      }
+      expect(await mobile.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
       await mobile.getByRole('button', { name: '근거 3개 보기' }).click();
       const sheet = await mobile.locator('.evidence-panel').evaluate((element) => element.getBoundingClientRect().toJSON());
       expect(sheet).toMatchObject({ x: 0, width: 390, bottom: 844 });
@@ -251,7 +260,15 @@ describe('second-brain search client interaction', () => {
       await followUp.press('Enter');
       await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('search-results');
       await expect.poll(() => page.getByRole('heading', { name: '검색 결과' }).count()).toBe(1);
+      await expect.poll(() => page.getByRole('status').textContent()).toBe('“Graphify”에 이어지는 공개 기록 1건을 찾았습니다.');
       expect(await page.locator('body').textContent()).not.toContain(fixture.answerLead);
+
+      const search = page.getByRole('searchbox', { name: '기록에 묻기' });
+      await search.fill('존재하지않는검색어');
+      await search.press('Enter');
+      await expect.poll(() => page.getByRole('heading', { name: '일치하는 결과가 없습니다.' }).count()).toBe(1);
+      await expect.poll(() => page.getByRole('status').textContent()).toBe('“존재하지않는검색어”에 이어지는 공개 기록을 찾지 못했습니다.');
+      await expect.poll(() => page.locator('[aria-live="polite"]').count()).toBe(1);
       expect(errors).toEqual([]);
     } finally {
       await browser?.close();

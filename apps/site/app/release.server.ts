@@ -331,9 +331,15 @@ export function publicSecondBrainFixture(release: CandidateRelease): PublicAnswe
     },
   ] as const;
 
+  const paragraphs = record.bodyHtml.match(/<p(?:\s[^>]*)?>[\s\S]*?<\/p>/gu) ?? [];
   for (const item of evidence) {
     if (!record.bodyHtml.includes(item.excerpt)) {
       throw new Error(`Public answer fixture excerpt drifted: ${item.excerpt}`);
+    }
+    const paragraphNumber = Number.parseInt(item.locatorLabel.replace(/^문단 /u, ''), 10);
+    if (!Number.isInteger(paragraphNumber) || paragraphNumber < 1
+      || !paragraphs[paragraphNumber - 1]?.includes(item.excerpt)) {
+      throw new Error(`Public answer fixture locator drifted: ${item.locatorLabel}`);
     }
   }
 

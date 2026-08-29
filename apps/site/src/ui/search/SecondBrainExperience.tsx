@@ -16,7 +16,7 @@ import {
   resolveAskSubmission,
   type PublicAnswerFixture,
 } from './secondBrain';
-import { boundedSearchQuery, type SearchInventoryItem } from './searchModel';
+import { boundedSearchQuery, searchMatches, type SearchInventoryItem } from './searchModel';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -150,7 +150,14 @@ function AnswerStage({ evidenceOpen, fixture, onOpenEvidence, onSubmit, question
             type="button"
             aria-label={`${fixture.evidence[0]?.label ?? '첫 번째'} 근거 보기`}
             onClick={(event) => onOpenEvidence(0, event.currentTarget)}
-          >1</button>{fixture.answerConclusionSuffix}
+            style={{
+              background: 'transparent', border: 0, height: 44, margin: '-11px -11px -11px -8px',
+              position: 'relative', width: 44,
+            }}
+          ><span aria-hidden="true" style={{
+            alignItems: 'center', border: '1px solid var(--ft-terracotta)', display: 'inline-flex',
+            height: 22, inset: 11, justifyContent: 'center', position: 'absolute', width: 22,
+          }}>1</span></button>{fixture.answerConclusionSuffix}
         </p>
       </div>
       <div className="answer-stage__meta">
@@ -160,7 +167,10 @@ function AnswerStage({ evidenceOpen, fixture, onOpenEvidence, onSubmit, question
           type="button"
           aria-expanded={evidenceOpen}
           onClick={(event) => onOpenEvidence(0, event.currentTarget)}
-        >근거 {fixture.evidence.length}개 보기</button>
+          style={{
+            borderBottom: 0, margin: '-6px -8px', minHeight: 44, padding: '6px 8px',
+          }}
+        ><span style={{ borderBottom: '1px solid' }}>근거 {fixture.evidence.length}개 보기</span></button>
       </div>
       <QuestionComposer
         id="second-brain-follow-up"
@@ -217,11 +227,16 @@ function EvidencePanel({ closeRef, fixture, onClose, onSelect, panelRef, selecte
   );
 }
 
-function progressStatus(view: string): string {
+function progressStatus(view: string, query: string, resultCount: number): string {
   if (view === 'retrieving') return '관련 기록을 찾고 있습니다.';
   if (view === 'connecting') return '생각 사이를 잇고 있습니다.';
   if (view === 'composing') return '답을 쓰고 있습니다.';
   if (view === 'answered' || view === 'evidence-open') return '공개된 기록을 바탕으로 답했습니다.';
+  if (view === 'search-results') {
+    return resultCount > 0
+      ? `“${query}”에 이어지는 공개 기록 ${resultCount}건을 찾았습니다.`
+      : `“${query}”에 이어지는 공개 기록을 찾지 못했습니다.`;
+  }
   return '질문을 기다리고 있습니다.';
 }
 
@@ -360,6 +375,7 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
   const progressView = state.view === 'retrieving' || state.view === 'connecting' || state.view === 'composing'
     ? state.view : null;
   const answerVisible = state.view === 'answered' || state.view === 'evidence-open';
+  const resultCount = state.view === 'search-results' ? searchMatches(inventory, state.query).length : 0;
 
   return (
     <section className="second-brain-search" data-view={state.view} aria-label="공개 기록에 묻기">
@@ -394,7 +410,9 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
                 </div>
               )}
             </div>
-            <p className="visually-hidden" role="status" aria-live="polite">{progressStatus(state.view)}</p>
+            <p className="visually-hidden" role="status" aria-live="polite">
+              {progressStatus(state.view, state.query, resultCount)}
+            </p>
           </section>
         </div>
         {state.view === 'search-results' ? (
