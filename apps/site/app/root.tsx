@@ -1,4 +1,4 @@
-import { Children, isValidElement, useRef, useState, type ReactNode } from 'react';
+import { Children, isValidElement, useCallback, useRef, useState, type ReactNode } from 'react';
 import { Links, Meta, Outlet, Scripts as ReactRouterScripts, useMatches } from 'react-router';
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
@@ -144,6 +144,15 @@ export function ResponsivePicture({
 }) {
   const [failed, setFailed] = useState(false);
   const failureReported = useRef(false);
+  const reportFailure = useCallback(() => {
+    if (failureReported.current) return;
+    failureReported.current = true;
+    setFailed(true);
+    onAssetError?.();
+  }, [onAssetError]);
+  const inspectImage = useCallback((image: HTMLImageElement | null) => {
+    if (image?.complete && image.naturalWidth === 0) reportFailure();
+  }, [reportFailure]);
 
   if (failed) return <span hidden data-responsive-picture-state="error" />;
 
@@ -153,6 +162,7 @@ export function ResponsivePicture({
         <source key={source.type} type={source.type} srcSet={srcSet(source.candidates)} sizes={sizes} />
       ))}
       <img
+        ref={inspectImage}
         className={className}
         src={asset.fallback.src}
         srcSet={srcSet(asset.fallback.candidates)}
@@ -163,12 +173,7 @@ export function ResponsivePicture({
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}
         decoding="async"
-        onError={() => {
-          if (failureReported.current) return;
-          failureReported.current = true;
-          setFailed(true);
-          onAssetError?.();
-        }}
+        onError={reportFailure}
       />
     </picture>
   );
