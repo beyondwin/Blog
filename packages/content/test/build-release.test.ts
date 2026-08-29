@@ -303,6 +303,11 @@ describe('immutable public release building', () => {
     ['IPv6 link-local', 'https://[fe80::1]/rights'],
     ['localhost subdomain', 'https://rights.localhost/rights'],
     ['trailing-dot localhost', 'https://localhost./rights'],
+    ['IPv6 zone identifier', 'http://[fe80::1%25en0]/rights'],
+    ['repeated localhost trailing dots', 'https://localhost../rights'],
+    ['repeated localhost-subdomain trailing dots', 'https://rights.localhost../rights'],
+    ['interior empty DNS label', 'https://rights..example.com/rights'],
+    ['leading empty DNS label', 'https://.example.com/rights'],
     ['single-label private hostname', 'https://rights-service/rights'],
   ])('rejects %s as review-cover evidence URL during release build', async (_name, evidenceUrl) => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-private-url-'));
@@ -348,6 +353,11 @@ describe('immutable public release building', () => {
     ['IPv6 link-local', 'https://[fe80::1]/cover.jpg'],
     ['localhost subdomain', 'https://covers.localhost/cover.jpg'],
     ['trailing-dot localhost', 'https://localhost./cover.jpg'],
+    ['IPv6 zone identifier', 'http://[fe80::1%25en0]/cover.jpg'],
+    ['repeated localhost trailing dots', 'https://localhost../cover.jpg'],
+    ['repeated localhost-subdomain trailing dots', 'https://rights.localhost../cover.jpg'],
+    ['interior empty DNS label', 'https://rights..example.com/cover.jpg'],
+    ['leading empty DNS label', 'https://.example.com/cover.jpg'],
     ['single-label private hostname', 'https://cover-service/cover.jpg'],
   ])('rejects %s as registered review-cover source URL during release build', async (_name, sourceUrl) => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-private-source-url-'));

@@ -68,6 +68,7 @@ function ipv6InCidr(address, base, prefix) {
 }
 
 function isPublicHostname(hostname) {
+  if (hostname.endsWith('..')) return false;
   const normalizedHostname = hostname.endsWith('.') ? hostname.slice(0, -1) : hostname;
   const unwrapped = normalizedHostname.startsWith('[') && normalizedHostname.endsWith(']')
     ? normalizedHostname.slice(1, -1)
@@ -79,18 +80,24 @@ function isPublicHostname(hostname) {
   if (ipVersion === 6) {
     return !blockedIpv6Cidrs.some(([base, prefix]) => ipv6InCidr(unwrapped, base, prefix));
   }
-  return normalizedHostname.includes('.')
+  const labels = normalizedHostname.split('.');
+  return labels.length >= 2
+    && labels.every((label) => label.length > 0)
     && !['localhost', 'local', 'internal', 'home.arpa', 'invalid', 'test'].some((suffix) => (
       normalizedHostname === suffix || normalizedHostname.endsWith(`.${suffix}`)
     ));
 }
 
 const externalUrl = z.url().refine((value) => {
-  const parsed = new URL(value);
-  return ['http:', 'https:'].includes(parsed.protocol)
-    && !parsed.username
-    && !parsed.password
-    && isPublicHostname(parsed.hostname.toLowerCase());
+  try {
+    const parsed = new URL(value);
+    return ['http:', 'https:'].includes(parsed.protocol)
+      && !parsed.username
+      && !parsed.password
+      && isPublicHostname(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
 }, 'evidenceUrl must be an external HTTP(S) URL');
 const safeRelativePath = z.string().trim().min(1).refine((value) => (
   !value.includes('\\')

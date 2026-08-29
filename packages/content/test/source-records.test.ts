@@ -13,6 +13,7 @@ import {
 } from '../src/source-records';
 import { writeReleaseFixture } from './helpers/release-fixture';
 import { readActiveRelease } from '../src/release/read-release';
+import { reviewCoverRightsEvidenceSchema } from '../src/media/review-cover-redistribution.mjs';
 
 const expectedPublicIds = [
   'articles/agents-md-vs-agent-skills-evidence',
@@ -68,6 +69,27 @@ const expectedNonPublicIds = [
   'reviews/example-book-review',
   'travel/example-travel-note',
 ] as const;
+
+describe('review-cover external URL parsing', () => {
+  it.each([
+    ['IPv6 zone identifier', 'http://[fe80::1%25en0]/rights'],
+    ['repeated localhost trailing dots', 'https://localhost../rights'],
+    ['repeated localhost-subdomain trailing dots', 'https://rights.localhost../rights'],
+    ['interior empty DNS label', 'https://rights..example.com/rights'],
+    ['leading empty DNS label', 'https://.example.com/rights'],
+  ])('returns a safeParse failure without throwing for %s', (_name, evidenceUrl) => {
+    const result = reviewCoverRightsEvidenceSchema.safeParse({
+      type: 'redistribution-license',
+      evidenceUrl,
+      evidencePath: 'docs/notes/project/assets/review-cover-rights/review/rights-evidence.txt',
+      evidenceChecksum: `sha256:${'0'.repeat(64)}`,
+      retrievedAt: '2026-08-29',
+      scope: 'public website redistribution of the exact cover asset',
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
 
 function isoBox(type: string, ...payloads: Buffer[]): Buffer {
   const size = 8 + payloads.reduce((total, payload) => total + payload.length, 0);
