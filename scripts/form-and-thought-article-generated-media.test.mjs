@@ -342,6 +342,27 @@ function assertTopicRefreshApprovalContract({ registry, decisionBytes, contactSh
     topicRefreshSelections,
     'topic-refresh manifest tuples must be exact',
   );
+  for (const expectedSelection of topicRefreshSelections) {
+    const expectedRightsRow = topicRefreshRightsRows.find(
+      ({ candidateId, outcome }) => candidateId === expectedSelection.candidateId && outcome === 'approved',
+    );
+    const canonicalAsset = canonical.assets.find(({ candidateId }) => candidateId === expectedSelection.candidateId);
+    assertLedger(expectedRightsRow, `${expectedSelection.candidateId} must have an independently locked approved rights row`);
+    assertSame(
+      {
+        candidateId: canonicalAsset.candidateId,
+        collection: canonicalAsset.collection,
+        recordId: canonicalAsset.recordId,
+        mediaId: canonicalAsset.mediaId,
+      },
+      expectedSelection,
+      `${expectedSelection.candidateId} canonical asset tuple must match the independently approved selection`,
+    );
+    assertLedger(
+      canonicalAsset.checksum === `sha256:${expectedRightsRow.checksum}`,
+      `${expectedSelection.candidateId} canonical asset checksum must match the independently rights-reviewed candidate byte`,
+    );
+  }
   assertLedger(canonical.rightsReview.state === 'approved', 'topic-refresh rights review must be approved');
   assertLedger(canonical.rightsReview.decision === 'approve-repository-publication', 'topic-refresh publication decision must be exact');
   assertLedger(canonical.approvedContactSheet.path === topicRefreshContactSheetPath, 'topic-refresh contact-sheet path must be exact');
@@ -799,6 +820,16 @@ describe('FORM & THOUGHT approved article generated-media batches', () => {
           topicRefreshRightsLedgerPath,
           'docs/notes/project/assets/form-and-thought-generated/articles/wrong-rights-ledger.yml',
         );
+        replaceTopicRefreshDecision(input, decision);
+      },
+    },
+    {
+      name: 'canonical candidate byte mutation',
+      pattern: /TR32 canonical asset checksum must match the independently rights-reviewed candidate byte/i,
+      mutate: (input) => {
+        const decision = parseYaml(input.decisionBytes.toString('utf8'));
+        decision.assets.find(({ candidateId }) => candidateId === 'TR32').checksum =
+          'sha256:0000000000000000000000000000000000000000000000000000000000000000';
         replaceTopicRefreshDecision(input, decision);
       },
     },
