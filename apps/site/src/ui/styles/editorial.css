@@ -25,10 +25,6 @@
   color: var(--ft-paper-bright);
 }
 
-.site-header__inner {
-  min-height: 104px;
-}
-
 .site-header--inverse .site-header__inner {
   border-bottom-color: color-mix(in srgb, var(--ft-paper-bright) 28%, transparent);
 }

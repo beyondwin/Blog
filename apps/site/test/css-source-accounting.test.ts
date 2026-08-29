@@ -108,14 +108,17 @@ describe('route-scoped critical CSS source accounting', () => {
     }
   });
 
-  it('uses the warm canvas and the single allowed outer paper-shell elevation', async () => {
+  it('uses the warm canvas and a full-bleed outer paper shell', async () => {
     const shell = await readFile(join(candidateRoot, 'src/ui/styles/shell.css'), 'utf8');
 
     expect(shell).toContain('background: var(--ft-canvas);');
     expect(shell).toContain('background: var(--ft-paper);');
     expect(shell).toContain('font-family: var(--ft-font-ui);');
-    expect(shell).toContain('box-shadow: 0 18px 44px rgb(36 23 18 / 14%);');
-    expect(shell).toContain('border-radius: 8px;');
+    expect(shell).toContain('.site-shell { width: 100%;');
+    expect(shell).toContain('min-height: 100vh;');
+    expect(shell).toContain('margin: 0;');
+    expect(shell).toContain('box-shadow: none;');
+    expect(shell).toContain('border-radius: 0;');
     expect(shell).not.toContain('data-surface-mode');
     expect(shell).toContain('outline: 2px solid var(--ft-on-terracotta);');
     expect(shell).toMatch(/\.site-brand \{[^}]*font-family: var\(--ft-font-wordmark\);[^}]*font-size: 20px;[^}]*font-weight: 400;[^}]*letter-spacing: -\.04em;/u);
