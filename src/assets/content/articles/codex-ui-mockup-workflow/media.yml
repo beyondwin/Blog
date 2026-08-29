@@ -1,0 +1,23 @@
+version: 1
+items:
+  - id: editorial-topic-hero
+    file: editorial-topic-hero.png
+    kind: illustration
+    alt: 검은 작업판 위에 각진 흰 종이 목업과 테라코타·검정·직물·목재 재료 표본이 가지런히 놓인 모습
+    caption: 이미지 목업을 토큰·컴포넌트·재료 규칙으로 분해하는 작업대
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-topic-v2
+      candidateId: TR13
+      decisionManifestChecksum: sha256:308dab7389ee78472fd74f48e225d15dfe0d4ffec5e21a986cd4f9e5e8e71341
+    verifiedAt: 2026-08-30
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:b18b29cecf538f6848d17ad00afb0c2723822784c3979c60ea1fda91b4fb79b0

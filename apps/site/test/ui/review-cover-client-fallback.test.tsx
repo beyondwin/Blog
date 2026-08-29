@@ -1,9 +1,11 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createElement, Fragment, StrictMode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { chromium, type Browser } from 'playwright';
 import { createServer, transformWithEsbuild, type Plugin, type ViteDevServer } from 'vite';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { ResponsivePicture } from '../../app/root';
@@ -12,6 +14,17 @@ import { ReviewPresentation } from '../../app/routes/review';
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const reviewRoutePath = join(repositoryRoot, 'apps/site/app/routes/review.tsx');
 const rootModulePath = join(repositoryRoot, 'apps/site/app/root.tsx');
+const viteCacheRoots: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(viteCacheRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+
+async function freshViteCacheRoot() {
+  const root = await mkdtemp(join(tmpdir(), 'beyondwin-review-fallback-vite-'));
+  viteCacheRoots.push(root);
+  return root;
+}
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 
@@ -239,6 +252,7 @@ describe('review cover client fallback', () => {
       server = await createServer({
         configFile: false,
         root: repositoryRoot,
+        cacheDir: await freshViteCacheRoot(),
         logLevel: 'silent',
         plugins: [clientEntryPlugin(serverMarkup)],
         define: {

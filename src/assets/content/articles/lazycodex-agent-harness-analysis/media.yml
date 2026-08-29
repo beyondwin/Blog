@@ -21,3 +21,24 @@ items:
     width: 1536
     height: 1024
     checksum: sha256:ef1d83b12af0a00838cc5b8b830beca36dbdfb5033bf11800457917086139479
+  - id: editorial-topic-hero
+    file: editorial-topic-hero.png
+    kind: illustration
+    alt: 낡은 목재 작업대에서 세 개의 검은 고정 지그가 길게 이어진 흰 종이 띠를 일정한 간격으로 붙잡은 모습
+    caption: 길게 이어지는 작업을 세 개의 점검 지점으로 고정한 에이전트 하네스
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-topic-v2
+      candidateId: TR25
+      decisionManifestChecksum: sha256:308dab7389ee78472fd74f48e225d15dfe0d4ffec5e21a986cd4f9e5e8e71341
+    verifiedAt: 2026-08-30
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:589d0088ab856a11ee7d44417867ea131f3f9c58250888f01f865b6ef14529ad

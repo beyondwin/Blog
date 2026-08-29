@@ -21,3 +21,24 @@ items:
     width: 1536
     height: 1024
     checksum: sha256:897af71d07cebeb499b858accce927eae9f18741cf696d546b3ea93b278b15ee
+  - id: editorial-topic-hero
+    file: editorial-topic-hero.png
+    kind: illustration
+    alt: 손이 검은 핀셋으로 테라코타 삼각 쐐기를 집어 동심형 검은 부품에서 분리하는 모습
+    caption: 기능을 덜어내고 핵심 조각만 남기는 미니멀 에이전트 설계
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-topic-v2
+      candidateId: TR35
+      decisionManifestChecksum: sha256:308dab7389ee78472fd74f48e225d15dfe0d4ffec5e21a986cd4f9e5e8e71341
+    verifiedAt: 2026-08-30
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:1401bdd29a0aade52ca225467e3e73cc61f045dad85d901c5178d3b4b717d3b3

@@ -1,0 +1,23 @@
+version: 1
+items:
+  - id: editorial-topic-hero
+    file: editorial-topic-hero.png
+    kind: illustration
+    alt: 긴 테라코타 레일 안에 흰 석재와 검은 석재와 목재로 만든 크기 다른 검색 조각들이 순서대로 꽂힌 모습
+    caption: 서로 다른 검색 신호를 한 레일에서 순서대로 비교하는 하이브리드 검색
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-topic-v2
+      candidateId: TR38
+      decisionManifestChecksum: sha256:308dab7389ee78472fd74f48e225d15dfe0d4ffec5e21a986cd4f9e5e8e71341
+    verifiedAt: 2026-08-30
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:7988d77a8369514c4505fbab77734a502842e65d735acc4f13c0401cd37e25c0

@@ -21,3 +21,24 @@ items:
     width: 1536
     height: 1024
     checksum: sha256:da935387386dd1c8a5da6e766572eed217d38c01da9c187e27aaf035755898e1
+  - id: editorial-topic-hero
+    file: editorial-topic-hero.png
+    kind: illustration
+    alt: 낡은 목재 작업대에 놓인 네 가지 색의 둥근 토큰 중 짙은 갈색 토큰을 손가락으로 누르는 모습
+    caption: 네 가지 실천 규율 중 하나를 직접 선택해 실행하는 과정
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-topic-v2
+      candidateId: TR05
+      decisionManifestChecksum: sha256:308dab7389ee78472fd74f48e225d15dfe0d4ffec5e21a986cd4f9e5e8e71341
+    verifiedAt: 2026-08-30
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:89a6e70153941986a83580d67b8dec42a4c7c27c632565710422f9b7b369ba74

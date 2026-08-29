@@ -1,0 +1,23 @@
+version: 1
+items:
+  - id: editorial-topic-hero
+    file: editorial-topic-hero.png
+    kind: illustration
+    alt: 짙은 금속 작업대에 불규칙한 흰색과 검은색 블록들이 놓이고 흰 블록 하나가 테라코타 트레이에 격리된 모습
+    caption: 서로 다른 도구 블록을 격리 트레이에서 검증하는 에이전트 작업대
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-topic-v2
+      candidateId: TR32
+      decisionManifestChecksum: sha256:308dab7389ee78472fd74f48e225d15dfe0d4ffec5e21a986cd4f9e5e8e71341
+    verifiedAt: 2026-08-30
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:6fdf396f251a37d38f579d5f03700350dcead2f59166995e193d7a4bfaa23462

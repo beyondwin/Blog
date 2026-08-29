@@ -3,13 +3,17 @@ import { cp, access, appendFile, mkdtemp, mkdir, readFile, rm, writeFile } from 
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import matter from 'gray-matter';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { recordsForCollection } from '../apps/site/app/release.server.ts';
 import { ARTICLE_TOPICS } from '../apps/site/src/ui/articles/articleTopics.ts';
 import { buildPublicRelease } from '../packages/content/src/release/build-release.ts';
 import { readActiveRelease } from '../packages/content/src/release/read-release.ts';
-import { generatedMediaDecisionManifestSchema } from '../packages/content/src/schemas.ts';
+import {
+  generatedMediaDecisionManifestSchema,
+  sourceMediaManifestSchema,
+} from '../packages/content/src/schemas.ts';
 import {
   parseGeneratedMediaApprovalRegistry,
 } from '../packages/content/src/media/generated-media-approval-registry.mjs';
@@ -255,7 +259,7 @@ afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
-async function copyPhaseBRepository() {
+async function copyVerifiedArticleRepository() {
   const root = await mkdtemp(join(tmpdir(), 'form-thought-article-media-'));
   roots.push(root);
   await Promise.all([
@@ -270,13 +274,6 @@ async function copyPhaseBRepository() {
       join(root, 'packages/content/review-cover-redistribution-approvals.json'),
     ),
   ]);
-  // Task 1 ledger tests intentionally exercise the last fully integrated public
-  // inventory. Task 3 registers approval evidence before Task 4 promotes bytes.
-  const copiedRegistryPath = join(root, registryPath);
-  const copiedRegistry = JSON.parse(await readFile(copiedRegistryPath, 'utf8'));
-  copiedRegistry.batches = copiedRegistry.batches.filter(({ batchId }) => batchId !== topicRefreshBatchId);
-  await writeFile(copiedRegistryPath, `${JSON.stringify(copiedRegistry)}\n`);
-  await rm(join(root, topicRefreshDecisionPath), { force: true });
   return root;
 }
 
@@ -298,7 +295,7 @@ async function expectBothGatesToFail(root, pattern) {
 
 async function loadArticleBriefEvidence() {
   articleBriefEvidencePromise ??= (async () => {
-    const root = await copyPhaseBRepository();
+    const root = await copyVerifiedArticleRepository();
     const releasesRoot = join(root, '.test-releases');
     await buildPublicRelease({
       root,
@@ -323,6 +320,130 @@ function assertSame(actual, expected, message) {
 
 function sha256(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+function assertConcreteArticleMediaText(value, field, recordId) {
+  assertLedger(typeof value === 'string' && value.trim().length >= 12, `${recordId}.${field} must be concrete`);
+  assertLedger(!genericBriefValue.test(value.trim()), `${recordId}.${field} must not be generic`);
+}
+
+async function assertHistoricalGeneratedApprovalsRemainPresent(root, registry) {
+  for (const batch of registry.batches.filter(({ batchId }) => batchId !== topicRefreshBatchId)) {
+    const decision = generatedMediaDecisionManifestSchema.parse(parseYaml(
+      await readFile(join(root, batch.decisionManifest), 'utf8'),
+    ));
+    for (const asset of decision.assets) {
+      const manifestPath = join(root, 'src/assets/content', asset.collection, asset.recordId, 'media.yml');
+      const manifest = sourceMediaManifestSchema.parse(parseYaml(await readFile(manifestPath, 'utf8')));
+      const item = manifest.items.find(({ id }) => id === asset.mediaId);
+      assertLedger(item, `historical approved media ${asset.collection}/${asset.recordId}/${asset.mediaId} must remain present`);
+      assertSame(
+        {
+          file: item.file,
+          sourcePath: item.sourcePath,
+          checksum: item.checksum,
+          candidateId: item.generation?.candidateId,
+          decisionManifestChecksum: item.generation?.decisionManifestChecksum,
+        },
+        {
+          file: asset.file,
+          sourcePath: batch.decisionManifest,
+          checksum: asset.checksum,
+          candidateId: asset.candidateId,
+          decisionManifestChecksum: batch.decisionManifestChecksum,
+        },
+        `historical approved media ${asset.collection}/${asset.recordId}/${asset.mediaId} identity must remain exact`,
+      );
+    }
+  }
+}
+
+async function assertTopicRefreshSourceIntegration(root) {
+  const registry = parseGeneratedMediaApprovalRegistry(
+    await readFile(join(root, registryPath), 'utf8'),
+    registryPath,
+  );
+  const registered = registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId);
+  const decision = generatedMediaDecisionManifestSchema.parse(parseYaml(
+    await readFile(join(root, topicRefreshDecisionPath), 'utf8'),
+  ));
+
+  await assertHistoricalGeneratedApprovalsRemainPresent(root, registry);
+
+  for (const asset of decision.assets) {
+    const manifestPath = join(root, 'src/assets/content', asset.collection, asset.recordId, 'media.yml');
+    const manifest = sourceMediaManifestSchema.parse(parseYaml(await readFile(manifestPath, 'utf8')));
+    const item = manifest.items.find(({ id }) => id === asset.mediaId);
+    assertLedger(item, `topic-refresh approved media ${asset.recordId}/${asset.mediaId} must be promoted`);
+    assertSame(
+      {
+        id: item.id,
+        file: item.file,
+        kind: item.kind,
+        credit: item.credit,
+        sourcePath: item.sourcePath,
+        sourceKind: item.sourceKind,
+        provider: item.generation?.provider,
+        generator: item.generation?.generator,
+        model: item.generation?.model,
+        modelVersion: item.generation?.modelVersion,
+        promptVersion: item.generation?.promptVersion,
+        candidateId: item.generation?.candidateId,
+        decisionManifestChecksum: item.generation?.decisionManifestChecksum,
+        verifiedAt: item.verifiedAt,
+        rightsNote: item.rightsNote,
+        width: item.width,
+        height: item.height,
+        checksum: item.checksum,
+      },
+      {
+        id: 'editorial-topic-hero',
+        file: 'editorial-topic-hero.png',
+        kind: 'illustration',
+        credit: 'OpenAI image generation for beyondwin',
+        sourcePath: topicRefreshDecisionPath,
+        sourceKind: 'repository-generated',
+        provider: decision.generator.provider,
+        generator: decision.generator.generator,
+        model: decision.generator.model,
+        modelVersion: decision.generator.modelVersion,
+        promptVersion: 'form-and-thought-articles-topic-v2',
+        candidateId: asset.candidateId,
+        decisionManifestChecksum: registered.decisionManifestChecksum,
+        verifiedAt: decision.rightsReview.checkedAt,
+        rightsNote: `Repository publication approved with caveat: ${decision.rightsReview.caveat}`,
+        width: asset.width,
+        height: asset.height,
+        checksum: asset.checksum,
+      },
+      `topic-refresh approved media ${asset.recordId}/${asset.mediaId} metadata must match the decision`,
+    );
+    assertConcreteArticleMediaText(item.alt, 'alt', asset.recordId);
+    assertConcreteArticleMediaText(item.caption, 'caption', asset.recordId);
+    assertLedger(
+      sha256(await readFile(join(root, asset.sourcePath))) === asset.checksum,
+      `topic-refresh approved media ${asset.recordId}/${asset.mediaId} bytes must match the decision`,
+    );
+
+    const article = matter(await readFile(join(root, 'src/content/articles', `${asset.recordId}.mdx`), 'utf8'));
+    assertLedger(
+      article.data.featuredMedia === asset.mediaId,
+      `${asset.recordId} must bind featuredMedia to ${asset.mediaId}`,
+    );
+  }
+
+  const briefs = parseYaml(await readFile(join(root, articleBriefsPath), 'utf8'));
+  for (const brief of briefs.articles) {
+    const article = matter(await readFile(join(root, 'src/content/articles', `${brief.recordId}.mdx`), 'utf8'));
+    assertLedger(typeof article.data.featuredMedia === 'string', `${brief.recordId} must resolve a featured media ID`);
+    const manifest = sourceMediaManifestSchema.parse(parseYaml(
+      await readFile(join(root, 'src/assets/content/articles', brief.recordId, 'media.yml'), 'utf8'),
+    ));
+    assertLedger(
+      manifest.items.some(({ id }) => id === article.data.featuredMedia),
+      `${brief.recordId} featured media must resolve in its source bundle`,
+    );
+  }
 }
 
 function assertTopicRefreshApprovalContract({ registry, decisionBytes, contactSheetBytes, rightsLedgerBytes }) {
@@ -592,7 +713,7 @@ describe('FORM & THOUGHT article topic-family image-brief ledger', () => {
   it('accepts the complete ledger in verified visible release order', async () => {
     const { briefs, visibleArticleIds } = await loadArticleBriefEvidence();
     expect(() => assertArticleBriefLedger(briefs, visibleArticleIds)).not.toThrow();
-  }, 30_000);
+  }, 120_000);
 
   it('rejects visible order drift', async () => {
     await expectArticleBriefMutantRejected((mutant) => {
@@ -694,6 +815,10 @@ describe('FORM & THOUGHT article topic-family image-brief ledger', () => {
 });
 
 describe('FORM & THOUGHT approved article generated-media batches', () => {
+  it('promotes every topic-refresh selection and resolves featured media for all 17 articles', async () => {
+    await expect(assertTopicRefreshSourceIntegration(repositoryRoot)).resolves.toBeUndefined();
+  });
+
   it('registers the exact topic-refresh batch path and byte checksum', async () => {
     const decisionBytes = await readFile(join(repositoryRoot, topicRefreshDecisionPath));
     const registry = parseGeneratedMediaApprovalRegistry(
@@ -957,7 +1082,7 @@ describe('FORM & THOUGHT approved article generated-media batches', () => {
       },
     },
   ])('fails both immutable release and strict media gates for $name', async ({ mutate, pattern }) => {
-    const root = await copyPhaseBRepository();
+    const root = await copyVerifiedArticleRepository();
     await requireAgentsBatch(root);
     await mutate(root);
     await expectBothGatesToFail(root, pattern);

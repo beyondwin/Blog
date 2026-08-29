@@ -21,3 +21,24 @@ items:
     width: 1536
     height: 1024
     checksum: sha256:49d3792950098b0bade991a9c2a498e4f5a6c975b6e2f88cbdc136ef16f312f4
+  - id: editorial-topic-hero
+    file: editorial-topic-hero.png
+    kind: illustration
+    alt: 둥근 목재 작업대 위 네 구역에 서로 다른 손잡이와 금속 모듈이 꽂히고 앞쪽 슬롯 하나가 비어 있는 모습
+    caption: 지속 런타임이 도구 모듈을 교체하고 빈 슬롯에서 다음 작업을 기다리는 구조
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-topic-v2
+      candidateId: TR21
+      decisionManifestChecksum: sha256:308dab7389ee78472fd74f48e225d15dfe0d4ffec5e21a986cd4f9e5e8e71341
+    verifiedAt: 2026-08-30
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:bb9f7764d051d29a1a8f461f7ffb53409d82a6712b3124401c275b05568efa0e

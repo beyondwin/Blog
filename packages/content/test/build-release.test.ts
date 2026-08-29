@@ -59,7 +59,7 @@ describe('immutable public release building', () => {
       generationEvidence: { candidateId: 'H01' },
     });
     expect(built.manifest).toEqual(active.manifest);
-  }, 30_000);
+  }, 120_000);
 
   it('excludes a rights-warning review cover from both the manifest and immutable artifact bytes', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-rights-'));

@@ -1,15 +1,28 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { chromium, type Browser } from 'playwright';
 import { createServer, transformWithEsbuild, type Plugin, type ViteDevServer } from 'vite';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { SearchPage } from '../../src/ui/search/SearchPage';
 import { SAMPLE_QUESTION, type PublicAnswerFixture } from '../../src/ui/search/secondBrain';
 import type { SearchInventoryItem } from '../../src/ui/search/searchModel';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const searchPagePath = join(repositoryRoot, 'apps/site/src/ui/search/SearchPage.tsx');
+const viteCacheRoots: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(viteCacheRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+
+async function freshViteCacheRoot() {
+  const root = await mkdtemp(join(tmpdir(), 'beyondwin-search-interaction-vite-'));
+  viteCacheRoots.push(root);
+  return root;
+}
 
 const fixture: PublicAnswerFixture = {
   question: SAMPLE_QUESTION,
@@ -89,6 +102,7 @@ describe('second-brain search client interaction', () => {
       server = await createServer({
         configFile: false,
         root: repositoryRoot,
+        cacheDir: await freshViteCacheRoot(),
         publicDir: join(repositoryRoot, 'apps/site/public'),
         logLevel: 'silent',
         plugins: [clientPlugin(markup)],
@@ -135,6 +149,7 @@ describe('second-brain search client interaction', () => {
       server = await createServer({
         configFile: false,
         root: repositoryRoot,
+        cacheDir: await freshViteCacheRoot(),
         publicDir: join(repositoryRoot, 'apps/site/public'),
         logLevel: 'silent',
         plugins: [clientPlugin(markup)],
