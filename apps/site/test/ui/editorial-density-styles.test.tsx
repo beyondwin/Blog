@@ -54,7 +54,7 @@ const fixture = `
         <ol class="article-index__ledger"><li><a class="editorial-list-row editorial-list-row--text-led" href="/"><span class="editorial-list-row__copy"><h2>Primary row</h2></span><span class="editorial-list-row__date">2026.08.29</span></a></li></ol>
       </section>
       <article class="article-detail">
-        <div class="editorial-detail-frame editorial-detail-frame--text-led"><header class="editorial-detail-frame__hero"><div class="editorial-detail-frame__introduction"><h1>Primary detail</h1></div></header></div>
+        <div class="editorial-detail-frame editorial-detail-frame--text-led"><header class="editorial-detail-frame__hero"><div class="editorial-detail-frame__introduction"><h1>Primary detail</h1></div></header><div class="editorial-detail-frame__body"><div class="editorial-detail-frame__prose"><p>Primary reading body.</p></div></div></div>
       </article>
     </main>
   </div>`;
@@ -123,9 +123,11 @@ describe('editorial density geometry', () => {
       const mobile = await page.evaluate(() => {
         const measure = document.querySelector('.site-shell-width')!.getBoundingClientRect();
         const target = document.querySelector('.mobile-navigation__button')!.getBoundingClientRect();
+        const prose = getComputedStyle(document.querySelector('.article-detail .editorial-detail-frame__prose')!);
         return {
           measure: { x: measure.x, width: measure.width },
           target: { height: target.height, width: target.width },
+          proseFontSize: prose.fontSize,
           documentWidth: document.documentElement.scrollWidth,
           viewportWidth: document.documentElement.clientWidth,
         };
@@ -135,6 +137,7 @@ describe('editorial density geometry', () => {
       expect(mobile.measure.width).toBe(346);
       expect(mobile.target.height).toBeGreaterThanOrEqual(44);
       expect(mobile.target.width).toBeGreaterThanOrEqual(44);
+      expect(mobile.proseFontSize).toBe('16px');
       expect(mobile.documentWidth).toBeLessThanOrEqual(mobile.viewportWidth);
     } finally {
       await page.close();
