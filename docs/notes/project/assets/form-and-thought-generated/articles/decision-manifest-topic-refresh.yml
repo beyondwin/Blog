@@ -9,12 +9,12 @@ generator:
   generatedAt: 2026-08-29T14:37:16.577Z
 approval:
   state: approved
-  selectedCandidateIds: [TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR29, TR35, TR38, TR41]
+  selectedCandidateIds: [TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR32, TR35, TR38, TR41]
   approvedBy:
     - controller
     - independent-visual-reviewer
-  recordedAt: 2026-08-30T00:25:17+09:00
-  evidence: User-delegated controller receipt .superpowers/media-intake/article-topic-refresh/controller-selection.yml (sha256:c64c78cca8e12569bee4565a229284fb56893a5bacacd22542da7055698fa91e) approved contact sheet sha256:edcc48f514aba13d69205be4988ef2dc27bf94465a9e8956024bb71ed0066796 and exact selected IDs TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR29, TR35, TR38, TR41; .superpowers/sdd/2026-08-29-form-and-thought-article-media-refresh/task-2-final-independent-visual-review.md independently recorded READY for the same selection.
+  recordedAt: 2026-08-30T01:20:00+09:00
+  evidence: User-delegated controller receipt .superpowers/media-intake/article-topic-refresh/controller-selection.yml (sha256:7640791aec2378d64048a68472ed1f162a2fd64e14611a263b9751c7e22a7164) approved contact sheet sha256:a534d6004cefd388951aa5a85fd61b4f2797b090012b096da160a5a1c38fdc7f and exact selected IDs TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR32, TR35, TR38, TR41; .superpowers/sdd/2026-08-29-form-and-thought-article-media-refresh/task-2-oh-my-pi-round2-review.md independently recorded READY for TR32 while retaining TR29 on HOLD and rejecting TR31; exact rights ledger docs/notes/project/assets/form-and-thought-generated/articles/candidate-rights-review-topic-refresh.yml (sha256:616963399b9d42c06a532dcd4c46c7cb843bd409256a26c7e9433eb9fc216a64) binds the candidate-level flags, approved partition, and HOLD partition.
 rightsReview:
   state: approved
   decision: approve-repository-publication
@@ -33,7 +33,7 @@ rightsReview:
     readableMark: false
 approvedContactSheet:
   path: docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-topic-refresh.png
-  checksum: sha256:edcc48f514aba13d69205be4988ef2dc27bf94465a9e8956024bb71ed0066796
+  checksum: sha256:a534d6004cefd388951aa5a85fd61b4f2797b090012b096da160a5a1c38fdc7f
 assets:
   - candidateId: TR01
     slot: homePick/indexLandscape
@@ -189,25 +189,25 @@ assets:
         mobileCrop: [86, 0, 1451, 1024]
         focalPoint: [0.64, 0.48]
         safeArea: [123, 102, 1382, 922]
-  - candidateId: TR29
+  - candidateId: TR32
     slot: homePick/indexLandscape
     collection: articles
     recordId: oh-my-pi-deep-review
     mediaId: editorial-topic-hero
     file: editorial-topic-hero.png
     sourcePath: src/assets/content/articles/oh-my-pi-deep-review/editorial-topic-hero.png
-    checksum: sha256:cc64489f797f0c57e6ba0191895282a9e8c930158be71af9216937032bd853ed
+    checksum: sha256:6fdf396f251a37d38f579d5f03700350dcead2f59166995e193d7a4bfaa23462
     width: 1536
     height: 1024
-    promptId: article-topic-refresh-tr29-v2
+    promptId: article-topic-refresh-tr32-v2
     placements:
       - slot: indexLandscape
-        desktopCrop: [0, 93, 1536, 1024]
+        desktopCrop: [0, 93, 1536, 931]
         mobileCrop: [86, 0, 1451, 1024]
         focalPoint: [0.4, 0.56]
         safeArea: [123, 123, 1321, 922]
       - slot: detailHero
-        desktopCrop: [0, 191, 1536, 922]
+        desktopCrop: [0, 191, 1536, 731]
         mobileCrop: [86, 0, 1451, 1024]
         focalPoint: [0.4, 0.56]
         safeArea: [123, 123, 1321, 922]

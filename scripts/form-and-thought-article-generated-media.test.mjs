@@ -32,9 +32,9 @@ const selectedCandidates = [
   'DS01', 'DS03',
   'DT01',
   'AV01', 'AV02', 'AV03', 'AV05',
-  'TR01', 'TR05', 'TR09', 'TR13', 'TR17', 'TR21', 'TR25', 'TR29', 'TR35', 'TR38', 'TR41',
+  'TR01', 'TR05', 'TR09', 'TR13', 'TR17', 'TR21', 'TR25', 'TR32', 'TR35', 'TR38', 'TR41',
 ];
-const heldCandidates = ['DS02', 'DT02', 'AV04', 'AV06'];
+const heldCandidates = ['DS02', 'DT02', 'AV04', 'AV06', 'TR29'];
 const topicRefreshSelections = [
   ['TR01', 'agents-md-vs-agent-skills-evidence'],
   ['TR05', 'andrej-karpathy-skills-analysis'],
@@ -43,7 +43,7 @@ const topicRefreshSelections = [
   ['TR17', 'context-refinement-system-design'],
   ['TR21', 'hermes-agent-persistent-worker-runtime'],
   ['TR25', 'lazycodex-agent-harness-analysis'],
-  ['TR29', 'oh-my-pi-deep-review'],
+  ['TR32', 'oh-my-pi-deep-review'],
   ['TR35', 'ponytail-agent-minimalism-analysis'],
   ['TR38', 'postgresql-bm25-pg-search'],
   ['TR41', 'uncle-bob-ai-code-review-evidence'],
@@ -55,7 +55,30 @@ const topicRefreshSelections = [
 }));
 const topicRefreshRejectedCandidates = [
   'TR02', 'TR06', 'TR10', 'TR14', 'TR18', 'TR22', 'TR26',
-  'TR30', 'TR33', 'TR34', 'TR36', 'TR37', 'TR42',
+  'TR29', 'TR30', 'TR31', 'TR33', 'TR34', 'TR36', 'TR37', 'TR42',
+];
+const topicRefreshHoldCandidateIds = ['TR29'];
+const topicRefreshContactSheetChecksum = 'sha256:a534d6004cefd388951aa5a85fd61b4f2797b090012b096da160a5a1c38fdc7f';
+const topicRefreshControllerReceiptChecksum = 'sha256:7640791aec2378d64048a68472ed1f162a2fd64e14611a263b9751c7e22a7164';
+const topicRefreshRightsRows = [
+  ['TR01', 'agents-md-vs-agent-skills-evidence', 'ea0b37717a5cbc5e009c171269672205c8bf764b8d4dacd54deca53b06b6296e', 'approved'],
+  ['TR05', 'andrej-karpathy-skills-analysis', '89a6e70153941986a83580d67b8dec42a4c7c27c632565710422f9b7b369ba74', 'approved'],
+  ['TR09', 'aws-static-frontend-serverless-bff', '32228b6b02eaa0257452b1bea5baf37acc79bd7507cb92d7e3a84ffcc4e29264', 'approved'],
+  ['TR13', 'codex-ui-mockup-workflow', 'b18b29cecf538f6848d17ad00afb0c2723822784c3979c60ea1fda91b4fb79b0', 'approved'],
+  ['TR17', 'context-refinement-system-design', 'df5b5b82658cc9d191f9747a26cf26ca03c75f0ad24ddd281db305e62cd8f5ec', 'approved'],
+  ['TR21', 'hermes-agent-persistent-worker-runtime', 'bb9f7764d051d29a1a8f461f7ffb53409d82a6712b3124401c275b05568efa0e', 'approved'],
+  ['TR25', 'lazycodex-agent-harness-analysis', '589d0088ab856a11ee7d44417867ea131f3f9c58250888f01f865b6ef14529ad', 'approved'],
+  ['TR29', 'oh-my-pi-deep-review', 'cc64489f797f0c57e6ba0191895282a9e8c930158be71af9216937032bd853ed', 'hold'],
+  ['TR32', 'oh-my-pi-deep-review', '6fdf396f251a37d38f579d5f03700350dcead2f59166995e193d7a4bfaa23462', 'approved'],
+  ['TR35', 'ponytail-agent-minimalism-analysis', '1401bdd29a0aade52ca225467e3e73cc61f045dad85d901c5178d3b4b717d3b3', 'approved'],
+  ['TR38', 'postgresql-bm25-pg-search', '7988d77a8369514c4505fbab77734a502842e65d735acc4f13c0401cd37e25c0', 'approved'],
+  ['TR41', 'uncle-bob-ai-code-review-evidence', '477e85a8339792aad65dc777fcfa3ea99026468912b4246a0548e1be19120e75', 'approved'],
+].map(([candidateId, recordId, checksum, outcome]) => ({ candidateId, recordId, checksum, outcome }));
+const topicRefreshRiskFlags = [
+  'externalImageInputs',
+  'namedOrLivingArtist',
+  'recognizablePersonOrProduct',
+  'readableMark',
 ];
 const articleDecisions = ['retain', 'replace', 'add'];
 const articleFamilies = [
@@ -302,14 +325,14 @@ function sha256(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
-function assertTopicRefreshApprovalContract({ registry, decision, decisionBytes, contactSheetBytes, rightsLedger }) {
+function assertTopicRefreshApprovalContract({ registry, decisionBytes, contactSheetBytes, rightsLedgerBytes }) {
   const registered = registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId);
   assertLedger(registered, 'topic-refresh batch must be registered');
   assertLedger(registered.decisionManifest === topicRefreshDecisionPath, 'topic-refresh decision path must be exact');
   assertLedger(registered.decisionManifestChecksum === sha256(decisionBytes), 'topic-refresh decision manifest checksum changed');
   assertSame(registered.selections, topicRefreshSelections, 'topic-refresh registered tuples must be exact');
 
-  const canonical = generatedMediaDecisionManifestSchema.parse(decision);
+  const canonical = generatedMediaDecisionManifestSchema.parse(parseYaml(decisionBytes.toString('utf8')));
   assertLedger(canonical.batchId === topicRefreshBatchId, 'topic-refresh decision batch ID must be exact');
   assertLedger(canonical.generator.promptVersion === 'form-and-thought-articles-topic-v2', 'topic-refresh prompt version must be exact');
   assertSame(canonical.approval.approvedBy, ['controller', 'independent-visual-reviewer'], 'topic-refresh approval roles must be exact');
@@ -323,12 +346,21 @@ function assertTopicRefreshApprovalContract({ registry, decision, decisionBytes,
   assertLedger(canonical.rightsReview.decision === 'approve-repository-publication', 'topic-refresh publication decision must be exact');
   assertLedger(canonical.approvedContactSheet.path === topicRefreshContactSheetPath, 'topic-refresh contact-sheet path must be exact');
   assertLedger(canonical.approvedContactSheet.checksum === sha256(contactSheetBytes), 'topic-refresh contact-sheet checksum changed');
+  assertLedger(canonical.approvedContactSheet.checksum === topicRefreshContactSheetChecksum, 'topic-refresh approved contact-sheet checksum must be exact');
   assertLedger(canonical.approval.evidence.includes(canonical.approvedContactSheet.checksum), 'topic-refresh approval evidence must bind the contact-sheet checksum');
+  assertLedger(canonical.approval.evidence.includes(topicRefreshControllerReceiptChecksum), 'topic-refresh approval evidence must bind the corrected controller receipt checksum');
   for (const { candidateId } of topicRefreshSelections) {
     assertLedger(canonical.approval.evidence.includes(candidateId), `topic-refresh approval evidence must bind ${candidateId}`);
   }
 
+  const rightsLedgerChecksum = sha256(rightsLedgerBytes);
+  assertLedger(
+    canonical.approval.evidence.includes(`${topicRefreshRightsLedgerPath} (${rightsLedgerChecksum})`),
+    'topic-refresh approval evidence must bind the exact rights-ledger path and checksum',
+  );
+  const rightsLedger = parseYaml(rightsLedgerBytes.toString('utf8'));
   assertLedger(rightsLedger.version === 1, 'topic-refresh rights ledger version must be 1');
+  assertLedger(rightsLedger.batchId === topicRefreshBatchId, 'topic-refresh rights ledger batch ID must be exact');
   assertSame(
     rightsLedger.sources,
     [
@@ -338,24 +370,43 @@ function assertTopicRefreshApprovalContract({ registry, decision, decisionBytes,
     'topic-refresh rights sources must be exact and fresh',
   );
   assertSame(
-    rightsLedger.candidates.map(({ candidateId, recordId, sha256: checksum }) => ({ candidateId, recordId, checksum })),
-    topicRefreshSelections.map(({ candidateId, recordId }) => {
-      const asset = canonical.assets.find((candidate) => candidate.candidateId === candidateId);
-      return { candidateId, recordId, checksum: asset.checksum.slice('sha256:'.length) };
-    }),
-    'topic-refresh rights ledger candidates and checksums must match the canonical manifest',
+    rightsLedger.candidates.map(({ candidateId, recordId, sha256: checksum, outcome }) => ({ candidateId, recordId, checksum, outcome })),
+    topicRefreshRightsRows,
+    'topic-refresh rights ledger inventory, checksums, and outcomes must be exact',
   );
+  const canonicalIds = new Set(canonical.assets.map(({ candidateId }) => candidateId));
   for (const candidate of rightsLedger.candidates) {
-    const canonicalIds = new Set(canonical.assets.map(({ candidateId }) => candidateId));
+    assertLedger(['approved', 'hold'].includes(candidate.outcome), `rights outcome for ${candidate.candidateId} must be approved or hold`);
+    for (const flag of topicRefreshRiskFlags) {
+      assertLedger(typeof candidate[flag] === 'boolean', `${candidate.candidateId}.${flag} must be boolean`);
+    }
+    const raisedRiskFlags = topicRefreshRiskFlags.filter((flag) => candidate[flag]);
+    assertLedger(
+      candidate.outcome !== 'approved' || raisedRiskFlags.length === 0,
+      `approved candidate ${candidate.candidateId} must have every risk flag false`,
+    );
+    assertLedger(
+      candidate.outcome !== 'hold' || raisedRiskFlags.length > 0,
+      `HOLD candidate ${candidate.candidateId} must retain a concrete raised risk flag`,
+    );
     assertLedger(
       candidate.outcome !== 'hold' || !canonicalIds.has(candidate.candidateId),
       `HOLD candidate ${candidate.candidateId} must remain absent from the canonical manifest`,
     );
   }
-  assertLedger(
-    rightsLedger.candidates.every(({ outcome }) => outcome === 'approved'),
-    'all selected topic-refresh candidates must pass rights review',
+  assertSame(
+    rightsLedger.candidates.filter(({ outcome }) => outcome === 'approved').map(({ candidateId }) => candidateId),
+    topicRefreshSelections.map(({ candidateId }) => candidateId),
+    'approved rights partition must exactly match the canonical selections',
   );
+  assertSame(
+    rightsLedger.candidates.filter(({ outcome }) => outcome === 'hold').map(({ candidateId }) => candidateId),
+    topicRefreshHoldCandidateIds,
+    'HOLD rights partition must be exact',
+  );
+  assertSame(rightsLedger.summary.approvedCandidateIds, topicRefreshSelections.map(({ candidateId }) => candidateId), 'approved rights summary must be exact');
+  assertSame(rightsLedger.summary.holdCandidateIds, topicRefreshHoldCandidateIds, 'HOLD rights summary must be exact');
+  assertLedger(rightsLedger.summary.decision === 'approve-repository-publication', 'rights summary decision must be exact');
 
   const canonicalCandidates = new Set([
     ...canonical.approval.selectedCandidateIds,
@@ -365,6 +416,22 @@ function assertTopicRefreshApprovalContract({ registry, decision, decisionBytes,
   for (const candidateId of topicRefreshRejectedCandidates) {
     assertLedger(!canonicalCandidates.has(candidateId), `rejected candidate ${candidateId} must remain absent`);
   }
+}
+
+function replaceTopicRefreshDecision(input, decision) {
+  input.decisionBytes = Buffer.from(stringifyYaml(decision));
+  input.registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId).decisionManifestChecksum = sha256(input.decisionBytes);
+}
+
+function replaceTopicRefreshRightsLedger(input, rightsLedger, { rebindEvidence = true } = {}) {
+  const previousChecksum = sha256(input.rightsLedgerBytes);
+  const nextRightsLedgerBytes = Buffer.from(stringifyYaml(rightsLedger));
+  if (rebindEvidence) {
+    const decision = parseYaml(input.decisionBytes.toString('utf8'));
+    decision.approval.evidence = decision.approval.evidence.replace(previousChecksum, sha256(nextRightsLedgerBytes));
+    replaceTopicRefreshDecision(input, decision);
+  }
+  input.rightsLedgerBytes = nextRightsLedgerBytes;
 }
 
 function articleBriefSemanticChecksum(brief) {
@@ -669,8 +736,7 @@ describe('FORM & THOUGHT approved article generated-media batches', () => {
     );
     const decisionBytes = await readFile(join(repositoryRoot, topicRefreshDecisionPath));
     const contactSheetBytes = await readFile(join(repositoryRoot, topicRefreshContactSheetPath));
-    const decision = parseYaml(decisionBytes.toString('utf8'));
-    const rightsLedger = parseYaml(await readFile(join(repositoryRoot, topicRefreshRightsLedgerPath), 'utf8'));
+    const rightsLedgerBytes = await readFile(join(repositoryRoot, topicRefreshRightsLedgerPath));
 
     expect(registry.batches.map((batch) => batch.batchId)).toEqual(requiredBatches);
     expect(registry.batches.flatMap((batch) => batch.selections.map((selection) => selection.candidateId)))
@@ -679,10 +745,9 @@ describe('FORM & THOUGHT approved article generated-media batches', () => {
       .not.toEqual(expect.arrayContaining(heldCandidates));
     expect(() => assertTopicRefreshApprovalContract({
       registry,
-      decision,
       decisionBytes,
       contactSheetBytes,
-      rightsLedger,
+      rightsLedgerBytes,
     })).not.toThrow();
   });
 
@@ -690,27 +755,87 @@ describe('FORM & THOUGHT approved article generated-media batches', () => {
     {
       name: 'decision-manifest byte tamper',
       pattern: /decision manifest checksum changed/i,
-      mutate: ({ decisionBytes }) => ({ decisionBytes: Buffer.concat([decisionBytes, Buffer.from('\n# tampered\n')]) }),
+      mutate: (input) => {
+        input.decisionBytes = Buffer.concat([input.decisionBytes, Buffer.from('\n# tampered\n')]);
+      },
     },
     {
       name: 'rejected candidate tuple insertion',
       pattern: /registered tuples must be exact|rejected candidate/i,
-      mutate: ({ registry }) => {
-        registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId).selections.push({
+      mutate: (input) => {
+        input.registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId).selections.push({
           candidateId: 'TR02',
           collection: 'articles',
           recordId: 'agents-md-vs-agent-skills-evidence',
           mediaId: 'editorial-topic-hero',
         });
-        return { registry };
       },
     },
     {
-      name: 'HOLD candidate canonical binding',
-      pattern: /HOLD candidate TR01 must remain absent/i,
-      mutate: ({ rightsLedger }) => {
-        rightsLedger.candidates.find(({ candidateId }) => candidateId === 'TR01').outcome = 'hold';
-        return { rightsLedger };
+      name: 'rights-ledger byte tamper',
+      pattern: /bind the exact rights-ledger path and checksum/i,
+      mutate: (input) => {
+        input.rightsLedgerBytes = Buffer.concat([input.rightsLedgerBytes, Buffer.from('\n# tampered\n')]);
+      },
+    },
+    {
+      name: 'rights-ledger checksum evidence mutation',
+      pattern: /bind the exact rights-ledger path and checksum/i,
+      mutate: (input) => {
+        const decision = parseYaml(input.decisionBytes.toString('utf8'));
+        decision.approval.evidence = decision.approval.evidence.replace(
+          sha256(input.rightsLedgerBytes),
+          'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+        );
+        replaceTopicRefreshDecision(input, decision);
+      },
+    },
+    {
+      name: 'rights-ledger path evidence mutation',
+      pattern: /bind the exact rights-ledger path and checksum/i,
+      mutate: (input) => {
+        const decision = parseYaml(input.decisionBytes.toString('utf8'));
+        decision.approval.evidence = decision.approval.evidence.replace(
+          topicRefreshRightsLedgerPath,
+          'docs/notes/project/assets/form-and-thought-generated/articles/wrong-rights-ledger.yml',
+        );
+        replaceTopicRefreshDecision(input, decision);
+      },
+    },
+    {
+      name: 'approved summary mutation',
+      pattern: /approved rights summary must be exact/i,
+      mutate: (input) => {
+        const rightsLedger = parseYaml(input.rightsLedgerBytes.toString('utf8'));
+        rightsLedger.summary.approvedCandidateIds = rightsLedger.summary.approvedCandidateIds.slice(0, -1);
+        replaceTopicRefreshRightsLedger(input, rightsLedger);
+      },
+    },
+    {
+      name: 'HOLD summary mutation',
+      pattern: /HOLD rights summary must be exact/i,
+      mutate: (input) => {
+        const rightsLedger = parseYaml(input.rightsLedgerBytes.toString('utf8'));
+        rightsLedger.summary.holdCandidateIds = [];
+        replaceTopicRefreshRightsLedger(input, rightsLedger);
+      },
+    },
+    {
+      name: 'HOLD outcome mutation',
+      pattern: /inventory, checksums, and outcomes must be exact|approved candidate TR29 must have every risk flag false/i,
+      mutate: (input) => {
+        const rightsLedger = parseYaml(input.rightsLedgerBytes.toString('utf8'));
+        rightsLedger.candidates.find(({ candidateId }) => candidateId === 'TR29').outcome = 'approved';
+        replaceTopicRefreshRightsLedger(input, rightsLedger);
+      },
+    },
+    {
+      name: 'HOLD risk contradiction',
+      pattern: /HOLD candidate TR29 must retain a concrete raised risk flag/i,
+      mutate: (input) => {
+        const rightsLedger = parseYaml(input.rightsLedgerBytes.toString('utf8'));
+        rightsLedger.candidates.find(({ candidateId }) => candidateId === 'TR29').recognizablePersonOrProduct = false;
+        replaceTopicRefreshRightsLedger(input, rightsLedger);
       },
     },
   ])('rejects topic-refresh $name', async ({ mutate, pattern }) => {
@@ -720,13 +845,31 @@ describe('FORM & THOUGHT approved article generated-media batches', () => {
         await readFile(join(repositoryRoot, registryPath), 'utf8'),
         registryPath,
       ),
-      decision: parseYaml(decisionBytes.toString('utf8')),
       decisionBytes,
       contactSheetBytes: await readFile(join(repositoryRoot, topicRefreshContactSheetPath)),
-      rightsLedger: parseYaml(await readFile(join(repositoryRoot, topicRefreshRightsLedgerPath), 'utf8')),
+      rightsLedgerBytes: await readFile(join(repositoryRoot, topicRefreshRightsLedgerPath)),
     };
-    Object.assign(input, mutate(structuredClone(input)));
+    mutate(input);
     expect(() => assertTopicRefreshApprovalContract(input)).toThrow(pattern);
+  });
+
+  it.each(topicRefreshRiskFlags)('rejects an approved candidate when %s is true', async (riskFlag) => {
+    const decisionBytes = await readFile(join(repositoryRoot, topicRefreshDecisionPath));
+    const input = {
+      registry: parseGeneratedMediaApprovalRegistry(
+        await readFile(join(repositoryRoot, registryPath), 'utf8'),
+        registryPath,
+      ),
+      decisionBytes,
+      contactSheetBytes: await readFile(join(repositoryRoot, topicRefreshContactSheetPath)),
+      rightsLedgerBytes: await readFile(join(repositoryRoot, topicRefreshRightsLedgerPath)),
+    };
+    const rightsLedger = parseYaml(input.rightsLedgerBytes.toString('utf8'));
+    rightsLedger.candidates.find(({ candidateId }) => candidateId === 'TR32')[riskFlag] = true;
+    replaceTopicRefreshRightsLedger(input, rightsLedger);
+
+    expect(() => assertTopicRefreshApprovalContract(input))
+      .toThrow(/approved candidate TR32 must have every risk flag false/i);
   });
 
   it.each([

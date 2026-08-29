@@ -20,14 +20,14 @@ provenance:
   candidateReceipt: .superpowers/media-intake/article-topic-refresh/candidate-receipts.yml
   controllerReceipt:
     path: .superpowers/media-intake/article-topic-refresh/controller-selection.yml
-    sha256: c64c78cca8e12569bee4565a229284fb56893a5bacacd22542da7055698fa91e
+    sha256: 7640791aec2378d64048a68472ed1f162a2fd64e14611a263b9751c7e22a7164
   approvedContactSheet:
     sourcePath: .superpowers/media-intake/article-topic-refresh/contact-sheet.png
-    sha256: edcc48f514aba13d69205be4988ef2dc27bf94465a9e8956024bb71ed0066796
+    sha256: a534d6004cefd388951aa5a85fd61b4f2797b090012b096da160a5a1c38fdc7f
 criteria:
   externalImageInputs: No external image was supplied to any generation call.
   namedOrLivingArtist: Prompts contain no artist name, style imitation request, or living-artist reference.
-  recognizablePersonOrProduct: No face, recognizable identity, brand, logo, or identifiable commercial product is visible; cropped hands and mechanical forms are anonymous and generic.
+  recognizablePersonOrProduct: Approved candidates show no face, recognizable identity, brand, logo, or identifiable commercial product; any candidate with recognizable product-form risk remains on HOLD and outside the canonical selection.
   readableMark: No readable text, pseudo-text, number, symbol, logo, watermark, or product mark is visible.
 candidates:
   - candidateId: TR01
@@ -112,12 +112,23 @@ candidates:
     sha256: cc64489f797f0c57e6ba0191895282a9e8c930158be71af9216937032bd853ed
     externalImageInputs: false
     namedOrLivingArtist: false
-    recognizablePersonOrProduct: false
+    recognizablePersonOrProduct: true
     readableMark: false
     promptConstraintCheck: One isolated generic tool head among varied unbranded heads; prompt explicitly forbids devices, brands, logos, markings, readable text, recognizable products or people, and external inputs.
-    exactByteInspection: Several fictional, unmarked metal tool-head forms surround one head in a terracotta tray; no coherent brand geometry, readable mark, person, logo, or watermark is visible.
+    exactByteInspection: Several metal forms visibly resemble drill-chuck or tool-holder hardware through their jaws, collars, and chuck-like noses; no readable brand, person, logo, or watermark is visible, but the recognizable product-form risk remains concrete.
+    outcome: hold
+    notes: HOLD for repository publication because the exact byte contains recognizable drill-chuck/tool-holder forms even without visible branding; it must remain outside every canonical approval tuple.
+  - candidateId: TR32
+    recordId: oh-my-pi-deep-review
+    sha256: 6fdf396f251a37d38f579d5f03700350dcead2f59166995e193d7a4bfaa23462
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: Irregular blunt clay-like parts and one terracotta tray replace the held mechanical forms; prompt explicitly forbids devices, brands, logos, markings, readable text, recognizable products or people, artist imitation, and external inputs.
+    exactByteInspection: Abstract unmarked clay-like blocks and one terracotta tray have irregular blunt geometry with no jaws, collars, chuck-like noses, recognizable commercial product, person, readable text, logo, or watermark visible.
     outcome: approved
-    notes: Repository publication is supported for this exact byte; although mechanical, the forms are generic and not recognizable as a specific commercial product.
+    notes: Repository publication is supported for this exact byte; the replacement reads as abstract tactile material rather than identifiable product hardware and has no observed external-input, artist-imitation, identity, or mark risk.
   - candidateId: TR35
     recordId: ponytail-agent-minimalism-analysis
     sha256: 1401bdd29a0aade52ca225467e3e73cc61f045dad85d901c5178d3b4b717d3b3
@@ -152,7 +163,7 @@ candidates:
     outcome: approved
     notes: Repository publication is supported for this exact byte; the housing and jig are generic fictional forms rather than recognizable product hardware.
 summary:
-  approvedCandidateIds: [TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR29, TR35, TR38, TR41]
-  holdCandidateIds: []
+  approvedCandidateIds: [TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR32, TR35, TR38, TR41]
+  holdCandidateIds: [TR29]
   decision: approve-repository-publication
   caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed
