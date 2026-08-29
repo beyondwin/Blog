@@ -4,12 +4,15 @@ import { renderToString } from 'react-dom/server';
 import { chromium, type Browser } from 'playwright';
 import { createServer, transformWithEsbuild, type Plugin, type ViteDevServer } from 'vite';
 import { describe, expect, it } from 'vitest';
+import { SiteShell } from '../../src/ui/components/SiteShell';
 import { SearchPage } from '../../src/ui/search/SearchPage';
 import { SAMPLE_QUESTION, type PublicAnswerFixture } from '../../src/ui/search/secondBrain';
 import type { SearchInventoryItem } from '../../src/ui/search/searchModel';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const searchPagePath = join(repositoryRoot, 'apps/site/src/ui/search/SearchPage.tsx');
+const siteShellPath = join(repositoryRoot, 'apps/site/src/ui/components/SiteShell.tsx');
+const searchStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/route-search.css');
 
 const fixture: PublicAnswerFixture = {
   question: SAMPLE_QUESTION,
@@ -54,9 +57,11 @@ function clientPlugin(serverMarkup: string): Plugin {
       return `
         import { hydrateRoot } from 'react-dom/client';
         import { SearchPage } from ${JSON.stringify(searchPagePath)};
+        import { SiteShell } from ${JSON.stringify(siteShellPath)};
+        import ${JSON.stringify(searchStylesPath)};
         const fixture = ${JSON.stringify(fixture)};
         const inventory = ${JSON.stringify(inventory)};
-        hydrateRoot(document.querySelector('#root'), <SearchPage fixture={fixture} initialQuery="" inventory={inventory} />);
+        hydrateRoot(document.querySelector('#root'), <SiteShell currentSection="search"><SearchPage fixture={fixture} initialQuery="" inventory={inventory} /></SiteShell>);
       `;
     },
     async transform(code, id) {
@@ -81,11 +86,14 @@ function clientPlugin(serverMarkup: string): Plugin {
 }
 
 describe('second-brain search client interaction', () => {
-  it('answers only the sample, manages evidence focus, and falls back to real search', async () => {
+  it('inerts every shell control and covers the header while evidence is open', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;
     try {
-      const markup = renderToString(createElement(SearchPage, { fixture, initialQuery: '', inventory }));
+      const markup = renderToString(createElement(SiteShell, {
+        currentSection: 'search',
+        children: createElement(SearchPage, { fixture, initialQuery: '', inventory }),
+      }));
       server = await createServer({
         configFile: false,
         root: repositoryRoot,
@@ -111,6 +119,10 @@ describe('second-brain search client interaction', () => {
       await evidenceButton.click();
       await expect.poll(() => page.getByRole('dialog', { name: '이 답의 기억' }).count()).toBe(1);
       await expect.poll(() => page.evaluate(() => document.activeElement?.getAttribute('aria-label'))).toBe('근거 패널 닫기');
+      await expect.poll(() => page.locator('.second-brain-search__background').getAttribute('inert')).toBe('');
+      await expect.poll(() => page.locator('.skip-link').getAttribute('inert')).toBe('');
+      await expect.poll(() => page.locator('.site-header').getAttribute('inert')).toBe('');
+      await expect.poll(() => page.locator('.evidence-backdrop').evaluate((element) => element.getBoundingClientRect().top)).toBe(0);
       await page.keyboard.press('Escape');
       await expect.poll(() => page.evaluate(() => document.activeElement?.textContent?.trim())).toBe('근거 3개 보기');
 
@@ -125,13 +137,49 @@ describe('second-brain search client interaction', () => {
       await browser?.close();
       await server?.close();
     }
-  }, 20_000);
+  }, 60_000);
+
+  it('keeps a single polite status region while evidence is open', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const markup = renderToString(createElement(SiteShell, {
+        currentSection: 'search',
+        children: createElement(SearchPage, { fixture, initialQuery: '', inventory }),
+      }));
+      server = await createServer({
+        configFile: false,
+        root: repositoryRoot,
+        publicDir: join(repositoryRoot, 'apps/site/public'),
+        logLevel: 'silent',
+        plugins: [clientPlugin(markup)],
+        server: { host: '127.0.0.1', port: 0, strictPort: false },
+      });
+      await server.listen();
+      const address = server.httpServer?.address();
+      if (!address || typeof address === 'string') throw new Error('Vite did not bind an ephemeral port');
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.goto(`http://127.0.0.1:${address.port}/__second-brain-search/`, { waitUntil: 'domcontentloaded' });
+
+      await page.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view'), { timeout: 4_000 }).toBe('answered');
+      await page.getByRole('button', { name: '근거 3개 보기' }).click();
+      await expect.poll(() => page.locator('[aria-live="polite"]').count()).toBe(1);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 60_000);
 
   it('skips staged waiting for reduced motion', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;
     try {
-      const markup = renderToString(createElement(SearchPage, { fixture, initialQuery: '', inventory }));
+      const markup = renderToString(createElement(SiteShell, {
+        currentSection: 'search',
+        children: createElement(SearchPage, { fixture, initialQuery: '', inventory }),
+      }));
       server = await createServer({
         configFile: false,
         root: repositoryRoot,
@@ -154,5 +202,5 @@ describe('second-brain search client interaction', () => {
       await browser?.close();
       await server?.close();
     }
-  }, 20_000);
+  }, 60_000);
 });

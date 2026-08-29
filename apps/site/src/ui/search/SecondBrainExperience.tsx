@@ -198,7 +198,7 @@ function EvidencePanel({ closeRef, fixture, onClose, onSelect, panelRef, selecte
               </button>
             ))}
           </div>
-          <article className="evidence-panel__preview" aria-live="polite">
+          <article className="evidence-panel__preview">
             <p className="evidence-panel__meta">{selected.collectionLabel} · {selected.dateLabel} · {selected.locatorLabel}</p>
             <blockquote>“{selected.excerpt}”</blockquote>
             <p className="evidence-panel__context">{selected.context}</p>
@@ -303,11 +303,14 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
       }
       return;
     }
-    const background = backgroundRef.current;
+    const inertTargets = [
+      backgroundRef.current,
+      ...document.querySelectorAll<HTMLElement>('[data-evidence-modal-inert]'),
+    ].filter((target): target is HTMLElement => target !== null);
     const panel = panelRef.current;
-    const hadInert = background?.hasAttribute('inert') ?? false;
+    const inertState = inertTargets.map((target) => target.hasAttribute('inert'));
     const previousOverflow = document.documentElement.style.overflow;
-    background?.setAttribute('inert', '');
+    inertTargets.forEach((target) => target.setAttribute('inert', ''));
     document.documentElement.style.overflow = 'hidden';
     const focusFrame = window.requestAnimationFrame(() => closeRef.current?.focus({ preventScroll: true }));
     const onKeyDown = (event: KeyboardEvent) => {
@@ -333,7 +336,9 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       window.cancelAnimationFrame(focusFrame);
-      if (!hadInert) background?.removeAttribute('inert');
+      inertTargets.forEach((target, index) => {
+        if (!inertState[index]) target.removeAttribute('inert');
+      });
       document.documentElement.style.overflow = previousOverflow;
     };
   }, [closeEvidence, state.view]);

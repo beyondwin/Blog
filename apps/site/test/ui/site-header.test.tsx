@@ -64,7 +64,8 @@ describe('FORM & THOUGHT shared site header', () => {
     }));
 
     expect(html).toContain('<header');
-    expect(html).toContain('href="#main-content">본문으로 건너뛰기</a>');
+    expect(html).toContain('href="#main-content" data-evidence-modal-inert="true">본문으로 건너뛰기</a>');
+    expect(html).toContain('<header class="site-header" aria-label="사이트 머리말" data-evidence-modal-inert="true">');
     expect(html).toMatch(/<main class="site-main" id="main-content" tabindex="-1" data-mobile-menu-inert/u);
     expect(html).not.toContain('<footer');
     expect(html).not.toContain('data-surface-mode');

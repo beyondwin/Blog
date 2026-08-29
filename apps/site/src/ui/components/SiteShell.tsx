@@ -14,8 +14,8 @@ export function SiteShell({
 }) {
   return (
     <div className="site-shell">
-      <a className="skip-link" href="#main-content">본문으로 건너뛰기</a>
-      <SiteHeader currentSection={currentSection} inverse={inverseHeader} />
+      <a className="skip-link" href="#main-content" data-evidence-modal-inert>본문으로 건너뛰기</a>
+      <SiteHeader currentSection={currentSection} inverse={inverseHeader} evidenceModalInert />
       <main className="site-main" id="main-content" tabIndex={-1} data-mobile-menu-inert>{children}</main>
     </div>
   );
