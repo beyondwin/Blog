@@ -19,7 +19,7 @@ type HomeGeometry = {
   hero: Box;
   heroTitle: ContentBox;
   heroDescription: ContentBox;
-  picks: Array<{ box: ContentBox; title: ContentBox; description: ContentBox; media: ContentBox | null; labelFontSize: string; descriptionFontSize: string }>;
+  picks: Array<{ box: ContentBox; copy: ContentBox; title: ContentBox; description: ContentBox; media: ContentBox | null; mediaPosition: string | null; descriptionClientHeight: number; descriptionScrollHeight: number; labelFontSize: string; descriptionFontSize: string }>;
 };
 
 let browser: Browser;
@@ -114,9 +114,13 @@ async function homeGeometryAt(width: number, height = 900): Promise<HomeGeometry
         heroDescription: measuredBox(document.querySelector('.form-home__hero-copy p')!),
         picks: [...document.querySelectorAll('.form-home__pick')].map((pick) => ({
           box: measuredBox(pick),
+          copy: measuredBox(pick.querySelector('.form-home__pick-copy')!),
           title: measuredBox(pick.querySelector('strong')!),
           description: measuredBox(pick.querySelector('.form-home__pick-copy > span:not(.form-home__pick-label)')!),
           media: pick.querySelector('.form-home__pick-media') ? measuredBox(pick.querySelector('.form-home__pick-media')!) : null,
+          mediaPosition: pick.querySelector('.form-home__pick-media') ? getComputedStyle(pick.querySelector('.form-home__pick-media')!).position : null,
+          descriptionClientHeight: (pick.querySelector('.form-home__pick-copy > span:not(.form-home__pick-label)') as HTMLElement).clientHeight,
+          descriptionScrollHeight: (pick.querySelector('.form-home__pick-copy > span:not(.form-home__pick-label)') as HTMLElement).scrollHeight,
           labelFontSize: getComputedStyle(pick.querySelector('.form-home__pick-label')!).fontSize,
           descriptionFontSize: getComputedStyle(pick.querySelector('.form-home__pick-copy > span:not(.form-home__pick-label)')!).fontSize,
         })),
@@ -153,7 +157,17 @@ describe('editorial density geometry', () => {
     if (width <= 1179) {
       expect(Number.parseFloat(thought.labelFontSize)).toBeGreaterThanOrEqual(14);
       expect(Number.parseFloat(thought.descriptionFontSize)).toBeGreaterThanOrEqual(14);
+      for (const pick of home.picks) expect(pick.descriptionScrollHeight).toBeLessThanOrEqual(pick.descriptionClientHeight);
     }
+  });
+
+  it.each([390, 320])('keeps thought media in normal flow before copy at %ipx', async (width) => {
+    const thought = (await homeGeometryAt(width)).picks[2]!;
+
+    expect(thought.mediaPosition).not.toBe('absolute');
+    expect(thought.media).not.toBeNull();
+    expect(thought.media!.bottom).toBeLessThanOrEqual(thought.copy.bottom - thought.copy.height);
+    expect(thought.media!.width / thought.media!.height).toBeGreaterThanOrEqual(.75);
   });
 
   it('uses the full desktop canvas with compact editorial landmarks', async () => {

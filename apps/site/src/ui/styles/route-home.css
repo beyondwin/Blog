@@ -197,7 +197,7 @@
   .form-home__pick-media { position: absolute; top: 0; right: 0; width: 44px; height: 44px; display: block; }
   .form-home__pick-copy { padding: 10px 12px 30px; }
   .form-home__pick-copy strong { margin-block-start: 5px; font-size: 18px; line-height: 1.12; }
-  .form-home__pick-copy > span:not(.form-home__pick-label) { margin-block-start: 4px; line-height: 1.05; letter-spacing: -.08em; }
+  .form-home__pick-copy > span:not(.form-home__pick-label) { padding-block-end: 1px; margin-block-start: 4px; line-height: 1; }
   .form-home__pick-copy svg { right: 12px; bottom: 9px; width: 18px; }
 }
 
