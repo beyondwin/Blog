@@ -1,78 +1,51 @@
 # Agent Runbook
 
-This runbook is for coding agents working in `beyondwin`. It routes tasks to the
-right source documents, edit surfaces, boundaries, and verification commands.
+이 runbook은 agent를 현재 React-only `FORM & THOUGHT` source, edit surface와 검증 명령으로
+보낸다. 개념 설명은 [project docs hub](README.md), [architecture reference](architecture-reference.md),
+[Design built truth](../../../DESIGN.md)을 읽는다.
 
-Use the human-facing project docs for explanation:
+## 시작 순서
 
-- [Project docs hub](README.md)
-- [Getting started](getting-started.md)
-- [Publishing workflows](publishing-workflows.md)
-- [Architecture reference](architecture-reference.md)
-- [Design and content rationale](design-and-content-rationale.md)
+1. `git status --short --branch`로 기존 변경을 보존한다.
+2. root `AGENTS.md`와 수정 subtree의 `AGENTS.md`를 읽는다.
+3. 제품·architecture·data/publication·durable UX 작업이면 ADR index와 ADR-0007을 읽는다.
+4. route/UI는 `site-change`, content/research는 `research-and-publish`, docs/memory는
+   `archive-and-memory` skill을 사용한다.
+5. focused RED/GREEN 뒤 `npm run validate`와 필요한 browser matrix를 실행한다.
 
-## Scoped Guidance And Skills
+과거 renderer, parity, rollback, Public Atlas와 Graphify 문서는 history다. current command와
+owner는 `package.json`, `apps/site`, `packages/content`, `packages/contracts`에서 확인한다.
 
-Start from the root `AGENTS.md`, then read the closest guidance before editing:
+## task routing
 
-| Scope | Guidance | Project skill |
+| 작업 | 먼저 읽기 | 실제 owner |
 | --- | --- | --- |
-| Astro routes, layouts, components, styles, interactions | `src/AGENTS.md` | `site-change` |
-| MDX content and source-grounded writing | `src/AGENTS.md`, `src/content/AGENTS.md` | `research-and-publish` |
-| Archive documents and indexes | `docs/AGENTS.md` | `archive-and-memory` |
-| Private memory and public projection inputs | `memory/AGENTS.md` | `archive-and-memory` |
+| 공개 architecture 질문 | `architecture-reference.md` | `apps/site`, `packages/content`, `packages/contracts` |
+| route/layout/style | `DESIGN.md`, ADR-0007 | `apps/site/app`, `apps/site/src/ui` |
+| ordinary article/thought | `publishing-workflows.md` | `src/content`, `packages/content/src/schemas.ts` |
+| source-grounded article | workflow + evidence packet | article MDX, `docs/notes/article-factory/` |
+| review | workflow + cover rights section | review MDX와 matching media bundle |
+| immutable release/media | architecture reference | `packages/content`, `packages/contracts`, content asset bundle |
+| queue analysis | `SYNC.md`, workflow | `queue.md`, `scripts/queue.mjs`, analysis MDX |
+| public memory | architecture + memory implementation doc | `memory/**`, projector, `src/data/memory.public.json` |
+| curated docs | `docs/AGENTS.md`, docs index rules | `docs/notes`, catalog/topics/INDEX |
+| production artifact | architecture origin section | approved origin + `site:build:production`; deploy는 별도 권한 |
 
-Critical safety rules live in `AGENTS.md`. Long repeatable procedures live in `.agents/skills/`; use the smallest matching skill set. Graphify is not a project operating dependency.
+## edit and verification matrix
 
-## Read Order
-
-Read the smallest useful set for the task.
-
-| Task | Read first | Then confirm |
+| change | editable surface | minimum evidence |
 | --- | --- | --- |
-| Architecture or codebase question | `docs/notes/project/architecture-reference.md` | Relevant `src/` or `scripts/` files |
-| Ordinary article | `docs/notes/project/publishing-workflows.md` | `src/content.config.ts` |
-| Source-grounded article | `docs/notes/project/publishing-workflows.md`, relevant `docs/notes/article-factory/` packet | Rendered article route |
-| Review, idea, or travel note | `docs/notes/project/publishing-workflows.md`, `docs/notes/project/architecture-reference.md` | Matching collection schema in `src/content.config.ts` |
-| Queue analysis | `SYNC.md`, `docs/notes/project/publishing-workflows.md` | `scripts/queue.mjs` and `queue.md` |
-| Public memory projection | `docs/notes/project/architecture-reference.md`, `docs/implementation/memory-second-brain.md` | `scripts/memory/schema.mjs`, `scripts/memory/project.mjs`, `src/lib/memory/`, `src/pages/memory.astro`, `src/pages/memory/[slug].astro` |
-| Archive docs note | `docs/README.md`, `docs/_index/README.md` | `docs/_index/catalog.yml`, `docs/_index/topics.yml`, `docs/INDEX.md` |
-| New content lane | `docs/notes/project/architecture-reference.md`, `DESIGN.md` | Existing pages, layouts, validation scripts, and navigation |
-| Route, layout, or style change | `DESIGN.md`, `docs/notes/project/architecture-reference.md` | Target `src/pages`, `src/layouts`, `src/components`, or CSS files |
-| Product, architecture, boundary, or durable UX decision | `docs/notes/project/adr/README.md`, relevant accepted ADRs | `PRODUCT.md`, `DESIGN.md`, specs, and implementation evidence |
+| docs-only durable note | note + catalog/topics/INDEX | `npm run agent:check`, `git diff --check`, final `npm run validate` |
+| content | exact MDX + its media bundle/evidence | `npm run validate`, rendered route |
+| source-grounded content | above + source packet | article quality, source check, rendered route |
+| public memory | exact private inputs + projection JSON | `npm run memory:validate`, `npm run validate`, `/memory/` |
+| route/UI | exact route/component/CSS/test owners | focused test, `npm run validate`, desktop/mobile browser |
+| release/media | exact schema/builder/approval owners | adversarial focused tests, strict media, build/verify/clean |
+| delivery | static exporter/host/verifier owners | unit, site build, actual host/404/headers, retained Playwright |
 
-## Task Map
+## structured content handoff
 
-| Task family | Purpose | Editable surface | Risky surface | Verification |
-| --- | --- | --- | --- | --- |
-| Ordinary article | Add a technical essay or development note | `src/content/articles/*.mdx` | Routes, layouts, schema, unrelated articles | `npm run validate`; preview the generated article route, such as `/articles/my-note/`, when user asks for rendered review |
-| Source-grounded article | Publish a source-backed analysis article with evidence | `src/content/articles/*.mdx`, `docs/notes/article-factory/*.md` | Long copied source text, missing evidence, unrelated packets | `npm run validate`; inspect rendered article route |
-| Review | Add a book, article, tool, course, or media review | `src/content/reviews/*.mdx` | Review layout and imported review contracts unless requested | `npm run validate`; preview the generated review route, such as `/reviews/my-review/`, for substantial prose |
-| Idea | Add a seed, sketch, or proposal | `src/content/ideas/*.mdx` | Schema defaults without explicit `maturity` | `npm run validate` |
-| Travel note | Add a travel or place record | `src/content/travel/*.mdx` | Collection routing and unrelated travel entries | `npm run validate` |
-| Structured content record | Scaffold an article, review, scene, or idea with its media bundle | `src/content/<collection>/`, `src/assets/content/<collection>/<slug>/media.yml` | Writing assets outside the bundle, unsafe/incomplete manifest provenance, assuming a scaffold is public | `npm run media:validate`; `npm run validate` |
-| Queue analysis | Turn a queued URL into an analysis entry | `queue.md`, `src/content/analysis/*.mdx` | Fabricated source claims, paywalled source guesses, missing `output:` metadata | `npm run validate`; confirm `queue.md` metadata |
-| Public memory projection | Promote accepted public thoughts to `/memory` | `memory/thoughts/*.md`, `memory/edges.jsonl`, `memory/sources.jsonl`, `src/data/memory.public.json` | Direct imports from `memory/**` in public routes, private thoughts, unsafe source paths | `npm run memory:validate`; `npm run validate` before closeout |
-| Archive docs note | Add or move a curated internal document | `docs/notes/**`, `docs/raw/**` when provenance matters, `docs/_index/*.yml`, `docs/INDEX.md` | `docs/wiki/`, uncataloged durable notes | `npm run validate` when practical; confirm index paths exist |
-| New content lane | Add a new public collection and route surface | `src/content.config.ts`, `src/pages`, `src/layouts`, `src/lib/content.ts`, validation scripts, project docs | Treating a lane as a folder-only change | `npm run validate`; preview listing and detail routes |
-| Route, layout, or style change | Change visible site behavior or reading experience | `src/pages`, `src/layouts`, `src/components`, `src/styles/global.css` | One-note palettes, nested cards, broken mobile text, missing focus states | `npm run validate`; browser check affected routes |
-
-## Validation Matrix
-
-| Change type | Minimum verification | Extra verification |
-| --- | --- | --- |
-| Docs-only project note | `npm run agent:check`, `git diff --check` | `npm run validate` before final closeout |
-| Archive docs note or index change | `npm run agent:check`, `git diff --check` | `npm run validate` |
-| Ordinary content | `npm run validate` | Route preview when text quality or layout matters |
-| Source-grounded article | `npm run validate` | Rendered route review and evidence packet check |
-| Memory projection | `npm run memory:validate`, `npm run validate` | Preview `/memory/` when UI or projection output changes |
-| Route, layout, style, or component | `npm run validate` | Browser check on desktop and mobile-sized viewport |
-| New content lane | `npm run validate` | Listing route and detail route preview |
-| ADR addition or status change | `npm run agent:check`, `git diff --check` | Confirm ADR index, docs catalog, topics when needed, and `docs/INDEX.md` agree |
-
-## Structured Content Handoff
-
-Use these commands from the repository root:
+Current scaffolds are created from repository root.
 
 ```bash
 npm run content:new -- <article|review|scene|idea> ...
@@ -81,93 +54,62 @@ npm run media:validate
 npm run validate
 ```
 
-Only `status: "published"` with `draft: false` (`published && !draft`) is
-public. A scaffold is intentionally `review` and draft. Keep each asset and
-its `media.yml` under `src/assets/content/<collection>/<slug>/`; the manifest
-records asset metadata and provenance, not a UI-specific path.
+The CLI name `scene` is only a retained input alias for a private-review travel record; it does not
+create the removed public scene experience. Every scaffold is `status: review`, `draft: true`.
 
-The design/route layer consumes `src/lib/content/viewModels.ts` and
-already-resolved `ResolvedMedia` from `src/lib/content/mediaRegistry.ts`.
-Publication selection belongs to `src/lib/content/publication.ts`. Do not
-repeat manifest/path resolution in pages, layouts, or components. Public
-list/detail/home/search/tag surfaces now consistently require
-`published && !draft`; `scripts/publication-surfaces.test.mjs` guards this
-route-level contract.
+`packages/content/src/schemas.ts` owns source records. Public selection is exactly
+`status === "published" && draft === false`. The current primary corpus is 17 articles, 18 reviews
+and one thought. Examples are excluded. `why-i-read-in-the-ai-era` is only a thought.
 
-The corpus preserves 18 real non-example article sources, all currently
-public locally after explicit publication authorization in this branch.
-That includes the former review-held Bundle A slugs
-`agents-md-vs-agent-skills-evidence`,
-`aws-static-frontend-serverless-bff`,
-`shared-ai-conversation-evidence-boundaries`, and
-`uncle-bob-ai-code-review-evidence`, plus un-drafted
-`karpathy-delete-everything-keep-graph`. The authorization is local
-frontmatter only; it is not a remote deploy. Risk-resolution work is not
-publication authorization.
+Each asset stays under `src/assets/content/<collection>/<slug>/` with `media.yml`. Generated media
+needs a canonical required batch, controller + independent visual approval and approved rights
+review. Review cover bytes additionally need exact edition identity and controller + independent
+rights approval. Warning/hold/unverified covers stay text-led.
 
-`npm run validate` includes the strict media gate
-`npm run media:validate -- --strict`. Naver review intake must use a new local
-directory outside `src/` and `public/`:
+## release and local site
 
 ```bash
-node scripts/import-naver-reviews.mjs \
-  --output docs/_inbox/naver-reviews-YYYY-MM-DD
+npm run public-release:build
+npm run public-release:verify
+npm run public-release:clean-test
+npm run site:build
+npm run site:preview -- --host 127.0.0.1 --port 4391
 ```
 
-The importer emits `status: "review"`, `draft: true`, never `coverImage`, and
-keeps a discovered cover URL only in the local `naver-review-intake.json`.
-Do not move an intake into the corpus until bibliography/media review and an
-explicit verdict approval are complete. The migrated corpus has 18 reviews:
-17 source-identified local covers and one `devotion-of-suspect-x` HOLD because
-the matching image is below 300px. `doing-good-better` is canonical; the old
-route is only a static meta-refresh compatibility page, not a guaranteed HTTP
-301 redirect.
+`site:build` is local evidence. Do not invent `FORM_THOUGHT_SITE_ORIGIN`. A production build requires
+an explicitly approved normalized HTTPS origin; current production origin is `not_measured` and
+authorization is `false`.
 
-## Public And Private Boundaries
+## public/private and search boundaries
 
-- `/memory` reads `src/data/memory.public.json`; it must not import or parse `memory/**` directly.
-- Content is public only when `published && !draft`; do not treat non-draft review or archived entries as public.
-- New thoughts should start private unless the user explicitly wants public memory.
-- Public memory export requires `confidentiality: public`, `surfaces: [memory-public]`, `review.status: accepted`, and at least one safe source.
-- `docs/raw/` preserves source wording and provenance; curated explanations belong in a stable topic folder under `docs/notes/`.
-- `docs/wiki/` is a generated navigation layer, not source of truth.
-- Source-grounded articles need evidence packets or equivalent source notes; do not rely on memory for source-specific claims.
-- Direct quotes must stay short enough for `scripts/validate-content.mjs` blockquote checks.
+- Public app/release reads `src/data/memory.public.json`, never top-level `memory/**`.
+- Public release rejects status/draft, private locator, raw prompt/job, source map and embedding leaks.
+- Primary navigation/search is reviews, articles, thoughts, search only.
+- Secondary analysis/ideas/travel/tags/memory routes remain canonical outside primary search.
+- No-JS anchors and GET forms remain functional. Static `/search/` cannot generate arbitrary
+  query-specific HTML; JS-off preserves canonical URL and base discovery, not filtering/input restore.
+- Publishing, memory promotion, cover approval and generated-media approval require explicit authority.
 
-## Index Sync Rules
+## browser completion
 
-When adding, moving, or deleting a durable curated note under `docs/notes/`:
+Visible work uses a separate local port and checks 1440×900, relevant calibrated reference width,
+768px, 390×844 and 320px. Record URL, viewport, release id, screenshot/hash, console, accessibility,
+overflow and reference ID. Include keyboard-only, menu containment/restore, reduced motion, no-JS,
+long titles, HOLD cover, image failure, table/code and actual static-host 404. Unrun means
+`not_measured`.
 
-1. Update `docs/_index/catalog.yml`.
-2. Update `docs/_index/topics.yml` only when the topic category changes or its description becomes inaccurate.
-3. Update `docs/INDEX.md` so humans can find the note.
-4. Confirm every catalog path points to an existing file.
+## docs and ADR rules
 
-Do not catalog generated `docs/wiki/` pages as primary sources.
+Adding or moving a durable note updates `docs/_index/catalog.yml`, `docs/_index/topics.yml` when its
+stable topic changes, and `docs/INDEX.md`. An ADR change also updates the ADR index. Preserve rejected
+and superseded decisions as history; do not rewrite them into current instructions.
 
-## ADR Update Rules
+## common failures
 
-Use [the ADR index](adr/README.md) for decisions that future work must treat as constraints.
-
-1. Read accepted ADRs before product, architecture, data-boundary, publishing-policy, or durable UX work.
-2. Add or update an ADR in the same change when a material decision is accepted, rejected, superseded, or narrowed.
-3. Keep research directions and unapproved design options `proposed`.
-4. Preserve rejected alternatives and the evidence behind the rejection.
-5. If a new decision replaces an accepted ADR, create a new ADR and mark the old one `superseded`; do not rewrite history.
-6. Update the ADR index, docs catalog, topics when needed, and human-readable docs index.
-
-## Common Failure Modes
-
-- Adding an MDX file without running `npm run validate`.
-- Running only non-strict `media:validate` and treating warnings as completion; `npm run validate` runs strict media validation and is the required final gate.
-- Running the Naver importer without a new local intake directory, or copying discovered cover URLs into public frontmatter.
-- Publishing a `source-grounded` article without source evidence or the required article-quality headings.
-- Letting `/memory` read private `memory/**` files directly.
-- Editing `/memory` behavior in `src/pages/memory.astro` before checking the focused module under `src/lib/memory/`.
-- Adding a curated docs note without updating `catalog.yml`, `topics.yml` when needed, and `docs/INDEX.md`.
-- Changing a content lane without updating schema, routes, helpers, validation, navigation, and docs together.
-- Treating a request to resolve migration or validation risk as permission to publish a `review` entry.
-- Editing broad root docs when a small task-specific docs link would be enough.
-- Starting work in a scoped subtree without reading its closest `AGENTS.md`.
-- Repeating a long workflow manually instead of using the matching project skill.
-- Treating Graphify as a project operating dependency after its removal.
+- Parsing source MDX or `media.yml` in a UI component instead of consuming the verified release.
+- Treating a scaffold, risk fix, release build or local static build as publication/deploy authority.
+- Hiding 17 cover-rights warnings because the safer public release contains no cover bytes.
+- Claiming no-JS search filtering on a single static `/search/index.html`.
+- Inventing a production domain or treating `.invalid` as production evidence.
+- Running only unit tests for a visible route change.
+- Restoring removed renderer/comparison tools from historical notes.

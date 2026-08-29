@@ -20,6 +20,7 @@
 | FORM & THOUGHT Astro removal manifest | project | evidence | en | organized | [docs/notes/project/evidence/form-and-thought-astro-removal-manifest.md](notes/project/evidence/form-and-thought-astro-removal-manifest.md) |
 | FORM & THOUGHT Astro removal post-removal amendment | project | evidence | en | organized | [docs/notes/project/evidence/form-and-thought-astro-removal-post-removal-amendment.md](notes/project/evidence/form-and-thought-astro-removal-post-removal-amendment.md) |
 | FORM & THOUGHT pre-removal acceptance | project | evidence | en | organized | [docs/notes/project/evidence/form-and-thought-pre-removal-acceptance.md](notes/project/evidence/form-and-thought-pre-removal-acceptance.md) |
+| FORM & THOUGHT final acceptance | project | evidence | en | organized | [docs/notes/project/evidence/form-and-thought-final-acceptance.md](notes/project/evidence/form-and-thought-final-acceptance.md) |
 | 서평 제외 아티클 전면 개선 설계 | project | workflow | ko | organized | [docs/notes/project/non-review-article-improvement-design.md](notes/project/non-review-article-improvement-design.md) |
 | 서평 제외 아티클 전면 개선 구현 계획 | project | implementation-plan | ko | organized | [docs/notes/project/non-review-article-improvement-implementation-plan.md](notes/project/non-review-article-improvement-implementation-plan.md) |
 | Agent Runbook | project | workflow | ko | organized | [docs/notes/project/agent-runbook.md](notes/project/agent-runbook.md) |

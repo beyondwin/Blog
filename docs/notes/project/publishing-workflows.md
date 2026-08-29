@@ -1,427 +1,237 @@
 # 콘텐츠 운영
 
-이 문서는 `beyondwin`에서 콘텐츠를 추가하고 유지하는 방법을 정리한다. 모든 작업은 repo root에서 실행한다.
+이 문서는 `src/content/` source record를 안전하게 만들고 immutable public release까지
+검증하는 현재 절차다. 모든 명령은 repository root에서 실행한다.
 
-## 공통 완료 기준
+## 공통 공개 조건과 완료 기준
 
-작업을 끝내기 전에는 항상 실행한다.
+공개 조건은 모든 source collection에서 정확히 다음 둘을 함께 만족하는 것이다.
+
+```yaml
+status: "published"
+draft: false
+```
+
+scaffold, import, source review, risk fix나 build 성공은 publication authorization이 아니다.
+사용자가 명시적으로 승인하지 않으면 `review`/draft를 published로 바꾸지 않는다.
 
 ```bash
 npm run validate
 ```
 
-검증이 실패하면 결과를 먼저 고친다. route preview가 필요한 글은 `npm run dev`로 실제 페이지까지 확인한다.
+이 final gate는 source content, strict media/rights, article quality, public memory, 전체 tests와
+typecheck, immutable release build/verify/cleanup, React static build를 실행한다. substantial prose,
+table, code, image 또는 UI 영향이 있으면 실제 route도 확인한다.
 
-## How to Scaffold Structured Content And Media
+## source schema와 record 만들기
 
-새 record는 content와 media bundle을 함께 만든다.
+schema source of truth는 `packages/content/src/schemas.ts`다. source collection은 `analysis`,
+`articles`, `ideas`, `reviews`, `travel`, `thoughts`다.
 
 ```bash
 npm run content:new -- <article|review|scene|idea> ...
 ```
 
-예를 들어 slug와 title을 지정한다.
+이 명령은 `src/content/<collection>/<slug>.mdx`와
+`src/assets/content/<collection>/<slug>/media.yml`을 collision-safe하게 함께 만든다. CLI의
+`scene` 입력은 travel review scaffold를 만드는 기존 alias일 뿐 공개 scene UI를 만들지 않는다.
+모든 scaffold는 `status: review`, `draft: true`다.
 
-```bash
-npm run content:new -- review --slug factfulness --title "Factfulness" --isbn 9788934985068
-```
+## ordinary article
 
-명령은 collision-safe하게 `src/content/<collection>/<slug>.mdx`와
-`src/assets/content/<collection>/<slug>/media.yml`를 같이 만든다. scaffold는
-언제나 `status: "review"`, `draft: true`이며, 검토 후 `status: "published"`와
-`draft: false`를 모두 설정할 때만 public이다. `published && !draft` 외의 어떤
-상태도 공개 조건으로 쓰지 않는다.
-
-asset 파일과 `media.yml`은 반드시 같은
-`src/assets/content/<collection>/<slug>/` 아래에 둔다. manifest item에는 `id`,
-`file`, `kind`, `alt`, `credit`, 하나의 `sourceUrl` 또는 `sourcePath`,
-`verifiedAt`, `rightsNote`, `checksum`을 기록한다. `book-cover`에는 source URL,
-ISBN-13, edition도 필요하다.
-
-```bash
-npm run media:validate
-```
-
-이 명령은 필요할 때 쓰는 non-strict 진단이다. 전체 완료 gate인
-`npm run validate`는 `npm run media:validate -- --strict`를 실행하므로 legacy
-`coverImage`나 원격 image hotlink가 하나라도 남으면 실패한다. 새 media는 remote
-URL을 직접 렌더링하지 말고 manifest ID (`featuredMedia`, `coverMedia`,
-`leadMedia`)로 참조한다.
-
-## How to Add An Ordinary Article
-
-개발 글이나 기술 에세이는 `src/content/articles/`에 둔다.
-
-1. MDX 파일을 만든다.
-
-   ```mdx
-   ---
-   title: "읽을 수 있는 제목"
-   description: "목록과 metadata에 보일 한 문장 요약."
-   createdAt: "2026-06-30"
-   updatedAt: "2026-06-30"
-   tags: ["workflow"]
-   status: "review"
-   ---
-
-   본문을 여기에 쓴다.
-   ```
-
-2. 직접 인용은 짧게 유지한다. [scripts/validate-content.mjs](../../../scripts/validate-content.mjs)는 blockquote 한 줄이 25단어를 넘으면 실패시킨다.
-
-3. 검증한다.
-
-   ```bash
-   npm run validate
-   ```
-
-4. 개발 서버에서 route를 확인한다.
-
-   ```bash
-   npm run dev
-   ```
-
-   파일이 `src/content/articles/my-note.mdx`라면 `/articles/my-note/`를 연다.
-
-## How to Add A Review
-
-리뷰는 `src/content/reviews/`에 둔다. 책, 글, 도구, 강의, 기타 리뷰가 모두 이 lane을 쓴다.
-
-먼저 review scaffold를 생성한다.
-
-```bash
-npm run content:new -- review --slug factfulness --title "Factfulness" --isbn 9788934985068
-```
-
-검증한 local cover를 사용할 때는 생성된 frontmatter에 `coverState`와
-`coverMedia`를 추가한다.
+`src/content/articles/<slug>.mdx`를 만들고 최소 공통 frontmatter를 채운다.
 
 ```mdx
 ---
-title: "Factfulness"
-description: "한 문장 요약."
-createdAt: "2026-06-30"
-updatedAt: "2026-06-30"
-tags: ["book"]
+title: "읽을 수 있는 제목"
+description: "목록과 metadata에 보일 한 문장 요약."
+createdAt: "2026-08-29"
+updatedAt: "2026-08-29"
+tags: ["workflow"]
 status: "review"
 draft: true
-itemType: "book"
-itemTitle: "Factfulness"
-itemAuthor: "Hans Rosling"
-isbn13: "9788934985068"
-rating: 4
-completedAt: "2026-06-30"
-sourceUrl: "https://example.com/original-review-or-source"
-coverState: "verified"
-coverMedia: "cover"
+recordKind: "technical-note"
+evidenceState: "personal"
 ---
 
-리뷰 본문.
+본문.
 ```
 
-이 상태는 실제 `src/assets/content/reviews/factfulness/cover.jpg`와 같은
-폴더의 `media.yml` 항목이 모두 있을 때만 쓴다.
+blockquote 한 줄은 25단어 이하로 유지한다. `updatedAt`은 `createdAt`보다 빠를 수 없다.
+확인할 route는 `/articles/<slug>/`다.
 
-```yaml
-version: 1
-items:
-  - id: cover
-    file: cover.jpg
-    kind: book-cover
-    alt: 팩트풀니스 한국어판 표지
-    credit: 출판사 또는 권리자
-    sourceUrl: https://example.com/cover-provenance
-    isbn13: "9788934985068"
-    edition: 한국어판 판본 설명
-    verifiedAt: "2026-06-30"
-    rightsNote: 저장 및 재배포 권한 확인 내용
-    checksum: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-```
+## public thought
 
-검증한 local cover가 없다면 `coverState: "hold"`만 기록하고
-`coverMedia`와 legacy `coverImage`는 모두 두지 않는다.
+short-form public thought는 `src/content/thoughts/<slug>.mdx`에 둔다. article subtype field나
+article-like scaffolding을 붙이지 않는다. 현재 공개 thought는
+`why-i-read-in-the-ai-era` 한 건이며 canonical route도 thoughts detail 하나뿐이다.
 
-제약:
+새 thought를 공개하면 schema, route inventory, thought index의 정확히 한 real cell 계약,
+search/home selection과 docs를 함께 검토해야 한다. 현재 index는 real one + inert empty five를
+요구하므로 두 번째 thought는 새 제품 결정 없이는 공개하지 않는다.
 
-- `itemType`은 `book`, `article`, `tool`, `course`, `other` 중 하나다.
-- `rating`은 선택값이며 0 이상 5 이하 숫자다.
-- `completedAt`이 있으면 review의 표시 날짜로 우선 사용된다.
-- review frontmatter의 `sourceUrl`은 원문 리뷰 또는 검토 대상의 URL이다. cover의 출처와 권리 근거는 `media.yml` item의 `sourceUrl`, `credit`, `rightsNote`에 별도로 기록한다.
-
-### Naver review intake
-
-Naver importer는 공개 콘텐츠를 직접 갱신하지 않는다. 기존 18개 review가 있는
-`src/content/reviews/`를 기본 출력으로 사용하지 않으며, 매번 존재하지 않는 local
-intake directory를 명시해야 한다.
-
-```bash
-node scripts/import-naver-reviews.mjs \
-  --output docs/_inbox/naver-reviews-2026-08-13
-```
-
-생성된 MDX는 원문 title, body, 날짜, Naver `sourceUrl`을 보존하지만 항상
-`status: "review"`, `draft: true`다. 발견한 cover URL은 public frontmatter에
-쓰지 않고 같은 intake directory의 `naver-review-intake.json`에만 조사 단서로
-남긴다. 출력 경로는 `src/`와 `public/` 아래일 수 없고, 이미 존재하는 directory는
-덮어쓰지 않는다.
-
-intake를 실제 review로 옮기기 전에는 서지와 판본을 확인하고 다음 중 하나를
-선택한다.
-
-- 검증된 local cover와 완전한 `media.yml`이 있으면 `coverState: "verified"`와
-  `coverMedia: "cover"`를 쓴다.
-- 판본과 source-identical image를 검증하지 못하면 `coverState: "hold"`만 쓴다.
-- 본문에서 뽑은 `verdict`는 작성자 승인을 받기 전에는 frontmatter로 옮기지 않는다.
-
-기존 18개 Naver review 마이그레이션에서는 17개 표지를 판본 식별용 local
-asset으로 옮겼고, 재배포 권한이 별도로 확인되지 않았다는 provenance warning을
-보존했다. `devotion-of-suspect-x`는 확인한 동일 판본 이미지가 repository의
-300px 최소 폭을 충족하지 않아 `coverState: "hold"`로 남는다. 18개 verdict는
-원문 첫 판단 문장과 동일한 후보를 작성자가 명시적으로 승인한 뒤에만 적용했다.
-`doing-good-better`가 올바른 canonical slug이며, 이전
-`/reviews/the-life-you-can-save/` 경로는 adapter 없는 static build에서 새 경로를
-가리키는 meta-refresh HTML을 생성한다. 이 동작을 HTTP 301로 설명하지 않는다.
-
-## How to Add An Idea
-
-아이디어는 `src/content/ideas/`에 둔다.
-
-```mdx
----
-title: "Idea title"
-description: "짧은 요약."
-createdAt: "2026-06-30"
-updatedAt: "2026-06-30"
-tags: ["product"]
-status: "review"
-maturity: "sketch"
----
-```
-
-`maturity`는 `seed`, `sketch`, `proposal` 중 하나다. 값이 없으면 Astro schema에서는 `sketch`가 기본값이지만, 현재 content validation script는 ideas에서 `maturity`를 필수로 요구한다. 그래서 파일에는 명시한다.
-
-## How to Add A Travel Note
-
-여행 기록은 `src/content/travel/`에 둔다.
-
-```mdx
----
-title: "Place note"
-description: "짧은 요약."
-createdAt: "2026-06-30"
-updatedAt: "2026-06-30"
-tags: ["travel"]
-status: "review"
-location: "Seoul"
-visitedAt: "2026-06-30"
----
-```
-
-`visitedAt`이 있으면 travel note의 표시 날짜로 우선 사용된다.
-`status: "published"`로 바꾸기 전에는 `privacyReviewed: true`와 검증된 local
-asset을 가리키는 `leadMedia`가 모두 필요하다. review/draft scaffold에는 이 공개
-전용 필드를 요구하지 않는다.
-
-모든 collection에서 `updatedAt`은 `createdAt`보다 빠를 수 없다. published review는
-`itemAuthor`, 유효한 `isbn13`, `publisher`, 승인된 `verdict`, `coverState`가 필요하다.
-`coverState: "verified"`는 `coverMedia`를 요구하고 `coverState: "hold"`는 이를
-금지한다. 이 조건은 `npm run validate`의 content gate에서 검사된다.
-
-## How to Create A Source-Grounded Article Draft
-
-외부 자료나 저장소를 깊게 읽고 쓰는 article은 evidence packet과 article draft를 같이 만든다.
+## source-grounded article
 
 ```bash
 npm run article:new -- ...
 ```
 
-실제 호출에서는 source label, `--title`, `--slug`를 제공한다.
+evidence packet은 `docs/notes/article-factory/`, draft는 `src/content/articles/`에 생긴다.
+`source-grounded` tag가 있으면 `npm run article:quality`가 아래 section과 자료 URL을 요구한다.
 
-생성물:
+- `먼저 알아야 할 개념`
+- `실제 구조`
+- `핵심 기능`
+- `좋은 점`
+- `조심해야 할 점`
+- `언제 쓰면 좋은가`
+- `주니어 개발자가 배울 점`
+- `내 결론`
+- `확인한 자료`
 
-- `docs/notes/article-factory/lazycodex.md`
-- `src/content/articles/lazycodex.mdx`
+packet의 source inventory/evidence ledger를 먼저 채우고 공식 docs, source, release note 또는
+local clone으로 주장마다 확인한다. 접근할 수 없는 자료는 gap으로 남기고 발명하지 않는다.
 
-생성된 article에는 `source-grounded` tag가 들어간다. 이 tag가 있으면 `npm run article:quality`가 아래 heading을 모두 요구한다.
+## review와 cover rights
 
-- `## 먼저 알아야 할 개념`
-- `## 실제 구조`
-- `## 핵심 기능`
-- `## 좋은 점`
-- `## 조심해야 할 점`
-- `## 언제 쓰면 좋은가`
-- `## 주니어 개발자가 배울 점`
-- `## 내 결론`
-- `## 확인한 자료`
-
-운영 순서:
-
-1. packet의 `Source Inventory`와 `Evidence Ledger`를 먼저 채운다.
-2. 공식 문서, GitHub source, release note, local clone 같은 근거를 확인한다.
-3. article scaffold의 일반 문장을 실제 주장과 근거로 바꾼다.
-4. `## 확인한 자료`에 최소 하나 이상의 URL을 둔다.
-5. `npm run validate`를 실행한다.
-
-## How to Process A Queue Item
-
-queue sync는 [SYNC.md](../../../SYNC.md)를 따른다.
-
-1. [queue.md](../../../queue.md)에 unchecked URL과 `comment:`를 둔다.
-
-   ```md
-   - [ ] https://example.com/some-article
-     comment: 제품 전략 관점에서 핵심 주장과 반론을 정리해줘.
-   ```
-
-2. source URL을 직접 읽는다. source-specific fact는 기억으로 채우지 않는다.
-
-3. `src/content/analysis/`에 MDX를 만든다.
-
-   ```mdx
-   ---
-   title: "Clear generated title"
-   description: "One sentence summary."
-   sourceUrl: "https://example.com/source"
-   sourceTitle: "Original source title"
-   comment: "Original queue comment"
-   format: "research-report"
-   createdAt: "2026-06-30"
-   updatedAt: "2026-06-30"
-   tags: ["strategy"]
-   status: "review"
-   draft: false
-   ---
-   ```
-
-4. `format`은 `research-report`, `essay`, `visual-page` 중 하나다.
-
-5. 검증한다.
-
-   ```bash
-   npm run validate
-   ```
-
-6. 처리 결과를 queue item에 기록한다.
-
-   ```md
-   - [x] https://example.com/some-article
-     comment: 제품 전략 관점에서 핵심 주장과 반론을 정리해줘.
-     output: src/content/analysis/some-article.mdx
-     pr: https://github.com/owner/repo/pull/123
-   ```
-
-source 접근이 막히면 글을 억지로 만들지 않는다.
-
-```md
-- [ ] https://example.com/paywalled
-  comment: 사업적 시사점 중심으로.
-  status: blocked
-  error: paywall or access restriction
+```bash
+npm run content:new -- review --slug factfulness --title "Factfulness" --isbn 9788934985068
 ```
 
-## How to Review And Project Public Memory
+published review는 author, valid ISBN-13, publisher, verdict와 `coverState`가 필요하다.
 
-`/memory`는 private source를 직접 읽지 않는다. 공개 페이지는 [src/data/memory.public.json](../../../src/data/memory.public.json)만 읽는다.
+- `coverState: hold`: `coverMedia`를 두지 않는다. text-led로 공개한다.
+- `coverState: verified`: source bundle에 동일 판본 cover item이 있어야 한다. 그러나 이것만으로
+  public cover byte를 허용하지 않는다.
 
-1. 후보를 생성한다.
+review cover가 release에 들어가려면 `media.yml` source URL/credit/rights note, exact ISBN/edition,
+source-identical bytes와 checksum, production approval registry의 controller +
+independent-rights-reviewer receipt가 모두 일치해야 한다. 하나라도 없으면 strict validator는
+warning을 남기고 release는 cover bytes를 제외한다.
 
-   ```bash
-   npm run memory:seed
-   ```
+현재 18 review 중 production-approved cover는 0건이다. 17건의 rights warning은 의도적으로
+보존하며 `devotion-of-suspect-x`는 `coverState: hold`다. warning을 없애기 위해 approval을
+만들거나 cover를 재생성하지 않는다.
 
-2. 후보를 읽기 쉬운 local report로 만든다.
+### Naver review intake
 
-   ```bash
-   npm run memory:review -- report
-   ```
+importer는 매번 새 local intake directory만 쓴다.
 
-   이 명령은 `memory/review/queue.md`를 만든다. 이 파일과 JSONL queue는 local review artifact이며 commit하지 않는다.
+```bash
+node scripts/import-naver-reviews.mjs \
+  --output docs/_inbox/naver-reviews-YYYY-MM-DD
+```
 
-3. 공개해도 되는 후보 하나를 명시적으로 승격한다.
+output은 `status: review`, `draft: true`이고 발견한 cover URL은 intake JSON의 조사 단서로만
+남는다. `src/`, `public/`, existing directory를 output으로 쓰지 않는다. 본문/verdict, bibliography,
+edition, media와 rights를 각각 검토하고 명시적 승인을 받은 뒤 exact record만 옮긴다.
 
-   ```bash
-   npm run memory:review -- promote <slug> --reviewed-at 2026-07-05
-   ```
+## idea와 travel
 
-   이 명령은 `memory/thoughts/<slug>.md`를 만든다. 승격된 thought는 `confidentiality: public`, `surfaces: [memory-public, article-ready]`, `review.status: accepted`를 가진다.
+idea는 `maturity: seed|sketch|proposal`을 명시한다. travel은 `location`을 요구하고 optional
+`visitedAt`을 display date로 쓴다. published travel에는 `privacyReviewed: true`와 verified
+`leadMedia`가 모두 필요하다.
 
-4. 공개 projection을 생성한다.
+secondary routes는 same FORM & THOUGHT shell을 쓰지만 primary navigation/search에는 들어가지
+않는다.
 
-   ```bash
-   npm run memory:project
-   ```
+## media bundle
 
-5. JSON을 쓰지 않고 검증만 하려면 실행한다.
+asset과 `media.yml`은 반드시 같은
+`src/assets/content/<collection>/<slug>/` bundle에 둔다. item은 다음을 기록한다.
 
-   ```bash
-   npm run memory:validate
-   ```
-
-6. 전체 gate를 통과시킨다.
-
-   ```bash
-   npm run validate
-   ```
-
-주의:
-
-- `memory/review/*.jsonl`과 `memory/review/*.md`는 local review artifact다.
-- 승격 명령은 duplicate slug, 안전하지 않은 source path, 존재하지 않는 source path를 거부한다.
-- public route는 `memory/**`를 직접 읽지 않는다.
-
-## How to Maintain Archive Docs
-
-`docs/`는 source, curated note, generated navigation을 분리한다.
-
-| Layer | Use |
-| --- | --- |
-| `docs/_inbox/` | 아직 분류하지 않은 local intake |
-| `docs/raw/` | 원문 wording과 provenance가 중요한 source capture |
-| `docs/notes/<topic>/` | 사람이 다듬은 장기 보관 문서 |
-| `docs/wiki/` | 생성된 navigation |
-
-curated note를 추가하거나 옮길 때:
-
-1. 파일을 `docs/notes/<topic>/` 아래에 둔다.
-2. [docs/_index/catalog.yml](../../_index/catalog.yml)에 항목을 추가하거나 수정한다.
-3. 안정적인 retrieval category가 새로 생겼다면 [docs/_index/topics.yml](../../_index/topics.yml)을 갱신한다.
-4. [docs/INDEX.md](../../INDEX.md)를 갱신한다.
-
-`docs/wiki/`는 source of truth가 아니다. 중요한 답변은 `docs/raw/` 또는 `docs/notes/`에서 다시 확인한다.
-
-## Focused Verification
-
-작업 종류에 따라 더 빠른 명령을 먼저 돌릴 수 있다.
+- unique media id와 local `file`
+- `kind`, non-empty `alt`, `credit`
+- 정확히 하나의 `sourceUrl` 또는 safe `sourcePath`
+- `verifiedAt`, `rightsNote`, SHA-256 checksum, dimensions
+- book cover이면 ISBN-13과 edition
 
 ```bash
 npm run media:validate
-npm run article:quality
-npm run memory:validate
-npm test
-npm run build
+npm run media:validate -- --strict
 ```
 
-마지막에는 `npm run validate`로 묶어서 확인한다.
+non-strict는 진단, strict는 completion boundary다. UI에서 remote URL을 hotlink하거나
+`media.yml`을 직접 읽지 않는다. frontmatter의 `featuredMedia`, `coverMedia`, `leadMedia` id를
+release builder가 resolve한다.
 
-## Troubleshooting
+### repository-generated media
+
+generated image는 ignored local intake에서 candidate/contact sheet를 먼저 만든다. public asset이
+되려면 모두 필요하다.
+
+1. canonical required-batch registry entry
+2. candidate checksum과 placement를 가진 durable decision manifest
+3. exact `controller` + `independent-visual-reviewer` approval
+4. approved contact sheet와 approved original checksum
+5. rights review `approve-repository-publication`
+6. `sourceKind: repository-generated`와 matching generation metadata
+
+현재 rights caveat는 `non-exclusive generated output; copyrightability/uniqueness not
+guaranteed`다. 승인되지 않은 후보, HOLD와 rejected image는 public release에 넣지 않고
+text-led fallback을 유지한다.
+
+## queue analysis
+
+[SYNC.md](../../../SYNC.md)를 따른다. unchecked URL과 `comment:`를 읽고 source를 직접 확인한
+뒤 `src/content/analysis/<slug>.mdx`를 만든다. 접근 제한이면 source-specific fact를 추정하지
+않고 item에 `status: blocked`, `error:`를 기록한다.
+
+성공한 item은 checkbox, exact `output:`과 실제 PR이 있을 때만 `pr:`을 기록한다. 분석 record도
+publication authority 전에는 `review`/draft 상태다.
+
+## public memory
+
+public route/release는 `src/data/memory.public.json`만 읽는다.
+
+```bash
+npm run memory:seed
+npm run memory:review -- report
+npm run memory:review -- promote <slug> --reviewed-at YYYY-MM-DD
+npm run memory:project
+npm run memory:validate
+```
+
+promotion은 명시적으로 승인된 slug만 수행한다. public projection eligibility는
+`confidentiality: public`, `surfaces: [memory-public]`, accepted review와 하나 이상의 safe source다.
+local review queue는 commit하지 않는다. public app code에 top-level `memory/**` import를
+추가하지 않는다.
+
+## immutable release와 route preview
+
+source나 media를 바꾼 뒤 현재 public artifact를 본다.
+
+```bash
+npm run public-release:build
+npm run public-release:verify
+npm run site:build
+npm run site:preview -- --host 127.0.0.1 --port 4391
+```
+
+`site:build`는 local reserved origin용이다. production build는 approved normalized exact HTTPS
+origin이 있을 때만 `FORM_THOUGHT_SITE_ORIGIN=... npm run site:build:production`으로 실행한다.
+현재 production origin은 `not_measured`, authorization은 `false`다.
+
+## archive docs
+
+original wording/provenance는 `docs/raw/`, curated source는 `docs/notes/<topic>/`, unsorted intake는
+`docs/_inbox/`, generated navigation은 `docs/wiki/`에 둔다. durable note를 추가·이동하면
+catalog, 필요 시 topics, `docs/INDEX.md`를 함께 갱신한다.
+
+## troubleshooting
 
 `Content validation failed`
-: 누락된 frontmatter, 잘못된 `status`, 배열이 아닌 `tags`, 잘못된 URL, 25단어 초과 blockquote를 확인한다.
+: `packages/content/src/schemas.ts`의 field, status/draft, URL, date, 25-word quote를 확인한다.
 
-`Article quality validation failed`
-: `source-grounded` article의 필수 heading, thesis paragraph, placeholder marker, 중복 `##` heading, `## 확인한 자료`의 URL을 확인한다.
+`Strict media validation failed`
+: bundle path/checksum/dimensions/provenance, generated approval batch, review redistribution receipt를
+확인한다. warning을 approval로 해석하지 않는다.
 
-`Memory projection valid`에서 excluded count가 예상보다 크다
-: 출력의 `excluded={...}`를 본다. 흔한 이유는 `private`, `notAccepted`, `notPublicSurface`, `missingSource`, `invalidSource`, `unsupportedSchema`다.
+route가 보이지 않는다
+: source가 `published && !draft`인지, active release를 다시 build/verify했는지, release-derived
+route inventory에 있는지 확인한다. UI source가 source MDX를 직접 읽도록 우회하지 않는다.
 
-Astro route가 보이지 않는다
-: 파일이 올바른 collection 폴더에 있는지, `status: "published"`와 `draft: false`가 모두 맞는지, 파일명이 route slug와 맞는지 확인한다. 개발 서버의 content state가 꼬였으면 서버를 재시작한다. list와 detail route는 모두 shared `published && !draft` selector를 사용한다.
-
-실제 article source는 예시 파일을 제외하면 18편이다. 이 브랜치에서 묶음 A 5편
-(`agents-md-vs-agent-skills-evidence`, `aws-static-frontend-serverless-bff`,
-`karpathy-delete-everything-keep-graph`,
-`shared-ai-conversation-evidence-boundaries`,
-`uncle-bob-ai-code-review-evidence`)에 대한 명시적 publication authorization
-이후, 로컬 corpus는 18편 모두 `published && !draft`다. 이 전환은 로컬
-frontmatter만 바꾸며 원격 배포·push·main 병합을 포함하지 않는다. 검증 또는
-migration 위험 해소 요청만으로는 공개 상태를 바꾸지 않는다.
+검색의 no-JS query 결과가 보이지 않는다
+: 현재 static architecture의 known limitation이다. GET URL과 base discovery는 유지되지만
+query-specific filter/input restore는 hydration-dependent다. 해결하려면 delivery/URL architecture
+결정이 먼저 필요하다.

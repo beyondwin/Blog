@@ -1,408 +1,177 @@
 # 아키텍처 레퍼런스
 
-`beyondwin`의 현재 public rollback/built truth는 Astro 기반 private-first 정적 지식 제품이다. 핵심은 typed MDX collection, script validation, private-first memory projection, 그리고 그중 공개 승인된 object만 조합하는 공개 탐색 화면이다.
+`beyondwin`의 현재 공개 built truth는 React Router Framework Mode static prerender와
+checksum-addressed immutable public release다. `apps/site`가 유일한 renderer이고,
+`packages/content`와 `packages/contracts`가 source schema, trusted MDX, media와 release
+검증을 소유한다. 과거 renderer 비교, rollback, Public Atlas 자료는 immutable history이며
+현재 실행 경로가 아니다.
 
-2026-08-23 승인된 목표 구조는 [ADR-0005](adr/0005-node-react-modular-monolith.md)와 [상세 설계](node-react-modular-monolith-design.md)에 기록돼 있다. 2026-08-25 측정 게이트는 React Router Framework Mode를 선택해 `apps/site`로 승격했다. 이는 네 route parity vertical slice의 선택·승격이며 full-route migration, cutover, PostgreSQL, Fastify, worker 구현 완료를 뜻하지 않는다. 그 전까지 아래 Astro reference를 public rollback truth로 사용한다.
+## 현재 경계
 
-## Approved Target Architecture — Partially Implemented
-
-| Layer | Target | Boundary |
+| 계층 | 구현 소유자 | 책임 |
 | --- | --- | --- |
-| 공개 사이트 | React Router Framework Mode, React/TypeScript | 측정 게이트에서 선택돼 `apps/site`로 승격됐다. 현재 네 parity route만 포함하며 immutable public release만 소비하고 private DB credential을 갖지 않는다. |
-| 내 작업실 | Vite, React Router Data Mode | Same-origin `/api`를 통해 private workflow를 수행한다. |
-| API | Fastify on Node.js | Auth, request/response schema, domain transaction boundary. |
-| Worker | Node.js + Graphile Worker | Ingestion, parsing, embedding, AI suggestion, public release build. |
-| Data | PostgreSQL, `pg_trgm`, pgvector | Canonical private data, session, search, durable jobs. |
-| Deployment | Docker Compose + reverse proxy | 한 host에서 시작하고 process를 독립적으로 분리할 수 있다. |
+| 공개 renderer | `apps/site` | React 19, React Router 8, route loader, FORM & THOUGHT UI, static export/host |
+| source/release | `packages/content` | MDX source parsing, Zod schema, trusted MDX render, media validation/build, release activation/verification |
+| public contract | `packages/contracts` | public record/media/release schema와 `isPublicRecord` |
+| 공개 원문 | `src/content/<collection>/*.mdx` | 사람이 관리하는 source record. public 여부는 `published && !draft` |
+| media source | `src/assets/content/<collection>/<slug>/` | 원본과 `media.yml`; UI 경로가 아니라 provenance bundle |
+| public memory input | `src/data/memory.public.json` | 공개 앱이 읽을 수 있는 유일한 memory projection |
+| private memory | `memory/**` | projection 입력. public app/release가 직접 읽지 않음 |
+| delivery | `apps/site/build-static-export.ts`, `apps/site/serve-static.ts` | verified release binding, atomic staging, assets, SEO/404/security headers, static host |
 
-Astro 제거는 migration 시작 조건이 아니라 route/content/media/browser parity와 rollback evidence를 모두 통과한 뒤 수행하는 마지막 단계다.
-[Public renderer comparison evidence](evidence/public-renderer-comparison.md)에서 Next.js는 mandatory failure 7건, React Router는 0건이었고 Next.js advantage는 0개였다. 이에 따라 공개 사이트 renderer는 React Router로 확정됐다.
+PostgreSQL, Fastify API, studio와 worker는 [ADR-0005](adr/0005-node-react-modular-monolith.md)의
+장기 architecture target이다. 이 공개 사이트 구현이 그 server-side target까지 구현했다는
+뜻은 아니다.
 
-## Runtime Stack
+## route map
 
-| Layer | File | Responsibility |
+route source of truth는 `apps/site/app/routes.ts`와 verified release다.
+
+| 분류 | canonical route | renderer |
 | --- | --- | --- |
-| Astro config | `astro.config.mjs` | Astro 설정. MDX integration을 등록한다. |
-| Content schemas | `src/content.config.ts` | collection별 frontmatter 계약. |
-| Pages | `src/pages/` | 정적 route와 collection detail route. |
-| Layouts | `src/layouts/` | base, article, analysis, review page shell. |
-| Components | `src/components/` | header, 공개 탐색 scene/object, reading card, callout, source panel, table of contents. |
-| Content helpers | `src/lib/content.ts` | collection metadata, 날짜 선택, route href, tag, sorting. |
-| Public scene contract | `src/lib/scenes/publicScene.ts` | scene definition/ref type, public-only resolver, canonical object view model, issue reporting. |
-| Judgment scene | `src/lib/scenes/judgmentScene.ts` | 현재 하나뿐인 author-approved `판단` definition과 public content/media projection 조립. |
-| Scene state | `src/lib/scenes/sceneState.ts` | overview/focus reducer, focus query helper, native rail scroll checkpoint parsing. |
-| Public scene UI | `src/components/PublicScene.astro`, `src/components/PublicSceneObject.astro` | server-rendered object links, Staged Aperture, focus/read/return/history interaction. |
-| Memory public data | `src/lib/memory/publicData.ts` | public memory JSON type, empty fallback, normalize, public JSON load. |
-| Memory lookup | `src/lib/memory/lookup.ts` | source route resolution and thought/topic/source/edge lookup maps. |
-| Memory graph model | `src/lib/memory/graphModel.ts` | graph nodes, edges, facets, deterministic positions. |
-| Memory filters | `src/lib/memory/filters.ts` | lens/filter matching and `/memory/` deep-link helpers. |
-| Memory content links | `src/lib/memory/contentLinks.ts` | public content footer linked/related memory matching. |
-| Memory page payload | `src/lib/memory/pagePayload.ts` | serializable `/memory` detail drawer and client payload data. |
-| Memory compatibility | `src/lib/memoryData.ts` | temporary re-export surface for existing imports. |
-| Global styles | `src/styles/global.css` | token, layout, prose, component, responsive CSS. |
-| Storyworld styles | `src/styles/storyworld.css` | `/`의 desktop Staged Aperture, mobile native snap rail, Continuity Zoom, reduced motion. |
-| Content source | `src/content/` | 공개 MDX 콘텐츠. |
-| Memory source | `memory/` | public projection의 입력. private draft는 commit하지 않는다. |
-| Docs library | `docs/` | source, curated note, index, generated navigation placeholder. |
+| home | `/` | `routes/home.tsx` |
+| primary index | `/reviews/`, `/articles/`, `/thoughts/`, `/search/` | 각 index/search route |
+| primary detail | `/reviews/:slug/`, `/articles/:slug/`, `/thoughts/:slug/` | verified release record detail |
+| secondary index | `/analysis/`, `/ideas/`, `/travel/`, `/tags/`, `/memory/` | secondary shell |
+| secondary detail | `/analysis/:slug/`, `/ideas/:slug/`, `/travel/:slug/`, `/tags/:tag/`, `/memory/:slug/` | release-derived route |
+| compatibility | `/memory/map/` | `noindex` `/memory/` redirect document |
+| delivery | `/sitemap.xml`, `/robots.txt`, `/404.html`, `/_headers` | static export artifact |
 
-## Content Collections
+현재 verified release에서 sitemap은 release-derived 93 route다. 이 숫자를 source에
+하드코딩하지 않고 `fullPublicPaths()`에서 다시 계산한다. 과거 review redirect와 article
+compatibility URL은 현재 route contract가 아니다.
 
-모든 collection은 아래 shared field를 가진다.
+## source content schema
 
-| Field | Type | Constraint |
-| --- | --- | --- |
-| `title` | string | required, non-empty |
-| `description` | string | required, non-empty |
-| `createdAt` | date | `z.coerce.date()` |
-| `updatedAt` | date | `z.coerce.date()`, `updatedAt >= createdAt` |
-| `tags` | string[] | default `[]`, item은 non-empty |
-| `status` | enum | `review`, `published`, `archived`; default `review` |
-| `draft` | boolean | default `false`; public selection에서는 `false`여야 한다. |
+single source schema는 `packages/content/src/schemas.ts`다. source collection은
+`analysis`, `articles`, `ideas`, `reviews`, `travel`, `thoughts`다. 공통 field는 `title`,
+`description`, `createdAt`, `updatedAt`, `tags`, `status`, `draft`, optional `dek`, 최대 세
+`relationships`, MDX `body`다. `updatedAt >= createdAt`과 collection canonical href를
+검증한다.
 
-공개 콘텐츠의 유일한 조건은 `status === "published" && draft === false`, 즉
-`published && !draft`다. `review`, `archived`, 그리고 `draft: true`는 모두
-public listing, tag, home selection에서 제외한다.
-
-### `analysis`
-
-Path: `src/content/analysis/`
-
-| Field | Type | Constraint |
-| --- | --- | --- |
-| `sourceUrl` | URL | required |
-| `sourceTitle` | string | required, non-empty |
-| `comment` | string | required, non-empty |
-| `format` | enum | `research-report`, `essay`, `visual-page` |
-
-### `articles`
-
-Path: `src/content/articles/`
-
-| Field | Type | Constraint |
-| --- | --- | --- |
-| `recordKind` | enum | optional; `technical-note`, `research`, `essay` |
-| `evidenceState` | enum | optional; `personal`, `source-grounded`, `verified` |
-| `featuredMedia` | string | optional, non-empty media id |
-
-`tags`에 `source-grounded`가 있으면 [scripts/article-quality.mjs](../../../scripts/article-quality.mjs)의 추가 gate를 통과해야 한다.
-
-### `ideas`
-
-Path: `src/content/ideas/`
-
-| Field | Type | Constraint |
-| --- | --- | --- |
-| `maturity` | enum | `seed`, `sketch`, `proposal`; Astro schema default는 `sketch` |
-
-현재 [scripts/validate-content.mjs](../../../scripts/validate-content.mjs)는 ideas에서 `maturity`를 required field로 검사한다. 새 파일에는 명시한다.
-
-### `reviews`
-
-Path: `src/content/reviews/`
-
-| Field | Type | Constraint |
-| --- | --- | --- |
-| `itemType` | enum | `book`, `article`, `tool`, `course`, `other` |
-| `itemTitle` | string | required, non-empty |
-| `itemAuthor` | string 또는 string[] | published review에서 required |
-| `isbn13` | string | published review에서 required, ISBN-13 형식 |
-| `publisher` | string | published review에서 required |
-| `verdict` | string | published review에서 required, non-empty |
-| `coverState` | enum | published review에서 `verified` 또는 `hold` required |
-| `coverMedia` | media id | `coverState: verified`에서 required, `hold`에서 forbidden |
-| `rating` | number | optional, 0-5 |
-| `completedAt` | date | optional, display date 우선순위 1 |
-| `sourceUrl` | URL | optional |
-
-### `travel`
-
-Path: `src/content/travel/`
-
-| Field | Type | Constraint |
-| --- | --- | --- |
-| `location` | string | required, non-empty |
-| `visitedAt` | date | optional, display date 우선순위 1 |
-| `privacyReviewed` | boolean | published travel에서 `true` required |
-| `leadMedia` | media id | published travel에서 required |
-
-## Route Map
-
-| Route | Source | Behavior |
-| --- | --- | --- |
-| `/` | `src/pages/index.astro` | `loadJudgmentScene()`으로 하나의 `판단` 공개 탐색 scene을 server-render하고 `PublicScene` interaction을 progressive-enhance한다. |
-| `/articles/` | `src/pages/articles/index.astro` | article listing. |
-| `/articles/[slug]/` | `src/pages/articles/[slug].astro` | published non-draft article detail. |
-| `/analysis/` | `src/pages/analysis/index.astro` | analysis listing. |
-| `/analysis/[slug]/` | `src/pages/analysis/[slug].astro` | published non-draft analysis detail. |
-| `/reviews/` | `src/pages/reviews/index.astro` | review listing. |
-| `/reviews/[slug]/` | `src/pages/reviews/[slug].astro` | published non-draft review detail. |
-| `/reviews/the-life-you-can-save/` | `astro.config.mjs` redirect | `/reviews/doing-good-better/`로 보내는 static meta-refresh compatibility page. HTTP 301을 보장하지 않는다. |
-| `/ideas/` | `src/pages/ideas/index.astro` | idea listing. |
-| `/ideas/[slug]/` | `src/pages/ideas/[slug].astro` | published non-draft idea detail. |
-| `/travel/` | `src/pages/travel/index.astro` | travel listing. |
-| `/travel/[slug]/` | `src/pages/travel/[slug].astro` | published non-draft travel detail. |
-| `/tags/` | `src/pages/tags/index.astro` | all public content tag index. |
-| `/tags/[tag]/` | `src/pages/tags/[tag].astro` | tag-filtered public content listing. |
-| `/memory/` | `src/pages/memory.astro` | generated public memory projection. |
-
-## 공개 탐색 화면 Projection Contract
-
-현재 공개 탐색 화면 구현은 `/`의 단일 `판단` scene이다. 여러 scene을 저장하거나 자동 생성하는 시스템은 없다.
-
-- `src/pages/index.astro`는 `src/lib/homeData.ts`가 re-export한 `loadJudgmentScene()`을 호출하고 `src/styles/storyworld.css`와 `PublicScene`을 사용한다.
-- `src/lib/scenes/judgmentScene.ts`는 published article/review selector, `src/data/memory.public.json` loader, media registry를 scene resolver에 주입한다. top-level `memory/**`를 직접 읽지 않는다.
-- `src/lib/scenes/publicScene.ts`는 author approval, relation reason, unique id와 canonical reference를 검증한다. lead가 없거나 공개될 수 없으면 실패하고, optional support/context 문제는 object id와 이유가 있는 structured issue로 남긴다. `src/pages/index.astro`가 이 issue를 순회해 `[public-scene] <object-id>: <message>` 형식의 build-time `console.warn`으로 내보내며, 별도 validation report를 생성하지 않는다.
-- object 순서는 `reading-desk-cobalt`, `judgment-scale`, text-only `black-swan`, `reading-excerpt`, `shared-reading-table`이다. 네 article object의 canonical href는 `/articles/why-i-read-in-the-ai-era/`, review href는 `/reviews/black-swan/`이다.
-- `src/components/PublicSceneObject.astro`는 모든 object를 canonical anchor로 server-render한다. JavaScript가 비활성화되어도 각 링크는 정상 route로 이동한다.
-- `src/components/PublicScene.astro`는 `?focus=<object-id>`와 history state를 동기화한다. focus entry의 자체 key는 `publicSceneFocus`와 `publicSceneScrollLeft` 두 개뿐이다. scene id는 history에 저장하지 않고, 현재 유일한 `/`의 authored definition에서 정해진다. direct focus URL, refresh, read/back, `Escape`, `전체 보기`를 지원하고 invalid focus는 overview로 정규화한다. 같은 active/pending object의 activation은 `sceneState.ts`의 pure guard로 거부해 rapid repeat가 동일 history entry를 더 만들지 않는다.
-- Mobile return state는 object id뿐 아니라 native rail의 `publicSceneScrollLeft`를 같은 history entry에 저장한다. focus/overview layout mutation 뒤 scroll offset을 복원하고 `preventScroll` focus를 적용해 정확한 scene viewport를 유지한다. 첫 viewport는 양쪽 `15vw` 여백과 lead 뒤 `15vw` 간격으로 만든 full-width initial slot 안에 `70vw` canonical lead를 중앙 배치한다. 양쪽 edge echo는 기존 public object를 다시 그린 `aria-hidden` 비상호작용 표현이며 canonical rail이 움직이면 사라진다.
-- Focus panel은 실제 article excerpt와 action을 provenance보다 먼저 렌더한다. 480ms focus 전환의 336ms 지점에 144ms reveal을 시작하며 native View Transition과 FLIP fallback을 각각 구현한다. reduced motion은 geometry와 panel을 모두 즉시 적용한다.
-- `prefers-reduced-motion: reduce`에서는 Web Animation과 View Transition을 시작하지 않는다.
-
-공개 탐색 화면은 public projection 소비자다. private authoring workspace, retrieval backend, graph persistence, automatic scene assembly를 구현하거나 암시하지 않는다.
-
-## Structured Content Foundation Contracts
-
-콘텐츠와 media asset은 별도 경로를 공유한다.
-
-- MDX: `src/content/<collection>/<slug>.mdx`
-- media bundle: `src/assets/content/<collection>/<slug>/`
-- manifest: 같은 bundle의 `media.yml`
-
-`media.yml`은 `version: 1`과 `items`를 가진다. 각 item은 `id`, canonical
-relative `file`, `kind`, `alt`, optional `caption`, `credit`, 정확히 하나의
-`sourceUrl` 또는 `sourcePath`, `verifiedAt`, `rightsNote`, `checksum`을 기록한다.
-optional `width`와 `height`는 함께 선언하며 실제 raster header와 일치해야 한다. `book-cover`는
-여기에 `sourceUrl`, ISBN-13 `isbn13`, `edition`을 추가로 요구한다. manifest와
-validator는 path traversal, manifest 밖의 asset, remote image hotlink, missing/
-orphaned asset, duplicate checksum, media reference mismatch를 거부한다.
-
-기존 Naver review 18개는 remote `coverImage`를 제거하고 구조화 서지로 옮겼다.
-17개는 판본 식별용 local cover와 provenance manifest를 가지며, 재배포 권한이
-별도로 확인되지 않았다는 warning은 의도적으로 유지한다.
-`devotion-of-suspect-x`는 동일 판본 source image가 300px 최소 폭에 못 미쳐
-`coverState: "hold"`이고 `coverMedia`가 없다. 냉정한 이타주의자 review의
-canonical content와 asset slug는 `doing-good-better`다. 역사적 verdict는 원문과
-동일한 후보를 작성자가 승인한 뒤 적용했으며 importer는 새 verdict를 자동으로
-승인하지 않는다.
-
-UI는 asset 경로나 manifest를 직접 해석하지 않는다. `src/lib/content/viewModels.ts`
-가 제공하는 summary/detail model과 이미 resolve된 `ResolvedMedia`를 소비하고,
-media resolution은 `src/lib/content/mediaRegistry.ts`에서 한 번만 한다. 공개
-선택과 home의 중복 제거는 `src/lib/content/publication.ts`에 있다. 이는 후속
-route/layout 디자인 구현이 사용할 handoff 경계이며, 해당 구현은 이 계약을
-다시 만들거나 private memory를 읽으면 안 된다.
-
-모든 public list/detail/home/search/tag surface는 shared selector 또는 그 selector를
-사용하는 public aggregator를 거친다. `getStaticPaths()`도 `published && !draft`를
-요구하므로 `review`와 `archived` entry의 detail route를 만들지 않는다.
-
-`src/content/articles/`의 filesystem file count는 public inventory 계약이 아니다. 이
-directory에는 scaffold/example, draft, review 상태의 record가 함께 있을 수 있으며,
-공개 여부는 매 build에서 shared `published && !draft` selector와 적용 가능한 schema,
-media, quality gate로 결정한다. migration이나 문서 정리를 publication authorization으로
-해석하지 않는다.
-
-## Content Helper Contracts
-
-[src/lib/content.ts](../../../src/lib/content.ts)의 public behavior:
-
-- `collectionMeta`: 각 collection의 label, nav label, description, href.
-- `primaryCollections`: `articles`, `reviews`, `ideas`, `travel`.
-- `getEntryDate(entry)`: review는 `completedAt`, travel은 `visitedAt`, 나머지는 `createdAt`.
-- `getEntryHref(entry)`: `/${entry.collection}/${entry.id}/`.
-- `getEntryTypeLabel(entry)`: analysis `format`은 title case로 변환하고, 나머지는 collection label을 쓴다.
-- `formatDate(date)`: `ko` locale로 날짜를 표시한다.
-- `estimateReadingMinutes(text)`: 260 words per minute 기준, 최소 1분.
-- `getContentByCollection(collection)`: `published && !draft`만 최신순 정렬.
-- `getAllContent()`: 모든 collection을 병합해 최신순 정렬.
-- `getHomeSections()`: home page용 collection별 entry 배열.
-- `getAllTags()`: 공개 콘텐츠 tag를 중복 제거 후 locale sort.
-
-## Memory Projection Contract
-
-입력:
-
-- `memory/thoughts/*.md`
-- `memory/edges.jsonl`
-- `memory/sources.jsonl`
-
-출력:
-
-- `src/data/memory.public.json`
-
-public route:
-
-- `/memory/`
-
-`/memory`는 `memory/**`를 직접 읽지 않는다. [src/lib/memory/publicData.ts](../../../src/lib/memory/publicData.ts)가 generated JSON을 읽고 normalize하며, [src/lib/memory/lookup.ts](../../../src/lib/memory/lookup.ts)가 source link를 resolve한다.
-
-### Thought Eligibility
-
-thought는 아래 조건을 모두 만족해야 export된다.
-
-- `schema_version`이 `1`.
-- `confidentiality`가 `public`.
-- `surfaces`에 `memory-public` 포함.
-- `review.status`가 `accepted`.
-- `sources`가 비어 있지 않음.
-- local source path가 repo 내부의 안전한 relative path.
-- external source URL이 `http` 또는 `https`.
-
-### Allowed Memory Values
-
-| Field | Allowed values |
+| collection | 추가 field |
 | --- | --- |
-| `memory_type` | `semantic`, `procedural`, `reflective`, `episodic` |
-| `origin` | `author`, `external`, `synthesized` |
-| `confidentiality` | `private`, `public` |
-| `review.status` | `candidate`, `accepted`, `needs_review`, `rejected` |
-| edge `type` | `supports`, `extends`, `instantiates`, `refines`, `contradicts`, `related`, `topic-tag`, `thesis-tag` |
+| `analysis` | `sourceUrl`, `sourceTitle`, `comment`, `format` |
+| `articles` | optional `recordKind`, `evidenceState`, `featuredMedia` |
+| `thoughts` | optional `featuredMedia`; article subtype field 없음 |
+| `ideas` | `maturity`; optional `prompt` |
+| `reviews` | item/author/ISBN/edition/publisher/verdict/cover state와 optional rating/date/source |
+| `travel` | `location`, optional visit/coordinates/lead; published이면 privacy review와 lead 필수 |
 
-Projection exclusion reasons:
+release build는 `status: published`이고 `draft: false`인 record만 public contract로 바꾼다.
+현재 primary corpus는 article 17, review 18, thought 1이며 example content는 public release에
+없다. 생각 `why-i-read-in-the-ai-era`의 canonical route는
+`/thoughts/why-i-read-in-the-ai-era/` 하나뿐이다.
 
-- `private`
-- `notAccepted`
-- `notPublicSurface`
-- `missingSource`
-- `invalidSource`
-- `unsupportedSchema`
+## public record와 listing boundary
 
-## Memory Code Map
+`packages/contracts/src/content.ts`는 public record union을 소유한다. public record에는
+source `status`, `draft`, private locator, raw prompt/job/embedding이 없다. route loader는
+verified release만 열고 `recordsForCollection()`으로 canonical public records를 선택한다.
+list/home/search payload는 `bodyHtml`, media 전체, relationships, memoryLinks 같은 detail-only
+field를 제거하거나 첫 frame에 필요한 asset만 고른다.
 
-| Layer | File | Responsibility |
-| --- | --- | --- |
-| Memory public data | `src/lib/memory/publicData.ts` | `MemoryPublicData`, empty fallback, normalization, public JSON loading. |
-| Memory lookup | `src/lib/memory/lookup.ts` | source href resolution and thought/topic/source/edge lookup maps. |
-| Memory graph model | `src/lib/memory/graphModel.ts` | graph nodes, edges, facets, deterministic positions. |
-| Memory filters | `src/lib/memory/filters.ts` | lens/filter matching and `/memory/` deep-link helpers. |
-| Memory content links | `src/lib/memory/contentLinks.ts` | public content footer linked/related memory matching. |
-| Memory article compatibility | `src/lib/memory/articleLinks.ts` | compatibility wrapper for article-memory imports. |
-| Memory page payload | `src/lib/memory/pagePayload.ts` | serializable `/memory` detail drawer and client payload data. |
-| Memory compatibility | `src/lib/memoryData.ts` | temporary re-export surface for existing imports. |
+primary search inventory는 articles, reviews, thoughts만 포함한다. secondary collection과
+memory는 tags/secondary navigation에서는 유지하지만 primary search에서는 제외한다.
 
-`/memory/` is a static sentence sheet; thought pages live at `/memory/[slug]/`.
-the Astro page renders static markup and embeds the public memory payload.
+## trusted MDX와 memory
 
-routeable source prefix:
+`packages/content/src/mdx/render.tsx`가 source MDX를 분석하고 허용된 component만 HTML로
+render한다. release verifier는 source map, private locator, forbidden key, raw prompt/job,
+embedding payload를 다시 검사한다.
 
-| Source prefix | Public route |
-| --- | --- |
-| `src/content/articles/` | `/articles/` |
-| `src/content/analysis/` | `/analysis/` |
-| `src/content/ideas/` | `/ideas/` |
-| `src/content/reviews/` | `/reviews/` |
-| `src/content/travel/` | `/travel/` |
+`scripts/memory/project.mjs`가 private-first memory를 `src/data/memory.public.json`으로
+projection한다. 공개 thought는 `confidentiality: public`, `surfaces: [memory-public]`, accepted
+review, safe source를 모두 만족해야 한다. `loadPublicMemoryRecords()`는 projection JSON만
+public record로 변환하며 top-level `memory/**`를 읽지 않는다.
 
-Published detail pages in `articles`, `analysis`, `reviews`, `ideas`, and
-`travel` can render a public memory footer. The footer uses
-`findContentMemoryLinks()` against `src/data/memory.public.json`; direct links
-come from exact source path matches, and related links come from tag/topic
-matches. Detail pages do not read `memory/**` directly.
+## media와 승인 경계
 
-## Script Reference
+각 `media.yml`은 source file, checksum, dimensions, alt, credit, provenance, rights를
+기록한다. strict validation과 release build가 같은 parser를 사용한다.
 
-| Command | Script | Purpose |
-| --- | --- | --- |
-| `npm run dev` | `astro dev` | local dev server. |
-| `npm run build` | `astro check && astro build` | type check와 static build. |
-| `npm run preview` | `astro preview` | built site preview. |
-| `npm test` | `vitest run` | 전체 test 실행. |
-| `npm run sync` | `node scripts/sync.mjs` | sync workflow entry point. |
-| `npm run content:new -- <article\|review\|scene\|idea> ...` | `node scripts/create-content-entry.mjs` | collision-safe draft MDX와 empty `media.yml` bundle을 함께 scaffold한다. |
-| `npm run article:new` | `node scripts/create-article-packet.mjs` | evidence packet과 article draft 생성. |
-| `npm run media:validate` | `node scripts/validate-media.mjs` | content media manifest, provenance, asset, reference를 non-strict mode로 검사한다. legacy `coverImage`는 warning만 낸다. |
-| `node scripts/import-naver-reviews.mjs --output <new-local-intake-directory>` | `scripts/import-naver-reviews.mjs` | 원문 title/body/date/source를 보존한 review/draft intake와 비공개 cover 조사 JSON을 신규 directory에 생성한다. |
-| `npm run article:quality` | `node scripts/article-quality.mjs` | source-grounded article shape 검사. |
-| `npm run memory:seed` | `node scripts/memory/seed.mjs` | memory review candidate 생성. |
-| `npm run memory:review -- report` | `node scripts/memory/review.mjs report` | generated memory candidates를 읽기 쉬운 local review report로 만든다. |
-| `npm run memory:review -- promote <slug> --reviewed-at YYYY-MM-DD` | `node scripts/memory/review.mjs promote` | 선택한 candidate를 검증된 public thought markdown으로 승격한다. |
-| `npm run memory:project` | `node scripts/memory/project.mjs` | `src/data/memory.public.json` 생성. |
-| `npm run memory:validate` | `node scripts/memory/project.mjs --validate` | public memory 입력 검증. JSON은 쓰지 않는다. |
-| `npm run validate` | chained command | content, strict media, article quality, memory, tests, build 전체 gate. |
+- repository-generated asset은 canonical required-batch registry,
+  checksum-bound decision manifest, 정확히 `controller`와 `independent-visual-reviewer`, approved
+  rights review가 모두 필요하다.
+- 승인되지 않은 candidate/batch는 public release를 fail closed한다.
+- review cover는 source/edition tuple과 정확히 controller + independent-rights-reviewer receipt가
+  있어야 byte가 public artifact에 들어간다.
+- 현재 release는 18 public assets, review cover asset/approval label 0건이다. strict validation의
+  17 review-cover warning은 안전한 text-led 결과와 별개로 unresolved rights evidence를 알린다.
 
-## Validation Gates
+## immutable release flow
 
-### `scripts/validate-content.mjs`
+1. `npm run public-release:build`가 source, MDX, memory와 media를 검증하고 trusted MDX를
+   render하며 responsive AVIF/WebP/fallback을 만든다.
+2. release identity policy v2가 renderer boundary
+   `mdx-3.1.1-sharp-0.35.3-v5`, sanitized source input, 정렬된 materialized public
+   records(`bodyHtml` 포함), 정렬된 asset output/checksum을 함께 canonicalize해 SHA-256
+   release id를 계산한다. 따라서 같은 source와 output은 같은 ID이고 renderer output, source,
+   renderer version 중 하나라도 바뀌면 새 ID다.
+3. exact materialized bytes를 `build/public-releases/<release-id>/`에 기록한다. 같은 ID의 기존
+   directory가 한 byte라도 다르면 overwrite하지 않고 fail closed하며, 이전 release도 지우거나
+   수정하지 않는다.
+4. owner/inode/symlink guard를 통과한 `active.json`을 원자적으로 교체한다.
+5. `npm run public-release:verify`가 pointer, manifest, 전체 artifact hash, private boundary,
+   dimensions와 checksums를 독립 재검증한다.
+6. `npm run site:build`가 exact active release binding을 React build 전후 다시 열고 private
+   staging에서 prerender/asset/SEO를 검증한 뒤 `apps/site/build/client`를 publish한다.
 
-검사 항목:
+`npm run public-release:clean-test`는 cleanup authority가 임의 path, repository root, home,
+release root를 지울 수 없음을 확인한다. repository recovery는 Git revision과 immutable
+release artifact다. 별도 renderer나 rollback app은 없다.
 
-- collection별 required frontmatter.
-- `status` enum.
-- `tags` array 여부.
-- analysis `format`.
-- ideas `maturity`.
-- `sourceUrl`, `coverImage` URL shape.
-- blockquote 한 줄 25단어 이하.
+## delivery origin과 static host
 
-주의: 이 스크립트는 `.mdx` 파일만 수집한다. Astro content schema는 `.md`도 허용하지만, 현재 repository content는 `.mdx` 기준으로 운영한다.
+`npm run site:build`는 local mode다. canonical/robots에는 reserved
+`https://form-thought.local.invalid`를 사용하며 production origin이라고 주장하지 않는다.
 
-### `scripts/article-quality.mjs`
+production artifact는 다음처럼 normalized exact HTTPS origin을 명시한다.
 
-`source-grounded` article 검사 항목:
+```bash
+FORM_THOUGHT_SITE_ORIGIN=https://example.com npm run site:build:production
+```
 
-- 필수 Korean section heading.
-- placeholder marker 없음.
-- duplicate `##` heading 없음.
-- 첫 heading 전에 thesis paragraph 존재.
-- `## 확인한 자료` section에 최소 하나의 URL.
+userinfo, path, query, fragment, HTTP, `.invalid` production origin은 거부한다. 이 저장소에는
+승인된 실제 production domain이 없으므로 production canonical origin은 `not_measured`,
+production cutover authorization은 `false`다. build나 문서 갱신은 deploy/traffic authority가
+아니다.
 
-### `scripts/memory/project.mjs --validate`
+static export는 absolute canonical/OG, sitemap, robots, branded 404, favicon/manifest와 CSP,
+Referrer-Policy, `nosniff`를 만든다. local preview는 `apps/site/serve-static.ts`가 동일한 404와
+header contract를 제공한다.
 
-검사 항목:
+## no-JavaScript boundary
 
-- thought frontmatter schema.
-- source path safety와 existence.
-- public thought edge endpoint validity.
-- projection eligibility count.
+wordmark, primary navigation, list/detail links, article filters와 search form은 canonical
+anchor/GET form이다. Home, indexes와 details는 prerender HTML로 읽고 이동할 수 있다.
 
-### `scripts/validate-media.mjs`
+검색은 `ssr: false` static export다. 하나의 `/search/index.html`은 임의 query별 결과 HTML을
+만들 수 없다. JavaScript-off에서 GET은 `/search/?q=...` canonical URL로 이동하고 기본
+discovery는 계속 읽을 수 있지만 query filtering과 input restoration은 `not satisfied`다.
+이를 green으로 문서화하거나 숨겨진 결과를 SSR이라고 부르지 않는다.
 
-`npm run media:validate`는 필요할 때 쓰는 non-strict 진단이다. legacy
-`coverImage`는 warning을 내지만 exit 0을 유지한다. 기본 완료 명령인
-`npm run validate`는 정확히 `npm run media:validate -- --strict`를 호출하므로 이
-warning을 error로 승격한다. 검증은 각 `media.yml`의 required provenance field,
-안전한 canonical path, checksum, referenced file, orphan file, 중복 선언,
-content media ID를 함께 검사한다.
+## 주요 명령
 
-## Queue Parser
+```bash
+npm ci
+npm run site:dev
+npm run public-release:build
+npm run public-release:verify
+npm run site:build
+npm run site:preview -- --host 127.0.0.1 --port 4391
+npm run validate
+```
 
-[scripts/queue.mjs](../../../scripts/queue.mjs)는 [queue.md](../../../queue.md)의 작업 항목을 읽는다.
+`npm run validate`의 순서는 agent contract, content, strict media, article quality, memory,
+전체 Vitest, workspace typecheck, release build/verify/cleanup, local site build다. public delivery
+전체 확인은 exact retained Playwright suite와 `npm run cutover:verify`, clean machine recovery는
+`npm run cutover:clean-host`가 소유한다. 이 명령 이름의 `cutover`는 유지된 React-only verifier
+namespace이며 제거된 renderer 비교를 실행하지 않는다.
 
-- item line: `- [ ] https://...` 또는 `- [x] https://...`
-- metadata line: 두 칸 이상 indent 후 `key: value`
-- code fence 내부는 무시한다.
-- unchecked이고 `status: blocked`가 아닌 항목이 queued item이다.
-- unchecked item에 `comment:`가 없으면 문제로 보고한다.
-- `output:`은 `.mdx`로 끝나야 한다.
-- `pr:`은 `https://` URL이어야 한다.
+## 문서와 역사
 
-## Test Files
-
-| Test | Coverage |
-| --- | --- |
-| `scripts/article-factory.test.mjs` | packet generation, input classification, slug generation, scaffold shape. |
-| `scripts/article-quality.test.mjs` | source-grounded article quality gate. |
-| `scripts/queue.test.mjs` | queue parser and metadata validation. |
-| `scripts/site-content.test.mjs` | brand shell, imported Naver review contracts, review layout constraints. |
-| `scripts/publication-surfaces.test.mjs` | public route, no private-memory import, scene composition source contracts. |
-| `scripts/memory.schema.test.mjs` | thought parsing, schema validation, exclusion reasons, edge validation. |
-| `scripts/memory.seed.test.mjs` | memory seed candidate generation. |
-| `scripts/memory.project.test.mjs` | public memory projection, exclusion counts, broken-source failure, JSON output. |
-| `src/lib/memory/*.test.mjs` | public memory data, lookup, graph model, filters, content links, article compatibility, and page payload behavior. |
-| `src/lib/memoryData.test.mjs` | compatibility re-export behavior. |
-| `src/lib/content/mediaRegistry.test.ts` | manifest-backed media resolution, dimensions, checksum/provenance contract. |
-| `src/lib/scenes/publicScene.test.ts` | authored scene validation, public eligibility, lead failure, optional issue reporting. |
-| `src/lib/scenes/sceneState.test.ts` | overview/focus URL state and valid native rail scroll checkpoint parsing. |
-| `src/lib/siteChrome.test.ts` | public navigation nouns and route contract. |
-| `src/styles/press.tokens.test.mjs` | existing press token contract remains intact outside the Storyworld surface. |
-
-## Docs Layers
-
-`docs/`는 curated library다.
-
-- `_inbox/`: local unsorted intake.
-- `raw/`: source capture.
-- `notes/`: curated docs.
-- `_index/`: catalog and topic metadata.
-- `wiki/`: generated navigation.
+accepted ADR과 evidence는 삭제하지 않는다. ADR-0002/3/4/6과 ADR-0005의 renderer-retention
+절, 과거 comparison/cutover evidence는 역사적 판단을 설명한다. 현재 작업자는 그 문서의
+옛 command, path, renderer를 실행 복구하지 않고 ADR-0007, 이 reference, `DESIGN.md`와 실제
+package scripts를 따른다. Graphify는 article subject일 뿐 project operating dependency가 아니다.

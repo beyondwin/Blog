@@ -64,7 +64,7 @@ export function createTrustedMdxComponents(options: TrustedMdxComponentOptions) 
   }
 
   function Table({ children }: { children?: ReactNode }) {
-    const table = <table>{children}</table>;
+    const table = <table tabIndex={0}>{children}</table>;
     if (!options.foldBriefTable) return table;
     const text = textFromChildren(children);
     if (!text.includes('질문') || !text.includes('짧은 판단')) return table;
@@ -76,5 +76,9 @@ export function createTrustedMdxComponents(options: TrustedMdxComponentOptions) 
     );
   }
 
-  return { Callout, Figure, table: Table };
+  function Pre({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) {
+    return <pre {...props} tabIndex={0}>{children}</pre>;
+  }
+
+  return { Callout, Figure, pre: Pre, table: Table };
 }

@@ -4,12 +4,23 @@ import { expectNoHorizontalOverflow, observeRuntimeIssues, waitForFirstFrameImag
 
 const REPRESENTATIVE_SURFACES = [
   { name: 'home desktop', viewport: { width: 1440, height: 900 }, path: '/' },
+  { name: 'reviews desktop', viewport: { width: 1440, height: 900 }, path: '/reviews/' },
+  { name: 'articles calibrated', viewport: { width: 1080, height: 1440 }, path: '/articles/' },
+  { name: 'thoughts intermediate', viewport: { width: 768, height: 900 }, path: '/thoughts/' },
+  { name: 'search mobile', viewport: { width: 390, height: 844 }, path: '/search/' },
   { name: 'article index mobile', viewport: { width: 390, height: 844 }, path: '/articles/' },
   {
-    name: 'article detail intermediate',
-    viewport: { width: 768, height: 900 },
+    name: 'article detail calibrated',
+    viewport: { width: 1120, height: 1400 },
     path: '/articles/graphify-code-knowledge-graph-deep-dive/',
   },
+  { name: 'review detail intermediate', viewport: { width: 768, height: 900 }, path: '/reviews/black-swan/' },
+  {
+    name: 'thought detail mobile',
+    viewport: { width: 390, height: 844 },
+    path: '/thoughts/why-i-read-in-the-ai-era/',
+  },
+  { name: 'secondary memory minimum reflow', viewport: { width: 320, height: 844 }, path: '/memory/' },
 ] as const;
 
 for (const entry of REPRESENTATIVE_SURFACES) {

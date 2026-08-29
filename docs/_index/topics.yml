@@ -19,7 +19,7 @@
 
 - id: project
   name: Project
-  description: beyondwin의 현재 built truth, 승인된 FORM & THOUGHT React-only 공개 시스템, Node/React 목표 구조, content model, publishing workflow, validation gate, memory projection, architecture decision records, design reference, agent task routing을 다루는 프로젝트 문서.
+  description: beyondwin의 현재 FORM & THOUGHT React-only built truth, immutable public release와 static delivery, Node/React 목표 구조, content/media approval, publishing workflow, validation, memory projection, ADR, design reference, browser evidence와 agent routing을 다루는 프로젝트 문서.
   folder: docs/notes/project
 
 - id: skills/agent-workflows

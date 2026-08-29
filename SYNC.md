@@ -20,7 +20,7 @@
    - `essay`
    - `visual-page`
 7. 결과 MDX는 `src/content/analysis/` 아래에 만든다.
-8. frontmatter는 [src/content.config.ts](src/content.config.ts)의 `analysis` schema를 따른다.
+8. frontmatter는 [packages/content/src/schemas.ts](packages/content/src/schemas.ts)의 `analysis` source schema를 따른다.
 9. 결과는 검토 가능한 글이어야 한다. source 요약, 반론, 실무 판단을 분리한다.
 10. `npm run validate`를 통과시킨다.
 11. 생성 작업은 `codex/` branch에서 진행한다.
@@ -86,7 +86,12 @@ List missing assumptions, risks, or alternate explanations.
 Connect the source to practical decisions.
 ```
 
-## 완료 기준
+## 공개 경계와 완료 기준
+
+Queue processing은 `analysis` MDX만 만든다. 공개 여부는 다른 collection과 동일하게
+`status: published`와 `draft: false`가 함께 있어야 하며, source 처리 성공만으로 공개 권한을
+추론하지 않는다. 생성한 record는 immutable release에 들어가기 전에 source schema, trusted
+MDX와 private-boundary 검사를 모두 통과한다.
 
 - `npm run validate`가 통과한다.
 - `queue.md`에 `output:`이 실제 `.mdx` 파일을 가리킨다.

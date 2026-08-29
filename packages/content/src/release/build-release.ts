@@ -39,7 +39,8 @@ import {
   type PublicReleaseManifest,
 } from './read-release';
 
-export const PUBLIC_RELEASE_RENDERER_VERSION = 'mdx-3.1.1-sharp-0.35.3-v4';
+export const PUBLIC_RELEASE_RENDERER_VERSION = 'mdx-3.1.1-sharp-0.35.3-v5';
+export const PUBLIC_RELEASE_IDENTITY_VERSION = 2 as const;
 
 type SourceCollection = Exclude<SourceRecord['collection'], 'memory'>;
 
@@ -438,6 +439,19 @@ function releaseIdFor(input: unknown): string {
   return createHash('sha256').update(canonicalJson(input)).digest('hex');
 }
 
+export function releaseIdForMaterializedRelease(
+  source: unknown,
+  output: unknown,
+  rendererVersion = PUBLIC_RELEASE_RENDERER_VERSION,
+): string {
+  return releaseIdFor({
+    identityVersion: PUBLIC_RELEASE_IDENTITY_VERSION,
+    rendererVersion,
+    source,
+    output,
+  });
+}
+
 async function installImmutableRelease(
   releasesRoot: string,
   staging: OwnedTemporaryRoot,
@@ -597,9 +611,8 @@ export async function buildPublicRelease(
     );
   }
 
-  const hashInput = {
+  const sourceIdentityInput = {
     schemaVersion: 1,
-    rendererVersion: PUBLIC_RELEASE_RENDERER_VERSION,
     records: sourceRecords.map((record) => ({
       public: publicRecordInput(
         record,
@@ -611,7 +624,6 @@ export async function buildPublicRelease(
     })),
     memory: memoryRecords,
   };
-  const releaseId = releaseIdFor(hashInput);
   const staging = await createOwnedTemporaryRoot(releasesRoot);
 
   try {
@@ -644,12 +656,20 @@ export async function buildPublicRelease(
     }
     for (const memoryRecord of memoryRecords) records.set(`memory/${memoryRecord.id}`, memoryRecord);
 
+    const materializedRecords = sortedRecord(records);
+    const materializedAssets = sortedRecord(assets);
+    const releaseId = releaseIdForMaterializedRelease(sourceIdentityInput, {
+      schemaVersion: 1,
+      records: materializedRecords,
+      assets: materializedAssets,
+    });
+
     const manifest = parseReleaseManifest({
       schemaVersion: 1,
       rendererVersion: PUBLIC_RELEASE_RENDERER_VERSION,
       releaseId,
-      records: sortedRecord(records),
-      assets: sortedRecord(assets),
+      records: materializedRecords,
+      assets: materializedAssets,
     });
     const manifestBytes = `${canonicalJson(manifest)}\n`;
     const manifestFile = await open(join(staging.path, 'manifest.json'), 'w', 0o644);

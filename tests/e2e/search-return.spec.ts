@@ -1,14 +1,17 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { APPROVED_VIEWPORTS, expectNoHorizontalOverflow, observeRuntimeIssues } from './support';
+import {
+  APPROVED_VIEWPORTS,
+  expectNoHorizontalOverflow,
+  observeRuntimeIssues,
+  OFFICIAL_BASE_URL,
+} from './support';
 
 const query = 'Graphify';
 const resultAnchor = 'record-articles-graphify-code-knowledge-graph-deep-dive';
 const detailPath = '/articles/graphify-code-knowledge-graph-deep-dive/';
-const BASE_URL = 'http://127.0.0.1:4397';
-
 function localUrl(path: string): string {
-  return new URL(path, BASE_URL).href;
+  return new URL(path, OFFICIAL_BASE_URL).href;
 }
 
 test('desktop search empty state exposes eight or fewer corpus keywords and one real card per primary lane', async ({ page }) => {

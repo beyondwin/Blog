@@ -1,7 +1,7 @@
 import { expect, test, type Browser } from '@playwright/test';
-import { expectNoHorizontalOverflow } from './support';
+import { expectNoHorizontalOverflow, OFFICIAL_BASE_URL } from './support';
 
-const BASE_URL = 'http://127.0.0.1:4397';
+const BASE_URL = OFFICIAL_BASE_URL;
 const PRIMARY_HREFS = ['/reviews/', '/articles/', '/thoughts/', '/search/'] as const;
 
 test('static host serves release-derived discovery, security headers, and an actual branded 404', async ({ request }) => {
@@ -27,7 +27,7 @@ async function noJsPage(browser: Browser, viewport: { width: number; height: num
   return { context, page: await context.newPage() };
 }
 
-for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 320, height: 844 }]) {
   test(`${viewport.width}px no-JS Home keeps real editorial selections and canonical navigation`, async ({ browser }) => {
     const { context, page } = await noJsPage(browser, viewport);
     try {
@@ -44,6 +44,46 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await hero.click();
       await expect(page).toHaveURL(`${BASE_URL}/articles/graphify-code-knowledge-graph-deep-dive/`);
       await expect(page.getByRole('link', { name: '아티클 전체 보기' })).toHaveAttribute('href', '/articles/');
+      await expectNoHorizontalOverflow(page);
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+for (const entry of [
+  {
+    name: 'reviews',
+    indexPath: '/reviews/',
+    itemSelector: '#record-reviews-black-swan',
+    detailPath: '/reviews/black-swan/',
+    count: 18,
+    returnLabel: '서평 목록으로',
+  },
+  {
+    name: 'thoughts',
+    indexPath: '/thoughts/',
+    itemSelector: '[data-thought-cell="record"]',
+    detailPath: '/thoughts/why-i-read-in-the-ai-era/',
+    count: 1,
+    returnLabel: '생각 목록으로',
+  },
+] as const) {
+  test(`390px no-JS ${entry.name} index and detail remain canonical`, async ({ browser }) => {
+    const { context, page } = await noJsPage(browser, { width: 390, height: 844 });
+    try {
+      await page.goto(entry.indexPath);
+      if (entry.name === 'reviews') {
+        await expect(page.locator('.review-index .editorial-list-row')).toHaveCount(entry.count);
+      } else {
+        await expect(page.locator('[data-thought-cell="record"]')).toHaveCount(entry.count);
+        await expect(page.locator('[data-thought-cell="empty"]')).toHaveCount(5);
+      }
+      const link = page.locator(entry.itemSelector).getByRole('link');
+      await expect(link).toHaveAttribute('href', entry.detailPath);
+      await link.click();
+      await expect(page).toHaveURL(`${BASE_URL}${entry.detailPath}`);
+      await expect(page.getByRole('link', { name: entry.returnLabel })).toBeVisible();
       await expectNoHorizontalOverflow(page);
     } finally {
       await context.close();

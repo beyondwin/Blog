@@ -80,7 +80,7 @@ describe('trusted repository MDX rendering', () => {
     ].join('\n'), { media: new Map([['hero', hero]]) });
 
     expect(html).toContain('<h2 id="stable-heading">Stable heading</h2>');
-    expect(html).toContain('<table>');
+    expect(html).toContain('<table tabindex="0">');
     expect(html).toContain('<aside class="callout"><strong>Decision</strong><p>Only public fields.</p></aside>');
     expect(html).toContain('<figure class="content-figure"');
     expect(html).toContain('width="1080" height="720"');
@@ -113,11 +113,11 @@ describe('trusted repository MDX rendering', () => {
     const folded = await renderTrustedMdx(briefTable, { media: new Map(), foldBriefTable: true });
     expect(folded).toContain('<details class="article-brief">');
     expect(folded).toContain('<summary>질문과 짧은 판단</summary>');
-    expect(folded).toContain('<table>');
+    expect(folded).toContain('<table tabindex="0">');
     expect(folded).toContain('무엇을 고르나?');
 
     const plain = await renderTrustedMdx(briefTable, { media: new Map() });
-    expect(plain).toContain('<table>');
+    expect(plain).toContain('<table tabindex="0">');
     expect(plain).not.toContain('article-brief');
   });
 
@@ -127,7 +127,22 @@ describe('trusted repository MDX rendering', () => {
       '| --- | --- |',
       '| Public | Ready |',
     ].join('\n'), { media: new Map(), foldBriefTable: true });
-    expect(html).toContain('<table>');
+    expect(html).toContain('<table tabindex="0">');
     expect(html).not.toContain('article-brief');
+  });
+
+  it('makes horizontally scrollable table and code regions keyboard focusable', async () => {
+    const html = await renderTrustedMdx([
+      '| Contract | State |',
+      '| --- | --- |',
+      '| Public | Ready |',
+      '',
+      '```text',
+      'a-long-code-line',
+      '```',
+    ].join('\n'), { media: new Map() });
+
+    expect(html).toContain('<table tabindex="0">');
+    expect(html).toContain('<pre tabindex="0"><code class="language-text">');
   });
 });

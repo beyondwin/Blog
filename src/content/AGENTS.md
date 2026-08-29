@@ -4,9 +4,10 @@ These rules apply to MDX collections under `src/content/` and extend `src/AGENTS
 
 ## Contracts
 
-- Confirm the matching schema in `src/content.config.ts` and workflow in `docs/notes/project/publishing-workflows.md` before writing.
+- Confirm the matching schema in `packages/content/src/schemas.ts` and workflow in `docs/notes/project/publishing-workflows.md` before writing.
 - Treat required frontmatter as a contract. Use `review`, `published`, or `archived` deliberately; `draft: true` keeps an entry off public listings.
 - Do not change an entry to `published` unless the user explicitly requests publication.
+- `thoughts` is its own collection. `why-i-read-in-the-ai-era` belongs only at `/thoughts/why-i-read-in-the-ai-era/`.
 
 ## Source quality
 
@@ -19,5 +20,5 @@ These rules apply to MDX collections under `src/content/` and extend `src/AGENTS
 
 - Write natural Korean technical-blog prose. Avoid repetitive report headings, generic AI transitions, marketing tone, and unsupported certainty.
 - Preserve verified facts when improving tone.
-- Run `npm run validate` for every content change.
+- Run `npm run validate` for every content change; it builds and verifies the immutable release before the React static export.
 - Inspect the rendered route for substantial prose, source-grounded articles, reviews, tables, links, or layout-sensitive content.

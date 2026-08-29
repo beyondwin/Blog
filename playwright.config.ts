@@ -9,6 +9,7 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 10_000 },
   outputDir: 'output/playwright/task14/artifacts',
+  snapshotPathTemplate: '{testDir}/{testFileName}-snapshots/{arg}{ext}',
   reporter: [['line']],
   use: {
     baseURL: 'http://127.0.0.1:4391',

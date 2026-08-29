@@ -3,12 +3,17 @@ import { expectNoHorizontalOverflow } from './support';
 
 const ROUTES = [
   { name: 'home', path: '/', active: null },
+  { name: 'review index', path: '/reviews/', active: '서평' },
+  { name: 'review detail', path: '/reviews/black-swan/', active: '서평' },
   { name: 'article index', path: '/articles/', active: '아티클' },
   {
     name: 'article detail',
     path: '/articles/graphify-code-knowledge-graph-deep-dive/',
     active: '아티클',
   },
+  { name: 'thought index', path: '/thoughts/', active: '생각' },
+  { name: 'thought detail', path: '/thoughts/why-i-read-in-the-ai-era/', active: '생각' },
+  { name: 'search', path: '/search/', active: '검색' },
 ] as const;
 const PRIMARY_LABELS = ['서평', '아티클', '생각', '검색'] as const;
 
@@ -28,6 +33,7 @@ for (const viewport of [
   { width: 1440, height: 900 },
   { width: 768, height: 900 },
   { width: 390, height: 844 },
+  { width: 320, height: 844 },
 ] as const) {
   test.describe(`${viewport.width}px FORM & THOUGHT chrome`, () => {
     test.use({ viewport });

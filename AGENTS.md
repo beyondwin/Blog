@@ -1,6 +1,6 @@
 # beyondwin agent contract
 
-`beyondwin` is an Astro and MDX personal knowledge publishing system. Public content lives under `src/content/`; public memory is projected into `src/data/memory.public.json`; private memory and archive sources have stricter boundaries.
+`beyondwin` is a React Router and MDX personal knowledge publishing system. Public content lives under `src/content/`, is compiled into an immutable release by `packages/content`, and is rendered only by `apps/site`. Public memory is projected into `src/data/memory.public.json`; private memory and archive sources have stricter boundaries.
 
 ## Start here
 
@@ -24,10 +24,11 @@
 
 - Use Node 24 and install committed dependencies with `npm ci`.
 - Use focused tests while iterating.
-- Run `npm run validate` before claiming completion; it includes the local agent setup check, content checks, memory validation, tests, Astro checks, and the production build.
+- Run `npm run validate` before claiming completion; it includes agent/content/media/article/memory checks, the full test and typecheck suites, immutable release build/verify/cleanup, and the local React static build.
 - Run `git diff --check` and review the final diff for unrelated files.
 - Review the relevant ADRs before closeout and confirm the implementation and documentation still match them.
 - UI or interaction changes require a real browser check on affected routes at desktop and mobile widths.
+- Use `npm run site:build` for local evidence. A production build additionally requires an explicitly approved normalized HTTPS `FORM_THOUGHT_SITE_ORIGIN`; do not invent one.
 
 ## Safety and scope
 
@@ -35,4 +36,4 @@
 - Public application code must not import or read top-level `memory/**`; it reads `src/data/memory.public.json`.
 - Preserve existing local servers. Use a separate port instead of killing or reconfiguring another process.
 - Do not commit or push unless the user explicitly requests it.
-- Graphify articles and historical notes are content only. Graphify is not a project operating dependency; do not run or restore Graphify commands.
+- Historical renderer, parity, rollback, Public Atlas, and Graphify documents are evidence only. Do not restore their removed commands or dependencies; Graphify is article subject matter, not a project tool.

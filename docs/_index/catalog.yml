@@ -49,9 +49,9 @@
   type: reference
   language: ko
   status: organized
-  summary: 현재 built truth와 승인된 FORM & THOUGHT React-only 목표, local setup, publishing workflow, architecture reference로 이어지는 프로젝트 문서 허브.
+  summary: 현재 FORM & THOUGHT React-only built truth, immutable release, local setup, publishing workflow, architecture reference와 historical evidence를 구분하는 프로젝트 문서 허브.
   source: README.md
-  updated: 2026-08-28
+  updated: 2026-08-29
 
 - title: beyondwin 시작하기
   path: docs/notes/project/getting-started.md
@@ -59,9 +59,9 @@
   type: tutorial
   language: ko
   status: organized
-  summary: dependency 설치, 전체 검증, Astro dev server 실행, MDX 파일 하나가 route로 이어지는 경로를 확인하는 첫 실행 튜토리얼.
-  source: README.md
-  updated: 2026-06-30
+  summary: Node 24 dependency 설치, full validation, immutable release, React static host와 source MDX가 public route로 이어지는 경로를 확인하는 첫 실행 튜토리얼.
+  source: README.md and apps/site
+  updated: 2026-08-29
 
 - title: 콘텐츠 운영
   path: docs/notes/project/publishing-workflows.md
@@ -69,9 +69,9 @@
   type: guide
   language: ko
   status: organized
-  summary: 일반 글, 리뷰, 아이디어, 여행 기록, source-grounded article, queue sync, memory projection, archive docs를 운영하는 방법.
-  source: src/content.config.ts
-  updated: 2026-06-30
+  summary: article, thought, review, secondary content, generated media, cover rights, queue, memory projection과 immutable release를 현재 source schema에 맞춰 운영하는 방법.
+  source: packages/content/src/schemas.ts and ADR-0007
+  updated: 2026-08-29
 
 - title: FORM & THOUGHT 공개 사이트 설계
   path: docs/notes/project/form-and-thought-public-site-design.md
@@ -163,6 +163,16 @@
   source: ADR-0007 and Task 14 pre-removal acceptance 2026-08-29
   updated: 2026-08-29
 
+- title: FORM & THOUGHT final acceptance
+  path: docs/notes/project/evidence/form-and-thought-final-acceptance.md
+  topic: project
+  type: evidence
+  language: en
+  status: organized
+  summary: Records the post-removal React-only route and responsive matrix, screenshot checksums, accessibility and overflow results, immutable release identity, final validation gates, warnings, and explicit production not-measured boundary.
+  source: ADR-0007 and Task 15 final acceptance 2026-08-29
+  updated: 2026-08-29
+
 - title: 서평 제외 아티클 전면 개선 설계
   path: docs/notes/project/non-review-article-improvement-design.md
   topic: project
@@ -189,9 +199,9 @@
   type: workflow
   language: ko
   status: organized
-  summary: 에이전트가 beyondwin 작업 유형별 read order, 수정 표면, 위험 경계, 검증 명령, public/private boundary를 빠르게 확인하는 실행 지도.
-  source: docs/superpowers/specs/2026-07-01-blog-agent-docs-runbook-design.md
-  updated: 2026-07-01
+  summary: 에이전트가 React-only route, immutable release, source/media, docs/memory 작업별 read order, exact owner, browser matrix와 public/private boundary를 확인하는 실행 지도.
+  source: ADR-0007 and current repository owners
+  updated: 2026-08-29
 
 - title: Architecture Decision Records
   path: docs/notes/project/adr/README.md
@@ -389,9 +399,9 @@
   type: reference
   language: ko
   status: organized
-  summary: 현재 Astro built truth와 승인된 Node/React 목표 구조를 구분하고 route, content schema, memory projection, validation gate를 정리한 기술 레퍼런스.
-  source: src/content.config.ts
-  updated: 2026-08-23
+  summary: 현재 React Router route map, content/public schema, immutable release, media approval, memory, static delivery origin, no-JS와 validation boundary를 정리한 built-truth reference.
+  source: apps/site, packages/content, packages/contracts, ADR-0007
+  updated: 2026-08-29
 
 - title: beyondwin이 이렇게 구성된 이유
   path: docs/notes/project/design-and-content-rationale.md

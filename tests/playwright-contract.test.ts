@@ -26,6 +26,9 @@ describe('official public-site Playwright contract', () => {
     });
     expect(config.workers).toBe(1);
     expect(config.retries).toBe(0);
+    expect(config.snapshotPathTemplate).toBe(
+      '{testDir}/{testFileName}-snapshots/{arg}{ext}',
+    );
   });
 
   it('forwards host and port through the root workspace preview script', async () => {

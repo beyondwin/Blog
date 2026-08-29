@@ -1,132 +1,124 @@
-# Design
+# FORM & THOUGHT design built truth
 
-## 적용 범위
+이 문서는 현재 React 공개 사이트의 구현 계약이다. 시각 권한은
+[ADR-0007](docs/notes/project/adr/0007-form-and-thought-react-only-editorial-system.md),
+[공개 사이트 설계](docs/notes/project/form-and-thought-public-site-design.md),
+[시각 스펙](docs/notes/project/form-and-thought-visual-spec.md), 승인된 일곱 reference와
+[최종 acceptance](docs/notes/project/evidence/form-and-thought-final-acceptance.md) 순서로 확인한다.
+Public Atlas, Staged Aperture, mineral/cobalt reading world, Continuity Zoom 문서는
+역사적 근거일 뿐 현재 UI를 수정하는 지침이 아니다.
 
-`/`는 공개 사이트의 첫 `판단` 탐색 화면이다. 차갑고 밝은 mineral daylight field, 실제 media, text-only object, cobalt selection으로 하나의 authored spatial composition을 만든다. 장면 문법과 Continuity Zoom은 이 작업에서 재설계하지 않았다.
+## 브랜드와 정보 구조
 
-React 공개 reading mode는 같은 mineral field와 optical-white sheet를 쓴다. `/articles/`와 `/reviews/`의 목록 밀도와 글 상세 밀도는 이 작업에서 실렸다. `/memory/`와 `/search/`는 이 작업에서 다시 만들지 않았고, 이미 mineral reading mode다.
+- 워드마크는 두 줄 `FORM & THOUGHT`다.
+- primary navigation의 순서와 표기는 `서평 · 아티클 · 생각 · 검색`이다.
+- canonical primary route는 `/reviews/`, `/articles/`, `/thoughts/`, `/search/`다.
+- `/`는 black/terracotta hero와 실제 공개 기록 세 건을 고른 editorial home이다.
+- `/analysis/`, `/ideas/`, `/travel/`, `/tags/`, `/memory/`와 유효한 상세 route는
+  같은 shell을 쓰는 secondary route다. primary navigation과 primary search에는 넣지 않는다.
+- footer navigation, scene rail, subtype badge, 좋아요·댓글 수치, 존재하지 않는 콘텐츠는 없다.
 
-회색 교정 부스, 재단선, `src/styles/press.css`는 Astro rollback baseline이다. 현재 React 공개 글/책 화면의 built truth가 아니다.
+## 지면과 토큰
 
-## 공개 명사
+공개 지면은 따뜻한 편집 인쇄물의 명암을 쓴다. 토큰의 단일 구현 소유자는
+`apps/site/src/ui/styles/tokens.css`다.
 
-주요 navigation은 같은 네 개의 공개 명사를 쓴다.
-
-`장면 · 글 · 책 · 찾기`
-
-| 공개 명사 | 라우트 | 하는 일 |
+| 역할 | 토큰 | 현재 값 |
 | --- | --- | --- |
-| 장면 | `/` | 공개 승인된 object를 관계가 있는 하나의 장면으로 보여준다. |
-| 글 | `/articles/` | 다 쓴 에세이와 조사 |
-| 책 | `/reviews/` | 표지가 있는 판단 |
-| 찾기 | `/search/` | 섹션이 아니라 동작 |
+| 바깥 지면 | `--ft-canvas` | `#E8E1D8` |
+| 본문 지면 | `--ft-paper` | `#F2EFE9` |
+| 밝은 지면 | `--ft-paper-bright` | `#F7F3ED` |
+| 잉크 | `--ft-ink` | `#11100F` |
+| 보조 잉크 | `--ft-ink-soft` | `#5E554E` |
+| 선 | `--ft-rule` | `#D3C9BF` |
+| terracotta | `--ft-terracotta` | `#AF6047` |
+| 짙은 terracotta | `--ft-terracotta-dark` | `#7D3F30` |
+| deep brown | `--ft-brown` | `#241712` |
 
-`/memory/`는 공개 projection을 읽는 canonical route로 유지하며 scene object와 content relation에서 접근할 수 있다. 다만 주요 navigation의 별도 명사로 올리지 않는다.
+gradient, glass, 큰 radius, 안쪽 floating shadow, decorative motion, 가짜 badge와
+pill을 추가하지 않는다. 사진과 일러스트는 건축적 면, 빛과 그림자, 정물, 충분한
+negative space를 사용한다. 서평 표지는 `contain`이며 디자인을 위해 crop하지 않는다.
 
-금지하는 주요 navigation 명사: 기록, 책장, 기억, 색인, 소개, 노트 목록, 아카이브, Articles, Analysis, Reviews, Ideas, Memory, Map.
+## 글꼴과 읽기 폭
 
-`/analysis/`, `/ideas/`, `/travel/`, `/tags/`, `/memory/`은 canonical route를 유지하되 주요 navigation에 올리지 않는다. 공개 재고가 없으면 빈 방을 만들지 않는다.
+- display/body 한글: self-hosted Noto Serif KR 400.
+- Latin wordmark: self-hosted Cormorant Garamond 400.
+- UI/meta 한글: self-hosted Noto Sans KR 400.
+- 세 파일은 `apps/site/public/fonts/`에 있고 OFL, upstream notice, checksum은
+  `apps/site/public/fonts/LICENSES.md`와 관련 테스트가 검증한다.
+- 본문은 desktop 17px, mobile 16px, line-height 약 1.9다.
+- 390px에서는 22px inset과 16px 본문을 보존한다. 실제 measure는 21.63em이며,
+  접근 가능한 크기를 줄여 과거 상충 수치를 맞추지 않는다.
+- 제목은 `word-break: keep-all`, 긴 URL·code·table은 route 안에서만 wrap/scroll하고
+  document 가로 overflow를 만들지 않는다.
 
-## 공개 탐색 화면: Staged Aperture
+## 공통 shell과 interaction
 
-현재 구현은 `/`의 author-approved `판단` scene 하나다. lead `reading-desk-cobalt`와 `judgment-scale`, text-only `블랙스완`, article excerpt, `shared-reading-table`을 하나의 유한한 장면으로 구성한다. warm `reading-desk-light`는 lead로 사용하지 않는다.
+`SiteShell`은 skip link, `SiteHeader`, main만 렌더한다. desktop은 inline primary
+navigation과 보조 menu button을 제공한다. 767px 이하에서는 44px menu button과
+modal navigation을 사용하며 배경을 inert로 만들고, focus를 가두고, `Escape`와 바깥
+pointer로 닫은 뒤 trigger로 focus를 복원한다. JavaScript가 없으면 `<noscript>`의
+canonical primary anchors가 남는다.
 
-- Desktop은 중앙에서 조금 오른쪽의 큰 lead와 viewport 경계의 support/context를 함께 보여준다. 동일한 card grid, masonry, 일반 carousel로 바꾸지 않는다.
-- Mobile은 native horizontal scrolling과 `scroll-snap`으로 같은 공간 관계를 번역한다. 첫 canonical lead는 full-viewport initial slot 안에서 양쪽 `15vw` 여백을 둔 `70vw`, support/context/hint stop은 `72vw`, stage는 `42svh`다. 첫 프레임에는 이미 resolve된 `judgment-scale`과 `black-swan`에서 만든 비상호작용·`aria-hidden` edge echo가 lead 위에 겹쳐 승인된 깊이를 보충한다. echo에는 href, canonical id, action, 별도 사실이 없고 사용자가 native rail을 움직이면 사라진다. swipe를 가로채는 custom drag나 scroll-jacking을 추가하지 않는다.
-- object는 server-rendered canonical anchor다. JavaScript가 없어도 글과 책 route로 이동한다.
-- `읽기`는 canonical content route로 이동하고 `전체 보기`는 현재 scene viewport로 돌아간다.
-- 현재 slice는 여러 scene, 자동 scene, 존재하지 않는 scene count를 암시하지 않는다.
+visible focus는 2px 이상 outline과 바깥 ink ring을 함께 사용한다. reduced motion에서는
+transition과 animation을 제거한다. canonical anchor와 GET form이 기본 동작을 소유하고
+React는 menu, link copy, 검색 결과 갱신, bounded origin return만 보강한다.
 
-## Continuity Zoom
+## route composition
 
-선택한 object는 modal을 겹쳐 띄우지 않고 원래 geometry에서 focus composition으로 확장한다. desktop focus는 image-first split과 quiet provenance를 사용하고, mobile focus는 object와 정보 패널을 세로로 잇는다.
+### Home
 
-- Focus는 `?focus=<object-id>`와 history state로 표현한다. direct URL과 refresh도 같은 object를 선택한다.
-- Shipped focus panel의 type field는 text가 아니라 3px marker다. visible information order는 title, 실제 authored article excerpt, `읽기`, `전체 보기`, quiet relation/source provenance다. Continuity Zoom이 시작된 뒤 336ms(480ms의 70%)에 panel reveal을 시작해 144ms에 완료한다. native View Transition은 named panel pseudo-element를, FLIP fallback은 live panel opacity를 사용한다.
-- 같은 object의 pending 또는 active focus activation은 idempotent guard가 거부한다. rapid repeat/Enter는 history entry를 중복 생성하지 않으며 focus 동안 canonical scene anchor는 tab order에서 빠지고 reveal 뒤 `읽기`가 keyboard path를 이어받는다.
-- browser Back, `Escape`, `전체 보기`는 선택 object와 keyboard focus를 복원한다.
-- mobile에서는 native rail의 정확한 `scrollLeft`를 history에 함께 보관하고 layout 전환 뒤 복원한다. object identity만으로 nearest snap point를 다시 계산하지 않는다.
-- `prefers-reduced-motion: reduce`에서는 Web Animation이나 View Transition을 시작하지 않고 즉시 전환한다.
-- invalid focus는 오류 화면 대신 `/` overview로 정규화한다.
+black/terracotta split hero, 승인된 대표 이미지와 실제 hero article, 그 아래 서평·아티클·
+생각 한 건씩을 고른 세 editorial pick을 렌더한다. selection은 immutable release에서만
+오며 body나 관계 같은 detail-only field를 listing payload에 싣지 않는다.
 
-## 색
+### 아티클과 서평 index
 
-공개 탐색 화면과 React 글/책 reading surface는 같은 daylight field를 쓴다.
+큰 제목, 설명, 얇은 rule, 가로 editorial row를 사용한다. 아티클은 canonical GET topic
+anchor와 17건 ledger를 제공한다. 서평은 18건 ledger를 제공하며 승인된 cover byte가 없는
+현재 release에서는 text-led다. `coverState: hold`는 숨기지 않고 공개 보류 상태를 표시한다.
 
-- base light `#F2F4F7`, reading white `#FFFFFF`, ink `#151619`.
-- selection과 visible focus는 cobalt `#2B63E8`.
-- 실제 media가 색을 담당하고 자동 gradient, glass, card shadow, paper grain, sticker, particle을 쓰지 않는다.
+### 생각 index
 
-React 글/책은 mineral field 위의 optical-white sheet다. 회색 부스가 아니다.
+정확히 3열 × 2행의 구성 공간이다. 실제 생각 한 건만 link와 콘텐츠를 갖고 나머지 다섯
+칸은 inert, `aria-hidden`, 비어 있다. placeholder, skeleton, fake date를 넣지 않는다.
 
-Astro rollback의 `src/styles/press.css`는 어두운 방과 밝은 종이를 그린다. 다크모드 본문이 아니다. 그 baseline에만 다음 토큰이 남는다.
+### 검색
 
-- `--booth`: 중성 그레이. 페이지 바깥, 헤더/푸터 크롬.
-- `--sheet`: 코팅 옵티컬 화이트. 읽기 시트. 본문은 여기만.
-- `--ink`: 리치 블랙. 제목과 본문.
-- `--soft`: 중성 다크 그레이. 날짜, 판권, 보조.
-- `--proof`: printer’s non-repro blue. 교정 메모, 문장.
-- `--mark`: 아주 얇은 생산 표시. 시트 네 모서리와 하단 4mm 색띠만.
+primary corpus인 서평·아티클·생각만 검색한다. 빈 검색은 실제 keyword 최대 8개와 lane별
+discovery card 한 건을 보여 준다. GET form은 JavaScript 없이 canonical query URL로
+이동하지만, `ssr: false` 정적 export이므로 query별 filtering과 input restoration은 hydration
+이후에만 동작한다. JavaScript-off에서는 읽을 수 있는 기본 discovery를 그대로 보여 주며
+query-specific 결과를 제공한다고 주장하지 않는다.
 
-레인마다 색을 나누지 않는다. 악센트 필드를 넓게 깔지 않는다.
+### detail
 
-금지한다.
+아티클·생각은 off-white inner header와 terracotta/dark split hero, action/prose grid를 쓴다.
+서평은 승인 cover가 있으면 image-led, 아니면 text-led다. action rail에서 좋아요와 댓글은
+비활성 준비 상태이고 수치나 성공을 만들지 않는다. link copy만 canonical URL을 복사하고
+접근 가능한 상태 메시지를 낸다. direct entry는 collection fallback을, 검증된 list/search
+origin은 bounded return을 제공한다.
 
-- 따뜻한 아이보리, 크림 종이, 문예 명조.
-- purple-blue AI gradient, glass, blob, 시안 시그널.
-- 카드 그림자, 칩, 배지, 라운드 고스트 박스.
-- 텍스트보다 먼저 보이는 배경 장식.
+### secondary route
 
-## 글꼴과 문장 폭
+analysis, ideas, travel, tags, memory는 같은 header, rule, serif hierarchy와 본문 measure를
+사용한다. legacy scene/zoom interaction은 없다. `/memory/map/`은 `/memory/`로 가는
+`noindex` compatibility document일 뿐 별도 public experience가 아니다.
 
-문예 명조와 AI 기본 세리프를 쓰지 않는다. 본문과 제목은 같은 한글 고딕 계열이다.
+## 이미지와 권리
 
-- 한글: Source Han Sans K / Noto Sans KR / Apple SD Gothic Neo.
-- 라틴: Source Sans 3 또는 같은 작업표 그로테스크.
-- 금지: Inter 디스플레이, Space Grotesk, Playfair, Iowan, AppleMyungjo, IBM Plex.
+public UI는 immutable release의 resolved media만 받는다. generated media는 controller와
+independent visual reviewer가 같은 checksum-bound decision batch를 승인하고 rights review가
+통과한 원본만 release에 들어간다. caveat는 `non-exclusive generated output;
+copyrightability/uniqueness not guaranteed`다. 승인되지 않은 후보는 text-led fallback이다.
 
-규칙:
+서평 cover는 판본 identity와 redistribution receipt가 모두 승인돼야 byte를 공개한다. 현재
+생산 registry는 승인 0건이며 strict validation은 17건의 rights warning을 의도적으로 남긴다.
 
-- 데스크톱 본문 measure는 대략 36–40자, `42em`.
-- 본문 17px / 행간 1.9. 모바일 16px. 한글 자간은 0.
-- 제목만 `word-break: keep-all`.
-- 계층은 색이 아니라 크기, 굵기, 여백으로 만든다.
+## responsive acceptance
 
-## 기존 reading route 레이아웃
-
-- React 공개 사이트의 글/책은 mineral field + optical-white sheet다. 회색 부스와 재단선은 Astro rollback baseline이다.
-- 그림자는 책 표지 물체에만. UI 패널은 띄우지 않는다.
-- `/articles/`는 리드 하나와 `조사`/`에세이` 장부 팸플릿이다.
-- 조사 글 상세는 본문 앞 절 목록과 `확인한 자료` colophon을 쓴다.
-- `/reviews/`는 최근 표지 객체와 연도별 일기다. 모바일에서 제목과 판정을 숨기지 않는다.
-- `/memory/`는 짧은 문장집이다. 각 문장은 `/memory/[slug]/`로 간다.
-- `/search/` 빈 쿼리는 글 / 책 / 문장 목록이다. KPI 사이드바 없음.
-- 텍스트가 많은 영역은 카드 그리드보다 행과 지면을 우선한다.
-
-## 컴포넌트 책임
-
-- `SiteHeader`: public chrome. 워드마크와 장면/글/책/찾기, mobile 44px menu.
-- `SiteFooter`: 같은 공개 navigation contract를 따른다.
-- `PublicScene`: server-rendered scene objects, native mobile rail, URL/history/focus lifecycle.
-- `PublicSceneObject`: media 또는 text-only object와 canonical no-JS anchor.
-- `storyworld.css`: Staged Aperture, focus composition, mobile snap rail, reduced-motion 규칙.
-- `reading-sheet`: React 공개 읽기 지면. `--bw-mineral` field 위의 `--bw-white` sheet다. Astro `press-sheet`의 재단선과 색띠는 rollback baseline이다.
-- React reading page: 글 팸플릿, 책 객체, 문장 페이지의 본문 셸.
-- `이어서 읽기`가 이어 읽기 문법이다. 이어질 기록이 있을 때만 목록을 그린다. 가짜 `이전 쇄` 이력을 만들지 않는다.
-
-## Motion
-
-공개 탐색 화면의 signature motion은 Continuity Zoom이다. object focus는 480ms, scene return은 360ms 범위의 shared-geometry 전환을 사용하며 bounce, idle animation, autoplay camera, scroll-jacking은 금지한다. reduced motion에서는 geometry animation을 생략한다.
-
-기존 reading route는 호버와 포커스에 필요한 짧은 transition만 사용한다. 모든 범위에서 포커스는 보이는 cobalt 또는 잉크 outline이다.
-
-## Content Model
-
-공개 writing lane은 route와 collection이 1:1로 대응한다. 공개 탐색 scene은 새 content lane이 아니라 published entry와 public projection을 참조하는 authored view model이다. 방문객에게 내부 collection을 광고하지 않는다.
-
-- `articles`: 개발 글과 기술 에세이. 공개 명사는 글.
-- `reviews`: 표지가 있는 책. 공개 명사는 책.
-- `memory`: private source에서 projection된 public thought. `/memory`와 public scene resolver는 `src/data/memory.public.json`만 읽는다.
-- `analysis`, `ideas`, `travel`: 라우트만 유지. 내비에 두지 않는다.
-
-새 lane은 단순 폴더 추가가 아니다. `src/content.config.ts`, route, layout, validation, navigation, docs를 함께 추가해야 한다.
+기본 확인 폭은 1440×900, 승인 reference calibration 1440×1080(Home), 1080×1440
+(articles), 1120×1400(detail), 768px, 390×844, 320 CSS px reflow다. 320px는 200% zoom
+proxy다. 모든 변경은 console error, keyboard focus, serious/critical accessibility,
+document overflow, image failure, 긴 제목, table/code containment, no-JS와 실제 static-host
+404를 다시 확인한다.

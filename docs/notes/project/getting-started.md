@@ -1,109 +1,101 @@
 # beyondwin 시작하기
 
-이 튜토리얼은 새 checkout에서 사이트를 실행하고, 검증 gate를 통과시키고, MDX 파일 하나가 실제 route로 이어지는 경로를 확인한다.
+이 문서는 현재 React-only `FORM & THOUGHT` public site를 로컬에서 검증하고 여는 최소 절차다.
 
 ## 준비물
 
-- Node.js와 npm.
-- 이 저장소의 local checkout.
-- dependency가 없다면 `npm install`을 실행할 수 있는 네트워크.
+- Node.js 24.x
+- npm 11.x
+- Git checkout 또는 isolated worktree
 
-## Step 1: dependency 설치
-
-repo root에서 실행한다.
+## 1. 상태와 dependency 확인
 
 ```bash
-npm install
+git status --short --branch
+node --version
+npm --version
+npm ci
 ```
 
-설치되는 주요 도구는 Astro, MDX, TypeScript, Vitest, `gray-matter`, `yaml`이다.
+기존 dirty file과 local server를 보존한다. `npm ci`는 committed lockfile의 React Router,
+React, TypeScript, Vitest, Playwright, MDX, Zod, Sharp를 설치한다.
 
-## Step 2: 전체 검증 실행
+## 2. 전체 검증
 
 ```bash
 npm run validate
 ```
 
-이 명령은 아래 순서로 실행된다.
+이 명령은 다음을 순서대로 실행한다.
 
-1. [scripts/validate-content.mjs](../../../scripts/validate-content.mjs): collection frontmatter와 긴 blockquote를 검사한다.
-2. [scripts/article-quality.mjs](../../../scripts/article-quality.mjs): `source-grounded` article의 필수 구조를 검사한다.
-3. `npm run memory:validate`: public memory projection 입력을 검사한다.
-4. `npm test`: Vitest 테스트를 실행한다.
-5. `npm run build`: `astro check`와 `astro build`를 실행한다.
+1. agent/docs contract
+2. source content와 25-word quote limit
+3. strict media/approval inventory
+4. source-grounded article quality
+5. public memory projection
+6. 전체 Vitest와 workspace typecheck
+7. immutable public release build, verify, cleanup guard
+8. local-origin React static export
 
-성공하면 앞부분에 이런 출력이 보인다.
+strict media가 17 review-cover redistribution warning을 출력하는 것은 현재 text-led production
+경계의 알려진 상태다. warning을 숨기거나 cover byte를 임의로 공개하지 않는다.
 
-```text
-Content validation passed.
-Article quality validation passed.
-Memory projection valid. thoughts=<n> topics=<n> edges=<n> sources=<n> excluded={...}
-```
-
-Vitest와 Astro는 그 뒤에 별도 성공 출력을 낸다.
-
-## Step 3: 개발 서버 실행
+## 3. 개발 서버
 
 ```bash
-npm run dev
+npm run site:dev
 ```
 
-Astro가 출력한 URL을 연다. 보통 아래 주소다.
+다른 server를 종료하지 말고 필요하면 별도 port를 사용한다. 공개 route는 active verified
+release를 읽는다. source MDX를 바꾼 뒤에는 `npm run public-release:build`를 먼저 실행한다.
+
+## 4. static artifact와 실제 host
+
+```bash
+npm run public-release:build
+npm run public-release:verify
+npm run site:build
+npm run site:preview -- --host 127.0.0.1 --port 4391
+```
+
+`site:build`는 local evidence용 `https://form-thought.local.invalid` canonical을 사용한다.
+production build는 승인된 domain이 있을 때만 다음 형태로 실행한다.
+
+```bash
+FORM_THOUGHT_SITE_ORIGIN=https://example.com npm run site:build:production
+```
+
+현재 실제 production origin은 `not_measured`, cutover authorization은 `false`다.
+
+## 5. 주요 route 확인
+
+- Home: `http://127.0.0.1:4391/`
+- primary: `/reviews/`, `/articles/`, `/thoughts/`, `/search/`
+- secondary: `/analysis/`, `/ideas/`, `/travel/`, `/tags/`, `/memory/`
+- actual 404: `/definitely-not-a-public-route/`
+
+UI 변경이면 1440×900, route별 calibrated reference width, 768px, 390×844, 320px에서
+console, keyboard, serious/critical accessibility, overflow, no-JS, reduced motion, image failure를
+확인한다.
+
+## 한 record가 공개되는 경로
 
 ```text
-http://localhost:4321/
+src/content/<collection>/<slug>.mdx
+  -> packages/content/src/schemas.ts
+  -> packages/content/src/source-records.ts
+  -> packages/content/src/release/build-release.ts
+  -> build/public-releases/<sha256>/manifest.json
+  -> apps/site/app/release.server.ts
+  -> apps/site/app/routes.ts + route module
+  -> apps/site/build/client/<route>/index.html
 ```
 
-첫 화면에서 확인할 것:
+media는 `src/assets/content/<collection>/<slug>/media.yml`에서 같은 release로 들어간다. UI는
+manifest나 source path를 직접 해석하지 않는다.
 
-- 최신 article 또는 analysis가 featured 영역에 표시된다.
-- `Articles`, `Analysis`, `Reviews`, `Ideas`, `Memory` lane count가 나온다.
-- tag rack과 latest list가 비어 있지 않다.
+## 완료 기준
 
-## Step 4: 주요 route 확인
-
-개발 서버가 켜진 상태에서 아래 route를 확인한다.
-
-| Route | 확인할 내용 |
-| --- | --- |
-| `/articles/` | 개발 글 listing |
-| `/analysis/` | queue 기반 분석 listing |
-| `/reviews/` | 책, 도구, 강의, 글 리뷰 listing |
-| `/ideas/` | 아이디어 listing |
-| `/travel/` | 여행 기록 listing |
-| `/tags/` | 전체 공개 콘텐츠 tag index |
-| `/memory/` | public memory workbench, library, sources tab |
-
-detail route는 파일 이름에서 slug가 정해진다. 예를 들어 [src/content/articles/example-article.mdx](../../../src/content/articles/example-article.mdx)는 `/articles/example-article/`가 된다.
-
-## Step 5: 콘텐츠 한 건 추적
-
-[src/content/articles/example-article.mdx](../../../src/content/articles/example-article.mdx)를 연다.
-
-이 파일은 아래 경로를 거쳐 화면에 나온다.
-
-```text
-MDX frontmatter
-  -> src/content.config.ts
-  -> src/lib/content.ts
-  -> src/pages/articles/[slug].astro
-  -> src/layouts/ArticleLayout.astro
-```
-
-각 파일의 책임:
-
-- [src/content.config.ts](../../../src/content.config.ts): `title`, `description`, `createdAt`, `updatedAt`, `tags`, `status`, `draft`를 검사한다.
-- [src/lib/content.ts](../../../src/lib/content.ts): draft 제외, 날짜 선택, route href, tag 수집, 정렬을 처리한다.
-- [src/pages/articles/[slug].astro](../../../src/pages/articles/[slug].astro): `published && !draft` article detail page를 생성한다.
-- [src/layouts/ArticleLayout.astro](../../../src/layouts/ArticleLayout.astro): article body shell을 렌더링한다.
-
-## 완료 상태
-
-이 튜토리얼을 끝내면 다음을 확인한 상태다.
-
-- dependency가 설치되어 있다.
-- `npm run validate`가 통과한다.
-- local site가 열린다.
-- content file 한 건이 schema, helper, route, layout을 거쳐 화면에 나오는 흐름을 설명할 수 있다.
-
-다음 작업은 [콘텐츠 운영](publishing-workflows.md)을 따른다. 정확한 schema와 script 계약은 [아키텍처 레퍼런스](architecture-reference.md)에 있다.
+`npm run agent:check`, `npm run validate`, affected Playwright suite, `git diff --check`, final
+status와 diff review가 모두 최신 실행이어야 한다. production origin, production traffic,
+authorization처럼 실행하지 않은 항목은 `not_measured` 또는 `false`로 기록한다.

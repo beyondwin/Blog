@@ -2,7 +2,10 @@ import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildPublicRelease } from '../src/release/build-release';
+import {
+  buildPublicRelease,
+  releaseIdForMaterializedRelease,
+} from '../src/release/build-release';
 import { readActiveRelease } from '../src/release/read-release';
 import {
   fixtureChecksum,
@@ -13,6 +16,20 @@ import {
 } from './helpers/release-fixture';
 
 describe('immutable public release building', () => {
+  it('binds release identity to deterministic source, renderer version, and materialized output', () => {
+    const source = { records: [{ body: 'same trusted source' }] };
+    const output = { records: { 'articles/example': { bodyHtml: '<p>first render</p>' } }, assets: {} };
+
+    const first = releaseIdForMaterializedRelease(source, output, 'renderer-v1');
+    expect(releaseIdForMaterializedRelease(source, output, 'renderer-v1')).toBe(first);
+    expect(releaseIdForMaterializedRelease(
+      source,
+      { records: { 'articles/example': { bodyHtml: '<p>changed render</p>' } }, assets: {} },
+      'renderer-v1',
+    )).not.toBe(first);
+    expect(releaseIdForMaterializedRelease(source, output, 'renderer-v2')).not.toBe(first);
+  });
+
   it('builds every approved generated media selection needed by the fixed home and detail projections', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-thought-round-trip-'));
     const releasesRoot = join(sandbox, 'releases');
