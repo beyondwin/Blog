@@ -1,0 +1,279 @@
+version: 1
+batchId: topic-refresh
+generator:
+  provider: openai
+  generator: codex-built-in-image-generation
+  model: not-exposed-by-built-in-tool
+  modelVersion: not-exposed-by-built-in-tool
+  promptVersion: form-and-thought-articles-topic-v2
+  generatedAt: 2026-08-29T14:37:16.577Z
+approval:
+  state: approved
+  selectedCandidateIds: [TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR29, TR35, TR38, TR41]
+  approvedBy:
+    - controller
+    - independent-visual-reviewer
+  recordedAt: 2026-08-30T00:25:17+09:00
+  evidence: User-delegated controller receipt .superpowers/media-intake/article-topic-refresh/controller-selection.yml (sha256:c64c78cca8e12569bee4565a229284fb56893a5bacacd22542da7055698fa91e) approved contact sheet sha256:edcc48f514aba13d69205be4988ef2dc27bf94465a9e8956024bb71ed0066796 and exact selected IDs TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR29, TR35, TR38, TR41; .superpowers/sdd/2026-08-29-form-and-thought-article-media-refresh/task-2-final-independent-visual-review.md independently recorded READY for the same selection.
+rightsReview:
+  state: approved
+  decision: approve-repository-publication
+  checkedAt: 2026-08-30
+  decidedBy: controller
+  caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed
+  sources:
+    - url: https://openai.com/policies/terms-of-use/
+      checkedAt: 2026-08-30
+    - url: https://openai.com/policies/service-terms/
+      checkedAt: 2026-08-30
+  inspection:
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+approvedContactSheet:
+  path: docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-topic-refresh.png
+  checksum: sha256:edcc48f514aba13d69205be4988ef2dc27bf94465a9e8956024bb71ed0066796
+assets:
+  - candidateId: TR01
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: agents-md-vs-agent-skills-evidence
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/agents-md-vs-agent-skills-evidence/editorial-topic-hero.png
+    checksum: sha256:ea0b37717a5cbc5e009c171269672205c8bf764b8d4dacd54deca53b06b6296e
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr01-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 47, 1536, 978]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.62, 0.5]
+        safeArea: [154, 123, 1413, 901]
+      - slot: detailHero
+        desktopCrop: [0, 147, 1536, 878]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.62, 0.5]
+        safeArea: [154, 123, 1413, 901]
+  - candidateId: TR05
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: andrej-karpathy-skills-analysis
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/andrej-karpathy-skills-analysis/editorial-topic-hero.png
+    checksum: sha256:89a6e70153941986a83580d67b8dec42a4c7c27c632565710422f9b7b369ba74
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr05-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 93, 1536, 1024]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.42, 0.56]
+        safeArea: [123, 102, 1352, 942]
+      - slot: detailHero
+        desktopCrop: [0, 208, 1536, 939]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.42, 0.56]
+        safeArea: [123, 102, 1352, 942]
+  - candidateId: TR09
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: aws-static-frontend-serverless-bff
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/aws-static-frontend-serverless-bff/editorial-topic-hero.png
+    checksum: sha256:32228b6b02eaa0257452b1bea5baf37acc79bd7507cb92d7e3a84ffcc4e29264
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr09-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 47, 1536, 978]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.6, 0.5]
+        safeArea: [184, 102, 1382, 922]
+      - slot: detailHero
+        desktopCrop: [0, 147, 1536, 878]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.6, 0.5]
+        safeArea: [184, 102, 1382, 922]
+  - candidateId: TR13
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: codex-ui-mockup-workflow
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/codex-ui-mockup-workflow/editorial-topic-hero.png
+    checksum: sha256:b18b29cecf538f6848d17ad00afb0c2723822784c3979c60ea1fda91b4fb79b0
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr13-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 87, 1536, 1018]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.46, 0.54]
+        safeArea: [123, 102, 1290, 922]
+      - slot: detailHero
+        desktopCrop: [0, 187, 1536, 918]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.46, 0.54]
+        safeArea: [123, 102, 1290, 922]
+  - candidateId: TR17
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: context-refinement-system-design
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/context-refinement-system-design/editorial-topic-hero.png
+    checksum: sha256:df5b5b82658cc9d191f9747a26cf26ca03c75f0ad24ddd281db305e62cd8f5ec
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr17-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 93, 1536, 1024]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.48, 0.6]
+        safeArea: [154, 123, 1352, 942]
+      - slot: detailHero
+        desktopCrop: [0, 211, 1536, 942]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.48, 0.6]
+        safeArea: [154, 123, 1352, 942]
+  - candidateId: TR21
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: hermes-agent-persistent-worker-runtime
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/hermes-agent-persistent-worker-runtime/editorial-topic-hero.png
+    checksum: sha256:bb9f7764d051d29a1a8f461f7ffb53409d82a6712b3124401c275b05568efa0e
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr21-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 93, 1536, 1024]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.56, 0.58]
+        safeArea: [184, 102, 1413, 922]
+      - slot: detailHero
+        desktopCrop: [0, 191, 1536, 922]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.56, 0.58]
+        safeArea: [184, 102, 1413, 922]
+  - candidateId: TR25
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: lazycodex-agent-harness-analysis
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/lazycodex-agent-harness-analysis/editorial-topic-hero.png
+    checksum: sha256:589d0088ab856a11ee7d44417867ea131f3f9c58250888f01f865b6ef14529ad
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr25-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 26, 1536, 957]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.64, 0.48]
+        safeArea: [123, 102, 1382, 922]
+      - slot: detailHero
+        desktopCrop: [0, 126, 1536, 857]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.64, 0.48]
+        safeArea: [123, 102, 1382, 922]
+  - candidateId: TR29
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: oh-my-pi-deep-review
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/oh-my-pi-deep-review/editorial-topic-hero.png
+    checksum: sha256:cc64489f797f0c57e6ba0191895282a9e8c930158be71af9216937032bd853ed
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr29-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 93, 1536, 1024]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.4, 0.56]
+        safeArea: [123, 123, 1321, 922]
+      - slot: detailHero
+        desktopCrop: [0, 191, 1536, 922]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.4, 0.56]
+        safeArea: [123, 123, 1321, 922]
+  - candidateId: TR35
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: ponytail-agent-minimalism-analysis
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/ponytail-agent-minimalism-analysis/editorial-topic-hero.png
+    checksum: sha256:1401bdd29a0aade52ca225467e3e73cc61f045dad85d901c5178d3b4b717d3b3
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr35-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 93, 1536, 1024]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.38, 0.64]
+        safeArea: [123, 123, 1290, 942]
+      - slot: detailHero
+        desktopCrop: [0, 211, 1536, 942]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.38, 0.64]
+        safeArea: [123, 123, 1290, 942]
+  - candidateId: TR38
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: postgresql-bm25-pg-search
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/postgresql-bm25-pg-search/editorial-topic-hero.png
+    checksum: sha256:7988d77a8369514c4505fbab77734a502842e65d735acc4f13c0401cd37e25c0
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr38-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 26, 1536, 957]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.58, 0.48]
+        safeArea: [154, 123, 1413, 901]
+      - slot: detailHero
+        desktopCrop: [0, 126, 1536, 857]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.58, 0.48]
+        safeArea: [154, 123, 1413, 901]
+  - candidateId: TR41
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: uncle-bob-ai-code-review-evidence
+    mediaId: editorial-topic-hero
+    file: editorial-topic-hero.png
+    sourcePath: src/assets/content/articles/uncle-bob-ai-code-review-evidence/editorial-topic-hero.png
+    checksum: sha256:477e85a8339792aad65dc777fcfa3ea99026468912b4246a0548e1be19120e75
+    width: 1536
+    height: 1024
+    promptId: article-topic-refresh-tr41-v2
+    placements:
+      - slot: indexLandscape
+        desktopCrop: [0, 87, 1536, 1018]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.44, 0.54]
+        safeArea: [123, 102, 1352, 922]
+      - slot: detailHero
+        desktopCrop: [0, 187, 1536, 918]
+        mobileCrop: [86, 0, 1451, 1024]
+        focalPoint: [0.44, 0.54]
+        safeArea: [123, 102, 1352, 922]

@@ -9,10 +9,10 @@ import { recordsForCollection } from '../apps/site/app/release.server.ts';
 import { ARTICLE_TOPICS } from '../apps/site/src/ui/articles/articleTopics.ts';
 import { buildPublicRelease } from '../packages/content/src/release/build-release.ts';
 import { readActiveRelease } from '../packages/content/src/release/read-release.ts';
+import { generatedMediaDecisionManifestSchema } from '../packages/content/src/schemas.ts';
 import {
   parseGeneratedMediaApprovalRegistry,
 } from '../packages/content/src/media/generated-media-approval-registry.mjs';
-import { validateGeneratedMediaInventory } from '../packages/content/src/media/validate-generated-media-inventory.ts';
 import { validateMediaRepository } from './validate-media.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -21,15 +21,42 @@ const agentsDecisionPath = 'docs/notes/project/assets/form-and-thought-generated
 const agentsMediaPath = 'src/assets/content/articles/andrej-karpathy-skills-analysis/media.yml';
 const agentsAssetPath = 'src/assets/content/articles/andrej-karpathy-skills-analysis/editorial-hero.png';
 const articleBriefsPath = 'docs/notes/project/assets/form-and-thought-generated/articles/topic-family-image-briefs.yml';
-const requiredBatches = ['calibration', 'agents', 'design', 'data-search', 'architecture-validation'];
+const topicRefreshBatchId = 'topic-refresh';
+const topicRefreshDecisionPath = 'docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml';
+const topicRefreshContactSheetPath = 'docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-topic-refresh.png';
+const topicRefreshRightsLedgerPath = 'docs/notes/project/assets/form-and-thought-generated/articles/candidate-rights-review-topic-refresh.yml';
+const requiredBatches = ['calibration', 'agents', 'design', 'data-search', 'architecture-validation', topicRefreshBatchId];
 const selectedCandidates = [
   'H01', 'A03', 'T01',
   'AG01', 'AG02', 'AG03', 'AG04', 'AG05',
   'DS01', 'DS03',
   'DT01',
   'AV01', 'AV02', 'AV03', 'AV05',
+  'TR01', 'TR05', 'TR09', 'TR13', 'TR17', 'TR21', 'TR25', 'TR29', 'TR35', 'TR38', 'TR41',
 ];
 const heldCandidates = ['DS02', 'DT02', 'AV04', 'AV06'];
+const topicRefreshSelections = [
+  ['TR01', 'agents-md-vs-agent-skills-evidence'],
+  ['TR05', 'andrej-karpathy-skills-analysis'],
+  ['TR09', 'aws-static-frontend-serverless-bff'],
+  ['TR13', 'codex-ui-mockup-workflow'],
+  ['TR17', 'context-refinement-system-design'],
+  ['TR21', 'hermes-agent-persistent-worker-runtime'],
+  ['TR25', 'lazycodex-agent-harness-analysis'],
+  ['TR29', 'oh-my-pi-deep-review'],
+  ['TR35', 'ponytail-agent-minimalism-analysis'],
+  ['TR38', 'postgresql-bm25-pg-search'],
+  ['TR41', 'uncle-bob-ai-code-review-evidence'],
+].map(([candidateId, recordId]) => ({
+  candidateId,
+  collection: 'articles',
+  recordId,
+  mediaId: 'editorial-topic-hero',
+}));
+const topicRefreshRejectedCandidates = [
+  'TR02', 'TR06', 'TR10', 'TR14', 'TR18', 'TR22', 'TR26',
+  'TR30', 'TR33', 'TR34', 'TR36', 'TR37', 'TR42',
+];
 const articleDecisions = ['retain', 'replace', 'add'];
 const articleFamilies = [
   'people-action',
@@ -220,6 +247,13 @@ async function copyPhaseBRepository() {
       join(root, 'packages/content/review-cover-redistribution-approvals.json'),
     ),
   ]);
+  // Task 1 ledger tests intentionally exercise the last fully integrated public
+  // inventory. Task 3 registers approval evidence before Task 4 promotes bytes.
+  const copiedRegistryPath = join(root, registryPath);
+  const copiedRegistry = JSON.parse(await readFile(copiedRegistryPath, 'utf8'));
+  copiedRegistry.batches = copiedRegistry.batches.filter(({ batchId }) => batchId !== topicRefreshBatchId);
+  await writeFile(copiedRegistryPath, `${JSON.stringify(copiedRegistry)}\n`);
+  await rm(join(root, topicRefreshDecisionPath), { force: true });
   return root;
 }
 
@@ -262,6 +296,75 @@ function assertLedger(condition, message) {
 
 function assertSame(actual, expected, message) {
   assertLedger(JSON.stringify(actual) === JSON.stringify(expected), message);
+}
+
+function sha256(bytes) {
+  return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+}
+
+function assertTopicRefreshApprovalContract({ registry, decision, decisionBytes, contactSheetBytes, rightsLedger }) {
+  const registered = registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId);
+  assertLedger(registered, 'topic-refresh batch must be registered');
+  assertLedger(registered.decisionManifest === topicRefreshDecisionPath, 'topic-refresh decision path must be exact');
+  assertLedger(registered.decisionManifestChecksum === sha256(decisionBytes), 'topic-refresh decision manifest checksum changed');
+  assertSame(registered.selections, topicRefreshSelections, 'topic-refresh registered tuples must be exact');
+
+  const canonical = generatedMediaDecisionManifestSchema.parse(decision);
+  assertLedger(canonical.batchId === topicRefreshBatchId, 'topic-refresh decision batch ID must be exact');
+  assertLedger(canonical.generator.promptVersion === 'form-and-thought-articles-topic-v2', 'topic-refresh prompt version must be exact');
+  assertSame(canonical.approval.approvedBy, ['controller', 'independent-visual-reviewer'], 'topic-refresh approval roles must be exact');
+  assertSame(canonical.approval.selectedCandidateIds, topicRefreshSelections.map(({ candidateId }) => candidateId), 'topic-refresh selected IDs must be exact');
+  assertSame(
+    canonical.assets.map(({ candidateId, collection, recordId, mediaId }) => ({ candidateId, collection, recordId, mediaId })),
+    topicRefreshSelections,
+    'topic-refresh manifest tuples must be exact',
+  );
+  assertLedger(canonical.rightsReview.state === 'approved', 'topic-refresh rights review must be approved');
+  assertLedger(canonical.rightsReview.decision === 'approve-repository-publication', 'topic-refresh publication decision must be exact');
+  assertLedger(canonical.approvedContactSheet.path === topicRefreshContactSheetPath, 'topic-refresh contact-sheet path must be exact');
+  assertLedger(canonical.approvedContactSheet.checksum === sha256(contactSheetBytes), 'topic-refresh contact-sheet checksum changed');
+  assertLedger(canonical.approval.evidence.includes(canonical.approvedContactSheet.checksum), 'topic-refresh approval evidence must bind the contact-sheet checksum');
+  for (const { candidateId } of topicRefreshSelections) {
+    assertLedger(canonical.approval.evidence.includes(candidateId), `topic-refresh approval evidence must bind ${candidateId}`);
+  }
+
+  assertLedger(rightsLedger.version === 1, 'topic-refresh rights ledger version must be 1');
+  assertSame(
+    rightsLedger.sources,
+    [
+      { url: 'https://openai.com/policies/terms-of-use/', checkedAt: '2026-08-30' },
+      { url: 'https://openai.com/policies/service-terms/', checkedAt: '2026-08-30' },
+    ],
+    'topic-refresh rights sources must be exact and fresh',
+  );
+  assertSame(
+    rightsLedger.candidates.map(({ candidateId, recordId, sha256: checksum }) => ({ candidateId, recordId, checksum })),
+    topicRefreshSelections.map(({ candidateId, recordId }) => {
+      const asset = canonical.assets.find((candidate) => candidate.candidateId === candidateId);
+      return { candidateId, recordId, checksum: asset.checksum.slice('sha256:'.length) };
+    }),
+    'topic-refresh rights ledger candidates and checksums must match the canonical manifest',
+  );
+  for (const candidate of rightsLedger.candidates) {
+    const canonicalIds = new Set(canonical.assets.map(({ candidateId }) => candidateId));
+    assertLedger(
+      candidate.outcome !== 'hold' || !canonicalIds.has(candidate.candidateId),
+      `HOLD candidate ${candidate.candidateId} must remain absent from the canonical manifest`,
+    );
+  }
+  assertLedger(
+    rightsLedger.candidates.every(({ outcome }) => outcome === 'approved'),
+    'all selected topic-refresh candidates must pass rights review',
+  );
+
+  const canonicalCandidates = new Set([
+    ...canonical.approval.selectedCandidateIds,
+    ...canonical.assets.map(({ candidateId }) => candidateId),
+    ...registered.selections.map(({ candidateId }) => candidateId),
+  ]);
+  for (const candidateId of topicRefreshRejectedCandidates) {
+    assertLedger(!canonicalCandidates.has(candidateId), `rejected candidate ${candidateId} must remain absent`);
+  }
 }
 
 function articleBriefSemanticChecksum(brief) {
@@ -503,20 +606,127 @@ describe('FORM & THOUGHT article topic-family image-brief ledger', () => {
 });
 
 describe('FORM & THOUGHT approved article generated-media batches', () => {
-  it('registers exactly the approved Phase B candidates and keeps every HOLD candidate text-led', async () => {
+  it('registers the exact topic-refresh batch path and byte checksum', async () => {
+    const decisionBytes = await readFile(join(repositoryRoot, topicRefreshDecisionPath));
     const registry = parseGeneratedMediaApprovalRegistry(
       await readFile(join(repositoryRoot, registryPath), 'utf8'),
       registryPath,
     );
+
+    expect(registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId)).toMatchObject({
+      batchId: topicRefreshBatchId,
+      decisionManifest: topicRefreshDecisionPath,
+      decisionManifestChecksum: sha256(decisionBytes),
+    });
+  });
+
+  it('registers the exact approved topic-refresh tuples', async () => {
+    const registry = parseGeneratedMediaApprovalRegistry(
+      await readFile(join(repositoryRoot, registryPath), 'utf8'),
+      registryPath,
+    );
+    const decision = generatedMediaDecisionManifestSchema.parse(parseYaml(
+      await readFile(join(repositoryRoot, topicRefreshDecisionPath), 'utf8'),
+    ));
+
+    expect(registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId)?.selections)
+      .toEqual(topicRefreshSelections);
+    expect(decision.assets.map(({ candidateId, collection, recordId, mediaId }) => ({
+      candidateId,
+      collection,
+      recordId,
+      mediaId,
+    }))).toEqual(topicRefreshSelections);
+  });
+
+  it('keeps every rejected or HOLD candidate absent from the canonical topic-refresh batch', async () => {
+    const registry = parseGeneratedMediaApprovalRegistry(
+      await readFile(join(repositoryRoot, registryPath), 'utf8'),
+      registryPath,
+    );
+    const decision = generatedMediaDecisionManifestSchema.parse(parseYaml(
+      await readFile(join(repositoryRoot, topicRefreshDecisionPath), 'utf8'),
+    ));
+    const rightsLedger = parseYaml(await readFile(join(repositoryRoot, topicRefreshRightsLedgerPath), 'utf8'));
+    const forbidden = [
+      ...topicRefreshRejectedCandidates,
+      ...rightsLedger.candidates.filter(({ outcome }) => outcome === 'hold').map(({ candidateId }) => candidateId),
+    ];
+    const canonical = [
+      ...registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId).selections.map(({ candidateId }) => candidateId),
+      ...decision.approval.selectedCandidateIds,
+      ...decision.assets.map(({ candidateId }) => candidateId),
+    ];
+
+    expect(canonical).not.toEqual(expect.arrayContaining(forbidden));
+  });
+
+  it('validates the complete approved Phase B and topic-refresh evidence contract', async () => {
+    const registrySource = await readFile(join(repositoryRoot, registryPath), 'utf8');
+    const registry = parseGeneratedMediaApprovalRegistry(
+      registrySource,
+      registryPath,
+    );
+    const decisionBytes = await readFile(join(repositoryRoot, topicRefreshDecisionPath));
+    const contactSheetBytes = await readFile(join(repositoryRoot, topicRefreshContactSheetPath));
+    const decision = parseYaml(decisionBytes.toString('utf8'));
+    const rightsLedger = parseYaml(await readFile(join(repositoryRoot, topicRefreshRightsLedgerPath), 'utf8'));
 
     expect(registry.batches.map((batch) => batch.batchId)).toEqual(requiredBatches);
     expect(registry.batches.flatMap((batch) => batch.selections.map((selection) => selection.candidateId)))
       .toEqual(selectedCandidates);
     expect(registry.batches.flatMap((batch) => batch.selections.map((selection) => selection.candidateId)))
       .not.toEqual(expect.arrayContaining(heldCandidates));
+    expect(() => assertTopicRefreshApprovalContract({
+      registry,
+      decision,
+      decisionBytes,
+      contactSheetBytes,
+      rightsLedger,
+    })).not.toThrow();
+  });
 
-    const approved = await validateGeneratedMediaInventory(repositoryRoot);
-    expect(approved).toHaveLength(selectedCandidates.length);
+  it.each([
+    {
+      name: 'decision-manifest byte tamper',
+      pattern: /decision manifest checksum changed/i,
+      mutate: ({ decisionBytes }) => ({ decisionBytes: Buffer.concat([decisionBytes, Buffer.from('\n# tampered\n')]) }),
+    },
+    {
+      name: 'rejected candidate tuple insertion',
+      pattern: /registered tuples must be exact|rejected candidate/i,
+      mutate: ({ registry }) => {
+        registry.batches.find(({ batchId }) => batchId === topicRefreshBatchId).selections.push({
+          candidateId: 'TR02',
+          collection: 'articles',
+          recordId: 'agents-md-vs-agent-skills-evidence',
+          mediaId: 'editorial-topic-hero',
+        });
+        return { registry };
+      },
+    },
+    {
+      name: 'HOLD candidate canonical binding',
+      pattern: /HOLD candidate TR01 must remain absent/i,
+      mutate: ({ rightsLedger }) => {
+        rightsLedger.candidates.find(({ candidateId }) => candidateId === 'TR01').outcome = 'hold';
+        return { rightsLedger };
+      },
+    },
+  ])('rejects topic-refresh $name', async ({ mutate, pattern }) => {
+    const decisionBytes = await readFile(join(repositoryRoot, topicRefreshDecisionPath));
+    const input = {
+      registry: parseGeneratedMediaApprovalRegistry(
+        await readFile(join(repositoryRoot, registryPath), 'utf8'),
+        registryPath,
+      ),
+      decision: parseYaml(decisionBytes.toString('utf8')),
+      decisionBytes,
+      contactSheetBytes: await readFile(join(repositoryRoot, topicRefreshContactSheetPath)),
+      rightsLedger: parseYaml(await readFile(join(repositoryRoot, topicRefreshRightsLedgerPath), 'utf8')),
+    };
+    Object.assign(input, mutate(structuredClone(input)));
+    expect(() => assertTopicRefreshApprovalContract(input)).toThrow(pattern);
   });
 
   it.each([

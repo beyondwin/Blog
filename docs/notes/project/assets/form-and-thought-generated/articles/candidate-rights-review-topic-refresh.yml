@@ -1,0 +1,158 @@
+version: 1
+batchId: topic-refresh
+checkedAt: 2026-08-30
+reviewer: controller
+scope: Exact user-delegated Task 2 selections only; visual selection alone did not authorize publication.
+sources:
+  - url: https://openai.com/policies/terms-of-use/
+    checkedAt: 2026-08-30
+  - url: https://openai.com/policies/service-terms/
+    checkedAt: 2026-08-30
+termsBasis:
+  - The current Terms assign OpenAI's rights in Output to the user to the extent permitted by applicable law, while keeping the user responsible for lawful, appropriate use.
+  - Output may not be unique, so approval does not claim exclusivity, guaranteed copyrightability, or uniqueness.
+  - The current Service Terms prohibit reproducing a person's likeness without express consent and all necessary rights.
+  - Third-party-rights, trademark, recognizable-person or product, and input-rights risks remain the user's responsibility and were inspected candidate by candidate.
+provenance:
+  generatorRoute: Codex built-in image generation
+  externalImageInputs: []
+  promptVersion: form-and-thought-articles-topic-v2
+  candidateReceipt: .superpowers/media-intake/article-topic-refresh/candidate-receipts.yml
+  controllerReceipt:
+    path: .superpowers/media-intake/article-topic-refresh/controller-selection.yml
+    sha256: c64c78cca8e12569bee4565a229284fb56893a5bacacd22542da7055698fa91e
+  approvedContactSheet:
+    sourcePath: .superpowers/media-intake/article-topic-refresh/contact-sheet.png
+    sha256: edcc48f514aba13d69205be4988ef2dc27bf94465a9e8956024bb71ed0066796
+criteria:
+  externalImageInputs: No external image was supplied to any generation call.
+  namedOrLivingArtist: Prompts contain no artist name, style imitation request, or living-artist reference.
+  recognizablePersonOrProduct: No face, recognizable identity, brand, logo, or identifiable commercial product is visible; cropped hands and mechanical forms are anonymous and generic.
+  readableMark: No readable text, pseudo-text, number, symbol, logo, watermark, or product mark is visible.
+candidates:
+  - candidateId: TR01
+    recordId: agents-md-vs-agent-skills-evidence
+    sha256: ea0b37717a5cbc5e009c171269672205c8bf764b8d4dacd54deca53b06b6296e
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: Blank paper cards in separate compartments; prompt explicitly forbids text, logos, marks, recognizable people, products, and external inputs.
+    exactByteInspection: Two unmarked matte card stacks in a generic dark-wood divider; no person, product identity, writing, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte with the batch caveat; the separated-card still life introduces no observed third-party identity or input-rights dependency.
+  - candidateId: TR05
+    recordId: andrej-karpathy-skills-analysis
+    sha256: 89a6e70153941986a83580d67b8dec42a4c7c27c632565710422f9b7b369ba74
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: One anonymous cropped hand and four blank tokens; prompt explicitly forbids faces, identity, writing, numbers, symbols, marks, products, and external inputs.
+    exactByteInspection: One face-free hand touches the fourth unmarked circular token on a generic wood surface; no identifiable person, product, text, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the visible hand is anonymous and does not reproduce a recognizable person's likeness.
+  - candidateId: TR09
+    recordId: aws-static-frontend-serverless-bff
+    sha256: 32228b6b02eaa0257452b1bea5baf37acc79bd7507cb92d7e3a84ffcc4e29264
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: Generic inspection tray and blank parcel across two material zones; prompt explicitly forbids interfaces, product marks, text, logos, recognizable people, and external inputs.
+    exactByteInspection: A plain wrapped parcel sits in an unbranded generic tray between stone and wood surfaces; no readable mark, product identity, person, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the tray and parcel are generic editorial objects rather than identifiable commercial packaging.
+  - candidateId: TR13
+    recordId: codex-ui-mockup-workflow
+    sha256: b18b29cecf538f6848d17ad00afb0c2723822784c3979c60ea1fda91b4fb79b0
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: Blank paper fragments and material swatches; prompt explicitly forbids real UI, devices, icons, controls, labels, pseudo-text, logos, products, and external inputs.
+    exactByteInspection: Unmarked abstract paper components and generic material swatches lie on a cutting surface; no interface, product identity, text, symbol, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the composition is an original generic workbench abstraction and does not reproduce a product screen.
+  - candidateId: TR17
+    recordId: context-refinement-system-design
+    sha256: df5b5b82658cc9d191f9747a26cf26ca03c75f0ad24ddd281db305e62cd8f5ec
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: Generic blank fragments move through three carved grooves; prompt explicitly forbids arrows, labels, text, screens, brands, products, recognizable people, and external inputs.
+    exactByteInspection: Unmarked clay and paper fragments surround three grooves on a generic wooden sorting board; no product, identity, text, symbol, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the physical sorting metaphor has no observed external-source, identity, or trademark dependency.
+  - candidateId: TR21
+    recordId: hermes-agent-persistent-worker-runtime
+    sha256: bb9f7764d051d29a1a8f461f7ffb53409d82a6712b3124401c275b05568efa0e
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: Generic rearrangeable tool modules and an empty ready slot; prompt explicitly forbids devices, robots, indicators, writing, brands, recognizable products or people, and external inputs.
+    exactByteInspection: Abstract unbranded handles, pegs, holders, and empty slots sit on a round wooden workbench; no identifiable equipment, text, logo, person, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the modules read as generic tactile tools rather than a recognizable commercial system.
+  - candidateId: TR25
+    recordId: lazycodex-agent-harness-analysis
+    sha256: 589d0088ab856a11ee7d44417867ea131f3f9c58250888f01f865b6ef14529ad
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: One blank material strip passes through three generic jigs; prompt explicitly forbids controls, labels, text, logos, product marks, recognizable people, and external inputs.
+    exactByteInspection: An unmarked off-white strip is held by three unbranded black fixtures on a generic wood bench; no identifiable product, person, text, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the fixtures are generic and lack any brand-specific or product-identifying design.
+  - candidateId: TR29
+    recordId: oh-my-pi-deep-review
+    sha256: cc64489f797f0c57e6ba0191895282a9e8c930158be71af9216937032bd853ed
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: One isolated generic tool head among varied unbranded heads; prompt explicitly forbids devices, brands, logos, markings, readable text, recognizable products or people, and external inputs.
+    exactByteInspection: Several fictional, unmarked metal tool-head forms surround one head in a terracotta tray; no coherent brand geometry, readable mark, person, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; although mechanical, the forms are generic and not recognizable as a specific commercial product.
+  - candidateId: TR35
+    recordId: ponytail-agent-minimalism-analysis
+    sha256: 1401bdd29a0aade52ca225467e3e73cc61f045dad85d901c5178d3b4b717d3b3
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: One anonymous cropped hand removes one terracotta wedge from an abstract workpiece; prompt explicitly forbids faces, identity, writing, marks, brands, products, and external inputs.
+    exactByteInspection: A face-free hand uses a slim unbranded tool beside one terracotta wedge and an abstract dark layered form; no identifiable person, product, text, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the hand is anonymous and the tactile component is not an identifiable product.
+  - candidateId: TR38
+    recordId: postgresql-bm25-pg-search
+    sha256: 7988d77a8369514c4505fbab77734a502842e65d735acc4f13c0401cd37e25c0
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: Mixed-material blank pieces stand in a tactile ranking rail; prompt explicitly forbids numbers, labels, graph axes, interfaces, brands, products, recognizable people, and external inputs.
+    exactByteInspection: Unmarked paper, stone, wood, fabric, and metal rectangles sit in an unbranded terracotta rail; no text, diagram labels, product identity, logo, person, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the ranking metaphor uses generic materials without brand, text, or external-image dependency.
+  - candidateId: TR41
+    recordId: uncle-bob-ai-code-review-evidence
+    sha256: 477e85a8339792aad65dc777fcfa3ea99026468912b4246a0548e1be19120e75
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+    promptConstraintCheck: One anonymous cropped hand lifts a generic unmarked part from a measuring jig; prompt explicitly forbids faces, identity, writing, measurement numbers, brands, products, and external inputs.
+    exactByteInspection: A face-free hand holds an unmarked fictional black housing above an unbranded metal jig; no identifiable person or commercial product, readable mark, logo, or watermark is visible.
+    outcome: approved
+    notes: Repository publication is supported for this exact byte; the housing and jig are generic fictional forms rather than recognizable product hardware.
+summary:
+  approvedCandidateIds: [TR01, TR05, TR09, TR13, TR17, TR21, TR25, TR29, TR35, TR38, TR41]
+  holdCandidateIds: []
+  decision: approve-repository-publication
+  caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed

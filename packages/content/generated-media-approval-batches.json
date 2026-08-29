@@ -65,6 +65,24 @@
         { "candidateId": "AV03", "collection": "articles", "recordId": "karpathy-delete-everything-keep-graph", "mediaId": "editorial-hero" },
         { "candidateId": "AV05", "collection": "articles", "recordId": "shared-ai-conversation-evidence-boundaries", "mediaId": "editorial-hero" }
       ]
+    },
+    {
+      "batchId": "topic-refresh",
+      "decisionManifest": "docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-topic-refresh.yml",
+      "decisionManifestChecksum": "sha256:b50285094126af8e93f6179cb85dc606b1cc53dd6a0ccfce39089e966962a492",
+      "selections": [
+        { "candidateId": "TR01", "collection": "articles", "recordId": "agents-md-vs-agent-skills-evidence", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR05", "collection": "articles", "recordId": "andrej-karpathy-skills-analysis", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR09", "collection": "articles", "recordId": "aws-static-frontend-serverless-bff", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR13", "collection": "articles", "recordId": "codex-ui-mockup-workflow", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR17", "collection": "articles", "recordId": "context-refinement-system-design", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR21", "collection": "articles", "recordId": "hermes-agent-persistent-worker-runtime", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR25", "collection": "articles", "recordId": "lazycodex-agent-harness-analysis", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR29", "collection": "articles", "recordId": "oh-my-pi-deep-review", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR35", "collection": "articles", "recordId": "ponytail-agent-minimalism-analysis", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR38", "collection": "articles", "recordId": "postgresql-bm25-pg-search", "mediaId": "editorial-topic-hero" },
+        { "candidateId": "TR41", "collection": "articles", "recordId": "uncle-bob-ai-code-review-evidence", "mediaId": "editorial-topic-hero" }
+      ]
     }
   ]
 }
