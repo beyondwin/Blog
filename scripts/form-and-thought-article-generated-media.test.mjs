@@ -4,7 +4,10 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import { recordsForCollection } from '../apps/site/app/release.server.ts';
+import { ARTICLE_TOPICS } from '../apps/site/src/ui/articles/articleTopics.ts';
 import { buildPublicRelease } from '../packages/content/src/release/build-release.ts';
+import { readActiveRelease } from '../packages/content/src/release/read-release.ts';
 import {
   parseGeneratedMediaApprovalRegistry,
 } from '../packages/content/src/media/generated-media-approval-registry.mjs';
@@ -16,6 +19,7 @@ const registryPath = 'packages/content/generated-media-approval-batches.json';
 const agentsDecisionPath = 'docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-agents.yml';
 const agentsMediaPath = 'src/assets/content/articles/andrej-karpathy-skills-analysis/media.yml';
 const agentsAssetPath = 'src/assets/content/articles/andrej-karpathy-skills-analysis/editorial-hero.png';
+const articleBriefsPath = 'docs/notes/project/assets/form-and-thought-generated/articles/topic-family-image-briefs.yml';
 const requiredBatches = ['calibration', 'agents', 'design', 'data-search', 'architecture-validation'];
 const selectedCandidates = [
   'H01', 'A03', 'T01',
@@ -25,7 +29,19 @@ const selectedCandidates = [
   'AV01', 'AV02', 'AV03', 'AV05',
 ];
 const heldCandidates = ['DS02', 'DT02', 'AV04', 'AV06'];
+const articleDecisions = ['retain', 'replace', 'add'];
+const articleFamilies = [
+  'people-action',
+  'tool-workbench',
+  'data-structure',
+  'boundary-evidence',
+  'design-material',
+  'reading-reflection',
+];
+const cameraDistances = ['close', 'medium', 'wide'];
+const genericBriefValue = /^(?:tbd|todo|n\/?a|none|article|content|image|subject|action|대표 이미지|내용에 맞는 이미지)$/iu;
 const roots = [];
+let articleBriefEvidencePromise;
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -64,6 +80,115 @@ async function expectBothGatesToFail(root, pattern) {
   const strict = await validateMediaRepository(root, { strict: true });
   expect(strict.errors).toEqual(expect.arrayContaining([expect.stringMatching(pattern)]));
 }
+
+async function loadArticleBriefEvidence() {
+  articleBriefEvidencePromise ??= (async () => {
+    const root = await copyPhaseBRepository();
+    const releasesRoot = join(root, '.test-releases');
+    await buildPublicRelease({
+      root,
+      releasesRoot,
+    });
+    const verified = await readActiveRelease(releasesRoot);
+    return {
+      briefs: parseYaml(await readFile(join(root, articleBriefsPath), 'utf8')),
+      visibleArticleIds: recordsForCollection(verified, 'articles').map(({ id }) => id),
+    };
+  })();
+  return articleBriefEvidencePromise;
+}
+
+function expectConcreteBriefValue(value, field, recordId) {
+  expect(typeof value, `${recordId}.${field} must be a string`).toBe('string');
+  const normalized = value.trim();
+  expect(normalized.length, `${recordId}.${field} must be specific`).toBeGreaterThanOrEqual(4);
+  expect(normalized, `${recordId}.${field} must not be generic`).not.toMatch(genericBriefValue);
+}
+
+function expectNormalizedTuple(value, length, field, recordId) {
+  expect(value, `${recordId}.${field} must contain ${length} normalized values`).toHaveLength(length);
+  for (const coordinate of value) {
+    expect(typeof coordinate, `${recordId}.${field} values must be numbers`).toBe('number');
+    expect(coordinate, `${recordId}.${field} values must be normalized`).toBeGreaterThanOrEqual(0);
+    expect(coordinate, `${recordId}.${field} values must be normalized`).toBeLessThanOrEqual(1);
+  }
+}
+
+describe('FORM & THOUGHT article topic-family image-brief ledger', () => {
+  it('matches the complete topic inventory in exact visible release order', async () => {
+    const { briefs, visibleArticleIds } = await loadArticleBriefEvidence();
+    const recordIds = briefs.articles.map(({ recordId }) => recordId);
+    const topicIds = Object.keys(ARTICLE_TOPICS);
+
+    expect(briefs.version).toBe(1);
+    expect(recordIds).toHaveLength(17);
+    expect(new Set(recordIds).size).toBe(17);
+    expect([...recordIds].sort()).toEqual([...topicIds].sort());
+    expect(recordIds).toEqual(visibleArticleIds);
+  }, 30_000);
+
+  it('uses only controlled decisions, families, camera distances, and concrete semantic fields', async () => {
+    const { briefs } = await loadArticleBriefEvidence();
+
+    for (const brief of briefs.articles) {
+      expect(articleDecisions, `${brief.recordId}.decision`).toContain(brief.decision);
+      expect(articleFamilies, `${brief.recordId}.family`).toContain(brief.family);
+      expect(cameraDistances, `${brief.recordId}.cameraDistance`).toContain(brief.cameraDistance);
+      for (const field of ['claim', 'mustNotImply', 'action', 'subject', 'reason']) {
+        expectConcreteBriefValue(brief[field], field, brief.recordId);
+      }
+    }
+  }, 30_000);
+
+  it('keeps focal points and safe areas normalized, ordered, and non-empty', async () => {
+    const { briefs } = await loadArticleBriefEvidence();
+
+    for (const brief of briefs.articles) {
+      expectNormalizedTuple(brief.focalPoint, 2, 'focalPoint', brief.recordId);
+      expectNormalizedTuple(brief.safeArea, 4, 'safeArea', brief.recordId);
+      const [left, top, right, bottom] = brief.safeArea;
+      expect(left, `${brief.recordId}.safeArea left must precede right`).toBeLessThan(right);
+      expect(top, `${brief.recordId}.safeArea top must precede bottom`).toBeLessThan(bottom);
+    }
+  }, 30_000);
+
+  it('avoids triple repetition of family, camera distance, or concrete subject in visible order', async () => {
+    const { briefs } = await loadArticleBriefEvidence();
+
+    for (let index = 0; index <= briefs.articles.length - 3; index += 1) {
+      const window = briefs.articles.slice(index, index + 3);
+      for (const field of ['family', 'cameraDistance', 'subject']) {
+        expect(new Set(window.map((brief) => brief[field])).size, `${field} repeats for ${window.map(({ recordId }) => recordId).join(', ')}`)
+          .toBeGreaterThan(1);
+      }
+    }
+  }, 30_000);
+
+  it('reserves exactly two two-candidate rounds only for add and replace records', async () => {
+    const { briefs } = await loadArticleBriefEvidence();
+    const generationBriefs = briefs.articles.filter(({ decision }) => decision !== 'retain');
+    const candidateIds = [];
+
+    for (const brief of briefs.articles) {
+      if (brief.decision === 'retain') {
+        expect(brief.candidateRounds, `${brief.recordId} retain must not reserve candidates`).toBeUndefined();
+        continue;
+      }
+      expect(brief.candidateRounds, `${brief.recordId} ${brief.decision} must reserve candidates`).toHaveLength(2);
+      for (const round of brief.candidateRounds) {
+        expect(round, `${brief.recordId} candidate round must contain two IDs`).toHaveLength(2);
+        for (const candidateId of round) {
+          expect(candidateId).toMatch(/^TR\d{2}$/u);
+          candidateIds.push(candidateId);
+        }
+      }
+    }
+
+    expect(candidateIds).toHaveLength(generationBriefs.length * 4);
+    expect(new Set(candidateIds).size).toBe(candidateIds.length);
+    expect(candidateIds).toEqual(candidateIds.map((_, index) => `TR${String(index + 1).padStart(2, '0')}`));
+  }, 30_000);
+});
 
 describe('FORM & THOUGHT approved article generated-media batches', () => {
   it('registers exactly the approved Phase B candidates and keeps every HOLD candidate text-led', async () => {

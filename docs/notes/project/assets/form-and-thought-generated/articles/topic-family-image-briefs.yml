@@ -1,0 +1,238 @@
+version: 1
+articles:
+  - recordId: graphify-code-knowledge-graph-deep-dive
+    decision: retain
+    family: data-structure
+    claim: Graphify는 코드 위치와 관계를 빠르게 탐색하게 하지만 그래프 산출물의 재현 조건과 신뢰 경계는 별도로 검증해야 한다.
+    mustNotImply: 지식 그래프가 코드의 의미를 완전하게 이해하거나 정확성을 자동으로 보증한다고 보여서는 안 된다.
+    action: 끊긴 경로의 양쪽 끝을 따라가며 연결 가능성을 점검한다.
+    subject: 높이가 다른 구조 사이에서 멈춘 검은 연결 다리
+    cameraDistance: wide
+    focalPoint: [0.55, 0.62]
+    safeArea: [0.08, 0.08, 0.92, 0.92]
+    reason: 승인된 A03 원본은 실제 1536x1024 bytes와 sha256:2fb5b356f40608a602c620747dd96a27ae63f7cea6b3214c837d2abdff9fb625가 manifest와 일치하며, 끊긴 다리와 경로가 그래프 탐색의 가능성과 간극을 함께 드러내므로 유지한다.
+
+  - recordId: agents-md-vs-agent-skills-evidence
+    decision: replace
+    family: boundary-evidence
+    claim: 상시 적용되는 AGENTS.md와 필요할 때 호출되는 Skills는 경쟁 규칙이 아니라 서로 다른 범위와 시점을 맡는 지침 계층이다.
+    mustNotImply: 어느 한 형식이 모든 작업에서 우월하거나 두 형식이 같은 실행 범위를 가진다고 보여서는 안 된다.
+    action: 두 종류의 지침 카드를 서로 다른 보관 경계에 나누어 꽂는다.
+    subject: 깊이와 색이 다른 지침 카드 두 장과 분리 보관함
+    cameraDistance: close
+    focalPoint: [0.62, 0.50]
+    safeArea: [0.10, 0.12, 0.92, 0.88]
+    reason: 현재 AV01의 검은 가림벽과 콘크리트 통로는 1536x1024와 승인 checksum은 정확하지만, 호출 시점이 다른 두 지침 대상을 보이지 않고 다른 architecture-validation 이미지와 같은 빈 건축 경계로 읽혀 교체한다.
+    candidateRounds:
+      - [TR01, TR02]
+      - [TR03, TR04]
+
+  - recordId: ai-design-references
+    decision: retain
+    family: design-material
+    claim: AI 디자인 도구는 목록의 개수보다 아이디어와 시스템, 모션과 레퍼런스를 어떤 판단 흐름으로 연결하는지가 중요하다.
+    mustNotImply: 특정 도구 하나가 완성된 디자인 판단이나 제품 UI를 자동으로 만들어 준다고 보여서는 안 된다.
+    action: 서로 다른 재료 면을 검은 프레임으로 겹쳐 비교한다.
+    subject: 테라코타와 종이 면 위의 검은 사각 재료 프레임
+    cameraDistance: medium
+    focalPoint: [0.51, 0.55]
+    safeArea: [0.14, 0.10, 0.86, 0.90]
+    reason: 초기 replace 대상이었지만 실제 DS01 원본과 sha256:c1c191e5481bd8c7a2b82e5e0dd8109a5520bee12aee4e4cec61935364e84a95를 감사한 결과, 재료를 골라 프레이밍하는 행동이 글의 디자인 판단 기준을 정확히 드러내고 다른 디자인 asset과도 피사체가 구별되어 유지한다.
+
+  - recordId: andrej-karpathy-skills-analysis
+    decision: replace
+    family: people-action
+    claim: 코딩 에이전트의 실패를 줄이려면 먼저 생각하고 단순하게 만들며 필요한 범위만 바꾸고 성공 기준으로 끝내는 네 가지 행동 규율이 필요하다.
+    mustNotImply: 네 규율이 Karpathy 본인의 공식 방법론이거나 모든 코딩 실패를 막는다고 보여서는 안 된다.
+    action: 한 작업자가 네 개의 점검 표식을 차례로 확인한다.
+    subject: 손과 네 개의 무문자 점검 토큰이 놓인 목재 작업대
+    cameraDistance: wide
+    focalPoint: [0.42, 0.56]
+    safeArea: [0.08, 0.10, 0.88, 0.92]
+    reason: 현재 AG01은 네 벽과 빈 검은 탁자로 규율의 수만 암시하고 실제 점검 행동을 보여주지 않으며, agents batch의 콘크리트 방 문법을 반복하므로 사람의 검토 행위가 보이는 이미지로 교체한다.
+    candidateRounds:
+      - [TR05, TR06]
+      - [TR07, TR08]
+
+  - recordId: aws-static-frontend-serverless-bff
+    decision: replace
+    family: boundary-evidence
+    claim: 정적 프런트엔드와 서버리스 BFF 조합은 배포 형태보다 CDN 원본, 인증, 사설 백엔드와 운영 책임의 경계를 함께 설계해야 안전하다.
+    mustNotImply: 이 구성이 모든 Next.js 기능을 지원하거나 보안과 비용을 자동으로 해결한다고 보여서는 안 된다.
+    action: 공개 구역에서 들어온 묶음을 검수대가 통제된 내부 구역으로 넘긴다.
+    subject: 서로 다른 재질의 두 구역 사이에 놓인 단일 검수 트레이
+    cameraDistance: medium
+    focalPoint: [0.60, 0.50]
+    safeArea: [0.12, 0.10, 0.90, 0.90]
+    reason: 현재 AV02의 테라코타 벽과 검은 통로는 경계를 암시하지만 프런트와 BFF 사이의 검수·중계 책임을 식별하지 못하고 AV01 등과 같은 건축 통로로 반복되어 교체한다.
+    candidateRounds:
+      - [TR09, TR10]
+      - [TR11, TR12]
+
+  - recordId: codex-ui-mockup-workflow
+    decision: add
+    family: design-material
+    claim: 이미지 목업은 바로 구현하기보다 디자인 시스템과 토큰, 컴포넌트, 화면 조립으로 분해하고 단계마다 검토해야 안정적인 UI가 된다.
+    mustNotImply: 이미지 한 장을 그대로 베끼면 접근성과 반응형 동작까지 완성되거나 가짜 제품 화면이 실제 UI라고 보여서는 안 된다.
+    action: 한 장의 목업 조각을 재료 토큰과 컴포넌트 조각으로 분해해 배열한다.
+    subject: 각진 종이 목업과 색상 타일과 재료 조각이 놓인 절단 매트
+    cameraDistance: close
+    focalPoint: [0.46, 0.54]
+    safeArea: [0.08, 0.10, 0.84, 0.90]
+    reason: 현재 published MDX에 featuredMedia가 없고 article bundle에도 대표 asset이 없으므로, 글이 설명하는 분해와 재조립 과정을 식별하는 새 이미지를 추가한다.
+    candidateRounds:
+      - [TR13, TR14]
+      - [TR15, TR16]
+
+  - recordId: context-refinement-system-design
+    decision: replace
+    family: boundary-evidence
+    claim: 거친 사용자 입력은 목표와 제약을 정제하고 필요한 스킬로 라우팅한 뒤 답변 이탈을 검사해야 실행 가능한 요청이 된다.
+    mustNotImply: 시스템이 사용자의 숨은 의도를 자동으로 알아내거나 불완전한 입력에서 사실을 만들어 낸다고 보여서는 안 된다.
+    action: 섞인 입력 조각을 좁은 선택 경로로 걸러 하나의 작업 묶음으로 정돈한다.
+    subject: 크기가 다른 입력 조각과 세 갈래 홈이 있는 물리 분류판
+    cameraDistance: wide
+    focalPoint: [0.48, 0.60]
+    safeArea: [0.10, 0.12, 0.88, 0.92]
+    reason: 현재 AG02는 빈 콘크리트 방 중앙의 테라코타 블록 하나로 수렴만 표현하고 입력 정제와 라우팅 행동을 보여주지 않으며, 같은 batch의 건축 공간과 구별력이 낮아 교체한다.
+    candidateRounds:
+      - [TR17, TR18]
+      - [TR19, TR20]
+
+  - recordId: hermes-agent-persistent-worker-runtime
+    decision: replace
+    family: tool-workbench
+    claim: Hermes Agent의 가치는 한 번의 대화보다 세션과 도구, 메모리와 자동화를 이어 개인 AI 워커를 계속 준비된 상태로 운영하는 런타임에 있다.
+    mustNotImply: 워커가 감독 없이 영구히 안전하게 실행되거나 특정 제품 화면과 장비가 실제 Hermes 구현이라고 보여서는 안 된다.
+    action: 반복 작업 사이에도 도구를 제자리에 두고 다음 실행을 위해 작업대를 재정렬한다.
+    subject: 교체 가능한 도구 모듈과 대기 슬롯이 있는 원형 목재 작업대
+    cameraDistance: medium
+    focalPoint: [0.56, 0.58]
+    safeArea: [0.12, 0.10, 0.92, 0.90]
+    reason: 현재 AG03은 원형 콘크리트 방과 빈 탁자로 지속성을 추상적으로만 표현하며 워커의 도구·대기·재개 상태를 식별할 수 없고 건축 공간 반복을 강화하므로 교체한다.
+    candidateRounds:
+      - [TR21, TR22]
+      - [TR23, TR24]
+
+  - recordId: karpathy-delete-everything-keep-graph
+    decision: retain
+    family: data-structure
+    claim: 2026년에 남겨야 할 것은 유행하는 그래프 제품 이름이 아니라 원전을 다시 확인하고 관찰과 검증과 복구가 가능한 작업 구조다.
+    mustNotImply: 모든 그래프 접근을 버려야 하거나 특정 유행 영상과 도구가 사기라고 단정하는 이미지가 되어서는 안 된다.
+    action: 점검구와 복구 경로를 따라 남길 구조를 확인한다.
+    subject: 낮은 점검 계단과 테라코타 검사판이 있는 콘크리트 벽
+    cameraDistance: close
+    focalPoint: [0.55, 0.66]
+    safeArea: [0.08, 0.08, 0.92, 0.94]
+    reason: 승인된 AV03 bytes와 sha256:5f897c521a5b41adce8a4cd39fcaad6a83c78ae004a150399a862acf1d07b53d가 일치하고, 점검구·계단·검사판이 글의 관찰·검증·복구 기준을 구체적으로 드러내므로 유지한다.
+
+  - recordId: lazycodex-agent-harness-analysis
+    decision: replace
+    family: tool-workbench
+    claim: LazyCodex는 Codex 위에 역할과 단계, 검토와 완료 조건을 얹어 큰 작업을 제품형 개발 하네스 안에서 통제하는 구조다.
+    mustNotImply: 하네스가 품질을 자동 보증하거나 실제 LazyCodex 제품 UI와 워크플로가 이미지에 정확히 재현됐다고 보여서는 안 된다.
+    action: 긴 작업 묶음을 여러 고정 지그에 순서대로 걸어 검토 가능한 단위로 나눈다.
+    subject: 목재 작업대 위의 세 개 고정 지그와 하나의 긴 작업 띠
+    cameraDistance: wide
+    focalPoint: [0.64, 0.48]
+    safeArea: [0.08, 0.10, 0.90, 0.90]
+    reason: 현재 AG04는 콘크리트 통로 끝의 블록으로 제약만 암시하고 작업 분할·검토·완료의 하네스 동작을 보여주지 않으며 다른 agents 이미지의 통로 문법을 반복해 교체한다.
+    candidateRounds:
+      - [TR25, TR26]
+      - [TR27, TR28]
+
+  - recordId: oh-my-pi-deep-review
+    decision: add
+    family: tool-workbench
+    claim: oh-my-pi의 강력한 도구 통합은 승인 범위와 확장, MCP, 브라우저 세션, 비밀정보와 프로세스 복구 경계를 함께 검토할 때만 안전하게 도입할 수 있다.
+    mustNotImply: 하나의 승인으로 모든 후속 작업이 안전하거나 실제 oh-my-pi 인터페이스와 보안 장치가 보장된다고 보여서는 안 된다.
+    action: 여러 도구 헤드가 달린 작업대에서 위험한 확장 모듈 하나를 분리해 점검한다.
+    subject: 분리 가능한 도구 헤드와 격리 트레이가 있는 금속 작업대
+    cameraDistance: close
+    focalPoint: [0.40, 0.56]
+    safeArea: [0.08, 0.12, 0.86, 0.90]
+    reason: 현재 published MDX에 featuredMedia가 없고 대표 asset bundle도 없으므로, 강력한 통합 도구를 격리·검사하는 글의 핵심 행동을 새 이미지로 추가한다.
+    candidateRounds:
+      - [TR29, TR30]
+      - [TR31, TR32]
+
+  - recordId: open-design-repo-analysis
+    decision: retain
+    family: design-material
+    claim: Open Design은 원격 마법이 아니라 로컬 파일과 도구, 모델 연결을 조합해 운영하는 디자인 에이전트 작업대로 봐야 한다.
+    mustNotImply: 완성된 제품 UI가 자동 생성되거나 이미지 속 모듈이 실제 저장소의 정확한 컴포넌트라고 보여서는 안 된다.
+    action: 서로 다른 재료 모듈을 한 로컬 도구 상자 안에서 골라 조합한다.
+    subject: 검은 목재 상자 안의 다섯 가지 종이와 점토 재료 모듈
+    cameraDistance: medium
+    focalPoint: [0.69, 0.52]
+    safeArea: [0.18, 0.08, 0.94, 0.92]
+    reason: 초기 replace 대상이었지만 실제 DS03 원본과 sha256:4b8f05b6b223be2f80374c1187b11bf4444e4f3a912935329aa061f96bd10df2를 감사한 결과, 로컬 도구 상자와 조합 가능한 재료가 글의 런타임 정체성을 정확히 표현하고 DS01의 프레임과도 주 피사체가 달라 유지한다.
+
+  - recordId: pgvector-hybrid-search
+    decision: retain
+    family: data-structure
+    claim: pgvector 검색은 벡터 거리만이 아니라 SQL 필터와 인덱스, 전문 검색과 RRF를 한 데이터 흐름에서 결합해 이해해야 한다.
+    mustNotImply: 벡터 검색 하나가 모든 검색 품질을 해결하거나 이미지가 실제 HNSW와 RRF 구조를 정확히 도식화한다고 보여서는 안 된다.
+    action: 곡선 경로와 직선 경로를 하나의 합류 지점에서 결합한다.
+    subject: 돌로 된 곡선 길과 검은 직선 길이 만나는 테라코타 원판
+    cameraDistance: wide
+    focalPoint: [0.54, 0.53]
+    safeArea: [0.06, 0.14, 0.94, 0.90]
+    reason: 승인된 DT01 bytes와 sha256:2206757026313ef38f3544698a27987cc8a651e9f4223f1e4590429bf35ba68f가 일치하고, 서로 다른 두 경로의 합류가 벡터·FTS 결합을 비문자 은유로 명확히 보여주므로 유지한다.
+
+  - recordId: ponytail-agent-minimalism-analysis
+    decision: replace
+    family: people-action
+    claim: Ponytail의 미니멀리즘은 에이전트가 필요한 부분만 작게 바꾸고 불필요한 구조와 지시를 덜어 검토 가능한 변경을 만드는 데 가치가 있다.
+    mustNotImply: 작은 변경이면 언제나 안전하거나 벤치마크가 다른 에이전트보다 절대적인 우위를 증명한다고 보여서는 안 된다.
+    action: 한 작업자가 큰 부품에서 필요한 작은 조각만 분리해 옆에 둔다.
+    subject: 손과 분리 도구와 하나의 작은 테라코타 쐐기
+    cameraDistance: medium
+    focalPoint: [0.38, 0.64]
+    safeArea: [0.08, 0.12, 0.84, 0.92]
+    reason: 현재 AG05의 쐐기와 콘크리트 덩어리는 최소 개입 은유는 강하지만 사람의 선택 행동이 없고 agents batch의 콘크리트 오브제 문법을 반복하므로, 실제 분리 행위가 보이는 사람·행동 이미지로 교체한다.
+    candidateRounds:
+      - [TR33, TR34]
+      - [TR35, TR36]
+
+  - recordId: postgresql-bm25-pg-search
+    decision: add
+    family: data-structure
+    claim: PostgreSQL 검색은 기본 FTS와 BM25, pg_search와 한국어 n-gram을 데이터와 운영 조건에 맞게 비교해 선택해야 한다.
+    mustNotImply: 하나의 랭킹 방식이 모든 언어와 데이터에서 최고이거나 이미지가 실제 점수와 인덱스 구조를 정확히 나타낸다고 보여서는 안 된다.
+    action: 서로 다른 질감의 검색 조각을 한 줄의 순위 홈에 끼워 비교한다.
+    subject: 길이와 표면이 다른 검색 조각들이 놓인 비문자 정렬 레일
+    cameraDistance: close
+    focalPoint: [0.58, 0.48]
+    safeArea: [0.10, 0.12, 0.92, 0.88]
+    reason: 현재 published MDX에 featuredMedia가 없고 대표 asset이 없으므로, FTS·BM25·n-gram 선택과 순위 비교를 글자나 가짜 차트 없이 드러내는 새 이미지를 추가한다.
+    candidateRounds:
+      - [TR37, TR38]
+      - [TR39, TR40]
+
+  - recordId: shared-ai-conversation-evidence-boundaries
+    decision: retain
+    family: boundary-evidence
+    claim: 공유 AI 대화는 스냅샷일 뿐이며 첨부파일과 원출처, 접근 가능한 재현 절차를 분리해야 검증 가능한 근거가 된다.
+    mustNotImply: 공유 링크 하나가 전체 대화 맥락과 원출처의 진실성을 보증하거나 숨은 내용을 추정할 수 있다고 보여서는 안 된다.
+    action: 좁은 틈으로 보이는 한 조각과 가려진 원본 영역을 분리해 관찰한다.
+    subject: 두꺼운 벽의 좁은 관찰 틈 너머에 보이는 테라코타 증거 조각
+    cameraDistance: wide
+    focalPoint: [0.57, 0.48]
+    safeArea: [0.18, 0.16, 0.86, 0.80]
+    reason: 승인된 AV05 bytes와 sha256:0ab6390f902cc7cd76c672bcd90f01619ec3e965b69a23a99fe6b788987fbf13가 일치하고, 보이는 조각과 가려진 범위를 한 프레임에서 정확히 대비해 글의 증거 경계를 식별하므로 유지한다.
+
+  - recordId: uncle-bob-ai-code-review-evidence
+    decision: add
+    family: boundary-evidence
+    claim: CRAP 같은 자동 지표는 복잡도와 커버리지 위험을 드러낼 수 있지만 코드의 의미와 요구사항, 보안과 운영 판단은 사람 리뷰의 경계로 남는다.
+    mustNotImply: 자동 점수가 코드 품질을 완전히 판정하거나 사람의 코드 읽기와 책임을 없애 준다고 보여서는 안 된다.
+    action: 측정 지그를 통과한 부품을 사람이 다시 들어 올려 표면과 결합부를 검사한다.
+    subject: 무문자 측정 지그와 손에 들린 검은 기계 부품
+    cameraDistance: medium
+    focalPoint: [0.44, 0.54]
+    safeArea: [0.08, 0.10, 0.88, 0.90]
+    reason: 현재 published MDX에 featuredMedia가 없고 대표 asset도 없으므로, 자동 측정 뒤에도 남는 사람 검토의 경계를 구체적인 검사 행동으로 보여주는 새 이미지를 추가한다.
+    candidateRounds:
+      - [TR41, TR42]
+      - [TR43, TR44]
