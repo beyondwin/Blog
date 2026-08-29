@@ -2,6 +2,7 @@
 
 이 문서는 현재 React 공개 사이트의 구현 계약이다. 시각 권한은
 [ADR-0007](docs/notes/project/adr/0007-form-and-thought-react-only-editorial-system.md),
+[ADR-0008](docs/notes/project/adr/0008-full-bleed-density-and-topic-media.md),
 [공개 사이트 설계](docs/notes/project/form-and-thought-public-site-design.md),
 [시각 스펙](docs/notes/project/form-and-thought-visual-spec.md), 승인된 일곱 reference와
 [최종 acceptance](docs/notes/project/evidence/form-and-thought-final-acceptance.md) 순서로 확인한다.
@@ -54,7 +55,10 @@ negative space를 사용한다. 서평 표지는 `contain`이며 디자인을 �
 
 ## 공통 shell과 interaction
 
-`SiteShell`은 skip link, `SiteHeader`, main만 렌더한다. desktop은 inline primary
+`SiteShell`은 skip link, `SiteHeader`, main만 렌더한다. `.site-shell`은 모든 public route에서
+viewport 전체 너비와 최소 `100vh`를 쓰며 outer margin, radius와 shadow가 없다. route content와
+header의 검증된 가로 gutter는 1180px 이상 `64px`, 768–1179px `36px`, 767px 이하 `22px`다.
+header 높이는 같은 구간에서 각각 `88px`, `80px`, `72px`다. desktop은 inline primary
 navigation과 보조 menu button을 제공한다. 767px 이하에서는 44px menu button과
 modal navigation을 사용하며 배경을 inert로 만들고, focus를 가두고, `Escape`와 바깥
 pointer로 닫은 뒤 trigger로 focus를 복원한다. JavaScript가 없으면 `<noscript>`의
@@ -70,13 +74,17 @@ React는 menu, link copy, 검색 결과 갱신, bounded origin return만 보강�
 
 black/terracotta split hero, 승인된 대표 이미지와 실제 hero article, 그 아래 서평·아티클·
 생각 한 건씩을 고른 세 editorial pick을 렌더한다. selection은 immutable release에서만
-오며 body나 관계 같은 detail-only field를 listing payload에 싣지 않는다.
+오며 body나 관계 같은 detail-only field를 listing payload에 싣지 않는다. 1180px 이상 hero는
+`520px`, 세 pick은 각각 `210px`이고, 768–1179px에서는 각각 `500px`, `200px`다. 모바일은
+고정 높이로 내용을 자르지 않고 copy → media → 세 pick의 DOM 순서대로 자연스럽게 늘어난다.
 
 ### 아티클과 서평 index
 
 큰 제목, 설명, 얇은 rule, 가로 editorial row를 사용한다. 아티클은 canonical GET topic
 anchor와 17건 ledger를 제공한다. 서평은 18건 ledger를 제공하며 승인된 cover byte가 없는
-현재 release에서는 text-led다. `coverState: hold`는 숨기지 않고 공개 보류 상태를 표시한다.
+현재 release에서는 text-led다. 1180px 이상 primary row는 `196px`이고, 768–1179px와 모바일은
+실제 긴 제목·설명·날짜가 다음 row와 겹치지 않도록 content-safe auto height를 쓴다.
+`coverState: hold`는 숨기지 않고 공개 보류 상태를 표시한다.
 
 ### 생각 index
 
@@ -94,7 +102,10 @@ query-specific 결과를 제공한다고 주장하지 않는다.
 ### detail
 
 아티클·생각은 off-white inner header와 terracotta/dark split hero, action/prose grid를 쓴다.
-서평은 승인 cover가 있으면 image-led, 아니면 text-led다. action rail에서 좋아요와 댓글은
+primary article/thought split hero의 desktop introduction과 media target은 `420px`이며 모바일은
+제목·요약·metadata가 잘리지 않도록 자연스럽게 늘어난다. secondary detail은 이 압축 owner를
+상속하지 않고 기존 `490px` 기준을 유지한다. 서평은 승인 cover가 있으면 image-led, 아니면
+compact text-led다. action rail에서 좋아요와 댓글은
 비활성 준비 상태이고 수치나 성공을 만들지 않는다. link copy만 canonical URL을 복사하고
 접근 가능한 상태 메시지를 낸다. direct entry는 collection fallback을, 검증된 list/search
 origin은 bounded return을 제공한다.
@@ -115,10 +126,24 @@ copyrightability/uniqueness not guaranteed`다. 승인되지 않은 후보는 te
 서평 cover는 판본 identity와 redistribution receipt가 모두 승인돼야 byte를 공개한다. 현재
 생산 registry는 승인 0건이며 strict validation은 17건의 rights warning을 의도적으로 남긴다.
 
+`ResponsivePicture`는 성공한 server markup의 local `<picture>` source를 그대로 유지한다.
+최종 `<img>`의 `error` 또는 hydration 때 확인한 `complete && naturalWidth === 0`는 mount당 한 번만
+실패로 보고되고, picture 대신 hidden `data-responsive-picture-state="error"` marker를 남긴다.
+owner CSS는 marker를 가진 home, ledger, article detail과 review cover stage를 숨기고 기존
+text-led/full-width 구성으로 접는다. review owner는 같은 실패 상태에서 preload, inverse header,
+cover stage와 image-led class를 함께 제거한다. 실제 article request의 hydration 전후 실패는
+검증됐지만, 실제 승인 review cover request 실패는 승인 cover가 0건이므로 `not_measured`다.
+
+이 실패 복구와 density 구현은 별도 article media refresh 또는 review cover rights 계획이
+완료됐다는 뜻이 아니다. 새 article media와 review cover byte는 각각의 승인·권리 gate를 따로
+통과해야 한다.
+
 ## responsive acceptance
 
 기본 확인 폭은 1440×900, 승인 reference calibration 1440×1080(Home), 1080×1440
 (articles), 1120×1400(detail), 768px, 390×844, 320 CSS px reflow다. 320px는 200% zoom
-proxy다. 모든 변경은 console error, keyboard focus, serious/critical accessibility,
+proxy다. density acceptance는 이 폭에 더해 물리 1440×900을 `720×450` CSS px와 DPR 2로
+검사하는 200% reflow proxy를 사용한다. 모든 변경은 console error, keyboard focus,
+serious/critical accessibility,
 document overflow, image failure, 긴 제목, table/code containment, no-JS와 실제 static-host
 404를 다시 확인한다.
