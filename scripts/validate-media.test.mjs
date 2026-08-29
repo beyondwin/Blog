@@ -312,6 +312,84 @@ describe('repository media validation', () => {
   });
 
   it.each([
+    ['IPv4 loopback', 'http://127.0.0.1/rights'],
+    ['IPv4 link-local', 'http://169.254.10.20/rights'],
+    ['IPv4 shared address space', 'http://100.64.0.1/rights'],
+    ['IPv4 documentation range', 'https://198.51.100.10/rights'],
+    ['IPv4 multicast', 'https://224.0.0.1/rights'],
+    ['RFC1918 10/8', 'https://10.1.2.3/rights'],
+    ['RFC1918 172.16/12', 'https://172.31.255.254/rights'],
+    ['RFC1918 192.168/16', 'https://192.168.1.20/rights'],
+    ['bracketed IPv6 loopback', 'http://[::1]/rights'],
+    ['IPv4-mapped IPv6 loopback', 'http://[::ffff:127.0.0.1]/rights'],
+    ['IPv6 documentation range', 'https://[2001:db8::1]/rights'],
+    ['IPv6 unique-local', 'https://[fc00::1234]/rights'],
+    ['IPv6 link-local', 'https://[fe80::1]/rights'],
+    ['localhost subdomain', 'https://rights.localhost/rights'],
+    ['trailing-dot localhost', 'https://localhost./rights'],
+    ['single-label private hostname', 'https://rights-service/rights'],
+  ])('rejects %s as review-cover evidence URL during strict validation', async (_name, evidenceUrl) => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { evidenceUrl });
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/external HTTP\(S\) URL/i),
+    ]));
+  });
+
+  it.each([
+    'https://rights.example.com/public-license',
+    'https://8.8.8.8/public-license',
+    'https://[2606:4700:4700::1111]/public-license',
+  ])('accepts public review-cover evidence URL %s during strict validation', async (evidenceUrl) => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { evidenceUrl });
+
+    expect(await validateMediaRepository(root, { strict: true })).toMatchObject({ errors: [], warnings: [] });
+  });
+
+  it.each([
+    ['IPv4 loopback', 'http://127.0.0.1/cover.jpg'],
+    ['IPv4 link-local', 'http://169.254.10.20/cover.jpg'],
+    ['IPv4 shared address space', 'http://100.64.0.1/cover.jpg'],
+    ['IPv4 documentation range', 'https://198.51.100.10/cover.jpg'],
+    ['IPv4 multicast', 'https://224.0.0.1/cover.jpg'],
+    ['RFC1918 10/8', 'https://10.1.2.3/cover.jpg'],
+    ['RFC1918 172.16/12', 'https://172.31.255.254/cover.jpg'],
+    ['RFC1918 192.168/16', 'https://192.168.1.20/cover.jpg'],
+    ['bracketed IPv6 loopback', 'http://[::1]/cover.jpg'],
+    ['IPv4-mapped IPv6 loopback', 'http://[::ffff:127.0.0.1]/cover.jpg'],
+    ['IPv6 documentation range', 'https://[2001:db8::1]/cover.jpg'],
+    ['IPv6 unique-local', 'https://[fc00::1234]/cover.jpg'],
+    ['IPv6 link-local', 'https://[fe80::1]/cover.jpg'],
+    ['localhost subdomain', 'https://covers.localhost/cover.jpg'],
+    ['trailing-dot localhost', 'https://localhost./cover.jpg'],
+    ['single-label private hostname', 'https://cover-service/cover.jpg'],
+  ])('rejects %s as registered review-cover source URL during strict validation', async (_name, sourceUrl) => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { sourceUrl });
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/external HTTP\(S\) URL/i),
+    ]));
+  });
+
+  it.each([
+    'https://covers.example.com/public-cover.jpg',
+    'https://8.8.4.4/public-cover.jpg',
+    'https://[2001:4860:4860::8844]/public-cover.jpg',
+  ])('accepts public registered review-cover source URL %s during strict validation', async (sourceUrl) => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { sourceUrl });
+
+    expect(await validateMediaRepository(root, { strict: true })).toMatchObject({ errors: [], warnings: [] });
+  });
+
+  it.each([
     ['decision title', { mutation: 'identity-title' }, /bibliographic identity title/i],
     ['decision second author', { mutation: 'identity-author-second' }, /bibliographic identity authors/i],
     ['decision author order', { mutation: 'identity-author-order' }, /bibliographic identity authors/i],

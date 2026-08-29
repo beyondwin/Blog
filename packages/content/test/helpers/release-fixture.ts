@@ -77,6 +77,8 @@ export async function writeReviewCoverFixture(
     evidenceFileMutation?: ReviewCoverEvidenceFileMutation;
     evidenceKind?: 'redistribution-license' | 'written-permission';
     omitPublicationYear?: boolean;
+    evidenceUrl?: string;
+    sourceUrl?: string;
   } = {},
 ): Promise<{
   decisionPath: string;
@@ -131,7 +133,7 @@ export async function writeReviewCoverFixture(
     ...(evidenceType === 'redistribution-license' ? {
       evidenceUrl: mutation === 'evidence-url'
         ? 'file:///tmp/forged-rights-evidence'
-        : 'https://example.com/redistribution-license',
+        : options.evidenceUrl ?? 'https://example.com/redistribution-license',
     } : {}),
     evidencePath: mutation === 'evidence-path'
       ? `docs/notes/project/assets/review-cover-rights/${recordId}/rights-evidence.md`
@@ -212,7 +214,7 @@ export async function writeReviewCoverFixture(
     kind: decision.asset.kind,
     sourceUrl: options.registryMutation === 'source-url'
       ? 'https://example.com/forged-cover-source.png'
-      : 'https://example.com/approved-cover.png',
+      : options.sourceUrl ?? 'https://example.com/approved-cover.png',
     verifiedAt: '2026-08-29',
     bibliographicIdentity: {
       ...bibliographicIdentity,
@@ -263,7 +265,7 @@ export async function writeReviewCoverFixture(
       kind: options.kind ?? 'book-cover',
       alt: '승인 테스트 판본 표지',
       credit: 'Test bookseller',
-      sourceUrl: 'https://example.com/approved-cover.png',
+      sourceUrl: options.sourceUrl ?? 'https://example.com/approved-cover.png',
       isbn13,
       edition,
       verifiedAt: '2026-08-29',

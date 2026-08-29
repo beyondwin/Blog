@@ -10,29 +10,76 @@ import {
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 
-const approvedCover = {
-  id: 'cover',
-  kind: 'book-cover',
-  fallback: { src: '/assets/content/reviews/a/cover.jpg' },
-  redistributionEvidence: {
-    state: 'approved',
-    decision: 'approve-public-redistribution',
-    bibliographicIdentity: {
-      title: 'a',
-      authors: ['저자'],
-      publisher: '출판사',
-      isbn13: '9788990247674',
-      editionLabel: '출판사 2026 초판',
-      publicationYear: 2026,
+function reviewCoverAsset(recordId: string, approved: boolean): ReleaseAsset {
+  const sourceAsset = `/assets/content/reviews/${recordId}/cover.jpg`;
+  const sourceChecksum = `sha256:${'0'.repeat(64)}`;
+  return {
+    id: 'cover',
+    collection: 'reviews',
+    recordId,
+    kind: 'book-cover',
+    alt: `${recordId} 표지`,
+    credit: 'Test bookseller',
+    provenanceUrl: `https://covers.example.com/${recordId}.jpg`,
+    verifiedAt: '2026-08-29',
+    rightsNote: approved ? 'Public redistribution approved.' : 'Identification only.',
+    width: 400,
+    height: 600,
+    sourceChecksum,
+    sources: [
+      {
+        type: 'image/avif',
+        candidates: [{
+          src: `/assets/content/reviews/${recordId}/cover-400w.avif`,
+          width: 400,
+          height: 600,
+          checksum: `sha256:${'1'.repeat(64)}`,
+        }],
+      },
+      {
+        type: 'image/webp',
+        candidates: [{
+          src: `/assets/content/reviews/${recordId}/cover-400w.webp`,
+          width: 400,
+          height: 600,
+          checksum: `sha256:${'2'.repeat(64)}`,
+        }],
+      },
+    ],
+    fallback: {
+      src: sourceAsset,
+      format: 'jpg',
+      checksum: `sha256:${'3'.repeat(64)}`,
+      candidates: [{
+        src: sourceAsset,
+        width: 400,
+        height: 600,
+        checksum: `sha256:${'3'.repeat(64)}`,
+      }],
     },
-  },
-} as ReleaseAsset;
+    redistributionEvidence: approved ? {
+      state: 'approved',
+      decision: 'approve-public-redistribution',
+      decisionDocument: `docs/notes/project/assets/review-cover-rights/${recordId}/redistribution-decision.yml`,
+      decisionChecksum: `sha256:${'d'.repeat(64)}`,
+      sourceAsset,
+      sourceChecksum,
+      width: 400,
+      height: 600,
+      bibliographicIdentity: {
+        title: recordId,
+        authors: ['저자'],
+        publisher: '출판사',
+        isbn13: '9788990247674',
+        editionLabel: '출판사 2026 초판',
+        publicationYear: 2026,
+      },
+    } : undefined,
+  };
+}
 
-const forgedCoverWithoutEvidence = {
-  id: 'cover',
-  kind: 'book-cover',
-  fallback: { src: '/assets/content/reviews/warning-cover/cover.jpg' },
-} as ReleaseAsset;
+const approvedCover = reviewCoverAsset('approved-cover', true);
+const forgedCoverWithoutEvidence = reviewCoverAsset('warning-cover', false);
 
 function review(id: string, overrides: Record<string, unknown> = {}): ReviewRecord {
   const parsed = parsePublicRecord({

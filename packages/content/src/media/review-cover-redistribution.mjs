@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import { z } from 'zod';
 
 const id = z.string().regex(/^[a-z0-9][a-z0-9-]*$/);
@@ -6,17 +7,90 @@ const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }, 'date must be a real YYYY-MM-DD calendar date');
+const blockedIpv4Cidrs = [
+  ['0.0.0.0', 8],
+  ['10.0.0.0', 8],
+  ['100.64.0.0', 10],
+  ['127.0.0.0', 8],
+  ['169.254.0.0', 16],
+  ['172.16.0.0', 12],
+  ['192.0.0.0', 24],
+  ['192.0.2.0', 24],
+  ['192.31.196.0', 24],
+  ['192.52.193.0', 24],
+  ['192.88.99.0', 24],
+  ['192.168.0.0', 16],
+  ['192.175.48.0', 24],
+  ['198.18.0.0', 15],
+  ['198.51.100.0', 24],
+  ['203.0.113.0', 24],
+  ['224.0.0.0', 4],
+  ['240.0.0.0', 4],
+];
+
+const blockedIpv6Cidrs = [
+  ['::', 96],
+  ['::ffff:0:0', 96],
+  ['64:ff9b::', 96],
+  ['64:ff9b:1::', 48],
+  ['100::', 64],
+  ['2001::', 23],
+  ['2001:db8::', 32],
+  ['2002::', 16],
+  ['3fff::', 20],
+  ['5f00::', 16],
+  ['fc00::', 7],
+  ['fe80::', 10],
+  ['ff00::', 8],
+];
+
+function ipv4ToInteger(address) {
+  return address.split('.').reduce((value, octet) => ((value << 8) | Number(octet)) >>> 0, 0);
+}
+
+function ipv6ToBigInt(address) {
+  const [leftSource, rightSource = ''] = address.split('::');
+  const left = leftSource ? leftSource.split(':') : [];
+  const right = rightSource ? rightSource.split(':') : [];
+  const missing = 8 - left.length - right.length;
+  const segments = [...left, ...Array.from({ length: missing }, () => '0'), ...right];
+  return segments.reduce((value, segment) => (value << 16n) | BigInt(`0x${segment || '0'}`), 0n);
+}
+
+function ipv4InCidr(address, base, prefix) {
+  const shift = 32 - prefix;
+  return (ipv4ToInteger(address) >>> shift) === (ipv4ToInteger(base) >>> shift);
+}
+
+function ipv6InCidr(address, base, prefix) {
+  const shift = BigInt(128 - prefix);
+  return (ipv6ToBigInt(address) >> shift) === (ipv6ToBigInt(base) >> shift);
+}
+
+function isPublicHostname(hostname) {
+  const normalizedHostname = hostname.endsWith('.') ? hostname.slice(0, -1) : hostname;
+  const unwrapped = normalizedHostname.startsWith('[') && normalizedHostname.endsWith(']')
+    ? normalizedHostname.slice(1, -1)
+    : normalizedHostname;
+  const ipVersion = isIP(unwrapped);
+  if (ipVersion === 4) {
+    return !blockedIpv4Cidrs.some(([base, prefix]) => ipv4InCidr(unwrapped, base, prefix));
+  }
+  if (ipVersion === 6) {
+    return !blockedIpv6Cidrs.some(([base, prefix]) => ipv6InCidr(unwrapped, base, prefix));
+  }
+  return normalizedHostname.includes('.')
+    && !['localhost', 'local', 'internal', 'home.arpa', 'invalid', 'test'].some((suffix) => (
+      normalizedHostname === suffix || normalizedHostname.endsWith(`.${suffix}`)
+    ));
+}
+
 const externalUrl = z.url().refine((value) => {
   const parsed = new URL(value);
-  const hostname = parsed.hostname.toLowerCase();
   return ['http:', 'https:'].includes(parsed.protocol)
     && !parsed.username
     && !parsed.password
-    && hostname !== 'localhost'
-    && !hostname.endsWith('.localhost')
-    && hostname !== '::1'
-    && hostname !== '0.0.0.0'
-    && !hostname.startsWith('127.');
+    && isPublicHostname(parsed.hostname.toLowerCase());
 }, 'evidenceUrl must be an external HTTP(S) URL');
 const safeRelativePath = z.string().trim().min(1).refine((value) => (
   !value.includes('\\')
