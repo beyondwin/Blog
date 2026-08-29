@@ -1,4 +1,4 @@
-import { Children, isValidElement, type ReactNode } from 'react';
+import { Children, isValidElement, useRef, useState, type ReactNode } from 'react';
 import { Links, Meta, Outlet, Scripts as ReactRouterScripts, useMatches } from 'react-router';
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
@@ -132,14 +132,21 @@ export function ResponsivePicture({
   alt,
   className,
   eager = false,
+  onAssetError,
   sizes,
 }: {
   asset: ReleaseAsset;
   alt: string;
   className?: string;
   eager?: boolean;
+  onAssetError?: () => void;
   sizes: string;
 }) {
+  const [failed, setFailed] = useState(false);
+  const failureReported = useRef(false);
+
+  if (failed) return <span hidden data-responsive-picture-state="error" />;
+
   return (
     <picture>
       {asset.sources.map((source) => (
@@ -156,6 +163,12 @@ export function ResponsivePicture({
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}
         decoding="async"
+        onError={() => {
+          if (failureReported.current) return;
+          failureReported.current = true;
+          setFailed(true);
+          onAssetError?.();
+        }}
       />
     </picture>
   );

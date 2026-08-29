@@ -104,7 +104,36 @@ async function computedObjectFits(html: string, selector: string): Promise<strin
   }
 }
 
+async function computedDisplays(html: string, selectors: string[]): Promise<string[]> {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  try {
+    await page.setContent(`<style>${reviewCss}</style>${html}`, { waitUntil: 'domcontentloaded' });
+    return await page.evaluate((targets) => targets.map((selector) => (
+      getComputedStyle(document.querySelector(selector)!).display
+    )), selectors);
+  } finally {
+    await page.close();
+  }
+}
+
 describe('current review route cover styling', () => {
+  it('collapses a failed cover marker without leaving the cover stage visible', async () => {
+    const html = `
+      <article class="review-detail review-detail--image-led">
+        <header class="review-detail__hero">
+          <figure class="review-detail__cover-stage">
+            <span hidden data-responsive-picture-state="error"></span>
+          </figure>
+          <div class="review-detail__introduction"><h1>블랙 스완</h1></div>
+        </header>
+      </article>`;
+
+    await expect(computedDisplays(html, [
+      '.review-detail__cover-stage',
+      '.review-detail__introduction',
+    ])).resolves.toEqual(['none', 'flex']);
+  });
+
   it('preserves the full cover in the canonical review ledger', async () => {
     const html = renderToStaticMarkup(createElement(BookIndexPage, {
       records: [reviewRecord],

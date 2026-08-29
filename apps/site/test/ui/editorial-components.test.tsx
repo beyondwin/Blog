@@ -1,13 +1,68 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import type { PublicReleaseManifest } from '@beyondwin/content/release';
+import { ResponsivePicture } from '../../app/root';
 import { DetailActionRail } from '../../src/ui/editorial/DetailActionRail';
 import { EditorialDetailFrame } from '../../src/ui/editorial/EditorialDetailFrame';
 import { EditorialListRow } from '../../src/ui/editorial/EditorialListRow';
 import { EditorialPageHeader } from '../../src/ui/editorial/EditorialPageHeader';
 import { copyCanonicalUrl } from '../../src/ui/editorial/copyCanonicalUrl';
 
+type ReleaseAsset = PublicReleaseManifest['assets'][string];
+
+const responsiveAsset = {
+  id: 'approved-editorial-media',
+  collection: 'articles',
+  recordId: 'one',
+  alt: '승인된 편집 이미지',
+  credit: 'beyondwin test',
+  verifiedAt: '2026-08-29',
+  rightsNote: 'approved test asset',
+  width: 1200,
+  height: 800,
+  sourceChecksum: `sha256:${'0'.repeat(64)}`,
+  sources: [{
+    type: 'image/avif',
+    candidates: [{
+      src: '/assets/content/articles/one/approved-1200w.avif',
+      width: 1200,
+      height: 800,
+      checksum: `sha256:${'1'.repeat(64)}`,
+    }],
+  }],
+  fallback: {
+    src: '/assets/content/articles/one/approved.png',
+    format: 'png',
+    candidates: [{
+      src: '/assets/content/articles/one/approved.png',
+      width: 1200,
+      height: 800,
+      checksum: `sha256:${'2'.repeat(64)}`,
+    }],
+  },
+} as ReleaseAsset;
+
 describe('editorial primitives', () => {
+  it('keeps the verified responsive picture success markup and local fallback URLs unchanged', () => {
+    const html = renderToStaticMarkup(createElement(ResponsivePicture, {
+      asset: responsiveAsset,
+      alt: responsiveAsset.alt,
+      className: 'approved-editorial-image',
+      eager: true,
+      sizes: '(max-width: 767px) 100vw, 50vw',
+      onAssetError: () => undefined,
+    }));
+
+    expect(html).toContain('<picture>');
+    expect(html).toContain('/assets/content/articles/one/approved-1200w.avif 1200w');
+    expect(html).toContain('src="/assets/content/articles/one/approved.png"');
+    expect(html).toContain('class="approved-editorial-image"');
+    expect(html).toContain('fetchPriority="high"');
+    expect(html).not.toContain('data-responsive-picture-state');
+    expect(html).not.toMatch(/https?:\/\//u);
+  });
+
   it('renders one page heading with optional description and controls', () => {
     const html = renderToStaticMarkup(createElement(EditorialPageHeader, {
       title: '아티클',

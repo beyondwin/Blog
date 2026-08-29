@@ -1,5 +1,6 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
+import { useState } from 'react';
 import {
   absoluteCanonical,
   type RouteCriticalCssHandle,
@@ -73,15 +74,18 @@ export function meta({ data }: { data?: ReviewData }) {
 }
 
 export function ReviewPresentation({ data }: { data: ReviewData }) {
+  const [coverFailed, setCoverFailed] = useState(false);
   const approvedCover = hasApprovedCoverRedistribution(data.coverAsset) ? data.coverAsset : undefined;
-  const preload = reviewCoverPreload(approvedCover);
-  const cover = approvedCover ? (
+  const visibleCover = coverFailed ? undefined : approvedCover;
+  const preload = reviewCoverPreload(visibleCover);
+  const cover = visibleCover ? (
     <ResponsivePicture
-      asset={approvedCover}
-      alt={approvedCover.alt}
+      asset={visibleCover}
+      alt={visibleCover.alt}
       className="review-detail__cover-image"
       eager
       sizes={REVIEW_COVER_SIZES}
+      onAssetError={() => setCoverFailed(true)}
     />
   ) : undefined;
   return (
@@ -92,7 +96,7 @@ export function ReviewPresentation({ data }: { data: ReviewData }) {
         description={reviewDescription(data.record)}
         title={publicMetadataTitle(data.record.title)}
       />
-      <SiteShell currentSection="reviews" inverseHeader={Boolean(approvedCover)}>
+      <SiteShell currentSection="reviews" inverseHeader={Boolean(visibleCover)}>
         <ReviewReadingPage record={data.record} cover={cover} continuations={data.continuations} />
       </SiteShell>
     </>

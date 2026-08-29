@@ -62,6 +62,41 @@ type MobileDetailGeometry = {
   proseTop: number;
 };
 
+type FailedMediaGeometry = {
+  article: {
+    heroWidth: number;
+    introductionWidth: number;
+    mediaDisplay: string;
+    mediaWidth: number;
+  };
+  homeHero: {
+    copyWidth: number;
+    heroWidth: number;
+    mediaDisplay: string;
+    mediaWidth: number;
+  };
+  homePick: {
+    copyWidth: number;
+    mediaDisplay: string;
+    mediaWidth: number;
+    pickWidth: number;
+  };
+  listRow: {
+    copyX: number;
+    dateRight: number;
+    mediaDisplay: string;
+    mediaWidth: number;
+    rowRight: number;
+    rowX: number;
+  };
+  review: {
+    coverDisplay: string;
+    coverHeight: number;
+    heroHeight: number;
+    introductionHeight: number;
+  };
+};
+
 type MeasuredElement = ContentBox & {
   clientHeight: number;
   scrollHeight: number;
@@ -299,6 +334,104 @@ async function mobileDetailGeometry(): Promise<MobileDetailGeometry> {
   }
 }
 
+async function failedMediaGeometry(width: number): Promise<FailedMediaGeometry> {
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
+  try {
+    await page.setContent(`<!doctype html><html><head><style>${styles}</style></head><body>
+      <section class="form-home">
+        <div class="form-home__hero failed-home-hero">
+          <div class="form-home__hero-copy"><h1>실패해도 남는 홈 제목</h1><p>이미지 칸 없이 읽히는 설명</p><a href="/">읽기</a></div>
+          <figure class="form-home__hero-media"><span hidden data-responsive-picture-state="error"></span></figure>
+        </div>
+        <ol class="form-home__picks">
+          <li>
+            <a class="form-home__pick failed-home-pick" href="/thoughts/one/">
+              <span class="form-home__pick-media"><span hidden data-responsive-picture-state="error"></span></span>
+              <span class="form-home__pick-copy"><span class="form-home__pick-label">생각</span><strong>실패해도 남는 선택</strong><span>빈 색상 블록 없이 전체 폭을 쓰는 설명</span></span>
+            </a>
+          </li>
+        </ol>
+      </section>
+      <a class="editorial-list-row failed-list-row" href="/articles/one/">
+        <span class="editorial-list-row__media"><span hidden data-responsive-picture-state="error"></span></span>
+        <span class="editorial-list-row__copy"><h2>실패해도 남는 목록 제목</h2><span>텍스트 설명</span></span>
+        <span class="editorial-list-row__date">2026.08.29</span>
+      </a>
+      <article class="article-detail">
+        <div class="editorial-detail-frame editorial-detail-frame--split failed-article-detail">
+          <header class="editorial-detail-frame__hero">
+            <div class="editorial-detail-frame__introduction"><h1>실패해도 남는 상세 제목</h1></div>
+            <figure class="editorial-detail-frame__media"><span hidden data-responsive-picture-state="error"></span></figure>
+          </header>
+        </div>
+      </article>
+      <article class="review-detail review-detail--image-led failed-review-detail">
+        <header class="review-detail__hero">
+          <figure class="review-detail__cover-stage"><span hidden data-responsive-picture-state="error"></span></figure>
+          <div class="review-detail__introduction"><h1>실패해도 남는 서평 제목</h1></div>
+        </header>
+      </article>
+    </body></html>`, { waitUntil: 'domcontentloaded' });
+
+    return await page.evaluate(() => {
+      const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+      const display = (selector: string) => getComputedStyle(document.querySelector(selector)!).display;
+      const homeHero = box('.failed-home-hero');
+      const homeHeroCopy = box('.failed-home-hero .form-home__hero-copy');
+      const homeHeroMedia = box('.failed-home-hero .form-home__hero-media');
+      const homePick = box('.failed-home-pick');
+      const homePickCopy = box('.failed-home-pick .form-home__pick-copy');
+      const homePickMedia = box('.failed-home-pick .form-home__pick-media');
+      const listRow = box('.failed-list-row');
+      const listCopy = box('.failed-list-row .editorial-list-row__copy');
+      const listDate = box('.failed-list-row .editorial-list-row__date');
+      const listMedia = box('.failed-list-row .editorial-list-row__media');
+      const articleHero = box('.failed-article-detail .editorial-detail-frame__hero');
+      const articleIntroduction = box('.failed-article-detail .editorial-detail-frame__introduction');
+      const articleMedia = box('.failed-article-detail .editorial-detail-frame__media');
+      const reviewHero = box('.failed-review-detail .review-detail__hero');
+      const reviewIntroduction = box('.failed-review-detail .review-detail__introduction');
+      const reviewCover = box('.failed-review-detail .review-detail__cover-stage');
+      return {
+        homeHero: {
+          heroWidth: homeHero.width,
+          copyWidth: homeHeroCopy.width,
+          mediaDisplay: display('.failed-home-hero .form-home__hero-media'),
+          mediaWidth: homeHeroMedia.width,
+        },
+        homePick: {
+          pickWidth: homePick.width,
+          copyWidth: homePickCopy.width,
+          mediaDisplay: display('.failed-home-pick .form-home__pick-media'),
+          mediaWidth: homePickMedia.width,
+        },
+        listRow: {
+          rowX: listRow.x,
+          rowRight: listRow.right,
+          copyX: listCopy.x,
+          dateRight: listDate.right,
+          mediaDisplay: display('.failed-list-row .editorial-list-row__media'),
+          mediaWidth: listMedia.width,
+        },
+        article: {
+          heroWidth: articleHero.width,
+          introductionWidth: articleIntroduction.width,
+          mediaDisplay: display('.failed-article-detail .editorial-detail-frame__media'),
+          mediaWidth: articleMedia.width,
+        },
+        review: {
+          heroHeight: reviewHero.height,
+          introductionHeight: reviewIntroduction.height,
+          coverDisplay: display('.failed-review-detail .review-detail__cover-stage'),
+          coverHeight: reviewCover.height,
+        },
+      };
+    });
+  } finally {
+    await page.close();
+  }
+}
+
 async function productionArticleGeometryAtDesktop(): Promise<ProductionArticleGeometry[]> {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {
@@ -349,6 +482,27 @@ describe('editorial density geometry', () => {
     const vertical = first.bottom - first.height < second.bottom && second.bottom - second.height < first.bottom;
     return horizontal && vertical;
   };
+
+  it.each([1440, 390])('collapses failed editorial media stages into their text-led geometry at %ipx', async (width) => {
+    const failed = await failedMediaGeometry(width);
+
+    expect(failed.homeHero.mediaDisplay).toBe('none');
+    expect(failed.homeHero.mediaWidth).toBe(0);
+    expect(failed.homeHero.copyWidth).toBe(failed.homeHero.heroWidth);
+    expect(failed.homePick.mediaDisplay).toBe('none');
+    expect(failed.homePick.mediaWidth).toBe(0);
+    expect(failed.homePick.copyWidth).toBe(failed.homePick.pickWidth - 2);
+    expect(failed.listRow.mediaDisplay).toBe('none');
+    expect(failed.listRow.mediaWidth).toBe(0);
+    expect(failed.listRow.copyX).toBe(failed.listRow.rowX);
+    expect(failed.listRow.dateRight).toBe(failed.listRow.rowRight);
+    expect(failed.article.mediaDisplay).toBe('none');
+    expect(failed.article.mediaWidth).toBe(0);
+    expect(failed.article.introductionWidth).toBe(failed.article.heroWidth);
+    expect(failed.review.coverDisplay).toBe('none');
+    expect(failed.review.coverHeight).toBe(0);
+    expect(failed.review.introductionHeight).toBe(failed.review.heroHeight);
+  });
 
   it.each([
     [1440, 500, 540, 200, 220],

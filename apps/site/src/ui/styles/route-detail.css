@@ -192,6 +192,10 @@
   box-shadow: 0 10px 12px rgb(17 16 15 / 28%);
 }
 
+.review-detail__cover-stage:has([data-responsive-picture-state="error"]) {
+  display: none;
+}
+
 .review-detail__introduction {
   min-height: 0;
   display: flex;
