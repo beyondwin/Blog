@@ -130,6 +130,15 @@ independent visual reviewer가 같은 checksum-bound decision batch를 승인하
 통과한 원본만 release에 들어간다. caveat는 `non-exclusive generated output;
 copyrightability/uniqueness not guaranteed`다. 승인되지 않은 후보는 text-led fallback이다.
 
+아티클 17개는 2026-08-30 media refresh에서 모두 대표 이미지를 갖는다. 최종 inventory는
+retain 6, replace 7, add 4이며 replace/add 11개는 `editorial-topic-hero`라는 새 ID로 기존
+asset을 보존한 채 연결했다. exact family와 순서는
+[이미지 아트 디렉션](docs/notes/project/form-and-thought-image-art-direction.md)과
+[최종 17-image contact sheet](docs/notes/project/assets/form-and-thought-generated/articles/final-article-index-contact-sheet-topic-refresh.png)가
+소유한다. `recordsForCollection()` 순서에서 family, camera distance, 주 피사체가 세 번 연속
+반복되지 않는다. 과거 missing 네 건도 승인 asset으로 해소됐고, HOLD/rejected candidate는
+public source와 release에 들어가지 않았다.
+
 서평 cover는 판본 identity와 redistribution receipt가 모두 승인돼야 byte를 공개한다. 현재
 생산 registry는 승인 0건이며 strict validation은 17건의 rights warning을 의도적으로 남긴다.
 
@@ -141,9 +150,13 @@ text-led/full-width 구성으로 접는다. review owner는 같은 실패 상태
 cover stage와 image-led class를 함께 제거한다. 실제 article request의 hydration 전후 실패는
 검증됐지만, 실제 승인 review cover request 실패는 승인 cover가 0건이므로 `not_measured`다.
 
-이 실패 복구와 density 구현은 별도 article media refresh 또는 review cover rights 계획이
-완료됐다는 뜻이 아니다. 새 article media와 review cover byte는 각각의 승인·권리 gate를 따로
-통과해야 한다.
+article media refresh는 release `dde592cdfd307ba664738de00f50077181ff947066a89192acd1d82241150aef`와
+17-cell browser matrix에서 완료됐다. `/articles/`은 1440×900, 768×900, 390×844, 320×844와
+720×450/DPR 2의 200% reflow proxy에서 이미지 decode, concrete alt, eager/lazy, crop,
+CLS(`0–0.001002`), console/network와 document overflow를 통과했다. retained 1개, replaced
+1개와 과거 missing 4개 상세도 1440×900/390×844에서 통과했다. article failure probe는 media를
+숨기고 한 열 text-led hero로 복구한다. 이 완료는 review cover rights 계획이나 production
+배포 권한을 대신하지 않는다.
 
 ## responsive acceptance
 
