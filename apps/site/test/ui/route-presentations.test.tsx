@@ -157,6 +157,9 @@ describe('full public route expansion', () => {
     }));
     expect(collectionHtml).toContain(`id="${releaseModule.recordAnchor('articles', article.id)}"`);
     expect(collectionHtml).toContain(`href="${article.href}"`);
+    expect(collectionHtml).toContain('class="editorial-page-header"');
+    expect(collectionHtml).toContain('class="editorial-list-row editorial-list-row--text-led"');
+    expect(collectionHtml).not.toMatch(/reading-sheet|data-surface-mode|public-scene/iu);
 
     const inventory = releaseModule.searchInventory(active);
     const discovery = releaseModule.searchDiscovery(active);
@@ -177,6 +180,7 @@ describe('full public route expansion', () => {
     const memoryHtml = renderToStaticMarkup(createElement(MemoryIndexPage, { records: [memory] }));
     expect(memoryHtml).toContain(`href="${memory.href}"`);
     expect(memoryHtml).not.toContain('__bw_');
+    expect(memoryHtml).toContain('class="editorial-page-header"');
 
     const tagsHtml = renderToStaticMarkup(createElement(TagsPage, {
       records: [article],
@@ -184,15 +188,19 @@ describe('full public route expansion', () => {
     }));
     expect(releaseModule.exactPublicTags(active)).toContainEqual(expect.objectContaining({ label: 'AI', href: '/tags/AI/' }));
     expect(tagsHtml).toContain(`href="${article.href}"`);
+    expect(tagsHtml).toContain('class="editorial-page-header"');
+    expect(tagsHtml).not.toMatch(/reading-sheet|data-surface-mode|public-scene/iu);
 
     const emptyLaneHtml = renderToStaticMarkup(createElement(CollectionPage, {
       collection: 'analysis',
-      description: '근거를 붙인 기술 글은 글에서 읽습니다.',
+      description: '근거를 붙인 기술 글은 아티클에서 읽습니다.',
       emptyMessage: '아직 공개한 출처 분석이 없습니다.',
       records: [],
       title: '조사',
     }));
     expect(emptyLaneHtml).toContain('아직 공개한 출처 분석이 없습니다.');
+    expect(emptyLaneHtml).toContain('아티클에서 읽습니다.');
+    expect(emptyLaneHtml).not.toContain('글에서 읽습니다.');
   });
 
   it('keeps explicit framework routes and presentation-only adapters', async () => {
@@ -235,7 +243,29 @@ describe('full public route expansion', () => {
     expect(html).toContain('href="https://example.com/source"');
     expect(html).toContain('Primary source');
     expect(html).toContain('research-report');
+    expect(html).toContain('class="editorial-detail-frame editorial-detail-frame--text-led"');
+    expect(html).toContain('class="detail-action-rail"');
+    expect(html).not.toMatch(/reading-sheet|reading-threshold|data-surface-mode|public-scene/iu);
     expect(mapRoute.loader().headers.get('Location')).toBe('/memory/');
+  });
+
+  it('keeps retired public-scene and mineral language out of active runtime sources', async () => {
+    const runtimeFiles = [
+      'app/routes/secondary-shared.tsx',
+      'src/ui/collections/CollectionPage.tsx',
+      'src/ui/collections/RecordRow.tsx',
+      'src/ui/memory/MemoryIndexPage.tsx',
+      'src/ui/memory/MemoryDetailPage.tsx',
+      'src/ui/memory/MemoryMapPage.tsx',
+      'src/ui/navigation/origin.ts',
+      'src/ui/reading/ContextReturn.tsx',
+      'src/ui/reading/SecondaryReadingPage.tsx',
+      'src/ui/tags/TagsPage.tsx',
+    ];
+    const source = (await Promise.all(runtimeFiles.map((path) => readFile(join(candidateRoot, path), 'utf8'))))
+      .join('\n');
+    expect(source).not.toMatch(/public-scene|Continuity Zoom|data-surface-mode|\bmineral\b/iu);
+    expect(source).not.toMatch(/[>'"]\s*(?:장면|beyondwin)(?:\s|[<'"])/iu);
   });
 
   it('loads every secondary detail adapter from one verified record and resolves applicable media', async () => {

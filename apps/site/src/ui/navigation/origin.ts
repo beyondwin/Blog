@@ -9,7 +9,6 @@ const SAFE_ORIGIN_ID = /^[A-Za-z0-9](?:[A-Za-z0-9_-]{0,78}[A-Za-z0-9])?$/u;
 const UNSAFE_QUERY_CHARACTER = /[\p{Cc}\p{Cf}\p{Cs}]/u;
 
 export type ReadingOrigin =
-  | { kind: 'scene'; focusId: string }
   | { kind: 'articles'; anchorId: string }
   | { kind: 'reviews'; anchorId: string }
   | { kind: 'search'; query: string; anchorId: string }
@@ -36,8 +35,6 @@ export function parseOrigin(value: unknown): ReadingOrigin | null {
   if (!isRecord(value) || typeof value.kind !== 'string') return null;
 
   switch (value.kind) {
-    case 'scene':
-      return isSafeOriginId(value.focusId) ? { kind: 'scene', focusId: value.focusId } : null;
     case 'articles':
     case 'reviews':
       return isSafeOriginId(value.anchorId) ? { kind: value.kind, anchorId: value.anchorId } : null;
@@ -62,8 +59,6 @@ export function parseOrigin(value: unknown): ReadingOrigin | null {
 export function originsEqual(left: ReadingOrigin, right: ReadingOrigin): boolean {
   if (left.kind !== right.kind) return false;
   switch (left.kind) {
-    case 'scene':
-      return right.kind === 'scene' && left.focusId === right.focusId;
     case 'articles':
     case 'reviews':
       return right.kind === left.kind && left.anchorId === right.anchorId;

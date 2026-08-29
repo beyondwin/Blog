@@ -124,15 +124,15 @@ describe('React Router current-behavior static route contract', () => {
     expect(articleSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
     expect(articleSource).not.toMatch(/route-article\.css\?inline|reading\.css\?inline/u);
     expect(reviewsIndexSource).toContain("import('../../src/ui/styles/route-index.css?inline')");
-    expect(reviewSource).toContain("import('../../src/ui/styles/route-review.css?inline')");
-    expect(reviewSource).toContain("import('../../src/ui/styles/reading.css?inline')");
     expect(reviewSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
+    expect(reviewSource).not.toMatch(/route-review\.css\?inline|route-reading\.css\?inline|reading\.css\?inline/u);
     expect(thoughtsIndexSource).toContain("import('../../src/ui/styles/route-thought.css?inline')");
     expect(thoughtsIndexSource).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
     expect(thoughtSource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
     expect(thoughtSource).toContain("import('../../src/ui/styles/route-thought.css?inline')");
     expect(thoughtSource).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
     expect(memorySource).toContain("import('../../src/ui/styles/route-memory.css?inline')");
+    expect(memorySource).toContain("import('../../src/ui/styles/route-detail.css?inline')");
     expect(searchSource).toContain("import('../../src/ui/styles/route-search.css?inline')");
     expect(searchSource).not.toMatch(/route-(?:reading|collections|index|detail)\.css\?inline/u);
     expect(root.resolveCriticalCssForRender('route', null, 'tokens', 'shell'))

@@ -12,14 +12,9 @@ import { hasApprovedCoverRedistribution } from '../../src/ui/reviews/bookshelfPr
 import { selectContinuations, type ContinuationItem } from '../../src/ui/reading/select-continuations';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [detailCss, routeReadingCss, readingCss, reviewCss] = import.meta.env.SSR
-  ? await Promise.all([
-      import('../../src/ui/styles/route-detail.css?inline').then((module) => module.default),
-      import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
-      import('../../src/ui/styles/reading.css?inline').then((module) => module.default),
-      import('../../src/ui/styles/route-review.css?inline').then((module) => module.default),
-    ])
-  : ['', '', '', ''];
+const detailCss = import.meta.env.SSR
+  ? await import('../../src/ui/styles/route-detail.css?inline').then((module) => module.default)
+  : '';
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
@@ -31,7 +26,7 @@ export interface ReviewData {
 }
 
 export const handle: RouteCriticalCssHandle = {
-  criticalCss: `${detailCss}${routeReadingCss}${readingCss}${reviewCss}`,
+  criticalCss: detailCss,
 };
 
 function reviewDescription(record: ReviewRecord): string {

@@ -141,8 +141,8 @@ describe('React Router emitted critical output', () => {
     expect(routeCss.thoughtDetail).toContain('.thought-detail__type');
     expect(routeCss.thoughtDetail).not.toContain('.reading-threshold');
     expect(routeCss.memoryDetail).toContain('.memory-thought');
-    expect(routeCss.memoryDetail).toContain('.reading-threshold');
-    expect(routeCss.memoryDetail).toContain('.context-return');
+    expect(routeCss.memoryDetail).toContain('.editorial-detail-frame__prose .prose');
+    expect(routeCss.memoryDetail).not.toMatch(/\.reading-threshold|\.context-return/u);
     expect(routeCss.search).toContain('.search-page__form');
     expect(routeCss.search).not.toMatch(/\.article-topic-filter|\.article-colophon/u);
     for (const css of Object.values(routeCss)) expect(css).toContain('.visually-hidden');

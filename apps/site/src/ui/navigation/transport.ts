@@ -82,9 +82,6 @@ function addOriginParameters(url: URL, origin: ReadingOrigin, token: string): vo
   for (const parameter of TRANSPORT_PARAMETERS) url.searchParams.delete(parameter);
   url.searchParams.set('__bw_from', origin.kind);
   switch (origin.kind) {
-    case 'scene':
-      url.searchParams.set('__bw_focus', origin.focusId);
-      break;
     case 'articles':
     case 'reviews':
       url.searchParams.set('__bw_anchor', origin.anchorId);
@@ -173,10 +170,6 @@ function queryOrigin(parameters: URLSearchParams): ReadingOrigin | null {
   const query = exactValues(parameters, '__bw_query');
 
   switch (kinds[0]) {
-    case 'scene':
-      return focus.length === 1 && anchor.length === 0 && query.length === 0
-        ? parseOrigin({ kind: 'scene', focusId: focus[0] })
-        : null;
     case 'articles':
     case 'reviews':
       return focus.length === 0 && anchor.length === 1 && query.length === 0
@@ -200,9 +193,7 @@ function queryOrigin(parameters: URLSearchParams): ReadingOrigin | null {
 
 function isCanonicalOriginRecord(value: unknown, parsed: ReadingOrigin): boolean {
   if (!isRecord(value)) return false;
-  const expectedKeys = parsed.kind === 'scene'
-    ? ['focusId', 'kind']
-    : parsed.kind === 'search'
+  const expectedKeys = parsed.kind === 'search'
       ? ['anchorId', 'kind', 'query']
       : 'anchorId' in parsed
         ? ['anchorId', 'kind']

@@ -9,9 +9,9 @@ export type SecondaryCollection = 'analysis' | 'ideas' | 'travel';
 type SecondaryRecord = Extract<PublicRecord, { collection: SecondaryCollection }>;
 
 export const SECONDARY_COPY = {
-  analysis: { title: '조사', description: '근거를 붙인 출처 분석.', empty: '아직 공개한 출처 분석이 없습니다. 근거를 붙인 기술 글은 글에서 읽습니다.' },
-  ideas: { title: '아이디어', description: '아직 다 쓰지 않은 공개 아이디어.', empty: '아직 공개한 아이디어가 없습니다. 다 쓴 글은 글에서 읽습니다.' },
-  travel: { title: '여행', description: '장소에서 남은 공개 기록.', empty: '아직 공개한 장면이 없습니다. 다 쓴 글은 글에서 읽습니다.' },
+  analysis: { title: '조사', description: '근거를 붙인 출처 분석.', empty: '아직 공개한 출처 분석이 없습니다. 근거를 붙인 기술 글은 아티클에서 읽습니다.' },
+  ideas: { title: '아이디어', description: '아직 다 쓰지 않은 공개 아이디어.', empty: '아직 공개한 아이디어가 없습니다. 다 쓴 글은 아티클에서 읽습니다.' },
+  travel: { title: '여행', description: '장소에서 남은 공개 기록.', empty: '아직 공개한 여행 기록이 없습니다. 다 쓴 글은 아티클에서 읽습니다.' },
 } as const;
 
 export interface SecondaryIndexData { records: import('../../src/ui/collections/RecordRow').RecordSummary[] }
@@ -28,10 +28,10 @@ export function SecondaryIndexPresentation({
   data: SecondaryIndexData;
 }) {
   const copy = SECONDARY_COPY[collection];
-  return <><DocumentMetadata canonical={`/${collection}/`} description={copy.empty} title={publicMetadataTitle()} /><SiteShell currentSection={null}><CollectionPage collection={collection} title={copy.title} description={copy.description} emptyMessage={copy.empty} records={data.records} /></SiteShell></>;
+  return <><DocumentMetadata canonical={`/${collection}/`} description={copy.description} title={publicMetadataTitle(copy.title)} /><SiteShell currentSection={null}><CollectionPage collection={collection} title={copy.title} description={copy.description} emptyMessage={copy.empty} records={data.records} /></SiteShell></>;
 }
 
 export function SecondaryDetailPresentation({ data }: { data: SecondaryDetailData }) {
-  const media = data.mediaAsset ? <ResponsivePicture asset={data.mediaAsset} alt={data.mediaAsset.alt} className="reading-threshold__media-image" eager sizes="(max-width: 720px) 30vw, 9rem" /> : undefined;
+  const media = data.mediaAsset ? <ResponsivePicture asset={data.mediaAsset} alt={data.mediaAsset.alt} className="secondary-detail__hero-image" eager sizes="(max-width: 767px) 100vw, (max-width: 1179px) 40vw, 500px" /> : undefined;
   return <><DocumentMetadata canonical={data.record.href} description={data.record.description} title={publicMetadataTitle(data.record.title)} /><SiteShell currentSection={null}><SecondaryReadingPage record={data.record} media={media} /></SiteShell></>;
 }

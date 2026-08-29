@@ -1,4 +1,5 @@
 import type { PublicCollection } from '@beyondwin/contracts';
+import { EditorialPageHeader } from '../editorial/EditorialPageHeader';
 import { RecordRow, type RecordSummary } from './RecordRow';
 
 const ORIGIN_KIND = {
@@ -29,13 +30,10 @@ export function CollectionPage({
   title: string;
 }) {
   return (
-    <section className={`reading-sheet collection-page collection-page--${collection}`} aria-labelledby="collection-title">
-      <header className="collection-page__header">
-        <h1 id="collection-title">{title}</h1>
-        <p>{description}</p>
-      </header>
+    <section className={`secondary-index collection-page collection-page--${collection}`} aria-label={title}>
+      <EditorialPageHeader title={title} description={description} />
       {records.length > 0 ? (
-        <ol className="record-list">
+        <ol className="secondary-index__ledger record-list">
           {records.map((record) => (
             <RecordRow key={`${record.collection}/${record.id}`} record={record} originKind={ORIGIN_KIND[collection]} />
           ))}

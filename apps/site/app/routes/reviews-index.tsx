@@ -3,11 +3,10 @@ import { BookIndexPage } from '../../src/ui/reviews/BookIndexPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
 import { loadVerifiedRelease, recordsForCollection } from '../release.server';
 
-const [indexCss, reviewCss] = import.meta.env.SSR ? await Promise.all([
-  import('../../src/ui/styles/route-index.css?inline').then((module) => module.default),
-  import('../../src/ui/styles/route-review.css?inline').then((module) => module.default),
-]) : ['', ''];
-export const handle: RouteCriticalCssHandle = { criticalCss: `${indexCss}${reviewCss}` };
+const indexCss = import.meta.env.SSR
+  ? await import('../../src/ui/styles/route-index.css?inline').then((module) => module.default)
+  : '';
+export const handle: RouteCriticalCssHandle = { criticalCss: indexCss };
 export async function loader() {
   const release = await loadVerifiedRelease();
   return {

@@ -1,4 +1,4 @@
-import { readFile, stat } from 'node:fs/promises';
+import { access, readFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -20,7 +20,7 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe('route-scoped critical CSS source accounting', () => {
-  it('defines the approved FORM & THOUGHT palette, selected font roles, and temporary legacy aliases', async () => {
+  it('defines only the approved FORM & THOUGHT palette and selected font roles', async () => {
     const tokens = await readFile(join(candidateRoot, 'src/ui/styles/tokens.css'), 'utf8');
 
     for (const declaration of [
@@ -38,13 +38,10 @@ describe('route-scoped critical CSS source accounting', () => {
       '--ft-font-display:',
       '--ft-font-wordmark:',
       '--ft-font-ui:',
-      '--bw-mineral: var(--ft-canvas);',
-      '--bw-white: var(--ft-paper-bright);',
-      '--bw-ink: var(--ft-ink);',
-      '--bw-font: var(--ft-font-ui);',
     ]) {
       expect(tokens).toContain(declaration);
     }
+    expect(tokens).not.toMatch(/--bw-(?:mineral|white|ink|cobalt|soft-ink|line|font)\s*:/u);
     expect(tokens.match(/@font-face/gu)).toHaveLength(3);
     expect(tokens).toContain('url("/fonts/form-thought-display-ko.woff2") format("woff2")');
     expect(tokens).toContain('url("/fonts/form-thought-wordmark.woff2") format("woff2")');
@@ -119,7 +116,7 @@ describe('route-scoped critical CSS source accounting', () => {
     expect(shell).toContain('font-family: var(--ft-font-ui);');
     expect(shell).toContain('box-shadow: 0 18px 44px rgb(36 23 18 / 14%);');
     expect(shell).toContain('border-radius: 8px;');
-    expect(shell).toContain('.site-shell[data-surface-mode] { background: var(--ft-paper); }');
+    expect(shell).not.toContain('data-surface-mode');
     expect(shell).toContain('outline: 2px solid var(--ft-on-terracotta);');
     expect(shell).toMatch(/\.site-brand \{[^}]*font-family: var\(--ft-font-wordmark\);[^}]*font-size: 20px;[^}]*font-weight: 400;[^}]*letter-spacing: -\.04em;/u);
   });
@@ -135,12 +132,12 @@ describe('route-scoped critical CSS source accounting', () => {
     ]);
     expect(root).not.toContain('criticalCssForPath');
     expect(reviewIndex).toContain("import('../../src/ui/styles/route-index.css?inline')");
-    expect(reviewIndex).toContain('criticalCss: `${indexCss}${reviewCss}`');
+    expect(reviewIndex).toContain('criticalCss: indexCss');
     expect(thoughtIndex).toContain("import('../../src/ui/styles/route-thought.css?inline')");
     expect(thoughtIndex).toContain('criticalCss: thoughtCss');
     expect(thoughtIndex).not.toMatch(/route-reading\.css\?inline|reading\.css\?inline/u);
     expect(reviewDetail).toContain("import('../../src/ui/styles/route-detail.css?inline')");
-    expect(reviewDetail).toContain('criticalCss: `${detailCss}${routeReadingCss}${readingCss}${reviewCss}`');
+    expect(reviewDetail).toContain('criticalCss: detailCss');
     expect(thoughtDetail).toContain("import('../../src/ui/styles/route-detail.css?inline')");
     expect(thoughtDetail).toContain("import('../../src/ui/styles/route-thought.css?inline')");
     expect(thoughtDetail).toContain('criticalCss: `${detailCss}${thoughtCss}`');
@@ -148,5 +145,26 @@ describe('route-scoped critical CSS source accounting', () => {
     expect(search).toContain("import('../../src/ui/styles/route-search.css?inline')");
     expect(search).toContain('criticalCss: searchCss');
     expect(search).not.toMatch(/route-(?:reading|collections|index|detail)\.css\?inline/u);
+  });
+
+  it('removes retired scene and reading CSS owners and their active imports', async () => {
+    const retired = [
+      'scene.css',
+      'route-scene.css',
+      'reading.css',
+      'route-reading.css',
+      'route-article.css',
+      'route-review.css',
+    ];
+    for (const file of retired) {
+      await expect(access(join(candidateRoot, 'src/ui/styles', file))).rejects.toThrow();
+    }
+
+    const routeSources = await Promise.all([
+      'analysis.tsx', 'analysis-index.tsx', 'idea.tsx', 'ideas-index.tsx',
+      'travel.tsx', 'travel-index.tsx', 'memory.tsx', 'memory-index.tsx',
+      'memory-map.tsx', 'tags-index.tsx', 'tag.tsx', 'review.tsx', 'reviews-index.tsx',
+    ].map((file) => readFile(join(candidateRoot, 'app/routes', file), 'utf8')));
+    expect(routeSources.join('\n')).not.toMatch(/(?:route-scene|scene|route-reading|reading|route-article|route-review)\.css\?inline/u);
   });
 });

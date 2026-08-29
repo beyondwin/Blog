@@ -81,8 +81,9 @@ let reviewCss: string;
 beforeAll(async () => {
   const stylesRoot = join(import.meta.dirname, '../../src/ui/styles');
   reviewCss = (await Promise.all([
-    readFile(join(stylesRoot, 'reading.css'), 'utf8'),
-    readFile(join(stylesRoot, 'route-review.css'), 'utf8'),
+    readFile(join(stylesRoot, 'editorial.css'), 'utf8'),
+    readFile(join(stylesRoot, 'route-index.css'), 'utf8'),
+    readFile(join(stylesRoot, 'route-detail.css'), 'utf8'),
   ])).join('\n');
   browser = await chromium.launch({ headless: true });
 });

@@ -1,8 +1,35 @@
-.memory-thought { max-width: 42em; }
-.memory-thought .reading-threshold__identity h1 { text-wrap: wrap; }
-.memory-thought__en { margin: -.35em 0 1.4em; color: var(--bw-soft-ink); line-height: 1.65; }
-.memory-thought__sources, .memory-thought__companions { margin-top: 2.4em; }
-.memory-thought__sources h2, .memory-thought__companions h2 { margin: 0 0 .6em; color: var(--bw-soft-ink); font-size: .82rem; font-weight: 500; }
+.memory-thought__body { margin-block-end: 2.8em; }
+
+.memory-thought__sources,
+.memory-thought__companions {
+  margin-block-start: 2.8em;
+  padding-block-start: 1.4em;
+  border-top: 1px solid var(--ft-rule);
+}
+
+.memory-thought__sources h2,
+.memory-thought__companions h2 {
+  margin: 0 0 .8em;
+  color: var(--ft-ink-soft);
+  font-family: var(--ft-font-ui);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .memory-thought ul { margin: 0; padding: 0; list-style: none; }
-.memory-thought li + li { margin-top: .55em; }
-.memory-thought__companions a { color: var(--bw-cobalt); font-weight: 600; line-height: 1.5; }
+.memory-thought li + li { margin-top: .7em; }
+
+.memory-thought a {
+  color: var(--ft-terracotta-dark);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.memory-map-fallback {
+  min-height: 50vh;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 48px 22px;
+  color: var(--ft-ink-soft);
+}

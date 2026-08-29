@@ -8,7 +8,6 @@ img, svg { max-width: 100%; }
 :where(a, button, input, select, textarea):focus-visible { outline: 2px solid var(--ft-on-terracotta); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ft-ink); }
 .visually-hidden { position: absolute!important; width: 1px!important; height: 1px!important; overflow: hidden!important; clip: rect(0 0 0 0)!important; clip-path: inset(50%)!important; white-space: nowrap!important; }
 .site-shell { width: min(1280px, calc(100% - 64px)); min-height: calc(100vh - 64px); margin: 32px auto; overflow-x: clip; background: var(--ft-paper); color: var(--ft-ink); caret-color: var(--ft-terracotta-dark); box-shadow: 0 18px 44px rgb(36 23 18 / 14%); border-radius: 8px; }
-.site-shell[data-surface-mode] { background: var(--ft-paper); }
 .site-shell-width { width: min(72rem, calc(100% - 96px)); margin-inline: auto; }
 .site-header { position: relative; z-index: 80; background: var(--ft-paper); }
 .site-header__inner { min-height: 96px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--ft-rule); }

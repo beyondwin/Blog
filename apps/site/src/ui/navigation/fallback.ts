@@ -23,10 +23,6 @@ export function safeReadingFallback(
   if (origin === null) return COLLECTION_ROOTS[recordCollection];
 
   switch (origin.kind) {
-    case 'scene': {
-      const search = new URLSearchParams({ focus: origin.focusId });
-      return `/?${search.toString()}`;
-    }
     case 'articles':
     case 'reviews':
       return withAnchor(COLLECTION_ROOTS[origin.kind], origin.anchorId);

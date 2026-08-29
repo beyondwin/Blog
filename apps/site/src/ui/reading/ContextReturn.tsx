@@ -34,9 +34,7 @@ export function contextReturnPresentation(
 ): ContextReturnPresentation {
   const origin = parseOrigin(originInput);
   if (origin === null) return { label: DIRECT_LABELS[collection], href: safeReadingFallback(null, collection) };
-  const label = origin.kind === 'scene'
-    ? '장면으로 돌아가기'
-    : origin.kind === 'search'
+  const label = origin.kind === 'search'
       ? `“${origin.query}” 결과로`
       : ORIGIN_LABELS[origin.kind];
   return { label, href: safeReadingFallback(origin, collection) };

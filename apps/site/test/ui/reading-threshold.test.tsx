@@ -39,7 +39,6 @@ describe('quiet reading threshold', () => {
   });
 
   it.each([
-    [{ kind: 'scene', focusId: 'reading-desk-cobalt' }, '장면으로 돌아가기', '/?focus=reading-desk-cobalt'],
     [{ kind: 'articles', anchorId: 'article-2' }, '글 목록으로', '/articles/#article-2'],
     [{ kind: 'reviews', anchorId: 'review-2' }, '책 목록으로', '/reviews/#review-2'],
     [{ kind: 'search', query: 'AI 판단', anchorId: 'result-2' }, '“AI 판단” 결과로', '/search/?q=AI+%ED%8C%90%EB%8B%A8#result-2'],
@@ -54,7 +53,7 @@ describe('quiet reading threshold', () => {
   it('fails closed to the current collection for malformed or stale origin input', () => {
     expect(contextReturnPresentation({ kind: 'search', query: 'bad\nquery', anchorId: 'safe' }, 'reviews'))
       .toEqual({ label: '책 목록으로', href: '/reviews/' });
-    expect(contextReturnPresentation({ kind: 'scene', focusId: '../unsafe' }, 'articles'))
+    expect(contextReturnPresentation({ kind: 'scene', focusId: 'retired-focus' }, 'articles'))
       .toEqual({ label: '글 목록으로', href: '/articles/' });
 
     const html = renderToStaticMarkup(createElement(ContextReturn, { collection: 'reviews' }));

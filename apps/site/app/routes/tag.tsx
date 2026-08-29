@@ -3,11 +3,11 @@ import { TagsPage } from '../../src/ui/tags/TagsPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
 import { exactPublicTags, loadVerifiedRelease, recordsForTag } from '../release.server';
 
-const [readingCss, collectionsCss] = import.meta.env.SSR ? await Promise.all([
-  import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
+const [indexCss, collectionsCss] = import.meta.env.SSR ? await Promise.all([
+  import('../../src/ui/styles/route-index.css?inline').then((module) => module.default),
   import('../../src/ui/styles/route-collections.css?inline').then((module) => module.default),
 ]) : ['', ''];
-export const handle: RouteCriticalCssHandle = { criticalCss: `${readingCss}${collectionsCss}` };
+export const handle: RouteCriticalCssHandle = { criticalCss: `${indexCss}${collectionsCss}` };
 export async function loader({ params }: { params: { tag?: string } }) {
   const release = await loadVerifiedRelease();
   const tag = params.tag;

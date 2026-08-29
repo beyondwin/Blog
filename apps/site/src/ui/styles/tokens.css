@@ -38,13 +38,4 @@
   --ft-font-display: "FORM THOUGHT Display", "Noto Serif KR", "AppleMyungjo", "Batang", serif;
   --ft-font-wordmark: "FORM THOUGHT Wordmark", "Cormorant Garamond", "Times New Roman", serif;
   --ft-font-ui: "FORM THOUGHT UI", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
-
-  /* Task 13 removes these after every legacy consumer has moved to --ft-* roles. */
-  --bw-mineral: var(--ft-canvas);
-  --bw-white: var(--ft-paper-bright);
-  --bw-ink: var(--ft-ink);
-  --bw-cobalt: var(--ft-terracotta-dark);
-  --bw-soft-ink: var(--ft-ink-soft);
-  --bw-line: var(--ft-rule);
-  --bw-font: var(--ft-font-ui);
 }

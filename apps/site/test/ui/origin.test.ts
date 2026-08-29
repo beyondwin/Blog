@@ -3,7 +3,6 @@ import { parseOrigin } from '../../src/ui/navigation/origin';
 
 describe('parseOrigin', () => {
   it.each([
-    [{ kind: 'scene', focusId: 'reading-desk-cobalt' }, { kind: 'scene', focusId: 'reading-desk-cobalt' }],
     [{ kind: 'articles', anchorId: 'article-2' }, { kind: 'articles', anchorId: 'article-2' }],
     [{ kind: 'reviews', anchorId: 'review_2' }, { kind: 'reviews', anchorId: 'review_2' }],
     [{ kind: 'search', query: ' AI 시대 ', anchorId: 'result-2' }, { kind: 'search', query: 'AI 시대', anchorId: 'result-2' }],
@@ -45,7 +44,7 @@ describe('parseOrigin', () => {
   });
 
   it('rejects missing required fields and drops an invalid optional secondary anchor', () => {
-    expect(parseOrigin({ kind: 'scene' })).toBeNull();
+    expect(parseOrigin({ kind: 'scene', focusId: 'retired-focus' })).toBeNull();
     expect(parseOrigin({ kind: 'articles' })).toBeNull();
     expect(parseOrigin({ kind: 'reviews', anchorId: 1 })).toBeNull();
     expect(parseOrigin({ kind: 'search', query: 'AI' })).toBeNull();

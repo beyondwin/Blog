@@ -4,19 +4,18 @@ import { MemoryDetailPage } from '../../src/ui/memory/MemoryDetailPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, metadataForRecord, publicMetadataTitle } from '../root';
 import { loadVerifiedRelease, recordForRoute } from '../release.server';
 
-const [routeReadingCss, readingCss, memoryCss] = import.meta.env.SSR
+const [detailCss, memoryCss] = import.meta.env.SSR
   ? await Promise.all([
-      import('../../src/ui/styles/route-reading.css?inline').then((module) => module.default),
-      import('../../src/ui/styles/reading.css?inline').then((module) => module.default),
+      import('../../src/ui/styles/route-detail.css?inline').then((module) => module.default),
       import('../../src/ui/styles/route-memory.css?inline').then((module) => module.default),
     ])
-  : ['', '', ''];
+  : ['', ''];
 
 type MemoryRecord = Extract<PublicRecord, { collection: 'memory' }>;
 export interface MemoryData { record: MemoryRecord }
 
 export const handle: RouteCriticalCssHandle = {
-  criticalCss: `${routeReadingCss}${readingCss}${memoryCss}`,
+  criticalCss: `${detailCss}${memoryCss}`,
 };
 
 export async function loader({ params }: { params: { slug?: string } }): Promise<MemoryData> {

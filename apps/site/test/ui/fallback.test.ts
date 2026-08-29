@@ -6,7 +6,6 @@ import {
 
 describe('safeReadingFallback', () => {
   it.each([
-    [{ kind: 'scene', focusId: 'reading-desk-cobalt' }, '/', '/?focus=reading-desk-cobalt'],
     [{ kind: 'articles', anchorId: 'article-2' }, 'reviews', '/articles/#article-2'],
     [{ kind: 'reviews', anchorId: 'review-2' }, 'articles', '/reviews/#review-2'],
     [{ kind: 'analysis', anchorId: 'analysis-2' }, 'articles', '/analysis/#analysis-2'],
