@@ -96,6 +96,7 @@ describe('editorial density geometry', () => {
     expect.soft(desktop.headerInner.x).toBeGreaterThanOrEqual(56);
     expect.soft(desktop.headerInner.x).toBeLessThanOrEqual(64);
     expect.soft(desktop.headerInner.width).toBe(1440 - (desktop.headerInner.x * 2));
+    expect.soft(desktop.headerInner.height).toBe(88);
     expect.soft(desktop.hero.height).toBeGreaterThanOrEqual(500);
     expect.soft(desktop.hero.height).toBeLessThanOrEqual(540);
     expect.soft(desktop.pick.height).toBeGreaterThanOrEqual(200);
@@ -112,6 +113,7 @@ describe('editorial density geometry', () => {
     expect(geometry.headerInner.x).toBeGreaterThanOrEqual(32);
     expect(geometry.headerInner.x).toBeLessThanOrEqual(48);
     expect(geometry.headerInner.width).toBe(width - (geometry.headerInner.x * 2));
+    expect(geometry.headerInner.height).toBe(80);
   });
 
   it('keeps the mobile reading measure, touch target, and document width intact', async () => {
@@ -122,10 +124,12 @@ describe('editorial density geometry', () => {
       });
       const mobile = await page.evaluate(() => {
         const measure = document.querySelector('.site-shell-width')!.getBoundingClientRect();
+        const header = document.querySelector('.site-header__inner')!.getBoundingClientRect();
         const target = document.querySelector('.mobile-navigation__button')!.getBoundingClientRect();
         const prose = getComputedStyle(document.querySelector('.article-detail .editorial-detail-frame__prose')!);
         return {
           measure: { x: measure.x, width: measure.width },
+          headerHeight: header.height,
           target: { height: target.height, width: target.width },
           proseFontSize: prose.fontSize,
           documentWidth: document.documentElement.scrollWidth,
@@ -135,6 +139,7 @@ describe('editorial density geometry', () => {
 
       expect(mobile.measure.x).toBe(22);
       expect(mobile.measure.width).toBe(346);
+      expect(mobile.headerHeight).toBe(72);
       expect(mobile.target.height).toBeGreaterThanOrEqual(44);
       expect(mobile.target.width).toBeGreaterThanOrEqual(44);
       expect(mobile.proseFontSize).toBe('16px');

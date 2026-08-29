@@ -110,15 +110,22 @@ describe('route-scoped critical CSS source accounting', () => {
 
   it('uses the warm canvas and a full-bleed outer paper shell', async () => {
     const shell = await readFile(join(candidateRoot, 'src/ui/styles/shell.css'), 'utf8');
+    const siteShellRule = shell.match(/\.site-shell \{([^}]*)\}/u)?.[1] ?? '';
 
     expect(shell).toContain('background: var(--ft-canvas);');
-    expect(shell).toContain('background: var(--ft-paper);');
     expect(shell).toContain('font-family: var(--ft-font-ui);');
-    expect(shell).toContain('.site-shell { width: 100%;');
-    expect(shell).toContain('min-height: 100vh;');
-    expect(shell).toContain('margin: 0;');
-    expect(shell).toContain('box-shadow: none;');
-    expect(shell).toContain('border-radius: 0;');
+    expect(shell).toMatch(/\.site-shell \{[^}]*\}/u);
+    for (const declaration of [
+      'width: 100%;',
+      'min-height: 100vh;',
+      'margin: 0;',
+      'overflow-x: clip;',
+      'background: var(--ft-paper);',
+      'box-shadow: none;',
+      'border-radius: 0;',
+    ]) {
+      expect(siteShellRule).toContain(declaration);
+    }
     expect(shell).not.toContain('data-surface-mode');
     expect(shell).toContain('outline: 2px solid var(--ft-on-terracotta);');
     expect(shell).toMatch(/\.site-brand \{[^}]*font-family: var\(--ft-font-wordmark\);[^}]*font-size: 20px;[^}]*font-weight: 400;[^}]*letter-spacing: -\.04em;/u);
