@@ -39,6 +39,14 @@ type HomeGeometry = {
   viewportWidth: number;
 };
 
+type LedgerRowGeometry = {
+  copy: ContentBox;
+  date: ContentBox;
+  description: ContentBox;
+  row: ContentBox;
+  title: ContentBox;
+};
+
 let browser: Browser;
 let styles: string;
 
@@ -92,6 +100,12 @@ const fixture = `
         <header class="editorial-page-header"><div class="editorial-page-header__heading"><h1>아티클</h1></div><div class="editorial-page-header__controls"><nav class="article-topic-filter"><a href="/articles/">전체</a></nav></div></header>
         <ol class="article-index__ledger"><li><a class="editorial-list-row editorial-list-row--text-led" href="/"><span class="editorial-list-row__copy"><h2>Primary row</h2></span><span class="editorial-list-row__date">2026.08.29</span></a></li></ol>
       </section>
+      <section class="article-index density-index">
+        <ol class="article-index__ledger">
+          <li><a class="editorial-list-row" href="/articles/pgvector-hybrid-search/"><span class="editorial-list-row__media" data-media-fit="cover"><picture></picture></span><span class="editorial-list-row__copy"><h2>pgvector로 벡터 검색 이해하기: 임베딩, SQL, HNSW, RRF까지</h2><span>PostgreSQL과 pgvector로 의미 기반 검색을 만드는 과정을 임베딩 기초, 거리 연산자, JSONB/JOIN, HNSW/IVFFLAT, FTS와 RRF 하이브리드 검색까지 한 흐름으로 정리한다.</span></span><span class="editorial-list-row__date"><time>2026.08.26</time><svg viewBox="0 0 24 24"><path d="M5 12h13" /></svg></span></a></li>
+          <li><a class="editorial-list-row editorial-list-row--review" href="/reviews/changing-their-minds/"><span class="editorial-list-row__media" data-media-fit="contain"><picture></picture></span><span class="editorial-list-row__copy"><h2>그들의 생각을 바꾸는 방법</h2><span>데이비드 맥레이니 — 생각을 바꾸는 대화는 논쟁의 승패가 아니라 상대가 자기 판단을 다시 살필 수 있는 질문에서 시작된다.</span></span><span class="editorial-list-row__date"><time>2026.05.27</time><svg viewBox="0 0 24 24"><path d="M5 12h13" /></svg></span></a></li>
+        </ol>
+      </section>
       <section class="secondary-index">
         <ol><li><a class="editorial-list-row editorial-list-row--text-led" href="/"><span class="editorial-list-row__copy"><h2>Secondary row</h2></span><span class="editorial-list-row__date">2026.08.29</span></a></li></ol>
       </section>
@@ -124,6 +138,31 @@ async function geometryAt(width: number, height = 900): Promise<Geometry> {
         secondaryRow: measuredBox('.secondary-index .editorial-list-row'),
         detailIntro: measuredBox('.article-detail .editorial-detail-frame__introduction'),
       };
+    });
+  } finally {
+    await page.close();
+  }
+}
+
+async function ledgerRowsAt(width: number): Promise<LedgerRowGeometry[]> {
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
+  try {
+    await page.setContent(`<!doctype html><html><head><style>${styles}</style></head><body>${fixture}</body></html>`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.evaluate(async () => { await document.fonts.ready; });
+    return await page.evaluate(() => {
+      const measuredBox = (element: Element) => {
+        const rect = element.getBoundingClientRect();
+        return { x: rect.x, width: rect.width, height: rect.height, bottom: rect.bottom };
+      };
+      return [...document.querySelectorAll('.density-index .editorial-list-row')].map((row) => ({
+        row: measuredBox(row),
+        copy: measuredBox(row.querySelector('.editorial-list-row__copy')!),
+        title: measuredBox(row.querySelector('h2')!),
+        description: measuredBox(row.querySelector('.editorial-list-row__copy > span')!),
+        date: measuredBox(row.querySelector('.editorial-list-row__date')!),
+      }));
     });
   } finally {
     await page.close();
@@ -259,6 +298,33 @@ describe('editorial density geometry', () => {
     expect(geometry.headerInner.x).toBeLessThanOrEqual(48);
     expect(geometry.headerInner.width).toBe(width - (geometry.headerInner.x * 2));
     expect(geometry.headerInner.height).toBe(80);
+  });
+
+  it.each([900, 1179])('keeps production-length primary row content inside its owner at %ipx', async (width) => {
+    const rows = await ledgerRowsAt(width);
+
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      for (const content of [row.copy, row.title, row.description, row.date]) {
+        expect(content.bottom - content.height).toBeGreaterThanOrEqual(row.row.bottom - row.row.height);
+        expect(content.bottom).toBeLessThanOrEqual(row.row.bottom);
+      }
+    }
+    expect(rows[0]!.row.bottom).toBeLessThanOrEqual(rows[1]!.row.bottom - rows[1]!.row.height);
+  });
+
+  it('keeps wide primary rows fixed at 196px without overflowing production-length content', async () => {
+    const rows = await ledgerRowsAt(1440);
+
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.row.height).toBe(196);
+      for (const content of [row.copy, row.title, row.description, row.date]) {
+        expect(content.bottom - content.height).toBeGreaterThanOrEqual(row.row.bottom - row.row.height);
+        expect(content.bottom).toBeLessThanOrEqual(row.row.bottom);
+      }
+    }
+    expect(rows[0]!.row.bottom).toBeLessThanOrEqual(rows[1]!.row.bottom - rows[1]!.row.height);
   });
 
   it('keeps the mobile reading measure, touch target, and document width intact', async () => {

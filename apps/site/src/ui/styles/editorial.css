@@ -327,6 +327,24 @@
   }
 }
 
+@media (min-width: 900px) and (max-width: 1179px) {
+  .article-index .editorial-list-row {
+    height: auto;
+    min-height: 196px;
+  }
+}
+
+@media (min-width: 1180px) {
+  .article-index .editorial-list-row__copy {
+    gap: 8px;
+    padding-block: 12px;
+  }
+
+  .article-index .editorial-list-row__date {
+    padding-block: 12px;
+  }
+}
+
 @media (min-width: 768px) and (max-width: 899px) {
   .editorial-list-row {
     grid-template-columns: minmax(240px, 37%) minmax(0, 1fr);
