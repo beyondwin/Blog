@@ -311,6 +311,45 @@ describe('repository media validation', () => {
     expect(result.warnings).toEqual([]);
   });
 
+  it.each([
+    ['decision title', { mutation: 'identity-title' }, /bibliographic identity title/i],
+    ['decision second author', { mutation: 'identity-author-second' }, /bibliographic identity authors/i],
+    ['decision author order', { mutation: 'identity-author-order' }, /bibliographic identity authors/i],
+    ['decision publisher', { mutation: 'identity-publisher' }, /bibliographic identity publisher/i],
+    ['decision ISBN', { mutation: 'identity-isbn13' }, /bibliographic identity isbn13/i],
+    ['decision edition', { mutation: 'identity-edition-label' }, /bibliographic identity editionLabel/i],
+    ['decision year', { mutation: 'identity-publication-year' }, /bibliographic identity publicationYear/i],
+    ['decision evidence checksum', { mutation: 'evidence-checksum' }, /rights evidence checksum/i],
+    ['registry title', { registryMutation: 'identity-title' }, /registry bibliographic identity title.*match/i],
+    ['registry second author', { registryMutation: 'identity-author-second' }, /registry bibliographic identity authors.*match/i],
+    ['registry author order', { registryMutation: 'identity-author-order' }, /registry bibliographic identity authors.*match/i],
+    ['registry evidence path', { registryMutation: 'evidence-path' }, /registry rights evidence evidencePath.*match/i],
+    ['registry evidence scope', { registryMutation: 'evidence-scope' }, /expected.*public website redistribution/i],
+  ])('rejects a mismatched %s', async (_name, options, error) => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, options);
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(error),
+    ]));
+  });
+
+  it.each([
+    ['missing', 'missing', /rights evidence.*missing/i],
+    ['symbolic link', 'symlink', /rights evidence.*symbolic link|symbolic link.*not allowed/i],
+    ['non-regular directory', 'directory', /rights evidence.*regular.*file|file does not exist/i],
+    ['tampered bytes', 'tampered', /rights evidence checksum/i],
+  ])('rejects %s rights-evidence bytes during strict validation', async (_name, evidenceFileMutation, error) => {
+    const root = await makeRepository();
+    await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });
+    await writeReviewCoverFixture(root, { evidenceFileMutation });
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(error),
+    ]));
+  });
+
   it('rejects an attacker-recomputed self-declared cover decision that is absent from the independent registry', async () => {
     const root = await makeRepository();
     await mkdir(join(root, 'src', 'content', 'reviews'), { recursive: true });

@@ -394,12 +394,23 @@ async function validateManifest(root, absolutePath, state) {
                     state.errors.add(`${label}: redistribution decision identity does not match the review cover`);
                   } else if (mismatched) {
                     state.errors.add(`${label}: asset ${mismatched} does not match the approved redistribution decision`);
-                  } else if (decision.edition.isbn13 !== item.isbn13) {
-                    state.errors.add(`${label}: edition isbn13 does not match the approved redistribution decision`);
-                  } else if (decision.edition.label !== item.edition) {
-                    state.errors.add(`${label}: edition label does not match the approved redistribution decision`);
+                  } else if (decision.bibliographicIdentity.isbn13 !== item.isbn13) {
+                    state.errors.add(`${label}: bibliographic identity isbn13 does not match the approved redistribution decision`);
+                  } else if (decision.bibliographicIdentity.editionLabel !== item.edition) {
+                    state.errors.add(`${label}: bibliographic identity editionLabel does not match the approved redistribution decision`);
                   } else {
                     try {
+                      const evidenceAbsolutePath = resolve(root, decision.rightsEvidence.evidencePath);
+                      const evidenceState = isInside(root, evidenceAbsolutePath)
+                        ? await inspectRepositoryFile(root, evidenceAbsolutePath, root)
+                        : 'outside';
+                      if (evidenceState !== 'ok') {
+                        throw new Error(`${label}: rights evidence is missing or not a regular non-symbolic-link file (${evidenceState})`);
+                      }
+                      const evidenceBytes = await readFile(evidenceAbsolutePath);
+                      if (sha256(evidenceBytes) !== decision.rightsEvidence.evidenceChecksum) {
+                        throw new Error(`${label}: rights evidence checksum changed`);
+                      }
                       assertRegisteredReviewCoverApproval(state.reviewCoverApprovalRegistry, {
                         collection: 'reviews',
                         recordId,
@@ -412,10 +423,10 @@ async function validateManifest(root, absolutePath, state) {
                           width: expectedAsset.width,
                           height: expectedAsset.height,
                           kind: expectedAsset.kind,
-                          isbn13: decision.edition.isbn13,
-                          edition: decision.edition.label,
                           sourceUrl: item.sourceUrl,
                           verifiedAt: item.verifiedAt,
+                          bibliographicIdentity: decision.bibliographicIdentity,
+                          rightsEvidence: decision.rightsEvidence,
                         },
                       });
                       redistributionApproved = true;
@@ -801,11 +812,34 @@ async function validateContentFile(root, absolutePath, targets, state, strict) {
       if (parsed.data.readEditionVerified !== true) {
         state.errors.add(`${path}: approved cover redistribution requires readEditionVerified true`);
       }
-      if (parsed.data.isbn13 !== cover.isbn13) {
-        state.errors.add(`${path}: review ISBN does not match approved cover edition identity`);
-      }
-      if (parsed.data.editionLabel !== cover.edition) {
-        state.errors.add(`${path}: review edition does not match approved cover edition identity`);
+      try {
+        const decisionBytes = await readFile(resolve(root, cover.redistributionApproval.decisionDocument));
+        const decision = reviewCoverRedistributionDecisionSchema.parse(parseYaml(decisionBytes.toString('utf8')));
+        const authors = Array.isArray(parsed.data.itemAuthor)
+          ? parsed.data.itemAuthor.map((author) => String(author).trim())
+          : typeof parsed.data.itemAuthor === 'string'
+            ? [parsed.data.itemAuthor.trim()]
+            : [];
+        const identity = decision.bibliographicIdentity;
+        for (const [field, actual, expected] of [
+          ['title', parsed.data.itemTitle, identity.title],
+          ['publisher', parsed.data.publisher, identity.publisher],
+          ['isbn13', parsed.data.isbn13, identity.isbn13],
+          ['editionLabel', parsed.data.editionLabel, identity.editionLabel],
+          ['publicationYear', parsed.data.publicationYear, identity.publicationYear],
+        ]) {
+          if (actual !== expected) {
+            state.errors.add(`${path}: review bibliographic identity ${field} does not match approved cover`);
+          }
+        }
+        if (
+          authors.length !== identity.authors.length
+          || authors.some((author, index) => author !== identity.authors[index])
+        ) {
+          state.errors.add(`${path}: review bibliographic identity authors do not match approved cover in source order`);
+        }
+      } catch (error) {
+        state.errors.add(`${path}: cannot compare approved cover bibliographic identity: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
   }

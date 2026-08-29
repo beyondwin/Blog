@@ -266,6 +266,26 @@ describe('active public release boundary', { timeout: 30_000 }, () => {
     await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/redistribution evidence.*source checksum/i);
   });
 
+  it('rejects an ordered-author identity forged only in the responsive cover asset', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-author-forge-'));
+    const sourceRoot = join(sandbox, 'source');
+    const releasesRoot = join(sandbox, 'releases');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot);
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot });
+    const manifestPath = join(built.releasePath, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as {
+      assets: Record<string, {
+        redistributionEvidence?: { bibliographicIdentity: { authors: string[] } };
+      }>;
+    };
+    manifest.assets['reviews/approved-review/cover']!
+      .redistributionEvidence!.bibliographicIdentity.authors.reverse();
+    await writeFile(manifestPath, `${JSON.stringify(manifest)}\n`);
+
+    await expect(readActiveRelease(releasesRoot)).rejects.toThrow(/responsive asset|bibliographic identity|public media/i);
+  });
+
   it('rejects an unmanifested file anywhere in the immutable release directory', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-extra-file-'));
     const sourceRoot = join(sandbox, 'source');

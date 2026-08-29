@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { PublicRecord } from '@beyondwin/contracts';
+import { parsePublicRecord, type PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { BookIndexPage } from '../../src/ui/reviews/BookIndexPage';
 
@@ -25,6 +25,14 @@ const approvedCover = {
   redistributionEvidence: {
     state: 'approved',
     decision: 'approve-public-redistribution',
+    bibliographicIdentity: {
+      title: 'black-swan',
+      authors: ['저자'],
+      publisher: '출판사',
+      isbn13: '9788990247674',
+      editionLabel: '출판사 2026 초판',
+      publicationYear: 2026,
+    },
   },
 } as ReleaseAsset;
 
@@ -38,7 +46,7 @@ const forgedCoverWithoutEvidence = {
 } as ReleaseAsset;
 
 function review(id: string, overrides: Record<string, unknown> = {}): ReviewRecord {
-  return {
+  const parsed = parsePublicRecord({
     collection: 'reviews',
     id,
     href: `/reviews/${id}/`,
@@ -52,10 +60,13 @@ function review(id: string, overrides: Record<string, unknown> = {}): ReviewReco
     memoryLinks: [],
     bodyHtml: '<p>본문</p>',
     itemType: 'book',
+    itemTitle: id,
     authors: ['저자'],
     readEditionVerified: true,
     ...overrides,
-  } as ReviewRecord;
+  });
+  if (parsed.collection !== 'reviews') throw new Error('expected review fixture');
+  return parsed;
 }
 
 describe('public review editorial ledger', () => {

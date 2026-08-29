@@ -69,6 +69,7 @@ const reviewSourceRecordSchema = z.object({
   editionLabel: z.string().trim().min(1).optional(),
   readEditionVerified: z.boolean().default(false),
   publisher: z.string().trim().min(1).optional(),
+  publicationYear: z.number().int().min(1000).max(9999).optional(),
   coverState: z.enum(['verified', 'hold']).optional(),
   coverMedia: z.string().trim().min(1).optional(),
   verdict: z.string().trim().min(1).optional(),

@@ -16,6 +16,15 @@ const publicAssetHref = z.string().regex(
   'media src must be a canonical public content asset path',
 );
 
+export const reviewCoverBibliographicIdentitySchema = z.object({
+  title: z.string().trim().min(1),
+  authors: z.array(z.string().trim().min(1)).min(1),
+  publisher: z.string().trim().min(1),
+  isbn13: z.string().regex(/^97[89]\d{10}$/),
+  editionLabel: z.string().trim().min(1),
+  publicationYear: z.number().int().min(1000).max(9999).optional(),
+}).strict();
+
 export const reviewCoverRedistributionEvidenceSchema = z.object({
   state: z.literal('approved'),
   decision: z.literal('approve-public-redistribution'),
@@ -29,8 +38,7 @@ export const reviewCoverRedistributionEvidenceSchema = z.object({
   sourceChecksum: checksumSchema,
   width: z.number().int().positive(),
   height: z.number().int().positive(),
-  isbn13: z.string().regex(/^97[89]\d{10}$/),
-  edition: z.string().trim().min(1),
+  bibliographicIdentity: reviewCoverBibliographicIdentitySchema,
 }).strict();
 
 export const publicMediaSchema = z.object({
@@ -47,6 +55,12 @@ export const publicMediaSchema = z.object({
   format: z.enum(['jpg', 'jpeg', 'png', 'webp', 'avif']),
   checksum: checksumSchema,
   redistributionEvidence: reviewCoverRedistributionEvidenceSchema.optional(),
+  rightsEvidence: z.never().optional(),
+  evidencePath: z.never().optional(),
+  evidenceUrl: z.never().optional(),
+  evidenceChecksum: z.never().optional(),
+  retrievedAt: z.never().optional(),
+  scope: z.never().optional(),
 }).superRefine((media, context) => {
   if (!media.redistributionEvidence) return;
   if (media.kind !== 'book-cover') {
@@ -67,4 +81,5 @@ export const publicMediaSchema = z.object({
 
 export type GeneratedMediaEvidenceReceipt = z.infer<typeof generatedMediaEvidenceReceiptSchema>;
 export type ReviewCoverRedistributionEvidence = z.infer<typeof reviewCoverRedistributionEvidenceSchema>;
+export type ReviewCoverBibliographicIdentity = z.infer<typeof reviewCoverBibliographicIdentitySchema>;
 export type PublicMedia = z.infer<typeof publicMediaSchema>;

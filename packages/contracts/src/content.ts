@@ -37,6 +37,12 @@ const commonPublicFields = {
   relationships: z.array(publicRelationshipSchema).max(3),
   memoryLinks: z.array(publicMemoryLinkSchema),
   bodyHtml: z.string(),
+  rightsEvidence: z.never().optional(),
+  evidencePath: z.never().optional(),
+  evidenceUrl: z.never().optional(),
+  evidenceChecksum: z.never().optional(),
+  retrievedAt: z.never().optional(),
+  scope: z.never().optional(),
 };
 
 const analysisPublicRecordSchema = z.object({
@@ -72,11 +78,13 @@ const reviewPublicRecordSchema = z.object({
   collection: z.literal('reviews'),
   ...commonPublicFields,
   itemType: z.enum(['book', 'article', 'tool', 'course', 'other']),
-  authors: z.array(z.string().trim().min(1)),
+  itemTitle: z.string().trim().min(1),
+  authors: z.array(z.string().trim().min(1)).min(1),
   isbn13: z.string().regex(/^97[89]\d{10}$/).optional(),
   editionLabel: z.string().trim().min(1).optional(),
   readEditionVerified: z.boolean(),
   publisher: z.string().trim().min(1).optional(),
+  publicationYear: z.number().int().min(1000).max(9999).optional(),
   coverState: z.enum(['verified', 'hold']).optional(),
   coverMedia: idSchema.optional(),
   verdict: z.string().trim().min(1).optional(),
@@ -147,11 +155,31 @@ export const publicRecordSchema = z.discriminatedUnion('collection', [
       if (!cover.redistributionEvidence) {
         context.addIssue({ code: 'custom', path: ['coverMedia'], message: 'public cover media requires approved redistribution evidence' });
       } else {
-        if (record.isbn13 !== cover.redistributionEvidence.isbn13) {
-          context.addIssue({ code: 'custom', path: ['isbn13'], message: 'review ISBN must match approved cover edition identity' });
+        const identity = cover.redistributionEvidence.bibliographicIdentity;
+        for (const [field, actual, expected] of [
+          ['title', record.itemTitle, identity.title],
+          ['publisher', record.publisher, identity.publisher],
+          ['isbn13', record.isbn13, identity.isbn13],
+          ['editionLabel', record.editionLabel, identity.editionLabel],
+          ['publicationYear', record.publicationYear, identity.publicationYear],
+        ] as const) {
+          if (actual !== expected) {
+            context.addIssue({
+              code: 'custom',
+              path: [field === 'title' ? 'itemTitle' : field],
+              message: `review bibliographic identity ${field} must match the approved cover`,
+            });
+          }
         }
-        if (record.editionLabel !== cover.redistributionEvidence.edition) {
-          context.addIssue({ code: 'custom', path: ['editionLabel'], message: 'review edition must match approved cover edition identity' });
+        if (
+          record.authors.length !== identity.authors.length
+          || record.authors.some((author, index) => author !== identity.authors[index])
+        ) {
+          context.addIssue({
+            code: 'custom',
+            path: ['authors'],
+            message: 'review bibliographic identity authors must match the approved cover in source order',
+          });
         }
       }
     }

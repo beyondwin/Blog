@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { stringify as stringifyYaml } from 'yaml';
@@ -16,8 +16,23 @@ export type ReviewCoverDecisionMutation =
   | 'asset-path'
   | 'asset-checksum'
   | 'dimensions'
-  | 'isbn13'
-  | 'edition';
+  | 'identity-title'
+  | 'identity-author-first'
+  | 'identity-author-second'
+  | 'identity-author-order'
+  | 'identity-publisher'
+  | 'identity-isbn13'
+  | 'identity-edition-label'
+  | 'identity-publication-year'
+  | 'evidence-type'
+  | 'evidence-url'
+  | 'evidence-path'
+  | 'evidence-path-escape'
+  | 'evidence-checksum'
+  | 'evidence-checksum-format'
+  | 'evidence-retrieved-at'
+  | 'evidence-scope'
+  | 'evidence-unknown-key';
 
 export type ReviewCoverRegistryMutation =
   | 'missing'
@@ -25,7 +40,27 @@ export type ReviewCoverRegistryMutation =
   | 'unregistered'
   | 'decision-checksum'
   | 'source-path'
-  | 'source-url';
+  | 'source-url'
+  | 'identity-title'
+  | 'identity-author-first'
+  | 'identity-author-second'
+  | 'identity-author-order'
+  | 'identity-publisher'
+  | 'identity-isbn13'
+  | 'identity-edition-label'
+  | 'identity-publication-year'
+  | 'evidence-type'
+  | 'evidence-url'
+  | 'evidence-path'
+  | 'evidence-checksum'
+  | 'evidence-retrieved-at'
+  | 'evidence-scope';
+
+export type ReviewCoverEvidenceFileMutation =
+  | 'missing'
+  | 'symlink'
+  | 'directory'
+  | 'tampered';
 
 export async function writeReviewCoverFixture(
   root: string,
@@ -39,16 +74,27 @@ export async function writeReviewCoverFixture(
     approvalRoles?: string[];
     legacySelfDeclaredEvidence?: boolean;
     registryMutation?: ReviewCoverRegistryMutation;
+    evidenceFileMutation?: ReviewCoverEvidenceFileMutation;
+    evidenceKind?: 'redistribution-license' | 'written-permission';
+    omitPublicationYear?: boolean;
   } = {},
-): Promise<{ decisionPath: string; mediaChecksum: string; registryPath: string }> {
+): Promise<{
+  decisionPath: string;
+  evidencePath: string;
+  evidenceChecksum: string;
+  mediaChecksum: string;
+  registryPath: string;
+}> {
   const recordId = 'approved-review';
   const mediaId = 'cover';
   const file = 'cover.png';
   const isbn13 = '9788990247674';
   const edition = 'Test Publisher 2026 edition';
+  const publicationYear = 2026;
   const mediaDirectory = `src/assets/content/reviews/${recordId}`;
   const sourceAssetPath = `${mediaDirectory}/${file}`;
   const decisionPath = `docs/notes/project/assets/review-cover-rights/${recordId}/redistribution-decision.yml`;
+  const canonicalEvidencePath = `docs/notes/project/assets/review-cover-rights/${recordId}/rights-evidence.txt`;
   const registryPath = 'packages/content/review-cover-redistribution-approvals.json';
   const coverBytes = await sharp({
     create: {
@@ -59,8 +105,50 @@ export async function writeReviewCoverFixture(
     },
   }).png().toBuffer();
   const mediaChecksum = `sha256:${createHash('sha256').update(coverBytes).digest('hex')}`;
+  const evidenceBytes = Buffer.from('Fixture redistribution grant for exact approved-review cover bytes.\n');
+  const evidenceChecksum = `sha256:${createHash('sha256').update(evidenceBytes).digest('hex')}`;
   const mutation = options.mutation;
   const approved = options.approved ?? true;
+  const bibliographicIdentity = {
+    title: mutation === 'identity-title' ? 'Different book title' : 'Approved review',
+    authors: mutation === 'identity-author-first'
+      ? ['Different Author', 'Second Author']
+      : mutation === 'identity-author-second'
+        ? ['Test Author', 'Different Second Author']
+        : mutation === 'identity-author-order'
+          ? ['Second Author', 'Test Author']
+          : ['Test Author', 'Second Author'],
+    publisher: mutation === 'identity-publisher' ? 'Different Publisher' : 'Test Publisher',
+    isbn13: mutation === 'identity-isbn13' ? '9788934985068' : isbn13,
+    editionLabel: mutation === 'identity-edition-label' ? 'Different edition' : edition,
+    ...(!options.omitPublicationYear ? {
+      publicationYear: mutation === 'identity-publication-year' ? 2025 : publicationYear,
+    } : {}),
+  };
+  const evidenceType = options.evidenceKind ?? 'redistribution-license';
+  const rightsEvidence = {
+    type: mutation === 'evidence-type' ? 'unsupported-grant' : evidenceType,
+    ...(evidenceType === 'redistribution-license' ? {
+      evidenceUrl: mutation === 'evidence-url'
+        ? 'file:///tmp/forged-rights-evidence'
+        : 'https://example.com/redistribution-license',
+    } : {}),
+    evidencePath: mutation === 'evidence-path'
+      ? `docs/notes/project/assets/review-cover-rights/${recordId}/rights-evidence.md`
+      : mutation === 'evidence-path-escape'
+        ? `docs/notes/project/assets/review-cover-rights/${recordId}/../rights-evidence.txt`
+        : canonicalEvidencePath,
+    evidenceChecksum: mutation === 'evidence-checksum'
+      ? `sha256:${'e'.repeat(64)}`
+      : mutation === 'evidence-checksum-format'
+        ? 'sha256:not-a-valid-checksum'
+        : evidenceChecksum,
+    retrievedAt: mutation === 'evidence-retrieved-at' ? '2026-02-30' : '2026-08-29',
+    scope: mutation === 'evidence-scope'
+      ? 'website display only'
+      : 'public website redistribution of the exact cover asset',
+    ...(mutation === 'evidence-unknown-key' ? { privateCorrespondence: 'must be rejected' } : {}),
+  };
   const decision = {
     version: 1,
     state: mutation === 'hold' || !approved ? 'hold' : 'approved',
@@ -74,10 +162,8 @@ export async function writeReviewCoverFixture(
       height: 480,
       kind: 'book-cover',
     },
-    edition: {
-      isbn13: mutation === 'isbn13' ? '9788934985068' : isbn13,
-      label: mutation === 'edition' ? 'Different edition' : edition,
-    },
+    bibliographicIdentity,
+    rightsEvidence,
     ...(options.legacySelfDeclaredEvidence ? {
       evidence: {
         decidedAt: '2026-08-29',
@@ -97,6 +183,22 @@ export async function writeReviewCoverFixture(
 
   await mkdir(join(root, ...mediaDirectory.split('/')), { recursive: true });
   await writeFile(join(root, ...sourceAssetPath.split('/')), coverBytes);
+  const evidenceAbsolutePath = join(root, ...canonicalEvidencePath.split('/'));
+  if (options.evidenceFileMutation !== 'missing') {
+    await mkdir(join(root, ...canonicalEvidencePath.split('/')).replace(/\/rights-evidence\.txt$/u, ''), { recursive: true });
+    if (options.evidenceFileMutation === 'symlink') {
+      const externalEvidence = join(root, 'external-rights-evidence.txt');
+      await writeFile(externalEvidence, evidenceBytes);
+      await symlink(externalEvidence, evidenceAbsolutePath);
+    } else if (options.evidenceFileMutation === 'directory') {
+      await mkdir(evidenceAbsolutePath, { recursive: true });
+    } else {
+      await writeFile(
+        evidenceAbsolutePath,
+        options.evidenceFileMutation === 'tampered' ? Buffer.from('tampered rights evidence\n') : evidenceBytes,
+      );
+    }
+  }
   if (!options.omitDecision) {
     await mkdir(join(root, ...decisionPath.split('/')).replace(/\/redistribution-decision\.yml$/u, ''), { recursive: true });
     await writeFile(join(root, ...decisionPath.split('/')), decisionBytes);
@@ -108,12 +210,30 @@ export async function writeReviewCoverFixture(
     width: decision.asset.width,
     height: decision.asset.height,
     kind: decision.asset.kind,
-    isbn13: decision.edition.isbn13,
-    edition: decision.edition.label,
     sourceUrl: options.registryMutation === 'source-url'
       ? 'https://example.com/forged-cover-source.png'
       : 'https://example.com/approved-cover.png',
     verifiedAt: '2026-08-29',
+    bibliographicIdentity: {
+      ...bibliographicIdentity,
+      ...(options.registryMutation === 'identity-title' ? { title: 'Registry title mismatch' } : {}),
+      ...(options.registryMutation === 'identity-author-first' ? { authors: ['Registry Author', 'Second Author'] } : {}),
+      ...(options.registryMutation === 'identity-author-second' ? { authors: ['Test Author', 'Registry Second Author'] } : {}),
+      ...(options.registryMutation === 'identity-author-order' ? { authors: [...bibliographicIdentity.authors].reverse() } : {}),
+      ...(options.registryMutation === 'identity-publisher' ? { publisher: 'Registry Publisher' } : {}),
+      ...(options.registryMutation === 'identity-isbn13' ? { isbn13: '9788934985068' } : {}),
+      ...(options.registryMutation === 'identity-edition-label' ? { editionLabel: 'Registry edition' } : {}),
+      ...(options.registryMutation === 'identity-publication-year' ? { publicationYear: 2024 } : {}),
+    },
+    rightsEvidence: {
+      ...rightsEvidence,
+      ...(options.registryMutation === 'evidence-type' ? { type: 'written-permission', evidenceUrl: undefined } : {}),
+      ...(options.registryMutation === 'evidence-url' ? { evidenceUrl: 'https://example.com/other-license' } : {}),
+      ...(options.registryMutation === 'evidence-path' ? { evidencePath: canonicalEvidencePath.replace('.txt', '.pdf') } : {}),
+      ...(options.registryMutation === 'evidence-checksum' ? { evidenceChecksum: `sha256:${'f'.repeat(64)}` } : {}),
+      ...(options.registryMutation === 'evidence-retrieved-at' ? { retrievedAt: '2026-08-28' } : {}),
+      ...(options.registryMutation === 'evidence-scope' ? { scope: 'website display only' } : {}),
+    },
   };
   const registry = {
     version: 1,
@@ -169,10 +289,11 @@ export async function writeReviewCoverFixture(
     'draft: false',
     'itemType: book',
     'itemTitle: Approved review',
-    'itemAuthor: Test Author',
+    'itemAuthor: [Test Author, Second Author]',
     `isbn13: "${isbn13}"`,
     'publisher: Test Publisher',
     `editionLabel: ${edition}`,
+    ...(!options.omitPublicationYear ? [`publicationYear: ${publicationYear}`] : []),
     'readEditionVerified: true',
     'verdict: The verdict remains visible.',
     'coverState: verified',
@@ -183,7 +304,13 @@ export async function writeReviewCoverFixture(
     '',
   ].join('\n'));
 
-  return { decisionPath, mediaChecksum, registryPath };
+  return {
+    decisionPath,
+    evidencePath: canonicalEvidencePath,
+    evidenceChecksum,
+    mediaChecksum,
+    registryPath,
+  };
 }
 
 export async function writeReleaseFixture(

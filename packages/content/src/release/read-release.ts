@@ -254,11 +254,11 @@ function exactPublicRecord(input: unknown, key: string): PublicRecord {
 
 // Match precise locators and serialized payload shapes, not ordinary technical
 // prose such as "embedding systems".
-const forbiddenPrivateKey = /^(?:embedding|embeddings|jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)$/i;
-const serializedPrivateField = /["'](?:jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)["']\s*:/i;
+const forbiddenPrivateKey = /^(?:embedding|embeddings|jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes|rightsEvidence|evidencePath|evidenceUrl|evidenceChecksum|retrievedAt|scope)$/i;
+const serializedPrivateField = /["'](?:jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes|rightsEvidence|evidencePath|evidenceUrl|evidenceChecksum|retrievedAt|scope)["']\s*:/i;
 const serializedEmbeddingPayload = /["']embeddings?["']\s*:\s*\[\s*[+\-.\d]/i;
-const assignedPrivateField = /\b(?:jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes)\s*=/i;
-const privateLocator = /\/Users\/|[A-Za-z]:\\Users\\|memory[\\/](?:thoughts[\\/]|edges\.jsonl|sources\.jsonl)/i;
+const assignedPrivateField = /\b(?:jobPrompt|rawPrompt|jobPayload|privatePath|sourcePath|rawSource|sourceBytes|rightsEvidence|evidencePath|evidenceUrl|evidenceChecksum|retrievedAt|scope)\s*=/i;
+const privateLocator = /\/Users\/|[A-Za-z]:\\Users\\|memory[\\/](?:thoughts[\\/]|edges\.jsonl|sources\.jsonl)|docs\/notes\/project\/assets\/review-cover-rights\/[a-z0-9-]+\/rights-evidence\.(?:html|pdf|txt|png|jpg)/i;
 
 function normalizeBoundaryString(value: string): string {
   let normalized = value;

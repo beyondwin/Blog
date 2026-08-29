@@ -203,11 +203,20 @@ async function loadReviewCoverRedistributionEvidence(
       throw new Error(`${label}: asset ${field} does not match the approved redistribution decision`);
     }
   }
-  if (decision.edition.isbn13 !== item.isbn13) {
-    throw new Error(`${label}: edition isbn13 does not match the approved redistribution decision`);
+  if (decision.bibliographicIdentity.isbn13 !== item.isbn13) {
+    throw new Error(`${label}: bibliographic identity isbn13 does not match the approved redistribution decision`);
   }
-  if (decision.edition.label !== item.edition) {
-    throw new Error(`${label}: edition label does not match the approved redistribution decision`);
+  if (decision.bibliographicIdentity.editionLabel !== item.edition) {
+    throw new Error(`${label}: bibliographic identity editionLabel does not match the approved redistribution decision`);
+  }
+  let evidenceBytes: Buffer;
+  try {
+    evidenceBytes = await readAllowlistedRegularFile(root, decision.rightsEvidence.evidencePath);
+  } catch (error) {
+    throw new Error(`${label}: rights evidence is missing or not a regular non-symbolic-link file: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (checksum(evidenceBytes) !== decision.rightsEvidence.evidenceChecksum) {
+    throw new Error(`${label}: rights evidence checksum changed`);
   }
   assertRegisteredReviewCoverApproval(registry, {
     collection: 'reviews',
@@ -221,10 +230,10 @@ async function loadReviewCoverRedistributionEvidence(
       width: expectedAsset.width,
       height: expectedAsset.height,
       kind: expectedAsset.kind,
-      isbn13: decision.edition.isbn13,
-      edition: decision.edition.label,
       sourceUrl: item.sourceUrl,
       verifiedAt: item.verifiedAt,
+      bibliographicIdentity: decision.bibliographicIdentity,
+      rightsEvidence: decision.rightsEvidence,
     },
   });
 
@@ -237,8 +246,7 @@ async function loadReviewCoverRedistributionEvidence(
     sourceChecksum: publicMedia.checksum,
     width: publicMedia.width,
     height: publicMedia.height,
-    isbn13: decision.edition.isbn13,
-    edition: decision.edition.label,
+    bibliographicIdentity: decision.bibliographicIdentity,
   });
 }
 

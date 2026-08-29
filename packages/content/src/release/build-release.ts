@@ -351,11 +351,26 @@ function publicArtifactMedia(
       if (!record.readEditionVerified) {
         throw new Error(`${record.id}: approved cover redistribution requires readEditionVerified true`);
       }
-      if (record.isbn13 !== cover.redistributionEvidence.isbn13) {
-        throw new Error(`${record.id}: review ISBN does not match approved cover edition identity`);
+      const identity = cover.redistributionEvidence.bibliographicIdentity;
+      const authors = record.itemAuthor
+        ? (Array.isArray(record.itemAuthor) ? record.itemAuthor : [record.itemAuthor])
+        : [];
+      for (const [field, actual, expected] of [
+        ['title', record.itemTitle, identity.title],
+        ['publisher', record.publisher, identity.publisher],
+        ['isbn13', record.isbn13, identity.isbn13],
+        ['editionLabel', record.editionLabel, identity.editionLabel],
+        ['publicationYear', record.publicationYear, identity.publicationYear],
+      ] as const) {
+        if (actual !== expected) {
+          throw new Error(`${record.id}: review bibliographic identity ${field} does not match approved cover`);
+        }
       }
-      if (record.editionLabel !== cover.redistributionEvidence.edition) {
-        throw new Error(`${record.id}: review edition does not match approved cover edition identity`);
+      if (
+        authors.length !== identity.authors.length
+        || authors.some((author, index) => author !== identity.authors[index])
+      ) {
+        throw new Error(`${record.id}: review bibliographic identity authors do not match approved cover in source order`);
       }
     }
   }
@@ -413,6 +428,7 @@ function publicRecordInput(
   if (record.collection === 'reviews') return {
     ...common,
     itemType: record.itemType,
+    itemTitle: record.itemTitle,
     authors: record.itemAuthor
       ? (Array.isArray(record.itemAuthor) ? record.itemAuthor : [record.itemAuthor])
       : [],
@@ -420,6 +436,7 @@ function publicRecordInput(
     ...optional('editionLabel', record.editionLabel),
     readEditionVerified: record.readEditionVerified,
     ...optional('publisher', record.publisher),
+    ...optional('publicationYear', record.publicationYear),
     ...optional('coverState', record.coverState),
     ...optional('coverMedia', record.coverMedia),
     ...optional('verdict', record.verdict),

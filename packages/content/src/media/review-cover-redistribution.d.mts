@@ -3,10 +3,36 @@ export interface ReviewCoverRedistributionReceipt {
   decisionChecksum: string;
 }
 
+export interface ReviewCoverBibliographicIdentity {
+  title: string;
+  authors: string[];
+  publisher: string;
+  isbn13: string;
+  editionLabel: string;
+  publicationYear?: number;
+}
+
+export type ReviewCoverRightsEvidence =
+  | {
+    type: 'redistribution-license';
+    evidenceUrl: string;
+    evidencePath: string;
+    evidenceChecksum: string;
+    retrievedAt: string;
+    scope: 'public website redistribution of the exact cover asset';
+  }
+  | {
+    type: 'written-permission';
+    evidencePath: string;
+    evidenceChecksum: string;
+    retrievedAt: string;
+    scope: 'public website redistribution of the exact cover asset';
+  };
+
 export interface ReviewCoverRedistributionDecision {
   version: 1;
-  state: 'approved' | 'hold';
-  decision: 'approve-public-redistribution' | 'hold';
+  state: 'approved';
+  decision: 'approve-public-redistribution';
   recordId: string;
   mediaId: string;
   asset: {
@@ -16,7 +42,8 @@ export interface ReviewCoverRedistributionDecision {
     height: number;
     kind: 'book-cover';
   };
-  edition: { isbn13: string; label: string };
+  bibliographicIdentity: ReviewCoverBibliographicIdentity;
+  rightsEvidence: ReviewCoverRightsEvidence;
   approval: {
     approvedBy: string[];
     recordedAt: string;
@@ -35,10 +62,10 @@ export interface ReviewCoverApprovalRegistryEntry {
     width: number;
     height: number;
     kind: 'book-cover';
-    isbn13: string;
-    edition: string;
     sourceUrl: string;
     verifiedAt: string;
+    bibliographicIdentity: ReviewCoverBibliographicIdentity;
+    rightsEvidence: ReviewCoverRightsEvidence;
   };
 }
 
@@ -54,6 +81,8 @@ interface Schema<T> {
 }
 
 export const reviewCoverRedistributionReceiptSchema: Schema<ReviewCoverRedistributionReceipt>;
+export const bibliographicIdentitySchema: Schema<ReviewCoverBibliographicIdentity>;
+export const reviewCoverRightsEvidenceSchema: Schema<ReviewCoverRightsEvidence>;
 export const reviewCoverRedistributionDecisionSchema: Schema<ReviewCoverRedistributionDecision>;
 export const REVIEW_COVER_APPROVAL_REGISTRY_PATH: 'packages/content/review-cover-redistribution-approvals.json';
 export function parseReviewCoverApprovalRegistry(source: string, path?: string): ReviewCoverApprovalRegistry;
@@ -62,3 +91,4 @@ export function assertRegisteredReviewCoverApproval(
   claim: ReviewCoverApprovalRegistryEntry,
 ): ReviewCoverApprovalRegistryEntry;
 export function canonicalReviewCoverDecisionPath(recordId: string): string;
+export function canonicalReviewCoverRightsEvidencePath(recordId: string, extension?: string): string;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PublicRecord } from '@beyondwin/contracts';
+import { parsePublicRecord, type PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import {
   buildBookshelfPresentation,
@@ -17,6 +17,14 @@ const approvedCover = {
   redistributionEvidence: {
     state: 'approved',
     decision: 'approve-public-redistribution',
+    bibliographicIdentity: {
+      title: 'a',
+      authors: ['저자'],
+      publisher: '출판사',
+      isbn13: '9788990247674',
+      editionLabel: '출판사 2026 초판',
+      publicationYear: 2026,
+    },
   },
 } as ReleaseAsset;
 
@@ -27,26 +35,30 @@ const forgedCoverWithoutEvidence = {
 } as ReleaseAsset;
 
 function review(id: string, overrides: Record<string, unknown> = {}): ReviewRecord {
-  return {
+  const parsed = parsePublicRecord({
     collection: 'reviews',
     id,
     href: `/reviews/${id}/`,
     title: id,
     description: `${id} 설명입니다.`,
     createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-12-31T00:00:00.000Z',
     tags: [],
     media: [],
     relationships: [],
     memoryLinks: [],
     bodyHtml: '<p>본문</p>',
     itemType: 'book',
+    itemTitle: id,
     authors: ['저자'],
     readEditionVerified: true,
     publisher: '출판사',
     editionLabel: '출판사 2026 초판',
+    publicationYear: 2026,
     ...overrides,
-  } as ReviewRecord;
+  });
+  if (parsed.collection !== 'reviews') throw new Error('expected review fixture');
+  return parsed;
 }
 
 describe('review editorial presentation', () => {

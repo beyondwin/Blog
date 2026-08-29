@@ -1,4 +1,4 @@
-import type { PublicRecord } from '@beyondwin/contracts';
+import { parsePublicRecord, type PublicRecord } from '@beyondwin/contracts';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -24,7 +24,7 @@ function article(id: string, overrides: Record<string, unknown> = {}): PublicRec
     href: `/articles/${id}/`,
     title: `아티클 ${id}`,
     ...overrides,
-  } as unknown as PublicRecord;
+  } satisfies PublicRecord;
 }
 
 function review(id: string, overrides: Record<string, unknown> = {}): PublicRecord {
@@ -35,10 +35,11 @@ function review(id: string, overrides: Record<string, unknown> = {}): PublicReco
     href: `/reviews/${id}/`,
     title: `서평 ${id}`,
     itemType: 'book',
+    itemTitle: `서평 ${id}`,
     authors: ['저자'],
     readEditionVerified: true,
     ...overrides,
-  } as unknown as PublicRecord;
+  } satisfies PublicRecord;
 }
 
 function memory(id: string, overrides: Record<string, unknown> = {}): PublicRecord {
@@ -57,7 +58,7 @@ function memory(id: string, overrides: Record<string, unknown> = {}): PublicReco
     sources: [],
     companions: [],
     ...overrides,
-  } as unknown as PublicRecord;
+  } satisfies PublicRecord;
 }
 
 describe('selectContinuations', () => {
@@ -65,11 +66,13 @@ describe('selectContinuations', () => {
     const current = article('current', {
       relationships: [{ target: 'thoughts/reflection', relation: 'extends', reason: '생각을 이어 간다.' }],
     });
-    const thought = {
-      ...article('reflection'),
+    const thought = parsePublicRecord({
+      ...base,
       collection: 'thoughts',
+      id: 'reflection',
       href: '/thoughts/reflection/',
-    } as unknown as PublicRecord;
+      title: '아티클 reflection',
+    });
 
     expect(selectContinuations(current, {
       'articles/current': current,

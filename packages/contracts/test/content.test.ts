@@ -74,6 +74,27 @@ function memoryWithSourceHref(href: string) {
   };
 }
 
+function publicReviewEvidence() {
+  return {
+    state: 'approved' as const,
+    decision: 'approve-public-redistribution' as const,
+    decisionDocument: 'docs/notes/project/assets/review-cover-rights/review-render/redistribution-decision.yml',
+    decisionChecksum: `sha256:${'1'.repeat(64)}`,
+    sourceAsset: '/assets/content/reviews/review-render/cover.png',
+    sourceChecksum: `sha256:${'2'.repeat(64)}`,
+    width: 320,
+    height: 480,
+    bibliographicIdentity: {
+      title: 'The Black Swan',
+      authors: ['Nassim Nicholas Taleb'],
+      publisher: 'Dongnyeok Science',
+      isbn13: '9788990247674',
+      editionLabel: '2018 edition',
+      publicationYear: 2018,
+    },
+  };
+}
+
 describe('public record allowlists', () => {
   it('keeps the common render contract and strips nested filesystem locators', () => {
     const parsed = parsePublicRecord({
@@ -232,11 +253,13 @@ describe('public record allowlists', () => {
       ...commonFields('reviews', 'review-render'),
       title: 'Black Swan',
       itemType: 'book',
+      itemTitle: 'The Black Swan',
       authors: ['Nassim Nicholas Taleb'],
       isbn13: '9788990247674',
       editionLabel: '2018 edition',
       readEditionVerified: true,
       publisher: 'Dongnyeok Science',
+      publicationYear: 2018,
       coverState: 'verified',
       coverMedia: 'cover',
       verdict: 'A public verdict',
@@ -248,11 +271,13 @@ describe('public record allowlists', () => {
 
     expect(parsed).toMatchObject({
       itemType: 'book',
+      itemTitle: 'The Black Swan',
       authors: ['Nassim Nicholas Taleb'],
       isbn13: '9788990247674',
       editionLabel: '2018 edition',
       readEditionVerified: true,
       publisher: 'Dongnyeok Science',
+      publicationYear: 2018,
       coverState: 'verified',
       coverMedia: 'cover',
       verdict: 'A public verdict',
@@ -264,18 +289,7 @@ describe('public record allowlists', () => {
   });
 
   it('preserves only the canonical checksum-bound public cover redistribution evidence', () => {
-    const evidence = {
-      state: 'approved',
-      decision: 'approve-public-redistribution',
-      decisionDocument: 'docs/notes/project/assets/review-cover-rights/review-render/redistribution-decision.yml',
-      decisionChecksum: `sha256:${'1'.repeat(64)}`,
-      sourceAsset: '/assets/content/reviews/review-render/cover.png',
-      sourceChecksum: `sha256:${'2'.repeat(64)}`,
-      width: 320,
-      height: 480,
-      isbn13: '9788990247674',
-      edition: '2018 edition',
-    };
+    const evidence = publicReviewEvidence();
     const parsed = parsePublicRecord({
       ...commonFields('reviews', 'review-render'),
       media: [{
@@ -289,18 +303,89 @@ describe('public record allowlists', () => {
         redistributionEvidence: evidence,
       }],
       itemType: 'book',
+      itemTitle: evidence.bibliographicIdentity.title,
       authors: ['Nassim Nicholas Taleb'],
-      isbn13: evidence.isbn13,
-      editionLabel: evidence.edition,
+      isbn13: evidence.bibliographicIdentity.isbn13,
+      editionLabel: evidence.bibliographicIdentity.editionLabel,
       readEditionVerified: true,
       publisher: 'Dongnyeok Science',
+      publicationYear: 2018,
       coverState: 'verified',
       coverMedia: 'cover',
       verdict: 'A public verdict',
     });
 
     expect(parsed.media[0]).toMatchObject({ redistributionEvidence: evidence });
+    expect(JSON.stringify(parsed)).not.toMatch(/rightsEvidence|evidencePath|evidenceUrl|evidenceChecksum|retrievedAt|scope/u);
   });
+
+  it.each([
+    ['rightsEvidence', { type: 'written-permission' }],
+    ['evidencePath', 'docs/notes/project/assets/review-cover-rights/review-render/rights-evidence.txt'],
+    ['evidenceUrl', 'https://example.com/private-license'],
+    ['evidenceChecksum', `sha256:${'3'.repeat(64)}`],
+    ['retrievedAt', '2026-08-29'],
+    ['scope', 'public website redistribution of the exact cover asset'],
+  ])('rejects private review rights field %s at the public record top level', (field, value) => {
+    expect(() => parsePublicRecord({
+      ...commonFields('reviews', 'review-private-field'),
+      itemType: 'book',
+      itemTitle: 'Private field fixture',
+      authors: ['Author'],
+      readEditionVerified: false,
+      [field]: value,
+    })).toThrow();
+  });
+
+  it.each(['rightsEvidence', 'evidencePath', 'evidenceUrl', 'evidenceChecksum', 'retrievedAt', 'scope'])(
+    'rejects private review rights field %s nested in public media',
+    (field) => {
+      expect(() => parsePublicRecord({
+        ...commonFields('reviews', 'review-private-media-field'),
+        media: [{
+          ...publicMediaFixture,
+          id: 'cover',
+          kind: 'book-cover',
+          src: '/assets/content/reviews/review-private-media-field/cover.png',
+          [field]: field === 'rightsEvidence' ? { type: 'written-permission' } : 'private',
+        }],
+        itemType: 'book',
+        itemTitle: 'Private nested field fixture',
+        authors: ['Author'],
+        readEditionVerified: false,
+      })).toThrow();
+    },
+  );
+
+  it.each(['rightsEvidence', 'evidencePath', 'evidenceUrl', 'evidenceChecksum', 'retrievedAt', 'scope'])(
+    'rejects private review rights field %s nested in public redistribution evidence',
+    (field) => {
+      const evidence = { ...publicReviewEvidence(), [field]: field === 'rightsEvidence' ? { type: 'written-permission' } : 'private' };
+      expect(() => parsePublicRecord({
+        ...commonFields('reviews', 'review-private-evidence-field'),
+        media: [{
+          ...publicMediaFixture,
+          id: 'cover',
+          kind: 'book-cover',
+          src: evidence.sourceAsset,
+          checksum: evidence.sourceChecksum,
+          width: evidence.width,
+          height: evidence.height,
+          redistributionEvidence: evidence,
+        }],
+        itemType: 'book',
+        itemTitle: evidence.bibliographicIdentity.title,
+        authors: evidence.bibliographicIdentity.authors,
+        isbn13: evidence.bibliographicIdentity.isbn13,
+        editionLabel: evidence.bibliographicIdentity.editionLabel,
+        readEditionVerified: true,
+        publisher: evidence.bibliographicIdentity.publisher,
+        publicationYear: evidence.bibliographicIdentity.publicationYear,
+        coverState: 'verified',
+        coverMedia: 'cover',
+      })).toThrow();
+    },
+  );
 
   it('keeps idea maturity but omits prompts because the current route does not render them', () => {
     const parsed = parsePublicRecord({

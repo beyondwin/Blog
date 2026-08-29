@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { PublicRecord } from '@beyondwin/contracts';
+import { parsePublicRecord, type PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { HomePresentation } from '../../app/routes/home';
 
@@ -20,13 +20,15 @@ function article(id: string, overrides: Record<string, unknown> = {}): ArticleRe
 }
 
 function review(): ReviewRecord {
-  return {
+  const parsed = parsePublicRecord({
     collection: 'reviews', id: 'black-swan', href: '/reviews/black-swan/', title: '블랙스완',
     description: '불확실성을 피하지 않고 다루는 법을 남긴 책.', createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-05-27T00:00:00.000Z', tags: [], media: [], relationships: [],
-    memoryLinks: [], bodyHtml: '<p>본문</p>', itemType: 'book', authors: ['나심 니콜라스 탈레브'],
+    memoryLinks: [], bodyHtml: '<p>본문</p>', itemType: 'book', itemTitle: '블랙 스완', authors: ['나심 니콜라스 탈레브'],
     readEditionVerified: true, verdict: '불확실성을 몸으로 읽는다.',
-  } as ReviewRecord;
+  });
+  if (parsed.collection !== 'reviews') throw new Error('expected review fixture');
+  return parsed;
 }
 
 function thought(): ThoughtRecord {

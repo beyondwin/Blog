@@ -245,6 +245,7 @@ describe('source record parsing', () => {
       isbn13: '9788990247674',
       editionLabel: '2018 edition',
       publisher: 'Publisher',
+      publicationYear: 2018,
       coverState: 'verified',
       coverMedia: 'cover',
       verdict: 'A public verdict',
@@ -264,6 +265,7 @@ describe('source record parsing', () => {
       editionLabel: '2018 edition',
       readEditionVerified: false,
       publisher: 'Publisher',
+      publicationYear: 2018,
       coverState: 'verified',
       coverMedia: 'cover',
       verdict: 'A public verdict',
@@ -272,6 +274,42 @@ describe('source record parsing', () => {
       sourceUrl: 'https://example.com/book',
     });
     expect('embedding' in parsed).toBe(false);
+  });
+
+  it('keeps publicationYear optional and never infers it from editionLabel', () => {
+    const parsed = parseSourceRecord({
+      collection: 'reviews',
+      id: 'review-without-publication-year',
+      title: 'Review without structured year',
+      description: 'The edition label contains a year but the structured field is absent.',
+      createdAt: '2026-08-21',
+      updatedAt: '2026-08-23',
+      itemType: 'book',
+      itemTitle: 'Public book title',
+      itemAuthor: ['Author One', 'Author Two'],
+      isbn13: '9788990247674',
+      editionLabel: 'Publisher 2018 edition',
+      publisher: 'Publisher',
+    });
+
+    expect(parsed.collection).toBe('reviews');
+    if (parsed.collection !== 'reviews') throw new Error('expected review fixture');
+    expect(parsed.editionLabel).toBe('Publisher 2018 edition');
+    expect(parsed).not.toHaveProperty('publicationYear');
+  });
+
+  it.each([999, 10000, 2026.5])('rejects invalid structured publicationYear %s', (publicationYear) => {
+    expect(() => parseSourceRecord({
+      collection: 'reviews',
+      id: 'review-invalid-publication-year',
+      title: 'Review with invalid structured year',
+      description: 'Invalid year fixture.',
+      createdAt: '2026-08-21',
+      updatedAt: '2026-08-23',
+      itemType: 'book',
+      itemTitle: 'Public book title',
+      publicationYear,
+    })).toThrow();
   });
 
   it('preserves travel fields while defaulting the privacy review', () => {

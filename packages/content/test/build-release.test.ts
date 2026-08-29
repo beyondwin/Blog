@@ -162,7 +162,7 @@ describe('immutable public release building', () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-approved-'));
     const sourceRoot = join(sandbox, 'source');
     await writeReleaseFixture(sourceRoot);
-    const { decisionPath, mediaChecksum } = await writeReviewCoverFixture(sourceRoot);
+    const { decisionPath, evidencePath, mediaChecksum } = await writeReviewCoverFixture(sourceRoot);
 
     const built = await buildPublicRelease({
       root: sourceRoot,
@@ -173,6 +173,12 @@ describe('immutable public release building', () => {
 
     expect(record).toMatchObject({
       collection: 'reviews',
+      itemTitle: 'Approved review',
+      authors: ['Test Author', 'Second Author'],
+      publisher: 'Test Publisher',
+      isbn13: '9788990247674',
+      editionLabel: 'Test Publisher 2026 edition',
+      publicationYear: 2026,
       coverMedia: 'cover',
       readEditionVerified: true,
       media: [expect.objectContaining({ id: 'cover', kind: 'book-cover', checksum: mediaChecksum })],
@@ -192,10 +198,19 @@ describe('immutable public release building', () => {
         sourceChecksum: mediaChecksum,
         width: 320,
         height: 480,
-        isbn13: '9788990247674',
-        edition: 'Test Publisher 2026 edition',
+        bibliographicIdentity: {
+          title: 'Approved review',
+          authors: ['Test Author', 'Second Author'],
+          publisher: 'Test Publisher',
+          isbn13: '9788990247674',
+          editionLabel: 'Test Publisher 2026 edition',
+          publicationYear: 2026,
+        },
       },
     });
+    expect(JSON.stringify(built.manifest)).not.toMatch(
+      /rightsEvidence|evidencePath|evidenceUrl|evidenceChecksum|retrievedAt|public website redistribution/u,
+    );
     await expect(readFile(join(
       built.releasePath,
       'assets',
@@ -204,17 +219,33 @@ describe('immutable public release building', () => {
       'approved-review',
       'cover.png',
     ))).resolves.toBeInstanceOf(Buffer);
+    await expect(readFile(join(built.releasePath, ...evidencePath.split('/')))).rejects.toThrow();
   });
 
   it.each([
     ['missing decision document', { omitDecision: true }, /redistribution decision.*missing/i],
     ['forged receipt checksum', { receiptChecksum: `sha256:${'c'.repeat(64)}` }, /decision.*checksum.*changed/i],
-    ['held decision', { mutation: 'hold' as ReviewCoverDecisionMutation }, /redistribution decision.*approved/i],
+    ['held decision', { mutation: 'hold' as ReviewCoverDecisionMutation }, /expected.*approved|approve-public-redistribution/i],
     ['wrong approved asset path', { mutation: 'asset-path' as ReviewCoverDecisionMutation }, /asset path.*approved/i],
     ['wrong approved asset checksum', { mutation: 'asset-checksum' as ReviewCoverDecisionMutation }, /asset checksum.*approved/i],
     ['wrong approved dimensions', { mutation: 'dimensions' as ReviewCoverDecisionMutation }, /asset width.*approved/i],
-    ['wrong approved ISBN', { mutation: 'isbn13' as ReviewCoverDecisionMutation }, /edition isbn13.*approved/i],
-    ['wrong approved edition label', { mutation: 'edition' as ReviewCoverDecisionMutation }, /edition label.*approved/i],
+    ['wrong approved item title', { mutation: 'identity-title' as ReviewCoverDecisionMutation }, /bibliographic identity title/i],
+    ['wrong approved first author', { mutation: 'identity-author-first' as ReviewCoverDecisionMutation }, /bibliographic identity authors/i],
+    ['wrong approved second author', { mutation: 'identity-author-second' as ReviewCoverDecisionMutation }, /bibliographic identity authors/i],
+    ['wrong approved author order', { mutation: 'identity-author-order' as ReviewCoverDecisionMutation }, /bibliographic identity authors/i],
+    ['wrong approved publisher', { mutation: 'identity-publisher' as ReviewCoverDecisionMutation }, /bibliographic identity publisher/i],
+    ['wrong approved ISBN', { mutation: 'identity-isbn13' as ReviewCoverDecisionMutation }, /bibliographic identity isbn13/i],
+    ['wrong approved edition label', { mutation: 'identity-edition-label' as ReviewCoverDecisionMutation }, /bibliographic identity editionLabel/i],
+    ['wrong approved publication year', { mutation: 'identity-publication-year' as ReviewCoverDecisionMutation }, /bibliographic identity publicationYear/i],
+    ['invalid evidence type', { mutation: 'evidence-type' as ReviewCoverDecisionMutation }, /invalid discriminator|redistribution-license|written-permission/i],
+    ['invalid evidence URL', { mutation: 'evidence-url' as ReviewCoverDecisionMutation }, /rights evidence|external/i],
+    ['invalid evidence path', { mutation: 'evidence-path' as ReviewCoverDecisionMutation }, /rights evidence|evidence path/i],
+    ['escaping evidence path', { mutation: 'evidence-path-escape' as ReviewCoverDecisionMutation }, /rights evidence|canonical|path/i],
+    ['wrong evidence checksum', { mutation: 'evidence-checksum' as ReviewCoverDecisionMutation }, /rights evidence checksum/i],
+    ['invalid evidence checksum format', { mutation: 'evidence-checksum-format' as ReviewCoverDecisionMutation }, /rights evidence|invalid string/i],
+    ['invalid retrieval date', { mutation: 'evidence-retrieved-at' as ReviewCoverDecisionMutation }, /rights evidence|retrievedAt|date/i],
+    ['wrong evidence scope', { mutation: 'evidence-scope' as ReviewCoverDecisionMutation }, /expected.*public website redistribution/i],
+    ['unknown private evidence key', { mutation: 'evidence-unknown-key' as ReviewCoverDecisionMutation }, /unrecognized key|rights evidence/i],
   ])('rejects a review cover approval with %s', async (_name, mutation, error) => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-decision-tamper-'));
     const sourceRoot = join(sandbox, 'source');
@@ -225,6 +256,47 @@ describe('immutable public release building', () => {
       root: sourceRoot,
       releasesRoot: join(sandbox, 'releases'),
     })).rejects.toThrow(error);
+  });
+
+  it.each([
+    ['missing', 'missing', /rights evidence.*missing|ENOENT/i],
+    ['symbolic link', 'symlink', /rights evidence.*symbolic link|must not be a symbolic link/i],
+    ['non-regular directory', 'directory', /rights evidence.*regular.*file|must be a regular file/i],
+    ['tampered bytes', 'tampered', /rights evidence checksum/i],
+  ] as const)('rejects %s rights-evidence bytes', async (_name, evidenceFileMutation, error) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-evidence-bytes-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot, { evidenceFileMutation });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(error);
+  });
+
+  it('accepts an approved written permission branch without a fabricated evidence URL', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-written-permission-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot, { evidenceKind: 'written-permission' });
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).resolves.toMatchObject({ manifest: { records: { 'reviews/approved-review': expect.any(Object) } } });
+  });
+
+  it('keeps omission of publicationYear valid when every identity boundary omits it', async () => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-no-year-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeReleaseFixture(sourceRoot);
+    await writeReviewCoverFixture(sourceRoot, { omitPublicationYear: true });
+
+    const built = await buildPublicRelease({ root: sourceRoot, releasesRoot: join(sandbox, 'releases') });
+    expect(built.manifest.records['reviews/approved-review']).not.toHaveProperty('publicationYear');
+    expect(built.manifest.assets['reviews/approved-review/cover']?.redistributionEvidence)
+      .not.toHaveProperty('bibliographicIdentity.publicationYear');
   });
 
   it('rejects an attacker-self-declared decision even after its receipt checksum is recomputed', async () => {
@@ -275,6 +347,20 @@ describe('immutable public release building', () => {
     ['tampered registered decision checksum', 'decision-checksum' as ReviewCoverRegistryMutation, /registry decision checksum.*match/i],
     ['wrong registered source tuple', 'source-path' as ReviewCoverRegistryMutation, /registry source path.*match/i],
     ['wrong registered source URL', 'source-url' as ReviewCoverRegistryMutation, /registry source sourceUrl.*match/i],
+    ['wrong registered title', 'identity-title' as ReviewCoverRegistryMutation, /registry bibliographic identity title.*match/i],
+    ['wrong registered first author', 'identity-author-first' as ReviewCoverRegistryMutation, /registry bibliographic identity authors.*match/i],
+    ['wrong registered second author', 'identity-author-second' as ReviewCoverRegistryMutation, /registry bibliographic identity authors.*match/i],
+    ['wrong registered author order', 'identity-author-order' as ReviewCoverRegistryMutation, /registry bibliographic identity authors.*match/i],
+    ['wrong registered publisher', 'identity-publisher' as ReviewCoverRegistryMutation, /registry bibliographic identity publisher.*match/i],
+    ['wrong registered ISBN', 'identity-isbn13' as ReviewCoverRegistryMutation, /registry bibliographic identity isbn13.*match/i],
+    ['wrong registered edition label', 'identity-edition-label' as ReviewCoverRegistryMutation, /registry bibliographic identity editionLabel.*match/i],
+    ['wrong registered publication year', 'identity-publication-year' as ReviewCoverRegistryMutation, /registry bibliographic identity publicationYear.*match/i],
+    ['wrong registered evidence type', 'evidence-type' as ReviewCoverRegistryMutation, /registry rights evidence type.*match/i],
+    ['wrong registered evidence URL', 'evidence-url' as ReviewCoverRegistryMutation, /registry rights evidence evidenceUrl.*match/i],
+    ['wrong registered evidence path', 'evidence-path' as ReviewCoverRegistryMutation, /registry rights evidence evidencePath.*match/i],
+    ['wrong registered evidence checksum', 'evidence-checksum' as ReviewCoverRegistryMutation, /registry rights evidence evidenceChecksum.*match/i],
+    ['wrong registered retrieval date', 'evidence-retrieved-at' as ReviewCoverRegistryMutation, /registry rights evidence retrievedAt.*match/i],
+    ['wrong registered scope', 'evidence-scope' as ReviewCoverRegistryMutation, /expected.*public website redistribution/i],
   ])('rejects a review-cover decision with %s', async (_name, registryMutation, error) => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-review-cover-registry-'));
     const sourceRoot = join(sandbox, 'source');
