@@ -10,23 +10,20 @@
 
 .article-topic-filter a {
   min-height: 44px;
+  min-width: 44px;
   display: inline-flex;
   align-items: center;
-  padding-inline: 18px;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  padding-inline: 4px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
   text-decoration: none;
 }
 
-.article-topic-filter a:hover,
-.article-topic-filter a:focus-visible {
-  border-color: var(--ft-ink);
-}
-
-.article-topic-filter a[aria-current="page"] {
-  background: var(--ft-ink);
-  color: var(--ft-paper-bright);
-  font-weight: 700;
+.article-topic-filter a:is(:hover, :focus-visible, [aria-current="page"]) {
+  border-bottom-color: currentColor;
+  background: transparent;
+  color: var(--ft-ink);
 }
 
 .article-index__ledger {

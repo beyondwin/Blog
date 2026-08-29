@@ -61,11 +61,15 @@ describe('article editorial ledger', () => {
       records: ARTICLE_IDS.map(article), selectedTopic: '데이터', assets: new Map(),
     }));
 
-    expect(html).toMatch(/>전체<[\s\S]*>에이전트<[\s\S]*>디자인<[\s\S]*>데이터<[\s\S]*>아키텍처<[\s\S]*>검증</u);
-    expect(html).toContain('href="/articles/"');
+    const topicFilter = html.match(/<nav class="article-topic-filter" aria-label="아티클 주제">([\s\S]*?)<\/nav>/u)?.[1];
+    expect(topicFilter).toBeDefined();
+    expect(topicFilter).toMatch(/<a href="\/articles\/">전체<\/a>/u);
     for (const topic of ['에이전트', '디자인', '데이터', '아키텍처', '검증']) {
-      expect(html).toContain(`href="/articles/?topic=${encodeURIComponent(topic)}"`);
+      expect(topicFilter).toContain(`<a href="/articles/?topic=${encodeURIComponent(topic)}"`);
+      expect(topicFilter).toContain(`>${topic}</a>`);
     }
+    expect(topicFilter).not.toContain('<button');
+    expect(topicFilter?.match(/<a /gu)).toHaveLength(6);
     expect(html).toMatch(/href="\/articles\/\?topic=%EB%8D%B0%EC%9D%B4%ED%84%B0" aria-current="page"/u);
     expect(html.match(/class="editorial-list-row(?:\s|"|--)/gu)).toHaveLength(3);
   });

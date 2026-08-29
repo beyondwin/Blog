@@ -89,7 +89,8 @@ describe('public review editorial ledger', () => {
     expect(html).toContain('불확실성을 몸으로 읽는다.');
     expect(html).toContain('표지 없이 판정을 남긴다.');
     expect(html).toContain('<time dateTime="2026-08-29">2026.08.29</time>');
-    expect(html).toContain('data-media-fit="contain"');
+    expect(html).toContain('<span class="editorial-list-row__media" data-media-fit="contain">');
+    expect(html).not.toContain('data-media-fit="cover"');
     expect(html).toContain('width="400" height="600"');
     expect(html.match(/href="\/reviews\/black-swan\/"/gu)).toHaveLength(1);
     expect(html.match(/href="\/reviews\/warning-cover\/"/gu)).toHaveLength(1);

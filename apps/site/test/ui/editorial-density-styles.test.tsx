@@ -8,10 +8,12 @@ type ContentBox = Box & { bottom: number };
 
 type Geometry = {
   detailIntro: Box;
+  filterTarget: Box;
   headerInner: Box;
   hero: Box;
   pick: Box;
   row: Box;
+  secondaryRow: Box;
   shell: { box: Box; radius: string; shadow: string };
 };
 
@@ -87,8 +89,11 @@ const fixture = `
         </ol>
       </section>
       <section class="article-index">
-        <header class="editorial-page-header"><div class="editorial-page-header__controls"></div></header>
+        <header class="editorial-page-header"><div class="editorial-page-header__heading"><h1>아티클</h1></div><div class="editorial-page-header__controls"><nav class="article-topic-filter"><a href="/articles/">전체</a></nav></div></header>
         <ol class="article-index__ledger"><li><a class="editorial-list-row editorial-list-row--text-led" href="/"><span class="editorial-list-row__copy"><h2>Primary row</h2></span><span class="editorial-list-row__date">2026.08.29</span></a></li></ol>
+      </section>
+      <section class="secondary-index">
+        <ol><li><a class="editorial-list-row editorial-list-row--text-led" href="/"><span class="editorial-list-row__copy"><h2>Secondary row</h2></span><span class="editorial-list-row__date">2026.08.29</span></a></li></ol>
       </section>
       <article class="article-detail">
         <div class="editorial-detail-frame editorial-detail-frame--text-led"><header class="editorial-detail-frame__hero"><div class="editorial-detail-frame__introduction"><h1>Primary detail</h1></div></header><div class="editorial-detail-frame__body"><div class="editorial-detail-frame__prose"><p>Primary reading body.</p></div></div></div>
@@ -111,10 +116,12 @@ async function geometryAt(width: number, height = 900): Promise<Geometry> {
       };
       return {
         shell: { box: measuredBox('.site-shell'), radius: shell.borderRadius, shadow: shell.boxShadow },
+        filterTarget: measuredBox('.article-topic-filter a'),
         headerInner: measuredBox('.site-header__inner'),
         hero: measuredBox('.form-home__hero'),
         pick: measuredBox('.form-home__pick'),
         row: measuredBox('.article-index .editorial-list-row'),
+        secondaryRow: measuredBox('.secondary-index .editorial-list-row'),
         detailIntro: measuredBox('.article-detail .editorial-detail-frame__introduction'),
       };
     });
@@ -236,8 +243,11 @@ describe('editorial density geometry', () => {
     expect.soft(desktop.hero.height).toBeLessThanOrEqual(540);
     expect.soft(desktop.pick.height).toBeGreaterThanOrEqual(200);
     expect.soft(desktop.pick.height).toBeLessThanOrEqual(220);
-    expect.soft(desktop.row.height).toBeGreaterThanOrEqual(180);
-    expect.soft(desktop.row.height).toBeLessThanOrEqual(210);
+    expect(desktop.filterTarget.height).toBeGreaterThanOrEqual(44);
+    expect(desktop.filterTarget.width).toBeGreaterThanOrEqual(44);
+    expect(desktop.row.height).toBeGreaterThanOrEqual(180);
+    expect(desktop.row.height).toBeLessThanOrEqual(210);
+    expect(desktop.secondaryRow.height).toBe(250);
     expect.soft(desktop.detailIntro.height).toBeGreaterThanOrEqual(400);
     expect.soft(desktop.detailIntro.height).toBeLessThanOrEqual(440);
   });
@@ -260,12 +270,16 @@ describe('editorial density geometry', () => {
       const mobile = await page.evaluate(() => {
         const measure = document.querySelector('.site-shell-width')!.getBoundingClientRect();
         const header = document.querySelector('.site-header__inner')!.getBoundingClientRect();
+        const indexHeading = document.querySelector('.article-index .editorial-page-header__heading')!.getBoundingClientRect();
         const target = document.querySelector('.mobile-navigation__button')!.getBoundingClientRect();
+        const filterTarget = document.querySelector('.article-topic-filter a')!.getBoundingClientRect();
         const prose = getComputedStyle(document.querySelector('.article-detail .editorial-detail-frame__prose')!);
         return {
           measure: { x: measure.x, width: measure.width },
           headerHeight: header.height,
+          indexHeading: { x: indexHeading.x, width: indexHeading.width },
           target: { height: target.height, width: target.width },
+          filterTarget: { height: filterTarget.height, width: filterTarget.width },
           proseFontSize: prose.fontSize,
           documentWidth: document.documentElement.scrollWidth,
           viewportWidth: document.documentElement.clientWidth,
@@ -275,8 +289,11 @@ describe('editorial density geometry', () => {
       expect(mobile.measure.x).toBe(22);
       expect(mobile.measure.width).toBe(346);
       expect(mobile.headerHeight).toBe(72);
+      expect(mobile.indexHeading.x).toBe(22);
       expect(mobile.target.height).toBeGreaterThanOrEqual(44);
       expect(mobile.target.width).toBeGreaterThanOrEqual(44);
+      expect(mobile.filterTarget.height).toBeGreaterThanOrEqual(44);
+      expect(mobile.filterTarget.width).toBeGreaterThanOrEqual(44);
       expect(mobile.proseFontSize).toBe('16px');
       expect(mobile.documentWidth).toBeLessThanOrEqual(mobile.viewportWidth);
     } finally {
