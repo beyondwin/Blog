@@ -432,6 +432,29 @@ describe('repository media validation', () => {
     ]));
   });
 
+  it.each([
+    ['reserved legacy-style filename', 'decision-manifest.yml'],
+    ['empty batch suffix', 'decision-manifest-.yml'],
+    ['underscore separator', 'decision-manifest_agents.yml'],
+    ['uppercase batch identifier', 'decision-manifest-AGENTS.yml'],
+  ])('rejects a malformed article approval manifest with %s', async (_name, filename) => {
+    const root = await makeRepository();
+    await writeApprovedGeneratedInventory(root);
+    const decisionBytes = await readFile(join(
+      root,
+      'docs/notes/project/assets/form-and-thought-generated/calibration/decision-manifest.yml',
+    ));
+    await put(
+      root,
+      `docs/notes/project/assets/form-and-thought-generated/articles/${filename}`,
+      decisionBytes,
+    );
+
+    expect((await validateMediaRepository(root, { strict: true })).errors).toEqual(expect.arrayContaining([
+      expect.stringMatching(/malformed generated article approval manifest/i),
+    ]));
+  });
+
   it('fails closed when a registered selected tuple does not exist in the decision manifest', async () => {
     const root = await makeRepository();
     await writeApprovedGeneratedInventory(root);

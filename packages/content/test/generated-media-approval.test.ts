@@ -372,6 +372,28 @@ describe('generated media approval and immutable evidence', () => {
     })).rejects.toThrow(/unregistered generated approval batch.*unregistered/i);
   });
 
+  it.each([
+    ['reserved legacy-style filename', 'decision-manifest.yml'],
+    ['empty batch suffix', 'decision-manifest-.yml'],
+    ['underscore separator', 'decision-manifest_agents.yml'],
+    ['uppercase batch identifier', 'decision-manifest-AGENTS.yml'],
+  ])('rejects a malformed article approval manifest with %s', async (_name, filename) => {
+    const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-malformed-article-manifest-'));
+    const sourceRoot = join(sandbox, 'source');
+    await writeGeneratedFixture(sourceRoot);
+    const decisionBytes = await readFile(join(sourceRoot, evidencePath));
+    await put(
+      sourceRoot,
+      `docs/notes/project/assets/form-and-thought-generated/articles/${filename}`,
+      decisionBytes,
+    );
+
+    await expect(buildPublicRelease({
+      root: sourceRoot,
+      releasesRoot: join(sandbox, 'releases'),
+    })).rejects.toThrow(/malformed generated article approval manifest/i);
+  });
+
   it('fails closed when a registered selected tuple does not exist in the decision manifest', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-generated-media-selection-anchor-'));
     const sourceRoot = join(sandbox, 'source');

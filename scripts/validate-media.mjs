@@ -8,6 +8,7 @@ import { parseMediaManifest } from '../src/lib/content/mediaManifest.mjs';
 import {
   assertGeneratedMediaRegistrySelections,
   GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,
+  generatedMediaArticleDecisionBatchId,
   generatedMediaContactSheetPath,
   parseGeneratedMediaApprovalRegistry,
 } from '../packages/content/src/media/generated-media-approval-registry.mjs';
@@ -645,16 +646,25 @@ async function validateGeneratedInventory(root, state) {
 
   for (const absolutePath of evidenceTree.files) {
     const decisionPath = repoPath(root, absolutePath);
+    let articleBatchId;
+    try {
+      articleBatchId = generatedMediaArticleDecisionBatchId(decisionPath);
+    } catch (error) {
+      state.errors.add(error instanceof Error ? error.message : String(error));
+      continue;
+    }
+    if (articleBatchId !== null) {
+      if (!registeredByPath.has(decisionPath)) {
+        state.errors.add(`unregistered generated approval batch ${articleBatchId}: ${decisionPath}`);
+      }
+      continue;
+    }
     const legacyMatch = decisionPath.match(
       /^docs\/notes\/project\/assets\/form-and-thought-generated\/([a-z0-9][a-z0-9-]*)\/decision-manifest\.yml$/,
     );
-    const articleMatch = decisionPath.match(
-      /^docs\/notes\/project\/assets\/form-and-thought-generated\/articles\/decision-manifest-([a-z0-9][a-z0-9-]*)\.yml$/,
-    );
-    const match = legacyMatch ?? articleMatch;
-    if (!match) continue;
+    if (!legacyMatch) continue;
     if (!registeredByPath.has(decisionPath)) {
-      state.errors.add(`unregistered generated approval batch ${match[1]}: ${decisionPath}`);
+      state.errors.add(`unregistered generated approval batch ${legacyMatch[1]}: ${decisionPath}`);
     }
   }
 

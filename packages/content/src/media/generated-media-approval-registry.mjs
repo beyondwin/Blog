@@ -6,6 +6,9 @@ const id = z.string().regex(/^[a-z0-9][a-z0-9-]*$/);
 const checksum = z.string().regex(/^sha256:[a-f0-9]{64}$/);
 const collection = z.enum(['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts']);
 const candidateId = z.string().regex(/^[A-Z]{1,2}[0-9]{2}$/);
+const articleEvidenceRoot = 'docs/notes/project/assets/form-and-thought-generated/articles/';
+const articleDecisionManifest = /^decision-manifest-([a-z0-9][a-z0-9-]*)\.yml$/;
+const articleDecisionManifestLike = /^decision-manifest.*\.yml$/;
 
 function canonicalDecisionPaths(batchId) {
   return [
@@ -23,6 +26,17 @@ export function generatedMediaContactSheetPath(decisionManifest, batchId) {
     return `docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-${batchId}.png`;
   }
   throw new Error(`registered decision manifest must match a canonical batch path for ${batchId}`);
+}
+
+export function generatedMediaArticleDecisionBatchId(decisionManifest) {
+  if (!decisionManifest.startsWith(articleEvidenceRoot)) return null;
+  const filename = decisionManifest.slice(articleEvidenceRoot.length);
+  if (filename.includes('/') || !articleDecisionManifestLike.test(filename)) return null;
+  const match = filename.match(articleDecisionManifest);
+  if (!match) {
+    throw new Error(`${decisionManifest}: malformed generated article approval manifest`);
+  }
+  return match[1];
 }
 
 const selection = z.object({

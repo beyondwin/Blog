@@ -29,6 +29,10 @@ export function generatedMediaContactSheetPath(
   batchId: string,
 ): string;
 
+export function generatedMediaArticleDecisionBatchId(
+  decisionManifest: string,
+): string | null;
+
 export function assertGeneratedMediaRegistrySelections(
   registered: GeneratedMediaApprovalRegistryBatch,
   assets: GeneratedMediaApprovalRegistrySelection[],

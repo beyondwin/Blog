@@ -18,6 +18,7 @@ import {
 import {
   assertGeneratedMediaRegistrySelections,
   GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,
+  generatedMediaArticleDecisionBatchId,
   generatedMediaContactSheetPath,
   parseGeneratedMediaApprovalRegistry,
   type GeneratedMediaApprovalRegistry,
@@ -159,11 +160,12 @@ async function discoverApproved(
     throw new Error(`${evidenceRoot}/articles/${unsafeArticleEvidence.name}: generated evidence must not be a symbolic link`);
   }
   const articleDecisions = articleEvidenceEntries
-    .filter((entry) => entry.isFile() && /^decision-manifest-[a-z0-9][a-z0-9-]*\.yml$/.test(entry.name))
+    .filter((entry) => entry.isFile())
     .sort((left, right) => left.name.localeCompare(right.name));
   for (const decision of articleDecisions) {
     const decisionPath = `${evidenceRoot}/articles/${decision.name}`;
-    const batchId = decision.name.slice('decision-manifest-'.length, -'.yml'.length);
+    const batchId = generatedMediaArticleDecisionBatchId(decisionPath);
+    if (batchId === null) continue;
     if (!registeredByPath.has(decisionPath)) {
       throw new Error(`unregistered generated approval batch ${batchId}: ${decisionPath}`);
     }
