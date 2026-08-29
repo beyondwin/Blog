@@ -165,7 +165,7 @@ describe('existing content migration contract', () => {
     ]);
   });
 
-  it('owns the three pgvector diagrams through exact local manifest records', async () => {
+  it('owns the three pgvector diagrams alongside the approved editorial hero', async () => {
     const bundle = join(root, 'src', 'assets', 'content', 'articles', 'pgvector-hybrid-search');
     const manifest = parseMediaManifest(await readFile(join(bundle, 'media.yml'), 'utf8'), 'pgvector media.yml');
     const expected = [
@@ -174,7 +174,12 @@ describe('existing content migration contract', () => {
       ['ivfflat-cluster', 'ivfflat-cluster.png', 2048, 1038, '86835667a6e083dce29be7fc4dd6d215132bb5ee8bddf692a4364f2b8b2648c0'],
     ];
 
-    expect(manifest.items).toHaveLength(3);
+    expect(manifest.items.map((item) => item.id)).toEqual([
+      'embedding-flow',
+      'architecture',
+      'ivfflat-cluster',
+      'editorial-hero',
+    ]);
     for (const [id, file, width, height, digest] of expected) {
       const bytes = await readFile(join(bundle, file));
       expect(manifest.items.find((item) => item.id === id)).toMatchObject({

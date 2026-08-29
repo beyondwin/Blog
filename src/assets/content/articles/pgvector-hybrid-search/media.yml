@@ -36,3 +36,24 @@ items:
     width: 2048
     height: 1038
     checksum: sha256:86835667a6e083dce29be7fc4dd6d215132bb5ee8bddf692a4364f2b8b2648c0
+  - id: editorial-hero
+    file: editorial-hero.png
+    kind: illustration
+    alt: 곡선의 돌길과 직선의 검은 길이 둥근 테라코타 지점에서 만나는 장면
+    caption: 서로 다른 검색 경로가 한 지점에서 결합되는 하이브리드 검색
+    credit: OpenAI image generation for beyondwin
+    sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-data-search.yml
+    sourceKind: repository-generated
+    generation:
+      provider: openai
+      generator: codex-built-in-image-generation
+      model: not-exposed-by-built-in-tool
+      modelVersion: not-exposed-by-built-in-tool
+      promptVersion: form-and-thought-articles-v1
+      candidateId: DT01
+      decisionManifestChecksum: sha256:e28feb41a76e9491c82f1bd7b2cd88c1a8336e21bea0614dc7a98e733cc1fafa
+    verifiedAt: "2026-08-29"
+    rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
+    width: 1536
+    height: 1024
+    checksum: sha256:2206757026313ef38f3544698a27987cc8a651e9f4223f1e4590429bf35ba68f

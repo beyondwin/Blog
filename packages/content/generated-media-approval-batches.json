@@ -46,6 +46,14 @@
         { "candidateId": "DS01", "collection": "articles", "recordId": "ai-design-references", "mediaId": "editorial-hero" },
         { "candidateId": "DS03", "collection": "articles", "recordId": "open-design-repo-analysis", "mediaId": "editorial-hero" }
       ]
+    },
+    {
+      "batchId": "data-search",
+      "decisionManifest": "docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-data-search.yml",
+      "decisionManifestChecksum": "sha256:e28feb41a76e9491c82f1bd7b2cd88c1a8336e21bea0614dc7a98e733cc1fafa",
+      "selections": [
+        { "candidateId": "DT01", "collection": "articles", "recordId": "pgvector-hybrid-search", "mediaId": "editorial-hero" }
+      ]
     }
   ]
 }

@@ -1,0 +1,88 @@
+version: 1
+batchId: data-search
+generator:
+  provider: openai
+  generator: codex-built-in-image-generation
+  model: not-exposed-by-built-in-tool
+  modelVersion: not-exposed-by-built-in-tool
+  promptVersion: form-and-thought-articles-v1
+  generatedAt: 2026-08-29T00:35:17.296Z
+approval:
+  state: approved
+  selectedCandidateIds:
+    - DT01
+  approvedBy:
+    - controller
+    - independent-visual-reviewer
+  recordedAt: 2026-08-29T09:53:20+09:00
+  evidence: Controller and independent visual reviewer approved exactly DT01. DT02 remains text-led because the output contains six rather than seven slabs and can read as a literal ranking/bar chart.
+rightsReview:
+  state: approved
+  decision: approve-repository-publication
+  checkedAt: 2026-08-29
+  decidedBy: controller
+  caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed
+  sources:
+    - url: https://openai.com/policies/terms-of-use/
+      checkedAt: 2026-08-29
+    - url: https://openai.com/policies/service-terms/
+      checkedAt: 2026-08-29
+  inspection:
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+approvedContactSheet:
+  path: docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-data-search.png
+  checksum: sha256:e08ceae38383ba840eed82b70b1dc4a21ffcdb7d1bd86373131541d5f9fc54ed
+assets:
+  - candidateId: DT01
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: pgvector-hybrid-search
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/pgvector-hybrid-search/editorial-hero.png
+    checksum: sha256:2206757026313ef38f3544698a27987cc8a651e9f4223f1e4590429bf35ba68f
+    width: 1536
+    height: 1024
+    promptId: dt01-pgvector-hybrid-search-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.54
+          - 0.53
+        safeArea:
+          - 80
+          - 140
+          - 1450
+          - 920
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 170
+          - 1536
+          - 901
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.54
+          - 0.53
+        safeArea:
+          - 80
+          - 140
+          - 1450
+          - 920
