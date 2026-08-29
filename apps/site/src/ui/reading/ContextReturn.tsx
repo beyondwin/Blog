@@ -7,7 +7,8 @@ export type DetailCollection = ReadingCollection;
 
 const DIRECT_LABELS: Record<DetailCollection, string> = {
   articles: '글 목록으로',
-  reviews: '책 목록으로',
+  reviews: '서평 목록으로',
+  thoughts: '생각 목록으로',
   analysis: '조사 목록으로',
   ideas: '아이디어 목록으로',
   travel: '여행 목록으로',

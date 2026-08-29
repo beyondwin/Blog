@@ -1,10 +1,11 @@
 import { parseOrigin, type ReadingOrigin } from './origin';
 
-export type ReadingCollection = 'articles' | 'reviews' | 'analysis' | 'ideas' | 'travel' | 'memory';
+export type ReadingCollection = 'articles' | 'reviews' | 'thoughts' | 'analysis' | 'ideas' | 'travel' | 'memory';
 
 const COLLECTION_ROOTS: Record<ReadingCollection, string> = {
   articles: '/articles/',
   reviews: '/reviews/',
+  thoughts: '/thoughts/',
   analysis: '/analysis/',
   ideas: '/ideas/',
   travel: '/travel/',

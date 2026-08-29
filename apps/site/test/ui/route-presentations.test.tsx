@@ -131,6 +131,26 @@ describe('full public route expansion', () => {
     expect(supportsCollectionPage('articles')).toBe(true);
   });
 
+  it('accounts for every transport-producing destination with a current detail consumer', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    expect([...releaseModule.PUBLIC_CONTENT_COLLECTIONS].sort()).toEqual([
+      'analysis', 'articles', 'ideas', 'reviews', 'thoughts', 'travel',
+    ]);
+
+    const ownerAssertions = [
+      ['analysis', 'src/ui/reading/SecondaryReadingPage.tsx', /<ContextReturn collection=\{record\.collection\}/u],
+      ['articles', 'src/ui/reading/ArticleReadingPage.tsx', /<ContextReturn collection="articles"/u],
+      ['ideas', 'src/ui/reading/SecondaryReadingPage.tsx', /<ContextReturn collection=\{record\.collection\}/u],
+      ['reviews', 'src/ui/reading/ReviewReadingPage.tsx', /<ContextReturn collection="reviews"/u],
+      ['thoughts', 'src/ui/thoughts/ThoughtReadingPage.tsx', /<ContextReturn collection="thoughts"/u],
+      ['travel', 'src/ui/reading/SecondaryReadingPage.tsx', /<ContextReturn collection=\{record\.collection\}/u],
+    ] as const;
+    for (const [collection, path, consumer] of ownerAssertions) {
+      const source = await readFile(join(candidateRoot, path), 'utf8');
+      expect(source, `${collection} detail owner ${path}`).toMatch(consumer);
+    }
+  });
+
   it('uses safe stable collection/id anchors and fails closed when one is overlong', async () => {
     const releaseModule = await candidateModule<any>('app/release.server.ts');
     expect(releaseModule.recordAnchor('articles', 'why-i-read-in-the-ai-era'))

@@ -35,7 +35,7 @@ describe('quiet reading threshold', () => {
 
     expect(html).toContain('<img src="/assets/content/reviews/safe/cover.webp"');
     expect(html).toContain('alt="검증된 판본 표지"');
-    expect(html).toContain('<a class="context-return" href="/reviews/">책 목록으로</a>');
+    expect(html).toContain('<a class="context-return" href="/reviews/">서평 목록으로</a>');
   });
 
   it.each([
@@ -52,12 +52,14 @@ describe('quiet reading threshold', () => {
 
   it('fails closed to the current collection for malformed or stale origin input', () => {
     expect(contextReturnPresentation({ kind: 'search', query: 'bad\nquery', anchorId: 'safe' }, 'reviews'))
-      .toEqual({ label: '책 목록으로', href: '/reviews/' });
+      .toEqual({ label: '서평 목록으로', href: '/reviews/' });
+    expect(contextReturnPresentation({ kind: 'search', query: 'bad\nquery', anchorId: 'safe' }, 'thoughts'))
+      .toEqual({ label: '생각 목록으로', href: '/thoughts/' });
     expect(contextReturnPresentation({ kind: 'scene', focusId: 'retired-focus' }, 'articles'))
       .toEqual({ label: '글 목록으로', href: '/articles/' });
 
     const html = renderToStaticMarkup(createElement(ContextReturn, { collection: 'reviews' }));
-    expect(html).toBe('<a class="context-return" href="/reviews/">책 목록으로</a>');
+    expect(html).toBe('<a class="context-return" href="/reviews/">서평 목록으로</a>');
     expect(html).not.toMatch(/__bw_|javascript:|https?:/u);
   });
 });

@@ -240,7 +240,7 @@ describe('React Router current-behavior static route contract', () => {
     expect(reviewHtml).toContain('<h1>블랙스완</h1>');
     expect(reviewHtml).toContain('판본 확인 · 표지 공개 권리 미확인');
     expect(reviewHtml).toContain('<a class="continue-reading__collection" href="/reviews/">서평 전체 보기</a>');
-    expect(reviewHtml).not.toContain('<a class="context-return" href="/reviews/">');
+    expect(reviewHtml).toContain('<a class="context-return" href="/reviews/">서평 목록으로</a>');
     expect(reviewHtml).not.toContain('/assets/content/reviews/black-swan/cover');
     expect(memoryHtml).toContain('href="/articles/lazycodex-agent-harness-analysis/"');
     expect(memoryHtml).toContain('href="/memory/agent-workflows-need-review-gates/"');
@@ -294,7 +294,8 @@ describe('React Router current-behavior static route contract', () => {
     expect(detailHtml).toContain('AI 때문에 책을 읽기 시작했다.');
     expect(detailHtml).toContain('<time dateTime="2026-08-16T00:00:00.000Z">2026.08.16</time>');
     expect(detailHtml).toContain('좋아요 · 준비 중');
-    expect(detailHtml).not.toMatch(/article-toc|article-colophon|생각 목록으로/u);
+    expect(detailHtml).toContain('<a class="context-return" href="/thoughts/">생각 목록으로</a>');
+    expect(detailHtml).not.toMatch(/article-toc|article-colophon/u);
     expect(detailHtml).toContain(`<link rel="canonical" href="/thoughts/${THOUGHT_ID}/"/>`);
     for (const html of [indexHtml, detailHtml]) {
       expect(html).toContain('href="/thoughts/" aria-current="page"');

@@ -2,6 +2,7 @@ import type { PublicRecord } from '@beyondwin/contracts';
 import type { ReactNode } from 'react';
 import { DetailActionRail } from '../editorial/DetailActionRail';
 import { EditorialDetailFrame } from '../editorial/EditorialDetailFrame';
+import { ContextReturn } from '../reading/ContextReturn';
 
 type ThoughtRecord = Extract<PublicRecord, { collection: 'thoughts' }>;
 
@@ -24,7 +25,12 @@ export function ThoughtReadingPage({ media, record }: { media?: ReactNode; recor
         summary={record.description}
         metadata={metadata}
         media={media}
-        actions={<DetailActionRail canonicalUrl={record.href} />}
+        actions={(
+          <>
+            <ContextReturn collection="thoughts" />
+            <DetailActionRail canonicalUrl={record.href} />
+          </>
+        )}
       >
         <div className="prose" dangerouslySetInnerHTML={{ __html: record.bodyHtml }} />
       </EditorialDetailFrame>

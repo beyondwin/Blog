@@ -43,6 +43,7 @@ describe('thought reference-03 detail', () => {
     expect(html).toContain('좋아요 · 준비 중');
     expect(html).toContain('댓글 · 준비 중');
     expect(html).toContain('링크 복사');
+    expect(html).toContain('<a class="context-return" href="/thoughts/">생각 목록으로</a>');
     expect(html).toContain('AI 때문에 책을 읽기 시작했다.');
     expect(html).toContain('그래서 책을 읽는다.');
     expect(html).not.toMatch(/aria-label="절"|article-toc|article-colophon|source-panel|확인한 자료/iu);

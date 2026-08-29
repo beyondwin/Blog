@@ -25,7 +25,10 @@ describe('safeReadingFallback', () => {
 
   it('uses only an allowlisted record collection when the origin is missing or invalid', () => {
     expect(safeReadingFallback(null, 'reviews')).toBe('/reviews/');
+    expect(safeReadingFallback(null, 'thoughts')).toBe('/thoughts/');
     expect(safeReadingFallback({ kind: 'articles', anchorId: '../evil' }, 'memory')).toBe('/memory/');
+    expect(safeReadingFallback({ kind: 'search', query: 'bad\nquery', anchorId: 'safe' }, 'thoughts'))
+      .toBe('/thoughts/');
   });
 });
 
@@ -51,5 +54,19 @@ describe('navigateToReadingOrigin', () => {
     expect(navigateToReadingOrigin({ history: { state, back }, location: { assign } }, 'reviews')).toBe('fallback');
     expect(back).not.toHaveBeenCalled();
     expect(assign).toHaveBeenCalledWith(expected);
+  });
+
+  it('fails closed to the thought collection when stale state is not eligible', () => {
+    const back = vi.fn();
+    const assign = vi.fn();
+    expect(navigateToReadingOrigin({
+      history: {
+        state: { bwOrigin: { kind: 'search', query: 'AI', anchorId: '../private' }, bwHistoryReturnEligible: true },
+        back,
+      },
+      location: { assign },
+    }, 'thoughts')).toBe('fallback');
+    expect(back).not.toHaveBeenCalled();
+    expect(assign).toHaveBeenCalledWith('/thoughts/');
   });
 });

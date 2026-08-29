@@ -2,6 +2,7 @@ import type { PublicRecord } from '@beyondwin/contracts';
 import type { ReactNode } from 'react';
 import { DetailActionRail } from '../editorial/DetailActionRail';
 import { formatReviewDate } from '../reviews/bookshelfPresentation';
+import { ContextReturn } from './ContextReturn';
 import type { ContinuationItem } from './select-continuations';
 
 type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
@@ -84,6 +85,7 @@ export function ReviewReadingPage({
         </header>
         <div className="editorial-detail-frame__body review-detail__body">
           <div className="editorial-detail-frame__actions">
+            <ContextReturn collection="reviews" />
             <DetailActionRail canonicalUrl={record.href} />
           </div>
           <div className="editorial-detail-frame__prose review-detail__prose">

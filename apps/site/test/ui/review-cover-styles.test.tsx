@@ -124,6 +124,7 @@ describe('current review route cover styling', () => {
       },
     }));
 
+    expect(html).toContain('<a class="context-return" href="/reviews/">서평 목록으로</a>');
     await expect(computedObjectFits(
       html,
       '.review-detail__cover-stage img',
