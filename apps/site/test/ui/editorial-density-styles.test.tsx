@@ -19,7 +19,7 @@ type HomeGeometry = {
   hero: Box;
   heroTitle: ContentBox;
   heroDescription: ContentBox;
-  picks: Array<{ box: ContentBox; title: ContentBox; description: ContentBox }>;
+  picks: Array<{ box: ContentBox; title: ContentBox; description: ContentBox; media: ContentBox | null; labelFontSize: string; descriptionFontSize: string }>;
 };
 
 let browser: Browser;
@@ -116,6 +116,9 @@ async function homeGeometryAt(width: number, height = 900): Promise<HomeGeometry
           box: measuredBox(pick),
           title: measuredBox(pick.querySelector('strong')!),
           description: measuredBox(pick.querySelector('.form-home__pick-copy > span:not(.form-home__pick-label)')!),
+          media: pick.querySelector('.form-home__pick-media') ? measuredBox(pick.querySelector('.form-home__pick-media')!) : null,
+          labelFontSize: getComputedStyle(pick.querySelector('.form-home__pick-label')!).fontSize,
+          descriptionFontSize: getComputedStyle(pick.querySelector('.form-home__pick-copy > span:not(.form-home__pick-label)')!).fontSize,
         })),
       };
     });
@@ -141,6 +144,15 @@ describe('editorial density geometry', () => {
       expect(pick.box.height).toBeLessThanOrEqual(pickMax);
       expect(pick.title.bottom).toBeLessThanOrEqual(pick.box.bottom);
       expect(pick.description.bottom).toBeLessThanOrEqual(pick.box.bottom);
+    }
+    const thought = home.picks[2]!;
+    expect(thought.media).not.toBeNull();
+    expect(thought.media!.width).toBeGreaterThan(0);
+    expect(thought.media!.height).toBeGreaterThan(0);
+    if (width === 1440) expect(thought.media!.width / thought.media!.height).toBeGreaterThanOrEqual(.85);
+    if (width <= 1179) {
+      expect(Number.parseFloat(thought.labelFontSize)).toBeGreaterThanOrEqual(14);
+      expect(Number.parseFloat(thought.descriptionFontSize)).toBeGreaterThanOrEqual(14);
     }
   });
 
