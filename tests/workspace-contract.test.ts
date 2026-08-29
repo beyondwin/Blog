@@ -59,6 +59,7 @@ describe('React-only Node 24 workspace contract', () => {
   it('pins approved tooling and has zero Astro packages or legacy scripts', async () => {
     const [rootManifest, ...publicManifests] = await Promise.all(manifestPaths.map(readManifest));
     expect(declaredDependencies(rootManifest)).toMatchObject(approvedToolVersions);
+    expect(publicManifests[0]?.devDependencies?.fontkitten).toBe('1.0.3');
     for (const manifest of [rootManifest, ...publicManifests]) {
       const dependencies = declaredDependencies(manifest);
       expect(Object.keys(dependencies)).not.toContain('astro');
