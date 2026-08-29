@@ -78,7 +78,14 @@ describe('FORM & THOUGHT home', () => {
     expect(html).toContain('이 글 읽기');
     expect(html).not.toContain('최근');
     expect(html.match(/class="form-home__pick(?:\s|"|--)/gu)).toHaveLength(3);
-    expect(html).toMatch(/>서평<[\s\S]*>아티클<[\s\S]*>생각</u);
+    const heroStart = html.indexOf('class="form-home__hero"');
+    const picksStart = html.indexOf('<ol class="form-home__picks"');
+    const pickLabels = [...html.matchAll(/class="form-home__pick-label">([^<]+)</gu)]
+      .map((match) => match[1]);
+
+    expect(heroStart).toBeGreaterThanOrEqual(0);
+    expect(picksStart).toBeGreaterThan(heroStart);
+    expect(pickLabels).toEqual(['서평', '아티클', '생각']);
     expect(html).toContain('href="/reviews/black-swan/"');
     expect(html).toContain('href="/articles/ai-design-references/"');
     expect(html).toContain('href="/thoughts/why-i-read-in-the-ai-era/"');
