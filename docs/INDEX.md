@@ -16,6 +16,7 @@
 | FORM & THOUGHT 이미지 아트 디렉션 | project | visual-specification | ko | organized | [docs/notes/project/form-and-thought-image-art-direction.md](notes/project/form-and-thought-image-art-direction.md) |
 | FORM & THOUGHT React-only 공개 사이트 구현 계획 | project | implementation-plan | ko | organized | [docs/notes/project/form-and-thought-implementation-plan.md](notes/project/form-and-thought-implementation-plan.md) |
 | FORM & THOUGHT representative vertical slice evidence | project | evidence | en | organized | [docs/notes/project/evidence/form-and-thought-vertical-slice.md](notes/project/evidence/form-and-thought-vertical-slice.md) |
+| FORM & THOUGHT editorial ledger | project | evidence | en | organized | [docs/notes/project/evidence/form-and-thought-editorial-ledger.md](notes/project/evidence/form-and-thought-editorial-ledger.md) |
 | 서평 제외 아티클 전면 개선 설계 | project | workflow | ko | organized | [docs/notes/project/non-review-article-improvement-design.md](notes/project/non-review-article-improvement-design.md) |
 | 서평 제외 아티클 전면 개선 구현 계획 | project | implementation-plan | ko | organized | [docs/notes/project/non-review-article-improvement-implementation-plan.md](notes/project/non-review-article-improvement-implementation-plan.md) |
 | Agent Runbook | project | workflow | ko | organized | [docs/notes/project/agent-runbook.md](notes/project/agent-runbook.md) |
