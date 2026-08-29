@@ -194,10 +194,10 @@
   .form-home__picks { gap: 12px; padding-inline: 32px; }
   .form-home__pick { height: 200px; }
   .form-home__pick:not(.form-home__pick--text-led) { position: relative; grid-template-columns: 1fr; }
-  .form-home__pick-media { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; display: block; }
+  .form-home__pick-media { position: absolute; top: 0; right: 0; width: 44px; height: 44px; display: block; }
   .form-home__pick-copy { padding: 10px 12px 30px; }
   .form-home__pick-copy strong { margin-block-start: 5px; font-size: 18px; line-height: 1.12; }
-  .form-home__pick-copy > span:not(.form-home__pick-label) { max-height: 2.5em; margin-block-start: 4px; line-height: 1.25; overflow: hidden; }
+  .form-home__pick-copy > span:not(.form-home__pick-label) { margin-block-start: 4px; line-height: 1.05; letter-spacing: -.08em; }
   .form-home__pick-copy svg { right: 12px; bottom: 9px; width: 18px; }
 }
 
@@ -211,7 +211,7 @@
   .form-home__hero-image { object-position: 70% 58%; }
   .form-home__picks { grid-template-columns: 1fr; gap: 20px; padding: 28px 22px 40px; }
   .form-home__pick { height: auto; min-height: 220px; }
-  .form-home__pick-media { display: block; }
+  .form-home__pick-media { position: static; width: auto; height: auto; display: block; }
   .form-home__pick:not(.form-home__pick--text-led) { grid-template-columns: 1fr 1fr; }
   .form-home__pick-copy { padding: 22px 20px; }
   .form-home__pick-label { font-size: 13px; }
