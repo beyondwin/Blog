@@ -72,7 +72,11 @@ list/home/search payload는 `bodyHtml`, media 전체, relationships, memoryLinks
 field를 제거하거나 첫 frame에 필요한 asset만 고른다.
 
 primary search inventory는 articles, reviews, thoughts만 포함한다. secondary collection과
-memory는 tags/secondary navigation에서는 유지하지만 primary search에서는 제외한다.
+memory는 tags/secondary navigation에서는 유지하지만 primary search에서는 제외한다. 검색
+loader는 이 inventory와 공개 thought의 문장을 build-time에 대조한 최소 answer fixture만
+직렬화한다. raw `bodyHtml`, private locator와 top-level `memory/**`는 질문 UI에 전달하지 않는다.
+현재는 승인된 sample question만 이 fixture로 답하고, 나머지 질문은 deterministic search
+result로 분기한다. RAG/LLM provider는 아직 존재하지 않는다.
 
 ## trusted MDX와 memory
 
@@ -147,9 +151,9 @@ wordmark, primary navigation, list/detail links, article filters와 search form�
 anchor/GET form이다. Home, indexes와 details는 prerender HTML로 읽고 이동할 수 있다.
 
 검색은 `ssr: false` static export다. 하나의 `/search/index.html`은 임의 query별 결과 HTML을
-만들 수 없다. JavaScript-off에서 GET은 `/search/?q=...` canonical URL로 이동하고 기본
-discovery는 계속 읽을 수 있지만 query filtering과 input restoration은 `not satisfied`다.
-이를 green으로 문서화하거나 숨겨진 결과를 SSR이라고 부르지 않는다.
+만들 수 없다. JavaScript-off에서 GET은 `/search/?q=...` canonical URL로 이동하지만 query
+filtering, input restoration과 질문형 answer flow는 `not satisfied`다. 기본 prerender는
+질문 composer와 승인된 sample만 제공하며 이를 임의 질문의 SSR/RAG 답변이라고 부르지 않는다.
 
 ## 주요 명령
 

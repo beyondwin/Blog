@@ -340,19 +340,23 @@ describe('React Router current-behavior static route contract', () => {
     }
   });
 
-  it('loads one primary-only search corpus with a bounded GET query and fixed lane discovery records', async () => {
+  it('loads one primary-only search corpus with a bounded GET query and verified answer fixture', async () => {
     const search = await candidateModule<any>('app/routes/search.tsx');
     const searchPage = await candidateModule<any>('src/ui/search/SearchPage.tsx');
     const keywordModule = await candidateModule<any>('src/ui/search/popularKeywords.ts');
     const data = await search.loader({ request: new Request('https://beyondwin.test/search/?q=%20Graphify%20') });
 
     expect(data.initialQuery).toBe('Graphify');
+    expect(data.fixture.question).toBe('AI 시대에도 왜 계속 책을 읽나요?');
+    expect(data.fixture.evidence).toHaveLength(3);
+    expect(data.fixture.evidence.every((item: { canonicalPath: string }) => (
+      item.canonicalPath === '/thoughts/why-i-read-in-the-ai-era/'
+    ))).toBe(true);
+    expect(JSON.stringify(data.fixture)).not.toMatch(/bodyHtml|privatePath|memory\//u);
     expect(new Set(data.inventory.map((item: { kind: string }) => item.kind))).toEqual(
       new Set(['article', 'review', 'thought']),
     );
-    expect(data.discovery.map((item: { kind: string }) => item.kind)).toEqual([
-      'review', 'article', 'thought',
-    ]);
+    expect(Object.keys(data).sort()).toEqual(['fixture', 'initialQuery', 'inventory']);
     expect(data.inventory.every((item: { id: string }) => (
       /^(?:articles|reviews|thoughts)\//u.test(item.id)
     ))).toBe(true);
@@ -382,7 +386,7 @@ describe('React Router current-behavior static route contract', () => {
 
     const html = renderToStaticMarkup(createElement(search.SearchPresentation, { data }));
     expect(html).toContain('<title>검색 · FORM &amp; THOUGHT</title>');
-    expect(html).toContain('content="서평, 아티클, 생각을 검색합니다."');
+    expect(html).toContain('content="공개된 기록에 질문하고, 연결된 답과 근거를 살펴봅니다."');
     expect(html).toContain('href="/search/" aria-current="page"');
     expect(html).not.toMatch(/>찾기<|>글<|>책<|>문장</u);
   });

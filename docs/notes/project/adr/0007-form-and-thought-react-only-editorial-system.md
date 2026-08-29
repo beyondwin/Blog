@@ -5,7 +5,7 @@
 - Decision owners: user / project
 - Approval evidence: 2026-08-28 conversation approvals recorded in this ADR's Decision evidence
 - Supersedes: ADR-0002, ADR-0003, ADR-0004, ADR-0006, and the Astro-retention clause of ADR-0005
-- Superseded by: none
+- Superseded by: ADR-0008 (partial: outer paper shell/page elevation and architecture-dominant media clauses), ADR-0009 (partial: `/search/` keyword-first composition)
 
 ## Context
 

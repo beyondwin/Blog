@@ -1,8 +1,9 @@
 # FORM & THOUGHT 시각 스펙
 
-- 상태: built and approved locally; production origin은 `not_measured`, cutover authorization은 `false`
+- 상태: 2026-08-28 built baseline; ADR-0008 target refinement approved, implementation pending
 - 승인일: 2026-08-28
-- 결정: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)
+- 결정: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md),
+  [ADR-0008](adr/0008-full-bleed-density-and-topic-media.md)
 - reference inventory: [manifest.yml](assets/form-and-thought-reference/manifest.yml)
 - 구현 증거: [최종 acceptance](evidence/form-and-thought-final-acceptance.md),
   [checksum-bound visual evidence](evidence/form-and-thought-astro-removal-manifest.md)
@@ -11,23 +12,24 @@
 
 구현 중 충돌은 다음 순서로 해결한다.
 
-1. ADR-0007에 기록된 직접 사용자 override.
-2. manifest에서 해당 route/state에 지정된 primary reference 또는 primary region.
-3. 이 문서의 route geometry, responsive matrix, component state.
-4. 공통 token과 구현 세부.
-5. secondary consistency board.
+1. ADR-0008에 기록된 full-bleed density와 topic-family media override.
+2. ADR-0007에 기록된 나머지 직접 사용자 override.
+3. manifest에서 해당 route/state에 지정된 primary reference 또는 primary region.
+4. 이 문서의 route geometry, responsive matrix, component state.
+5. 공통 token과 구현 세부.
+6. secondary consistency board.
 
-따라서 생각 목록의 `실제 한 건 + 완전히 빈 다섯 칸`은 여섯 칸 모두 문구가 있는 reference보다 우선한다. 반대로 reference에 분명한 home inverse header, outer paper shell, page-level elevation은 generic inner-page 규칙으로 지우지 않는다. 레퍼런스 속 가상 문구, 사람, 날짜와 이미지는 복사하지 않고 실제 공개 콘텐츠와 승인 media로 대체한다.
+따라서 생각 목록의 `실제 한 건 + 완전히 빈 다섯 칸`은 여섯 칸 모두 문구가 있는 reference보다 우선한다. Home inverse header는 유지하지만 outer paper shell과 page-level elevation은 ADR-0008이 명시적으로 제거한다. 레퍼런스 속 가상 문구, 사람, 날짜와 이미지는 복사하지 않고 실제 공개 콘텐츠와 승인 media로 대체한다.
 
 Reference bitmap 크기는 CSS viewport가 아니다. 첫 구현 전에 page-shell crop, 비교 CSS viewport, DPR, browser/font 환경을 calibration artifact에 기록한 뒤 동일 조건에서 screenshot을 비교한다. 이 calibration은 layout을 재해석하는 절차가 아니다.
 
 ## 2. 시각 언어와 예외
 
-- viewport는 따뜻한 canvas, 그 위에 off-white paper shell을 둔다.
+- viewport 전체를 off-white paper surface로 사용하고 별도 outer inset을 만들지 않는다.
 - 핵심 대비는 ink black, terracotta, deep brown, paper white가 만든다.
-- 이미지는 건축적 면, 자연광, 깊은 그림자, 절제된 정물로 구성한다.
+- 이미지는 공통 palette, 자연광과 negative space를 공유하되 글에 따라 사람·행동, 도구·작업대, 데이터·구조, 경계·증거, 디자인·재료, 읽기·사유 소재를 사용한다.
 - inner editorial card와 row는 얇은 rule과 간격만 사용하고 floating shadow를 쓰지 않는다.
-- outer paper shell에만 reference와 같은 낮고 넓은 diffuse shadow와 0–8px radius를 허용한다.
+- page-level shadow와 radius는 사용하지 않는다.
 - inner card는 직각이다. 입력과 keyword chip만 6–12px radius를 허용한다.
 - texture는 저대비 paper grain만 허용하며 읽기 선명도나 screenshot 안정성을 낮추면 제거한다.
 
@@ -78,11 +80,11 @@ mobile 16px과 약 1.9 line-height를 유지한다.
 
 | item | wide | intermediate | mobile |
 | --- | --- | --- | --- |
-| viewport canvas | outer inset 32–56px | 16–32px | 0–12px |
-| page shell | max 1280px centered | full available width | full width |
-| inner header | 96–112px | 84–96px | 68–76px |
-| content side inset | 48–64px | 32–48px | 20–24px |
-| primary vertical gap | 56–80px | 44–64px | 36–48px |
+| viewport canvas | outer inset 0 | outer inset 0 | outer inset 0 |
+| page shell | full width | full width | full width |
+| inner header | 84–96px | 76–88px | 68–76px |
+| content side inset | 56–64px | 32–48px | 20–24px |
+| primary vertical gap | 44–64px | 40–56px | 32–44px |
 | reading measure | 38–46 Korean chars | 34–42 | 27–34 |
 | interactive minimum | 44×44px | 44×44px | 44×44px |
 
@@ -110,6 +112,7 @@ Desktop menu는 non-modal popover로 focus trap을 쓰지 않는다. Mobile menu
   secondary tone-consistency board로만 보조한다.
 - inverse header + hero 전체는 첫 큰 dark block이다.
 - hero split은 text 43–48%, image 52–57%, 전체 약 16:8.5다.
+- desktop hero target은 500–540px이며 1440×900에 hero 전체와 세 pick의 핵심 내용이 함께 보여야 한다.
 - hero 아래 32–44px에 서평·아티클·생각 세 pick을 동일 폭으로 둔다.
 - 정확히 세 pick을 유지하기 위해 release에는 lane별 published selection 한 건이 반드시 있어야 한다. 없으면 build가 실패하며 fake card나 2열 reflow를 만들지 않는다.
 - hero article과 article pick은 가능한 한 서로 다른 fixed editorial ID를 사용한다.
@@ -119,9 +122,9 @@ Desktop menu는 non-modal popover로 focus trap을 쓰지 않는다. Mobile menu
 
 - Primary: `reference-04-article-index`.
 - title/description, rule, six topic filter, ledger row 순서다.
-- row는 desktop 210–250px, image 34–39%, text 43–49%, date remainder다.
+- row는 desktop 180–210px, image 34–39%, text 43–49%, date remainder다.
 - 17개 실제 항목을 pagination 없이 한 editorial ledger에 모두 렌더한다. reference의 3–4행은 first-frame density 기준이지 corpus 제한이 아니다.
-- 첫 viewport에는 title/filter와 2개 이상 row의 주요 내용이 보여야 한다. 첫 media만 필요 시 eager, 나머지는 lazy다.
+- 첫 1440×900 viewport에는 title/filter, 2개 full row와 다음 row 시작이 보여야 한다. 첫 media만 필요 시 eager, 나머지는 lazy다.
 - filter는 GET query와 canonical anchor로 동작하며 invalid value는 `전체`로 정규화한다.
 
 ### Review index `/reviews/`
@@ -160,6 +163,8 @@ Desktop menu는 non-modal popover로 focus trap을 쓰지 않는다. Mobile menu
 | review | `reference-06-review-detail-right` | hero image 위 inverse | hero 아래 centered | full-width image-led; 없으면 paper title-led | action rail + verdict body + real cover/figure |
 
 서로 다른 variant를 한 화면에서 혼합하지 않는다. no-media variant는 빈 image box를 만들지 않고 텍스트가 지정 column을 점유한다. detail metadata는 실제 author가 있을 때만 `by`, 그다음 `YYYY.MM.DD`; 가상 editor 이름을 쓰지 않는다.
+
+Article/thought split hero의 desktop target은 400–440px다. Review는 rights-approved cover가 있으면 image-led, 없으면 큰 빈 면이 없는 compact text-led hero를 사용한다.
 
 ## 8. Responsive route matrix
 

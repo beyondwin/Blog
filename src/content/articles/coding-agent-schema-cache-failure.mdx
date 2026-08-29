@@ -1,0 +1,244 @@
+---
+title: "코딩 에이전트가 짜 줘도, 스키마·캐시·장애는 사람이 정한다"
+description: "앤드류 응의 소프트웨어 기초 편지를 스키마, 캐시, 장애 쪽으로 읽어, 코딩 에이전트가 채우는 빈칸을 사람이 어디에 적을지를 정리한다."
+createdAt: "2026-08-29"
+updatedAt: "2026-08-29"
+tags: ["AI", "software-engineering", "coding-agents"]
+status: "review"
+draft: true
+recordKind: "essay"
+evidenceState: "personal"
+---
+
+코딩 에이전트에게 기능을 맡기면 화면과 CRUD는 빨리 나온다. 문제는 그다음이다. 캐시 키를 어떻게 쪼갤지, 주문 상태를 어디에 둘지, 웹훅이 두 번 들어왔을 때 돈을 두 번 받을지. 이런 선택은 프롬프트에 안 적으면 모델이 가장 흔한 패턴으로 채운다. 흔한 패턴이 이 서비스에 맞다는 보장은 없다.
+
+앤드류 응은 2026년 8월 28일 The Batch 편지 [Why Software Fundamentals Remain Essential for AI Developers](https://www.deeplearning.ai/the-batch/the-ai-engineering-skills-map-in-detail-software-engineering-fundamentals)에서 같은 점을 다른 말로 적는다. 문법을 외울 필요는 줄었다. 대신 latency, availability, consistency, reliability, maintainability, simplicity, cost 사이에서 무엇을 버릴지 모르는 상태로 에이전트를 돌리면, 그 빈칸을 모델이 채운다. 빈칸을 채운 뒤에야 “왜 이렇게 됐지?”를 묻게 된다.
+
+같은 달 공개된 [AI Engineering Skills Map](https://www.deeplearning.ai/the-batch/the-ai-engineering-skills-map)은 상위 항목을 네 개로 나눈다. AI 앱 구축·배포, 소프트웨어 기초, 코딩 에이전트 사용, 무엇을 만들지 정하기. 이번 편지는 두 번째 항목이다. 기초를 다섯으로 나눈다.
+
+1. 풀스택 애플리케이션
+2. 데이터
+3. 시스템 아키텍처
+4. 보안과 신뢰성
+5. 스케일·운영
+
+이 글은 그 다섯을 번역하거나 요약하지 않는다. 응이 든 항목을 스키마, 캐시, 장애 쪽으로 당겨 읽는다. 아래 커머스 예시와 티켓 목록은 편지 원문이 아니라 그 읽기의 결과다.
+
+## 풀스택: 화면이 아니라 경로를 본다
+
+에이전트는 프론트만 하던 사람도 서버를 건드리게 만든다. 도움은 된다. 다만 “로그인 만들어줘”의 기본 구현은 대개 이 조합이다.
+
+- JWT를 로컬 스토리지에 저장
+- `/api/me`를 매 페이지에서 호출
+- 만료되면 로그인 페이지로 보냄
+
+데모에는 충분하다. 실제 서비스면 바로 구멍이 열린다.
+
+세션을 서버에 둘지, 액세스 토큰 15분 + 리프레시 쿠키로 갈지부터 갈린다. 리프레시를 HttpOnly + Secure + SameSite로 둘지, 모바일 앱이면 별도 refresh rotation을 넣을지, 동시 세션을 몇 개까지 허용할지, 탈취 시 전 기기 로그아웃을 어떤 저장소로 구현할지. 이 목록을 안 적으면 모델은 SPA 튜토리얼 코드를 낸다.
+
+캐시도 같다. “목록이 느려. 캐시 넣어줘”는 거의 항상 Redis에 `products:list` 하나를 만든다. 그다음 생기는 일:
+
+- 관리자가 상품명만 바꿔도 목록이 5분 동안 안 바뀐다. TTL만 넣었기 때문이다.
+- 상세 페이지는 DB를 치는데 목록만 캐시돼 있어서 가격이 어긋난다.
+- 인기 상품이 만료되는 순간 트래픽이 한 키로 몰린다. cache stampede.
+- 유저별 추천 목록을 같은 키 패턴에 넣어서 개인정보가 섞인다.
+
+캐시를 넣을 때 먼저 정할 것은 라이브러리가 아니다.
+
+- 키 단위: `product:{id}`, `product:list:{cursor}:{filter_hash}`, `inventory:{sku}`
+- 무효화: TTL만 쓸지, write 경로에서 명시적으로 delete할지
+- 일관성: 목록과 상세가 같은 소스를 보는지
+- 실패 동작: Redis가 죽으면 DB로 갈지, stale 데이터를 줄지, 에러를 줄지
+
+페이지 렌더링도 경로 문제다. “메인 페이지 만들어줘”는 클라이언트에서 상품, 쿠폰, 리뷰를 각각 fetch하는 코드를 잘 만든다. 모바일 네트워크에서는 그 세 호출이 waterfall이 된다. 서버에서 한 번에 조립할지, RSC/SSR로 캐시 가능한 HTML을 내릴지, CDN 캐시와 cookie가 섞여 cache miss가 폭주할지는 사람이 정한다. 모델은 기본값으로 클라이언트 fetch를 고른다.
+
+접근성도 나중에 붙이면 컴포넌트를 갈아엎는 일이 된다. 모달 focus trap, 키보드 장바구니, 스크린리더용 live region은 “예쁜 버튼” 프롬프트에 안 들어 있다.
+
+풀스택을 혼자 다 짜라는 말이 아니다. 한 요청이 브라우저 → edge → API → 인증 → 저장소 → 캐시 → 다시 브라우저로 어떻게 왕복하는지 그릴 수 있어야, 에이전트 결과물을 어디서부터 고칠지 보인다.
+
+## 데이터: 코드보다 되돌리기 비싸다
+
+응이 데이터를 따로 뺀 이유가 있다. 코드는 지우고 다시 생성하면 된다. 잘못된 스키마에 6개월 치 주문이 쌓이면 마이그레이션이 기능이 된다.
+
+에이전트에게 “커머스 DB 만들어줘”라고 하면 대략 이런 테이블이 나온다.
+
+```text
+users(id, email, password_hash)
+products(id, name, price, stock)
+orders(id, user_id, status, total)
+order_items(id, order_id, product_id, qty, price)
+```
+
+여기까지는 맞다. 빠진 것은 접근 패턴이다.
+
+**재고.** `products.stock`을 숫자 컬럼으로 두면 동시 주문이 레이스가 된다.
+
+```text
+-- 에이전트가 자주 내는 코드
+UPDATE products SET stock = stock - :qty
+WHERE id = :id AND stock >= :qty
+```
+
+이 문장은 단일 상품에는 버틴다. 세트 상품, 창고가 두 개, 예약 재고, 결제 대기 중 홀드가 붙으면 바로 부족하다. 재고 이동을 이벤트로 쌓고 `on_hand = receipts - shipments - holds`로 읽는지, 한 컬럼을 락으로 지키는지. 둘 다 가능하다. 안 정하면 모델은 컬럼 하나와 `SELECT … FOR UPDATE`를 넣는다. 트래픽이 낮을 때는 조용하고, 세일 다음에야 중복 차감이 보인다.
+
+**주문 상태.** `status = pending | paid | shipped`는 데모용이다. 결제는 됐는데 재고 차감이 실패한 상태를 표현할 곳이 없다. 상태 컬럼 하나와 `payments`, `shipments`를 따로 두는 것은 다른 모델이다. 전자는 전이가 코드에 숨고, 후자는 쿼리가 길어진다. 환불 부분 취소가 생기면 전자는 거의 항상 무너진다.
+
+**가격.** `products.price`만 있으면 주문 당시 가격이 없다. 할인 정책이 바뀌면 과거 주문의 `total`과 아이템 합이 어긋난다. 스냅샷을 `order_items`에 복사할지, price list 버전을 둘지 정해야 한다.
+
+**JSONB.** “유연하게 가자”며 `metadata jsonb`를 큰 덩어리로 두면 초반 속도는 좋다. 그다음 `metadata->>'color' = 'black'` 조건이 생기고, GIN 인덱스를 달고, 필드가 committable contract가 아닌데 프론트가 의존한다. 나중에 컬럼으로 빼려면 backfill + dual read가 된다. JSONB는 스키마를 미룬 것이지 없앤 것이 아니다.
+
+저장소 종류도 프롬프트 한 줄로 결정되면 안 된다.
+
+- 주문, 결제, 재고 이동: 트랜잭션이 필요하면 관계형이 기본이다.
+- 상품 검색: 문서/검색 엔진. Postgres FTS로 버티는 한계를 숫자로 정해 두는 편이 낫다.
+- 세션, 레이트 리밋, 락: 키-밸류.
+- 추천, 관계: 그래프가 필요할 수도 있고, 그냥 join으로 끝날 수도 있다.
+
+에이전트는 익숙한 Postgres + Redis 조합을 낸다. 틀린 조합이 아니라, 선택 이유가 없는 조합이다.
+
+프라이버시도 스키마 문제다. 이메일을 users에 평문으로 두고 로그에 `user` 객체를 dump하면, 나중에 삭제 요청이 왔을 때 주문 이력·로그·분석 이벤트·검색 인덱스 네 곳을 찾아다녀야 한다. 식별자를 어디서부터 분리할지 처음에 안 정하면 삭제 기능이 프로젝트가 된다.
+
+응이 따로 적은 문장이 있다. AI 시스템은 이 데이터에서 컨텍스트를 가져간다. 주문 이벤트가 “paid”만 있고 실패 이유가 없으면, 나중에 에이전트가 고객 문의에 답할 때도 실패 이유를 모른다. 사람 UI용 스키마와 모델 입력용 스키마가 같다고 가정하면 안 된다.
+
+## 아키텍처: 단계가 바뀌면 정답도 바뀐다
+
+“모놀리스 vs 마이크로서비스”를 먼저 고르는 팀이 아직 있다. 응이 묻는 것은 그 전이다. 사용자 수, 지연 한도, 비용 한도, 상태의 위치.
+
+프로토타입에서 Next.js 한 앱 + SQLite는 맞다. 그 구조를 결제 프로덕션에 그대로 가져가면 이런 일이 난다.
+
+- 웹 요청 처리 프로세스 안에서 결제 프로바이더를 호출한다. 프로바이더 타임아웃이 워커를 잡아먹는다.
+- 재고 차감과 결제 승인을 한 트랜잭션처럼 생각하고 코드 순서만 맞춘다. 실제로는 두 시스템이므로 한쪽만 성공한다.
+- 이미지 리사이즈를 API 프로세스에서 한다. 배포할 때마다 CPU burst가 난다.
+
+이 지점에서 큐를 넣을지 말지가 아키텍처다. “비동기 처리 넣어줘”라고 하면 모델은 Bull 또는 SQS 예제를 붙인다. 안 정하고 넘어가는 것은 재시도 정책이다.
+
+- 최대 몇 번 재시도하는지
+- 백오프가 있는지
+- 실패 메시지를 DLQ로 보내는지
+- 재시도가 안전한지 (멱등한지)
+
+결제 capture를 큐에 넣고 재시도 기본값 5회를 그대로 쓰면, 프로바이더가 timeout을 줬는데 실제로는 승인된 건이 다섯 번 잡힐 수 있다. 큐를 넣는 것이 문제가 아니라 idempotency key 없이 큐를 넣는 것이 문제다.
+
+상태 위치도 마찬가지다. 장바구니를 프론트 localStorage에 두면 구현이 쉽다. 다른 기기, 가격 변경, 품절을 반영하지 못한다. 서버 세션에 두면 스케일 아웃할 때 sticky session 또는 외부 세션 저장소가 필요하다. Redis에 두면 TTL과 로그인 유저 장바구니 병합 정책이 생긴다. 에이전트는 지금 화면 기준으로 가장 짧은 코드를 고른다.
+
+스택 선택도 실험 대상이다. “익숙한 프레임워크”와 “이 부하에 맞는 런타임”은 다르다. 모델은 훈련 데이터에 많은 쪽을 고른다. 벤치 없이 고르면 그 편향이 아키텍처가 된다.
+
+프로토타입 구조를 버릴 때를 미리 적어 두는 편이 낫다. 예: “주문 초당 5 넘기 전, 결제 호출은 동기여도 된다. 그 이후에는 outbox + 워커.” 이 문장이 있으면 에이전트에게 지금 단계의 코드를 시켜도 다음 단계 작업 범위가 보인다.
+
+## 보안·신뢰성: 해피 패스 바깥
+
+에이전트는 테스트도 잘 만든다. 다만 만든 테스트는 대체로 “201이 나온다”, “목록 길이가 3이다”다. 깨져야 하는 경우를 적어 주지 않으면 그 경우는 없다.
+
+결제 한 건만 봐도 테스트 목록이 갈린다.
+
+- 같은 `idempotency-key`로 두 번 POST
+- 승인 성공 후 재고 차감 실패
+- 웹훅이 주문 API보다 먼저 도착
+- 웹훅이 같은 event id로 두 번 도착
+- 클라이언트는 타임아웃을 받았는데 서버는 커밋됨
+- 부분 환불 후 재결제
+
+이 여섯을 프롬프트에 안 넣으면 단위 테스트 12개가 생겨도 운영 장애는 그대로다.
+
+장애 반경도 코드 생성 기본값과 안 맞는다. 상품 추천 API가 죽으면 상품 상세 전체가 500이 되는 구현을 모델은 자주 낸다. 상세 본문은 뜨고 추천만 빈 칸인 쪽이 맞다. circuit breaker, timeout, fallback을 “넣어줘”라고 하면 라이브러리는 붙는다. timeout 값을 200ms로 둘지 2s로 둘지, fallback을 캐시된 베스트셀러로 할지 빈 배열로 할지는 사람 값이다.
+
+보안은 스캐너로 대체되지 않는다. 에이전트가 자주 하는 실수:
+
+- CORS `origin: *` + credential
+- 에러 응답에 SQL/스택 포함
+- `admin` 여부를 JWT claim만 보고 확인하고, 서버에서 role을 다시 안 읽음
+- 파일 업로드 확장자만 보고 Content-Type은 안 봄
+- 시크릿을 `.env.example`에 실제 값으로 넣음
+- IDOR: `/orders/123`을 로그인만 되면 조회
+
+의존성 스캔은 이 목록의 일부를 잡는다. IDOR와 웹훅 서명 검증 누락은 스펙을 알아야 잡는다. Stripe/Toss 웹훅을 “엔드포인트 만들어줘”로 만들면 서명 검증 없는 POST가 나온다. 그 엔드포인트가 주문 상태를 paid로 바꾼다.
+
+shift left는 도구를 앞에 두는 일이 아니다. 인증 경계, 테넌트 경계, 웹훅 경계, 파일 경계를 티켓에 같이 적어 두는 일이다.
+
+## 운영: 초록불 다음
+
+로컬에서 테스트가 통과한 코드는 배포 대상이지 운영 대상이 아니다. 배포 파이프라인, 롤백, 마이그레이션 순서, 관측이 없으면 에이전트가 만든 코드의 실패를 볼 방법이 없다.
+
+마이그레이션 순서만 해도 자주 깨진다.
+
+1. 코드가 새 컬럼을 읽는다
+2. 컬럼은 다음 배포에서 추가된다
+
+또는 반대.
+
+1. 컬럼을 먼저 넣는다
+2. 코드는 아직 옛 컬럼만 쓴다
+3. 기본값이 없어 INSERT가 죽는다
+
+에이전트에게 “스키마 변경하고 API 수정해줘”라고 한 커밋에 시키면 이 순서가 한 파일이 된다. 블루그린/카나리에서는 옛 인스턴스와 새 인스턴스가 잠시 같이 산다. expand-contract를 모르면 그 짧은 구간에서 주문이 실패한다.
+
+관측도 기본 구현이 얇다. `console.log(err)` 또는 `logger.info('order created')`. 나중에 필요한 것은 이것이다.
+
+- `order_id`, `payment_id`, `idempotency_key`가 같은 라인에 있는지
+- 결제 프로바이더 latency histogram
+- 재고 차감 실패 수
+- 캐시 hit/miss, stampede 의심 키
+- 큐 lag, DLQ 증가
+
+알림은 “5xx가 10개”가 아니라 “결제 성공률이 15분 평균 대비 떨어짐”이어야 쓸모가 있다. 에이전트는 전자를 잘 만든다.
+
+스케일 이야기도 캐시·스키마로 돌아온다. read replica를 붙이면 기본 설정에는 replica lag가 있다. “방금 쓴 주문이 목록에 없음”이 재현된다. 읽기를 replica로 보낼 쿼리와 primary에 둘 쿼리를 안 나누면, 캐시를 넣기 전에 이미 일관성 버그가 있다. 인덱스를 많이 달면 목록은 빨라지고 주문 INSERT는 느려진다. 에이전트는 느린 SELECT를 보면 인덱스를 추가한다. write path cost는 안 본다.
+
+기술 부채도 속도가 빨라져서 더 빨리 쌓인다. 리팩터를 시키는 것은 쉽다. 어떤 모듈을 이번 주에 안 건드릴지가 없다. 경계 없이 리팩터하면 결제와 알림과 추천이 한 PR에 들어간다. 롤백 단위가 사라진다.
+
+## 이 주장이 과한 지점
+
+응의 편지와 결이 다른 측정도 있다.
+
+Anthropic은 2026년 6월 16일 [Agentic coding and persistent returns to expertise](https://www.anthropic.com/research/claude-code-expertise)에서 Claude Code 세션 약 40만 건을 봤다. 코딩 직군과 다른 직군의 성공률 차이는 크지 않았다. 차이를 만든 쪽은 도메인 지식에 가까웠다. 사람이 계획의 대부분을 정하고 모델이 실행의 대부분을 했다. 디버깅이 세션에서 차지하는 비중은 줄고 운영 업무 비중은 늘었다.
+
+해석은 두 가지다. 문법을 모르는 사람도 도구를 만들 수 있다. 그래도 전문가 세션과 초보 세션의 성공률 간격은 남아 있다. 스키마와 장애를 아는 사람이 계획을 더 잘 적는 것과 맞닿는다.
+
+다른 실험은 학습 쪽이다. Anthropic의 2026년 1월 29일 [How AI assistance impacts the formation of coding skills](https://www.anthropic.com/research/AI-assistance-coding-skills)는 낯선 라이브러리를 배울 때 AI를 쓴 그룹이 직후 퀴즈에서 손으로 짠 그룹보다 낮았다고 적는다. 차이가 큰 항목이 디버깅이었다. 이 실험은 에이전트 코딩이 아니라 사이드바 보조에 가깝다. 그래도 완전히 위임하면 그 라이브러리의 실패 모드를 직접 안 본다는 점은 같다. 운영에서 그 공백이 다시 나온다.
+
+사이먼 윌리슨의 기준으로 보면 구분도 필요하다. [Not all AI-assisted programming is vibe coding](https://simonwillison.net/2025/Mar/19/vibe-coding/)에서 그는, 코드를 읽고 설명할 수 있는 상태로 커밋하는 작업은 바이브 코딩이 아니라고 적는다. 바이브 코딩은 코드를 안 읽는 쪽에 가깝다. 읽지 않은 코드의 버그는 다시 모델에게 고치라고 하는 루프가 된다. 캐시 무효화가 잘못된 시스템이 그 루프에 들어가면, 고칠 때마다 키 패턴이 늘어난다.
+
+병목이 코딩이 아니라 무엇을 만들지라는 지적도 맞다. 잘못된 주문을 아주 잘 설계할 수 있다. 그래서 이 다섯 가지는 출하 조건이지 제품 조건은 아니다.
+
+## 에이전트에게 일을 넘기기 전에 적을 것
+
+기능을 시키기 전에 아래를 티켓에 붙이면, 생성 코드의 수정 범위가 줄어든다.
+
+**스키마**
+
+- 읽기 쿼리 3개, 쓰기 쿼리 3개를 먼저 적는다.
+- 상태가 컬럼 하나인지, 별도 이벤트 테이블인지.
+- 돈·재고·권한은 어떤 트랜잭션 경계인지.
+- JSONB에 넣을 필드와 컬럼으로 승격할 조건을 적는다.
+
+**캐시**
+
+- 키 목록과 무효화 트리거.
+- 목록/상세/유저별 키가 섞이는지.
+- Redis 장애 시 동작.
+- stampede 방지를 넣을지 (singleflight, early refresh).
+
+**장애**
+
+- 한 번 더 호출돼도 안전한지. idempotency key가 어디에 저장되는지.
+- 웹훅 서명, event id 중복.
+- 부분 실패 시 사용자에게 보이는 화면.
+- timeout과 재시도가 중복 결제를 만드는지.
+
+**배포**
+
+- 마이그레이션과 코드의 순서.
+- 롤백 시 데이터는 남는 방향인지.
+- 로그에 주문/결제/키 식별자가 있는지.
+
+문법을 다시 외울 필요는 없다. 위 목록을 채우지 않은 채 “만들어줘”만 반복하면, 모델은 평균적인 웹앱을 만든다. 평균적인 웹앱의 재고 컬럼과 평균적인 Redis 키는, 결제와 재고와 개인정보가 있는 서비스에서 평균적으로 실패한다.
+
+다음에 에이전트가 낸 마이그레이션과 캐시 레이어를 볼 때는 프레임워크 이름보다 키, 트랜잭션 경계, 재시도부터 보면 된다.
+
+## 확인한 자료
+
+- Andrew Ng, [Why Software Fundamentals Remain Essential for AI Developers](https://www.deeplearning.ai/the-batch/the-ai-engineering-skills-map-in-detail-software-engineering-fundamentals), The Batch, 2026-08-28.
+- Andrew Ng / DeepLearning.AI, [The AI Engineering Skills Map](https://www.deeplearning.ai/the-batch/the-ai-engineering-skills-map), The Batch, 2026-08-14.
+- Anthropic, [Agentic coding and persistent returns to expertise](https://www.anthropic.com/research/claude-code-expertise), 2026-06-16.
+- Judy Hanwen Shen, Alex Tamkin, [How AI assistance impacts the formation of coding skills](https://www.anthropic.com/research/AI-assistance-coding-skills), Anthropic, 2026-01-29. 논문: [arXiv:2601.20245](https://arxiv.org/abs/2601.20245).
+- Simon Willison, [Not all AI-assisted programming is vibe coding (but vibe coding rocks)](https://simonwillison.net/2025/Mar/19/vibe-coding/), 2025-03-19.

@@ -62,6 +62,7 @@ const expectedPublicIds = [
 
 const expectedNonPublicIds = [
   'analysis/example-url-analysis',
+  'articles/coding-agent-schema-cache-failure',
   'articles/example-article',
   'ideas/example-idea',
   'reviews/example-book-review',
@@ -391,8 +392,8 @@ describe('framework-neutral corpus loading', () => {
     releaseRoutes = new Set(releaseModule.fullPublicPaths(activeRelease));
   });
 
-  it('parses all 41 MDX records without Astro imports and preserves authored bodies', () => {
-    expect(records).toHaveLength(41);
+  it('parses all 42 MDX records without Astro imports and preserves authored bodies', () => {
+    expect(records).toHaveLength(42);
     expect(records.find((record) => record.id === 'why-i-read-in-the-ai-era')).toMatchObject({
       collection: 'thoughts',
       status: 'published',

@@ -1,18 +1,21 @@
 # FORM & THOUGHT 이미지 아트 디렉션
 
 - 상태: approved generation and integration policy
-- 날짜: 2026-08-28
-- 승인 근거: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)
+- 날짜: 2026-08-29
+- 승인 근거: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md),
+  [ADR-0008](adr/0008-full-bleed-density-and-topic-media.md)
 - reference manifest: [assets/form-and-thought-reference/manifest.yml](assets/form-and-thought-reference/manifest.yml)
 
 ## 목적
 
-대표 이미지가 필요한 아티클과 홈을 하나의 시각 세계로 묶되, 콘텐츠의 근거를 대신하는 장식 이미지를 만들지 않는다. 이미지는 정보 구조를 보조하고 FORM & THOUGHT의 black/terracotta/off-white 편집 지면에 맞아야 한다.
+대표 이미지가 필요한 아티클과 홈을 하나의 시각 세계로 묶되, 동일한 건축 공간 공식을 반복하지 않고 각 글의 핵심 주장과 행동을 식별 가능하게 만든다. 이미지는 콘텐츠의 근거를 대신하지 않으며 FORM & THOUGHT의 black/terracotta/off-white 편집 지면에 맞아야 한다.
 
 ## 공통 이미지 문법
 
-- architectural minimalism.
-- 넓은 면, 한두 개의 강한 대각선 또는 수직선.
+- palette, 자연광, 낮은 채도와 충분한 negative space를 공유한다.
+- 소재는 사람·행동, 도구·작업대, 데이터·구조, 경계·증거, 디자인·재료, 읽기·사유로 분산한다.
+- architectural minimalism은 하나의 subject formula가 아니라 framing과 restraint의 guardrail이다.
+- 넓은 면과 한두 개의 강한 선은 허용하지만 모든 글의 주 피사체로 반복하지 않는다.
 - warm off-white, terracotta, near-black, deep brown.
 - 낮은 채도와 자연광, 선명한 그림자.
 - 한 명의 작은 인물 또는 책·컵·의자·식물 같은 단일 정물.
@@ -33,7 +36,7 @@
 
 ### 에이전트와 코딩 도구
 
-반복되는 로봇, 터미널, 회로 대신 규율·경계·작업 흐름을 건축적 공간, 문, 계단, 선, 하나의 작업 물체로 표현한다.
+반복되는 로봇, 터미널, 회로 대신 규율·경계·작업 흐름을 사람의 행동, 작업대, 문, 선, evidence object와 제한된 공간 은유로 표현한다. 같은 건축 공간이 연속되지 않게 한다.
 
 ### 디자인과 UI
 
@@ -41,7 +44,7 @@ grid, crop, paper, material sample, 빛이 만든 면을 사용한다. 완성된
 
 ### 데이터와 검색
 
-벡터·그래프 icon을 직접 그리지 않고 거리, 층, 교차, 정렬, 분기 같은 공간 관계로 번역한다.
+거리, 층, 교차, 정렬, 분기 같은 관계를 사용한다. 실제 글에 근거한 구조 diagram은 사용할 수 있지만 가짜 dashboard나 근거 없는 graph를 만들지 않는다.
 
 ### 서평
 
@@ -50,6 +53,23 @@ grid, crop, paper, material sample, 빛이 만든 면을 사용한다. 완성된
 ### 생각
 
 한 장의 조용한 이미지 또는 text-only paper cell을 사용한다. 미래 빈 cell을 채우기 위한 이미지는 생성하지 않는다.
+
+## 아티클 세트 다양성
+
+- 공개 article 17개 모두에 핵심 주장, 금지 오독, image family와 retain/replace 근거가 있는 brief를 만든다.
+- featured media가 없는 네 article은 새 media 후보가 필요하다.
+- 기존 asset도 의미 식별력이 약하거나 반복성이 크면 새 ID로 교체한다.
+- 목록에서 연속 세 article이 같은 family, camera distance 또는 주 피사체를 사용하지 않는다.
+- 최종 contact sheet는 개별 품질뿐 아니라 전체 목록 rhythm을 함께 승인한다.
+
+## 서평 표지 수집
+
+- exact ISBN, publisher, edition label과 publication year를 candidate source와 대조한다.
+- publisher/rightsholder media, reuse를 허용하는 official distributor/API, licensed repository 순으로 찾는다.
+- 상품 페이지에 보인다는 사실만으로 redistribution approval을 추론하지 않는다.
+- source URL, retrieved date, license/permission evidence, checksum과 dimensions를 기록한다.
+- edition은 맞지만 redistribution evidence가 없으면 `hold`이며 public bytes를 만들지 않는다.
+- 검색 thumbnail, 다른 판본, hotlink와 생성 표지는 사용하지 않는다.
 
 ## 생성 절차
 
@@ -110,3 +130,5 @@ docs/notes/project/assets/form-and-thought-generated/<batch-id>/
 - 이미지 자체에 읽을 수 없는 가짜 글자가 없는가.
 - source/provenance와 rights state가 기록됐는가.
 - 서평 표지를 대체하거나 가짜 콘텐츠를 암시하지 않는가.
+- article 목록에서 인접 asset이 같은 소재와 camera grammar를 반복하지 않는가.
+- review cover의 exact edition과 redistribution evidence가 모두 있는가.

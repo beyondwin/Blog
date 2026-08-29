@@ -65,8 +65,9 @@ pointer로 닫은 뒤 trigger로 focus를 복원한다. JavaScript가 없으면 
 canonical primary anchors가 남는다.
 
 visible focus는 2px 이상 outline과 바깥 ink ring을 함께 사용한다. reduced motion에서는
-transition과 animation을 제거한다. canonical anchor와 GET form이 기본 동작을 소유하고
-React는 menu, link copy, 검색 결과 갱신, bounded origin return만 보강한다.
+transition과 animation을 제거하고 `/search/`의 기억 탐색 대기 없이 최종 상태로 이동한다.
+canonical anchor와 GET form이 기본 동작을 소유하고 React는 menu, link copy, 질문형 검색 상태,
+검색 결과 갱신, bounded origin return만 보강한다.
 
 ## route composition
 
@@ -93,11 +94,17 @@ anchor와 17건 ledger를 제공한다. 서평은 18건 ledger를 제공하며 �
 
 ### 검색
 
-primary corpus인 서평·아티클·생각만 검색한다. 빈 검색은 실제 keyword 최대 8개와 lane별
-discovery card 한 건을 보여 준다. GET form은 JavaScript 없이 canonical query URL로
-이동하지만, `ssr: false` 정적 export이므로 query별 filtering과 input restoration은 hydration
-이후에만 동작한다. JavaScript-off에서는 읽을 수 있는 기본 discovery를 그대로 보여 주며
-query-specific 결과를 제공한다고 주장하지 않는다.
+`/search/`는 FORM & THOUGHT의 공개 기록에 질문하는 second-brain 표면이다. 첫 화면은 avatar가
+있는 종이 collage stage와 질문 composer를 49/51로 놓고, 모바일은 avatar 다음에 질문이 온다.
+승인된 sample 질문은 `관련 기록 탐색 → 생각 연결 → 답 쓰기` 뒤 실제 공개 thought에서 검증한
+답과 세 근거를 보여 준다. 근거는 desktop left panel, mobile bottom sheet로 열리며 focus trap,
+`Escape`, backdrop close와 trigger focus return을 제공한다.
+
+LLM/RAG를 아직 연결하지 않았으므로 다른 질문에 sample 답을 재사용하지 않는다. 임의 질문은
+primary corpus인 서평·아티클·생각의 deterministic 결과로 전환한다. GET form과 canonical query
+URL은 유지하지만 `ssr: false` 정적 export이므로 query별 filtering과 input restoration은
+hydration 이후에만 동작한다. JavaScript-off에서 query-specific 결과나 생성 답변을 제공한다고
+주장하지 않는다.
 
 ### detail
 

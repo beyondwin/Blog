@@ -1,4 +1,4 @@
-import type { SearchInventoryItem } from './SearchPage';
+import type { SearchInventoryItem } from './searchModel';
 
 export interface PopularKeyword {
   count: number;

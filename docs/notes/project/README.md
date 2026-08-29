@@ -3,12 +3,16 @@
 이 폴더는 현재 `FORM & THOUGHT` React-only public site, immutable release, content/media/public
 memory boundary와 운영 절차를 설명한다. built truth는 ADR-0007, `DESIGN.md`, architecture
 reference와 실제 code/scripts다. 이전 renderer와 visual system 자료는 삭제하지 않은 history다.
+ADR-0008은 구현 전 승인된 full-bleed density와 topic-family media target이며 현재 built truth와
+구분한다. ADR-0009는 `/search/`의 질문형 second-brain 전환과 UI-only 진실성 경계를 고정한다.
 
 ## current docs
 
 | 문서 | 쓰는 때 |
 | --- | --- |
 | [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md) | current public product/renderer decision 확인 |
+| [ADR-0008](adr/0008-full-bleed-density-and-topic-media.md) | approved full-bleed density와 topic-family media target 확인 |
+| [ADR-0009](adr/0009-question-led-public-record-interface.md) | approved question-led search, fixture와 real-search fallback 경계 확인 |
 | [Design built truth](../../../DESIGN.md) | tokens, typography, route composition, responsive behavior 변경 |
 | [Architecture reference](architecture-reference.md) | route, schema, release, delivery, no-JS와 private boundary 확인 |
 | [Agent Runbook](agent-runbook.md) | task read/edit/verification surface 선택 |

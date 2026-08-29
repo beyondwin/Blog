@@ -1,0 +1,36 @@
+version: 1
+assetId: form-and-thought-agent-avatar-v1
+operation: integrate-approved-existing-raster
+imageSpec:
+  mode: audit
+  assetType: editorial-avatar
+  purpose: public second-brain response stage
+  destination: apps/site/public/images/form-and-thought-agent-avatar-v1.png
+  canvas: [1254, 1254]
+  invariants:
+    - preserve the exact approved raster bytes
+    - preserve the paper-collage face and FORM & THOUGHT palette
+    - add no visible copy or mark
+approval:
+  state: approved
+  approvedBy:
+    - controller
+  evidence: ADR-0009 and repeated controller approvals on 2026-08-29
+asset:
+  sourceReference: docs/superpowers/assets/2026-08-29-form-and-thought-second-brain-search/files/form-and-thought-agent-avatar-v1.png
+  publicPath: apps/site/public/images/form-and-thought-agent-avatar-v1.png
+  format: png
+  checksum: sha256:f29c064b1c0f77e5906a9c02e5b8e0a573ae6c44373b99fb75532c90fd481f20
+  width: 1254
+  height: 1254
+  byteSize: 1872261
+  alpha: false
+evidence:
+  mechanical: verified
+  visual: verified
+  projectFit: verified
+  rights: partially_verified
+rightsBoundary:
+  generatedOutputProvenance: user-approved Codex built-in image generation design exploration
+  independentLegalReview: not_measured
+  caveat: generated output may be non-exclusive and its copyrightability or uniqueness is not guaranteed

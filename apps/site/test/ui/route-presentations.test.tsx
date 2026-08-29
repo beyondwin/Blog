@@ -173,8 +173,10 @@ describe('full public route expansion', () => {
 
     const inventory = releaseModule.searchInventory(active);
     const discovery = releaseModule.searchDiscovery(active);
+    const fixture = releaseModule.publicSecondBrainFixture(active);
     const searchHtml = renderToStaticMarkup(createElement(SearchPage, {
       discovery,
+      fixture,
       initialQuery: 'Graphify',
       inventory,
     }));
@@ -183,8 +185,13 @@ describe('full public route expansion', () => {
     expect(searchHtml).toContain('href="/articles/graphify-code-knowledge-graph-deep-dive/"');
     expect(JSON.stringify(inventory)).not.toMatch(/bodyHtml|releaseId|rendererVersion|rawPrompt|privatePath/u);
 
-    const emptySearchHtml = renderToStaticMarkup(createElement(SearchPage, { discovery, initialQuery: '', inventory }));
-    expect(emptySearchHtml).toContain('찾는 키워드에서 서평과 아티클, 생각의 다음 질문을 발견해 보세요.');
+    const emptySearchHtml = renderToStaticMarkup(createElement(SearchPage, {
+      discovery,
+      fixture,
+      initialQuery: '',
+      inventory,
+    }));
+    expect(emptySearchHtml).toContain('제 기록에');
     expect(emptySearchHtml).not.toContain('__bw_');
 
     const memoryHtml = renderToStaticMarkup(createElement(MemoryIndexPage, { records: [memory] }));
@@ -355,10 +362,18 @@ describe('full public route expansion', () => {
 
   it('preserves raw search typing, creates a bounded primary-result origin, and detects safe tag-anchor collisions', async () => {
     const search = await candidateModule<any>('src/ui/search/SearchPage.tsx');
+    const secondBrain = await candidateModule<any>('src/ui/search/secondBrain.ts');
     const anchors = await candidateModule<any>('src/ui/navigation/search-anchor.ts');
     const article = { id: 'articles/AI-design', anchorId: 'record-articles-ai-design', href: '/articles/ai-design/', kind: 'article', title: 'AI 설계', description: '설명', topics: ['AI 설계'] };
     const html = renderToStaticMarkup(createElement(search.SearchPage, {
-      discovery: [article, article, article],
+      fixture: {
+        question: secondBrain.SAMPLE_QUESTION,
+        answerLead: '답변',
+        answerConclusionPrefix: '판단 ',
+        answerEmphasis: '근거',
+        answerConclusionSuffix: '입니다.',
+        evidence: [],
+      },
       initialQuery: 'AI 설계 ',
       inventory: [article],
     }));
@@ -397,7 +412,7 @@ describe('full public route expansion', () => {
 
     const cases = [
       ['app/routes/memory-index.tsx', 'MemoryIndexPresentation', '<title>문장 · FORM &amp; THOUGHT</title>', '글로 쓰고 난 뒤에도 남는 문장만 여기에 둡니다.'],
-      ['app/routes/search.tsx', 'SearchPresentation', '<title>검색 · FORM &amp; THOUGHT</title>', '서평, 아티클, 생각을 검색합니다.'],
+      ['app/routes/search.tsx', 'SearchPresentation', '<title>검색 · FORM &amp; THOUGHT</title>', '공개된 기록에 질문하고, 연결된 답과 근거를 살펴봅니다.'],
       ['app/routes/tags-index.tsx', 'TagsIndexPresentation', '<title>FORM &amp; THOUGHT</title>', '찾기로 이어진 단어들.'],
     ] as const;
     for (const [path, presentationName, title, description] of cases) {
@@ -406,7 +421,7 @@ describe('full public route expansion', () => {
         ? { records: releaseModule.summariesForCollection(active, 'memory') }
         : path.includes('search')
           ? {
-              discovery: releaseModule.searchDiscovery(active),
+              fixture: releaseModule.publicSecondBrainFixture(active),
               initialQuery: '',
               inventory: releaseModule.searchInventory(active),
             }

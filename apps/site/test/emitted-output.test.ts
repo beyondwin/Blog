@@ -1,4 +1,6 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -166,16 +168,34 @@ describe('React Router emitted critical output', () => {
     expect(routeCss.memoryDetail).toContain('.memory-thought');
     expect(routeCss.memoryDetail).toContain('.editorial-detail-frame__prose .prose');
     expect(routeCss.memoryDetail).not.toMatch(/\.reading-threshold|\.context-return/u);
-    expect(routeCss.search).toContain('.search-page__form');
+    expect(routeCss.search).toContain('.second-brain-search__stage');
+    expect(routeCss.search).toContain('.evidence-panel');
+    expect(routeCss.search).not.toContain('.search-discovery-card');
     expect(routeCss.search).not.toMatch(/\.article-topic-filter|\.article-colophon/u);
     for (const css of Object.values(routeCss)) expect(css).toContain('.visually-hidden');
     expect(routeCss.home.length).toBeLessThan(10_000);
     expect(routeCss.articleDetail.length).toBeLessThan(12_000);
-    for (const css of Object.values(routeCss)) expect(css.length).toBeLessThan(18_000);
+    for (const [route, css] of Object.entries(routeCss)) {
+      if (route !== 'search') expect(css.length).toBeLessThan(18_000);
+    }
+    expect(routeCss.search.length).toBeLessThan(28_000);
+    expect(gzipSync(routeCss.search).byteLength).toBeLessThan(6_500);
     const imagePreload = homeHtml.match(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u)?.[0];
     expect(imagePreload).toContain('href="/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero-1536w.avif"');
     expect(imagePreload).toContain('imageSizes="(max-width: 767px) 100vw, (max-width: 1179px) 54vw, 710px"');
     expect(imagePreload).toContain('fetchPriority="high"');
+  });
+
+  it('copies the approved second-brain avatar without changing its bytes', async () => {
+    const avatar = await readFile(join(
+      candidateRoot,
+      'build/client/images/form-and-thought-agent-avatar-v1.png',
+    ));
+    expect(avatar).toHaveLength(1_872_261);
+    expect(createHash('sha256').update(avatar).digest('hex')).toBe(
+      'f29c064b1c0f77e5906a9c02e5b8e0a573ae6c44373b99fb75532c90fd481f20',
+    );
+    expect(searchHtml).toContain('src="/images/form-and-thought-agent-avatar-v1.png"');
   });
 
   it('keeps the no-JS article document as a complete ledger with six canonical filter anchors', () => {

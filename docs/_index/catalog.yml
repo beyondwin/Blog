@@ -89,9 +89,9 @@
   type: visual-specification
   language: ko
   status: organized
-  summary: 일곱 승인 시안의 권한, palette, typography, geometry, image behavior, 금지 목록과 screenshot QA 기준을 고정한 시각 스펙.
-  source: ADR-0007 and user-provided reference set 2026-08-28
-  updated: 2026-08-28
+  summary: 승인 시안과 후속 full-bleed density override의 palette, typography, geometry, image behavior, 금지 목록과 screenshot QA 기준을 고정한 시각 스펙.
+  source: ADR-0007, ADR-0008 and user approvals 2026-08-29
+  updated: 2026-08-29
 
 - title: FORM & THOUGHT 이미지 아트 디렉션
   path: docs/notes/project/form-and-thought-image-art-direction.md
@@ -99,9 +99,9 @@
   type: visual-specification
   language: ko
   status: organized
-  summary: 대표 이미지의 공통 문법, 콘텐츠별 은유, 생성 후보 contact sheet, 승인, provenance와 public integration 경계를 정의한다.
-  source: ADR-0007 and user-provided reference set 2026-08-28
-  updated: 2026-08-28
+  summary: 주제별 article image family, exact review cover sourcing, 생성 후보 contact sheet, 승인, provenance와 public integration 경계를 정의한다.
+  source: ADR-0007, ADR-0008 and user approvals 2026-08-29
+  updated: 2026-08-29
 
 - title: FORM & THOUGHT React-only 공개 사이트 구현 계획
   path: docs/notes/project/form-and-thought-implementation-plan.md
@@ -211,7 +211,7 @@
   status: organized
   summary: Index, status model, template, and maintenance workflow for durable beyondwin product, architecture, boundary, publishing-policy, and UX decisions.
   source: AGENTS.md
-  updated: 2026-08-28
+  updated: 2026-08-29
 
 - title: 'ADR-0000: ADR 관리 규칙'
   path: docs/notes/project/adr/0000-adr-governance.md
@@ -289,9 +289,29 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Fixes the approved visual references, public nouns and routes, thoughts collection, editorial content model, React-only cutover, and Astro removal.
-  source: user decisions 2026-08-28
-  updated: 2026-08-28
+  summary: Fixes the approved visual references, public nouns and routes, thoughts collection, editorial content model, React-only cutover, and Astro removal; ADR-0008 and ADR-0009 partially supersede its visual and search composition clauses.
+  source: user decisions 2026-08-28, ADR-0008 and ADR-0009
+  updated: 2026-08-29
+
+- title: 'ADR-0008: Full-bleed 압축 지면과 주제별 미디어 사용'
+  path: docs/notes/project/adr/0008-full-bleed-density-and-topic-media.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Removes the outer paper inset and elevation, increases first-view density, diversifies article media by topic, and requires exact edition plus redistribution evidence for review covers.
+  source: user decisions 2026-08-29
+  updated: 2026-08-29
+
+- title: 'ADR-0009: 질문형 public second-brain 검색 인터페이스'
+  path: docs/notes/project/adr/0009-question-led-public-record-interface.md
+  topic: project
+  type: decision-record
+  language: ko
+  status: organized
+  summary: Partially supersedes the keyword-first search composition with a question, retrieval, answer, and evidence flow while preserving truthful deterministic fallback and the public projection boundary.
+  source: user decisions and approved interactive prototype 2026-08-29
+  updated: 2026-08-29
 
 - title: Node/React 모듈러 모놀리스 상세 설계
   path: docs/notes/project/node-react-modular-monolith-design.md

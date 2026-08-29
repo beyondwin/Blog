@@ -9,6 +9,10 @@ import {
   type SearchInventoryItem,
 } from '../../src/ui/search/SearchPage';
 import { popularKeywords } from '../../src/ui/search/popularKeywords';
+import {
+  SAMPLE_QUESTION,
+  type PublicAnswerFixture,
+} from '../../src/ui/search/secondBrain';
 
 function item(
   kind: 'article' | 'review' | 'thought',
@@ -45,31 +49,48 @@ const inventory = [
   }),
 ];
 
-const discovery = [inventory[1], inventory[0], inventory[2]];
+
+const fixture: PublicAnswerFixture = {
+  question: SAMPLE_QUESTION,
+  answerLead: '저에게 독서는 답을 얻는 일이 아닙니다.',
+  answerConclusionPrefix: '결론까지 가는 시간을 지나며 ',
+  answerEmphasis: '내 판단',
+  answerConclusionSuffix: '을 되찾는 일입니다.',
+  evidence: [0, 1, 2].map((index) => ({
+    id: `evidence-${index + 1}`,
+    label: ['결론까지 가는 시간', '판단의 마지막 몫', '답을 쉽게 믿지 않기'][index]!,
+    collectionLabel: '생각' as const,
+    dateLabel: '2026.08',
+    locatorLabel: `문단 ${index + 1}`,
+    excerpt: `공개 기록 근거 ${index + 1}`,
+    context: `답변에 사용한 맥락 ${index + 1}`,
+    recordTitle: 'AI 시대에, 나는 왜 책을 읽는가',
+    canonicalPath: '/thoughts/why-i-read-in-the-ai-era/',
+  })),
+};
 
 function renderSearch(initialQuery: string) {
   return renderToStaticMarkup(createElement(SearchPage as any, {
-    discovery,
+    fixture,
     initialQuery,
     inventory,
   }));
 }
 
 describe('FORM & THOUGHT public search', () => {
-  it('renders exact search chrome, a canonical GET form, corpus keywords, and one fixed real card per primary lane', () => {
+  it('renders the approved question-led idle screen with a canonical GET fallback', () => {
     const html = renderSearch('');
 
-    expect(html).toContain('<h1 id="search-title">검색</h1>');
-    expect(html).toContain('<form class="search-page__form" role="search" action="/search/" method="get">');
+    expect(html).toContain('제 기록에');
+    expect(html).toContain('무엇을 묻고 싶나요?');
+    expect(html).toContain('<form class="question-composer" action="/search/" method="get">');
     expect(html).toContain('name="q"');
-    expect(html).toContain('aria-label="검색어"');
-    expect(html).toContain('href="/search/?q=AI"');
-    expect(html).toContain('href="/search/?q=%EB%8F%85%EC%84%9C"');
-    expect(html.match(/class="search-keywords__link"/gu)?.length).toBeLessThanOrEqual(8);
-    expect(html.match(/<a class="search-discovery-card /gu)).toHaveLength(3);
-    expect(html).toMatch(/>서평<[\s\S]*>아티클<[\s\S]*>생각</u);
-    expect(html).not.toMatch(/>글<|>책<|>문장<|주제와 태그/u);
-    expect(html).not.toMatch(/검색은 정보|search-page__closure/u);
+    expect(html).toContain('aria-label="기록에 묻기"');
+    expect(html).toContain(`value="${SAMPLE_QUESTION}"`);
+    expect(html).toContain('질문을 기다리고 있습니다.');
+    expect(html).toContain('/images/form-and-thought-agent-avatar-v1.png');
+    expect(html).not.toMatch(/자주 쓰인 키워드|search-keywords__link|search-discovery-card/u);
+    expect(html).not.toMatch(/AI 대리인|AI DELEGATE|MIND 01/u);
   });
 
   it('keeps query bounding pure and ranks title before tag before description in one flat list', () => {
@@ -98,6 +119,7 @@ describe('FORM & THOUGHT public search', () => {
     expect(html.indexOf('태그로 찾는 서평')).toBeLessThan(html.indexOf('읽는다는 것'));
     expect(html).toMatch(/search-result__kind">아티클<[\s\S]*search-result__kind">서평<[\s\S]*search-result__kind">생각</u);
     expect(html).not.toMatch(/search-page__group|>글<|>책<|>문장</u);
+    expect(html).not.toContain(fixture.answerLead);
   });
 
   it('renders only real corpus keyword suggestions for zero results and no discovery-card grid', () => {

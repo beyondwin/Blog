@@ -1,7 +1,11 @@
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { boundedSearchQuery, SearchPage } from '../../src/ui/search/SearchPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
-import { loadVerifiedRelease, searchDiscovery, searchInventory } from '../release.server';
+import {
+  loadVerifiedRelease,
+  publicSecondBrainFixture,
+  searchInventory,
+} from '../release.server';
 
 const searchCss = import.meta.env.SSR
   ? await import('../../src/ui/styles/route-search.css?inline').then((module) => module.default)
@@ -14,7 +18,7 @@ export async function loader({ request }: { request?: Request } = {}) {
     request ? new URL(request.url).searchParams.get('q') ?? '' : '',
   );
   return {
-    discovery: searchDiscovery(release),
+    fixture: publicSecondBrainFixture(release),
     initialQuery,
     inventory: searchInventory(release),
   };
@@ -25,12 +29,12 @@ export function SearchPresentation({ data }: { data: Awaited<ReturnType<typeof l
     <>
       <DocumentMetadata
         canonical="/search/"
-        description="서평, 아티클, 생각을 검색합니다."
+        description="공개된 기록에 질문하고, 연결된 답과 근거를 살펴봅니다."
         title={publicMetadataTitle('검색')}
       />
       <SiteShell currentSection="search">
         <SearchPage
-          discovery={data.discovery}
+          fixture={data.fixture}
           initialQuery={data.initialQuery}
           inventory={data.inventory}
         />

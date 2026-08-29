@@ -15,7 +15,9 @@ ADR은 회의록이나 일일 작업 로그가 아니다. 미래 구현을 제�
 | [ADR-0004](0004-staged-aperture-public-composition.md) | Public Atlas의 기본 구성을 Staged Aperture로 사용 | superseded | 2026-08-28 | 과거 scene composition. 승인 reference 기반 route composition이 대체한다. |
 | [ADR-0005](0005-node-react-modular-monolith.md) | Node/React 모듈러 모놀리스와 분리된 공개 projection | accepted | 2026-08-28 | Node/React runtime과 public projection은 유지한다. Astro retention과 rollback 조항만 ADR-0007이 대체한다. |
 | [ADR-0006](0006-unified-public-reading-continuity.md) | 하나의 public visual world 안에서 탐색과 독서 모드를 분리 | superseded | 2026-08-28 | 과거 mineral reading continuity. FORM & THOUGHT 편집 지면이 대체한다. |
-| [ADR-0007](0007-form-and-thought-react-only-editorial-system.md) | FORM & THOUGHT React-only 공개 편집 시스템 | accepted | 2026-08-28 | 승인 reference, 공개 명사, 콘텐츠 lane, React-only 전환과 Astro 제거를 고정한다. |
+| [ADR-0007](0007-form-and-thought-react-only-editorial-system.md) | FORM & THOUGHT React-only 공개 편집 시스템 | accepted | 2026-08-29 | 승인 reference, 공개 명사, 콘텐츠 lane, React-only 전환과 Astro 제거를 고정하며 ADR-0008과 ADR-0009가 일부만 대체한다. |
+| [ADR-0008](0008-full-bleed-density-and-topic-media.md) | Full-bleed 압축 지면과 주제별 미디어 사용 | accepted | 2026-08-29 | ADR-0007의 outer shell/elevation과 architecture-dominant media만 부분 대체하고 route와 편집 구조는 유지한다. |
+| [ADR-0009](0009-question-led-public-record-interface.md) | 질문형 public second-brain 검색 인터페이스 | accepted | 2026-08-29 | `/search/`를 질문·응답·근거 흐름으로 바꾸고 UI-only fixture와 실제 검색 fallback의 진실성 경계를 고정한다. |
 
 ## 상태
 

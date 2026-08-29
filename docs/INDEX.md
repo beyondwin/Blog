@@ -33,6 +33,8 @@
 | ADR-0005: Node/React 모듈러 모놀리스와 분리된 공개 projection | project | decision-record | ko | organized | [docs/notes/project/adr/0005-node-react-modular-monolith.md](notes/project/adr/0005-node-react-modular-monolith.md) |
 | ADR-0006: 하나의 public visual world 안에서 탐색과 독서 모드를 분리 | project | decision-record | ko | organized | [docs/notes/project/adr/0006-unified-public-reading-continuity.md](notes/project/adr/0006-unified-public-reading-continuity.md) |
 | ADR-0007: FORM & THOUGHT React-only 공개 편집 시스템 | project | decision-record | ko | organized | [docs/notes/project/adr/0007-form-and-thought-react-only-editorial-system.md](notes/project/adr/0007-form-and-thought-react-only-editorial-system.md) |
+| ADR-0008: Full-bleed 압축 지면과 주제별 미디어 사용 | project | decision-record | ko | organized | [docs/notes/project/adr/0008-full-bleed-density-and-topic-media.md](notes/project/adr/0008-full-bleed-density-and-topic-media.md) |
+| ADR-0009: 질문형 public second-brain 검색 인터페이스 | project | decision-record | ko | organized | [docs/notes/project/adr/0009-question-led-public-record-interface.md](notes/project/adr/0009-question-led-public-record-interface.md) |
 | Node/React 모듈러 모놀리스 상세 설계 | project | architecture-design | ko | organized | [docs/notes/project/node-react-modular-monolith-design.md](notes/project/node-react-modular-monolith-design.md) |
 | Public reading continuity 상세 설계 | project | product-design | ko | organized | [docs/notes/project/public-reading-continuity-design.md](notes/project/public-reading-continuity-design.md) |
 | Public reading continuity React migration 구현 계획 | project | implementation-plan | ko | organized | [docs/notes/project/public-reading-continuity-implementation-plan.md](notes/project/public-reading-continuity-implementation-plan.md) |

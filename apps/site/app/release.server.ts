@@ -16,6 +16,10 @@ import type {
   SearchInventoryItem,
   SearchKind,
 } from '../src/ui/search/SearchPage';
+import {
+  SAMPLE_QUESTION,
+  type PublicAnswerFixture,
+} from '../src/ui/search/secondBrain';
 import type { PublicTag } from '../src/ui/tags/TagsPage';
 import { PREFERRED_PUBLIC_ARTICLE_LEAD_ID } from '../src/ui/articles/articlePresentation';
 import { recordAnchor as createRecordAnchor } from '../src/ui/navigation/record-anchor';
@@ -297,6 +301,57 @@ export function searchDiscovery(release: CandidateRelease): SearchDiscoveryItem[
     }
     return { ...item, media };
   });
+}
+
+export function publicSecondBrainFixture(release: CandidateRelease): PublicAnswerFixture {
+  const record = recordForRoute(release, 'thoughts', 'why-i-read-in-the-ai-era');
+  if (!record) throw new Error('Verified release is missing the public second-brain fixture thought');
+
+  const evidence = [
+    {
+      id: 'reading-time',
+      label: '결론까지 가는 시간',
+      locatorLabel: '문단 10',
+      excerpt: '요약은 결론을 주고, 독서는 그 결론까지 가는 시간을 준다.',
+      context: '요약의 효율보다 판단이 만들어지는 시간을 중요하게 본 근거입니다.',
+    },
+    {
+      id: 'last-judgment',
+      label: '판단의 마지막 몫',
+      locatorLabel: '문단 05',
+      excerpt: '더 많이 아는 경쟁은 이미 졌다. 중요한 것은 얼마나 많이 아느냐보다, 그 많은 정보와 답을 어떻게 받아들이고 판단하느냐일 것이다.',
+      context: '정보의 양보다 마지막 판단을 자기 몫으로 남겨야 한다는 관점을 가져왔습니다.',
+    },
+    {
+      id: 'doubt-the-answer',
+      label: '답을 쉽게 믿지 않기',
+      locatorLabel: '문단 16',
+      excerpt: '그래서 책을 읽는다. 더 많은 답을 가지기 위해서라기보다, 답을 쉽게 믿지 않는 사람이 되기 위해서.',
+      context: '읽기를 더 많은 답의 수집이 아니라 믿음을 점검하는 태도로 연결한 근거입니다.',
+    },
+  ] as const;
+
+  for (const item of evidence) {
+    if (!record.bodyHtml.includes(item.excerpt)) {
+      throw new Error(`Public answer fixture excerpt drifted: ${item.excerpt}`);
+    }
+  }
+
+  const dateLabel = record.updatedAt.slice(0, 7).replace('-', '.');
+  return {
+    question: SAMPLE_QUESTION,
+    answerLead: '저에게 독서는 답을 얻는 일이 아닙니다.',
+    answerConclusionPrefix: '결론까지 가는 시간을 지나며 ',
+    answerEmphasis: '내 판단',
+    answerConclusionSuffix: '을 되찾는 일입니다.',
+    evidence: evidence.map((item) => ({
+      ...item,
+      collectionLabel: '생각',
+      dateLabel,
+      recordTitle: record.title,
+      canonicalPath: record.href,
+    })),
+  };
 }
 
 export function recordForRoute<C extends CandidateCollection>(
