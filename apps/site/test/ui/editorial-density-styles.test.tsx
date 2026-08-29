@@ -4,6 +4,7 @@ import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 type Box = { height: number; width: number; x: number };
+type ContentBox = Box & { bottom: number };
 
 type Geometry = {
   detailIntro: Box;
@@ -12,6 +13,13 @@ type Geometry = {
   pick: Box;
   row: Box;
   shell: { box: Box; radius: string; shadow: string };
+};
+
+type HomeGeometry = {
+  hero: Box;
+  heroTitle: ContentBox;
+  heroDescription: ContentBox;
+  picks: Array<{ box: ContentBox; title: ContentBox; description: ContentBox }>;
 };
 
 let browser: Browser;
@@ -46,8 +54,12 @@ const fixture = `
     </header>
     <main>
       <section class="form-home">
-        <div class="form-home__hero"><div class="form-home__hero-copy">Editorial home</div><figure class="form-home__hero-media"></figure></div>
-        <ol class="form-home__picks"><li><a class="form-home__pick form-home__pick--text-led" href="/"><span class="form-home__pick-copy">Pick</span></a></li></ol>
+        <div class="form-home__hero"><div class="form-home__hero-copy"><h1>Graphify는 코드 이해를 정말 더 빠르게 만드는가?</h1><p>Graphify의 코드 지식 그래프 원리와 질의 방식, 통제 실험, 벤치마크 한계, 보안·운영 사각지대와 현실적인 도입법을 코드와 근거로 검토한다.</p><a href="/">이 글 읽기</a></div><figure class="form-home__hero-media"></figure></div>
+        <ol class="form-home__picks">
+          <li><a class="form-home__pick form-home__pick--text-led" href="/"><span class="form-home__pick-copy"><span class="form-home__pick-label">서평</span><strong>블랙스완</strong><span>우리는 현실을 보는가, 현실에 대해 만든 이야기를 보는가.</span><svg viewBox="0 0 24 24"><path d="M4 12h15M14 6l6 6-6 6" /></svg></span></a></li>
+          <li><a class="form-home__pick form-home__pick--text-led" href="/"><span class="form-home__pick-copy"><span class="form-home__pick-label">아티클</span><strong>AI 디자인 도구를 보는 기준</strong><span>AI 디자인 레퍼런스와 도구들을 단순 목록이 아니라 아이디어, 디자인 시스템, 모션, 레퍼런스 탐색의 작업 흐름으로 정리한다.</span><svg viewBox="0 0 24 24"><path d="M4 12h15M14 6l6 6-6 6" /></svg></span></a></li>
+          <li><a class="form-home__pick" href="/"><span class="form-home__pick-media"></span><span class="form-home__pick-copy"><span class="form-home__pick-label">생각</span><strong>AI 시대에, 나는 왜 책을 읽는가</strong><span>지식에 도달하는 비용이 싸진 시대에, 더 많은 답을 모으기보다 답을 쉽게 믿지 않기 위해 책을 읽고 함께 읽는다.</span><svg viewBox="0 0 24 24"><path d="M4 12h15M14 6l6 6-6 6" /></svg></span></a></li>
+        </ol>
       </section>
       <section class="article-index">
         <header class="editorial-page-header"><div class="editorial-page-header__controls"></div></header>
@@ -85,7 +97,53 @@ async function geometryAt(width: number, height = 900): Promise<Geometry> {
   }
 }
 
+async function homeGeometryAt(width: number, height = 900): Promise<HomeGeometry> {
+  const page = await browser.newPage({ viewport: { width, height } });
+  try {
+    await page.setContent(`<!doctype html><html><head><style>${styles}</style></head><body>${fixture}</body></html>`, {
+      waitUntil: 'domcontentloaded',
+    });
+    return await page.evaluate(() => {
+      const measuredBox = (element: Element) => {
+        const rect = element.getBoundingClientRect();
+        return { x: rect.x, width: rect.width, height: rect.height, bottom: rect.bottom };
+      };
+      return {
+        hero: measuredBox(document.querySelector('.form-home__hero')!),
+        heroTitle: measuredBox(document.querySelector('.form-home__hero-copy h1')!),
+        heroDescription: measuredBox(document.querySelector('.form-home__hero-copy p')!),
+        picks: [...document.querySelectorAll('.form-home__pick')].map((pick) => ({
+          box: measuredBox(pick),
+          title: measuredBox(pick.querySelector('strong')!),
+          description: measuredBox(pick.querySelector('.form-home__pick-copy > span:not(.form-home__pick-label)')!),
+        })),
+      };
+    });
+  } finally {
+    await page.close();
+  }
+}
+
 describe('editorial density geometry', () => {
+  it.each([
+    [1440, 500, 540, 200, 220],
+    [1179, 500, 500, 200, 200],
+    [768, 500, 500, 200, 200],
+  ])('fits the fixed home copy inside the compact frame at %ipx', async (width, heroMin, heroMax, pickMin, pickMax) => {
+    const home = await homeGeometryAt(width);
+
+    expect(home.hero.height).toBeGreaterThanOrEqual(heroMin);
+    expect(home.hero.height).toBeLessThanOrEqual(heroMax);
+    expect(home.heroTitle.bottom).toBeLessThanOrEqual(home.hero.height);
+    expect(home.heroDescription.bottom).toBeLessThanOrEqual(home.hero.height);
+    for (const pick of home.picks) {
+      expect(pick.box.height).toBeGreaterThanOrEqual(pickMin);
+      expect(pick.box.height).toBeLessThanOrEqual(pickMax);
+      expect(pick.title.bottom).toBeLessThanOrEqual(pick.box.bottom);
+      expect(pick.description.bottom).toBeLessThanOrEqual(pick.box.bottom);
+    }
+  });
+
   it('uses the full desktop canvas with compact editorial landmarks', async () => {
     const desktop = await geometryAt(1440);
 
