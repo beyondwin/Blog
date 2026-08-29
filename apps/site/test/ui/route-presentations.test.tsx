@@ -219,6 +219,7 @@ describe('full public route expansion', () => {
 
   it('keeps secondary detail evidence and memory map behavior truthful without inventing records', async () => {
     const SecondaryReadingPage = (await candidateModule<any>('src/ui/reading/SecondaryReadingPage.tsx')).SecondaryReadingPage;
+    const MemoryDetailPage = (await candidateModule<any>('src/ui/memory/MemoryDetailPage.tsx')).MemoryDetailPage;
     const mapRoute = await candidateModule<any>('app/routes/memory-map.tsx');
     const html = renderToStaticMarkup(createElement(SecondaryReadingPage, { record: {
       collection: 'analysis',
@@ -245,7 +246,35 @@ describe('full public route expansion', () => {
     expect(html).toContain('research-report');
     expect(html).toContain('class="editorial-detail-frame editorial-detail-frame--text-led"');
     expect(html).toContain('class="detail-action-rail"');
+    expect(html).toContain('<a class="context-return" href="/analysis/">조사 목록으로</a>');
     expect(html).not.toMatch(/reading-sheet|reading-threshold|data-surface-mode|public-scene/iu);
+
+    const memoryHtml = renderToStaticMarkup(createElement(MemoryDetailPage, { record: parsePublicRecord({
+      collection: 'memory',
+      id: 'memory-fixture',
+      href: '/memory/memory-fixture/',
+      title: '검토가 필요한 문장',
+      description: '공개 projection fixture.',
+      claimKo: '판단은 검토를 지나야 한다.',
+      claimEn: 'Judgment needs review.',
+      body: '본문',
+      bodyHtml: '<p>본문</p>',
+      memoryType: 'reflective',
+      origin: 'author',
+      topics: [],
+      theses: [],
+      sources: [{ href: '/articles/source/', title: '근거가 된 글' }],
+      companions: [{ slug: 'companion', href: '/memory/companion/', claimKo: '함께 읽는 문장' }],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      tags: [],
+      media: [],
+      relationships: [],
+      memoryLinks: [],
+    }) }));
+    expect(memoryHtml).toContain('<a class="context-return" href="/memory/">문장 목록으로</a>');
+    expect(memoryHtml).toContain('class="memory-thought__sources"');
+    expect(memoryHtml).toContain('class="memory-thought__companions"');
     expect(mapRoute.loader().headers.get('Location')).toBe('/memory/');
   });
 

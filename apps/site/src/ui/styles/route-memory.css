@@ -16,10 +16,18 @@
   font-weight: 700;
 }
 
-.memory-thought ul { margin: 0; padding: 0; list-style: none; }
-.memory-thought li + li { margin-top: .7em; }
+.memory-thought__sources ul,
+.memory-thought__companions ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
-.memory-thought a {
+.memory-thought__sources li + li,
+.memory-thought__companions li + li { margin-top: .7em; }
+
+.memory-thought__sources a,
+.memory-thought__companions a {
   color: var(--ft-terracotta-dark);
   font-weight: 600;
   line-height: 1.6;

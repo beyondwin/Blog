@@ -1,7 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react';
 import { navigateToReadingOrigin, safeReadingFallback, type ReadingCollection } from '../navigation/fallback';
 import { parseOrigin, type ReadingOrigin } from '../navigation/origin';
-import { bootstrapReadingOrigin } from '../navigation/transport';
+import { bootstrapReadingOrigin, requestReadingOriginFocus } from '../navigation/transport';
 
 export type DetailCollection = ReadingCollection;
 
@@ -77,6 +77,14 @@ export function ContextReturn({ collection }: { collection: DetailCollection }) 
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (origin === null || !isPlainActivation(event)) return;
     event.preventDefault();
+    try {
+      requestReadingOriginFocus(origin, {
+        sessionStorage: window.sessionStorage,
+        now: () => Date.now(),
+      });
+    } catch {
+      // A denied session store must not block the safe return navigation.
+    }
     navigateToReadingOrigin({
       history: { state: window.history.state, back: () => window.history.back() },
       location: { assign: (url) => window.location.assign(url) },

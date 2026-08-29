@@ -1,6 +1,7 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import { DetailActionRail } from '../editorial/DetailActionRail';
 import { EditorialDetailFrame } from '../editorial/EditorialDetailFrame';
+import { ContextReturn } from '../reading/ContextReturn';
 
 type MemoryRecord = Extract<PublicRecord, { collection: 'memory' }>;
 
@@ -10,7 +11,12 @@ export function MemoryDetailPage({ record }: { record: MemoryRecord }) {
       title={record.claimKo}
       summary={record.claimEn}
       metadata={<span>남는 문장</span>}
-      actions={<DetailActionRail canonicalUrl={record.href} />}
+      actions={(
+        <>
+          <ContextReturn collection="memory" />
+          <DetailActionRail canonicalUrl={record.href} />
+        </>
+      )}
     >
       <div className="prose memory-thought__body" dangerouslySetInnerHTML={{ __html: record.bodyHtml }} />
       {record.sources.length > 0 && (

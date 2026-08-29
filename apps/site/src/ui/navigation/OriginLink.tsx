@@ -1,5 +1,5 @@
-import { createElement, type AnchorHTMLAttributes, type MouseEvent } from 'react';
-import { enhanceOriginClick, type OriginClickBrowser } from './transport';
+import { createElement, useEffect, useRef, type AnchorHTMLAttributes, type MouseEvent } from 'react';
+import { consumeReadingOriginFocus, enhanceOriginClick, type OriginClickBrowser } from './transport';
 
 export interface OriginLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
   href: string;
@@ -44,6 +44,27 @@ export function OriginLink({
   ...anchorProps
 }: OriginLinkProps) {
   assertCleanInternalHref(href);
+  const linkRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    const restoreFocus = () => {
+      const link = linkRef.current;
+      if (link === null) return;
+      try {
+        consumeReadingOriginFocus(origin, {
+          sessionStorage: window.sessionStorage,
+          now: () => Date.now(),
+        }, () => {
+          try { link.focus({ preventScroll: true }); } catch { link.focus(); }
+        });
+      } catch {
+        // Browsers may deny session storage; the canonical link remains usable.
+      }
+    };
+    restoreFocus();
+    window.addEventListener('pageshow', restoreFocus);
+    return () => { window.removeEventListener('pageshow', restoreFocus); };
+  }, [origin]);
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event);
@@ -52,5 +73,5 @@ export function OriginLink({
     if (activeBrowser !== undefined) enhanceOriginClick(event, origin, activeBrowser);
   };
 
-  return createElement('a', { ...anchorProps, href, onClick: handleClick });
+  return createElement('a', { ...anchorProps, href, onClick: handleClick, ref: linkRef });
 }

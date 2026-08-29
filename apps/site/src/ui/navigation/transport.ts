@@ -3,6 +3,8 @@ import { originsEqual, parseOrigin, type ReadingOrigin } from './origin';
 export const ORIGIN_STORAGE_PREFIX = 'bw:origin:';
 export const ORIGIN_MAX_AGE_MS = 600_000;
 export const ORIGIN_TOKEN_PATTERN = /^[0-9a-f]{32}$/u;
+export const ORIGIN_RETURN_FOCUS_KEY = 'bw:return-focus';
+export const ORIGIN_RETURN_FOCUS_MAX_AGE_MS = 5_000;
 
 const TOKEN_BYTES = 16;
 const TRANSPORT_PARAMETERS = [
@@ -62,6 +64,15 @@ export interface OriginBootstrapBrowser {
   };
   now(): number;
   referrer?: string;
+}
+
+interface OriginFocusBrowser {
+  sessionStorage?: {
+    getItem?(key: string): string | null;
+    setItem?(key: string, value: string): void;
+    removeItem?(key: string): void;
+  };
+  now(): number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -236,6 +247,80 @@ function parseStoredOrigin(value: string): StoredOrigin | null {
     || (decoded.issuedAt as number) < 0
   ) return null;
   return { origin, targetPath: decoded.targetPath, issuedAt: decoded.issuedAt as number };
+}
+
+interface StoredOriginFocus {
+  origin: ReadingOrigin;
+  issuedAt: number;
+}
+
+function parseStoredOriginFocus(value: string): StoredOriginFocus | null {
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (!isRecord(decoded) || Object.keys(decoded).sort().join(',') !== 'issuedAt,origin') return null;
+  const origin = parseOrigin(decoded.origin);
+  if (
+    origin === null
+    || !isCanonicalOriginRecord(decoded.origin, origin)
+    || !Number.isSafeInteger(decoded.issuedAt)
+    || (decoded.issuedAt as number) < 0
+  ) return null;
+  return { origin, issuedAt: decoded.issuedAt as number };
+}
+
+export function requestReadingOriginFocus(originInput: unknown, browser: OriginFocusBrowser): boolean {
+  const origin = parseOrigin(originInput);
+  const issuedAt = browser.now();
+  if (
+    origin === null
+    || browser.sessionStorage?.setItem === undefined
+    || !Number.isSafeInteger(issuedAt)
+    || issuedAt < 0
+  ) return false;
+  try {
+    browser.sessionStorage.setItem(ORIGIN_RETURN_FOCUS_KEY, JSON.stringify({ origin, issuedAt }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function consumeReadingOriginFocus(
+  originInput: unknown,
+  browser: OriginFocusBrowser,
+  focus: () => void,
+): boolean {
+  const origin = parseOrigin(originInput);
+  const storage = browser.sessionStorage;
+  if (origin === null || storage?.getItem === undefined || storage.removeItem === undefined) return false;
+
+  let serialized: string | null;
+  try {
+    serialized = storage.getItem(ORIGIN_RETURN_FOCUS_KEY);
+  } catch {
+    return false;
+  }
+  if (serialized === null) return false;
+
+  const stored = parseStoredOriginFocus(serialized);
+  const age = stored === null ? Number.NaN : browser.now() - stored.issuedAt;
+  if (stored === null || age < 0 || age > ORIGIN_RETURN_FOCUS_MAX_AGE_MS) {
+    try { storage.removeItem(ORIGIN_RETURN_FOCUS_KEY); } catch { /* fail closed */ }
+    return false;
+  }
+  if (!originsEqual(origin, stored.origin)) return false;
+
+  try {
+    storage.removeItem(ORIGIN_RETURN_FOCUS_KEY);
+    focus();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function cleanState(state: unknown): Record<string, unknown> {

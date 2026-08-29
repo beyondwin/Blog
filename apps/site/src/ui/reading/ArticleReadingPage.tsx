@@ -4,6 +4,7 @@ import { articleReadingPresentation, formatArticleDate } from '../articles/artic
 import { DetailActionRail } from '../editorial/DetailActionRail';
 import { EditorialDetailFrame } from '../editorial/EditorialDetailFrame';
 import { ContinueReading } from './ContinueReading';
+import { ContextReturn } from './ContextReturn';
 import type { ContinuationItem } from './select-continuations';
 
 type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
@@ -27,7 +28,12 @@ export function ArticleReadingPage({ continuations, media, record }: {
         summary={reading.stake}
         metadata={metadata}
         media={media}
-        actions={<DetailActionRail canonicalUrl={record.href} />}
+        actions={(
+          <>
+            <ContextReturn collection="articles" />
+            <DetailActionRail canonicalUrl={record.href} />
+          </>
+        )}
       >
         {reading.toc.length > 0 ? (
           <nav className="article-toc" aria-label="절">

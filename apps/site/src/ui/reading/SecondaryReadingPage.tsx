@@ -2,6 +2,7 @@ import type { PublicRecord } from '@beyondwin/contracts';
 import type { ReactNode } from 'react';
 import { DetailActionRail } from '../editorial/DetailActionRail';
 import { EditorialDetailFrame } from '../editorial/EditorialDetailFrame';
+import { ContextReturn } from './ContextReturn';
 
 type SecondaryRecord = Extract<PublicRecord, { collection: 'analysis' | 'ideas' | 'travel' }>;
 
@@ -20,7 +21,12 @@ export function SecondaryReadingPage({ media, record }: { media?: ReactNode; rec
       summary={record.description}
       metadata={metadata}
       media={media}
-      actions={<DetailActionRail canonicalUrl={record.href} />}
+      actions={(
+        <>
+          <ContextReturn collection={record.collection} />
+          <DetailActionRail canonicalUrl={record.href} />
+        </>
+      )}
     >
       {record.collection === 'analysis' && (
         <p className="secondary-reading-page__source">

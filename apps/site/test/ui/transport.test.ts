@@ -5,9 +5,13 @@ import { OriginLink } from '../../src/ui/navigation/OriginLink';
 import { navigateToReadingOrigin } from '../../src/ui/navigation/fallback';
 import {
   bootstrapReadingOrigin,
+  consumeReadingOriginFocus,
   enhanceOriginClick,
   ORIGIN_MAX_AGE_MS,
+  ORIGIN_RETURN_FOCUS_KEY,
+  ORIGIN_RETURN_FOCUS_MAX_AGE_MS,
   ORIGIN_STORAGE_PREFIX,
+  requestReadingOriginFocus,
 } from '../../src/ui/navigation/transport';
 
 const TOKEN = '000102030405060708090a0b0c0d0e0f';
@@ -172,6 +176,45 @@ describe('OriginLink and click transport', () => {
 });
 
 describe('detail origin bootstrap', () => {
+  it('carries a tag-row origin through one-time transport cleanup and an eligible history return', () => {
+    const origin = { kind: 'tags', anchorId: 'record-articles-safe' } as const;
+    const click = clickFixture({ href: '/articles/safe/' });
+    const outbound = clickBrowser({
+      location: { href: 'https://beyondwin.test/tags/AI/', assign: vi.fn() },
+    });
+    expect(enhanceOriginClick(click.event, origin, outbound.browser)).toBe(true);
+
+    const destination = outbound.browser.location.assign.mock.calls[0]?.[0] as string;
+    const storageKey = ORIGIN_STORAGE_PREFIX + TOKEN;
+    const removeItem = vi.fn(() => { outbound.storage.delete(storageKey); });
+    const replaceState = vi.fn();
+    expect(bootstrapReadingOrigin({
+      location: { href: new URL(destination, 'https://beyondwin.test').href },
+      history: { state: { keep: true }, replaceState },
+      sessionStorage: {
+        getItem: (key) => outbound.storage.get(key) ?? null,
+        removeItem,
+      },
+      now: () => 1_000_000,
+    })).toEqual(origin);
+    expect(removeItem).toHaveBeenCalledWith(storageKey);
+    expect(outbound.storage.has(storageKey)).toBe(false);
+    expect(replaceState).toHaveBeenCalledWith({
+      keep: true,
+      bwOrigin: origin,
+      bwHistoryReturnEligible: true,
+    }, '', '/articles/safe/');
+
+    const back = vi.fn();
+    const assign = vi.fn();
+    expect(navigateToReadingOrigin({
+      history: { state: replaceState.mock.calls[0]?.[0], back },
+      location: { assign },
+    }, 'articles')).toBe('back');
+    expect(back).toHaveBeenCalledOnce();
+    expect(assign).not.toHaveBeenCalled();
+  });
+
   it('consumes a matching record, merges history state, and cleans the URL with no referrer', () => {
     const fixture = bootstrapBrowser({ referrer: undefined });
     expect(bootstrapReadingOrigin(fixture.browser)).toEqual(ORIGIN);
@@ -243,5 +286,74 @@ describe('detail origin bootstrap', () => {
     expect(fixture.getItem).not.toHaveBeenCalled();
     expect(fixture.removeItem).not.toHaveBeenCalled();
     expect(fixture.replaceState).not.toHaveBeenCalled();
+  });
+});
+
+describe('contextual return focus intent', () => {
+  const origin = { kind: 'tags', anchorId: 'record-articles-safe' } as const;
+
+  function focusStorage(initial?: string) {
+    const storage = new Map<string, string>();
+    if (initial !== undefined) storage.set(ORIGIN_RETURN_FOCUS_KEY, initial);
+    return {
+      storage,
+      sessionStorage: {
+        getItem: vi.fn((key: string) => storage.get(key) ?? null),
+        setItem: vi.fn((key: string, value: string) => { storage.set(key, value); }),
+        removeItem: vi.fn((key: string) => { storage.delete(key); }),
+      },
+    };
+  }
+
+  it('stores only the canonical origin with a bounded issue time', () => {
+    const fixture = focusStorage();
+    expect(requestReadingOriginFocus({ ...origin, returnUrl: 'https://evil.test' }, {
+      sessionStorage: fixture.sessionStorage,
+      now: () => 5_000,
+    })).toBe(true);
+    expect(fixture.storage.get(ORIGIN_RETURN_FOCUS_KEY)).toBe(JSON.stringify({
+      origin,
+      issuedAt: 5_000,
+    }));
+  });
+
+  it('leaves a fresh nonmatching intent for the matching link and consumes it exactly once', () => {
+    const fixture = focusStorage(JSON.stringify({ origin, issuedAt: 5_000 }));
+    const wrongFocus = vi.fn();
+    expect(consumeReadingOriginFocus({ kind: 'tags', anchorId: 'record-articles-other' }, {
+      sessionStorage: fixture.sessionStorage,
+      now: () => 5_001,
+    }, wrongFocus)).toBe(false);
+    expect(wrongFocus).not.toHaveBeenCalled();
+    expect(fixture.storage.has(ORIGIN_RETURN_FOCUS_KEY)).toBe(true);
+
+    const focus = vi.fn();
+    expect(consumeReadingOriginFocus(origin, {
+      sessionStorage: fixture.sessionStorage,
+      now: () => 5_002,
+    }, focus)).toBe(true);
+    expect(focus).toHaveBeenCalledOnce();
+    expect(fixture.storage.has(ORIGIN_RETURN_FOCUS_KEY)).toBe(false);
+    expect(consumeReadingOriginFocus(origin, {
+      sessionStorage: fixture.sessionStorage,
+      now: () => 5_003,
+    }, focus)).toBe(false);
+    expect(focus).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['expired', JSON.stringify({ origin, issuedAt: 5_000 }), 5_000 + ORIGIN_RETURN_FOCUS_MAX_AGE_MS + 1],
+    ['future', JSON.stringify({ origin, issuedAt: 5_001 }), 5_000],
+    ['malformed', '{not json', 5_000],
+    ['noncanonical', JSON.stringify({ origin: { ...origin, returnUrl: '/private/' }, issuedAt: 5_000 }), 5_001],
+  ])('removes a %s focus intent without focusing', (_name, initial, now) => {
+    const fixture = focusStorage(initial);
+    const focus = vi.fn();
+    expect(consumeReadingOriginFocus(origin, {
+      sessionStorage: fixture.sessionStorage,
+      now: () => now,
+    }, focus)).toBe(false);
+    expect(focus).not.toHaveBeenCalled();
+    expect(fixture.storage.has(ORIGIN_RETURN_FOCUS_KEY)).toBe(false);
   });
 });
