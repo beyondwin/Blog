@@ -77,7 +77,7 @@ async function writeForgedCandidate(
   return { src: href, width, height, checksum: sha256(bytes) };
 }
 
-describe('active public release boundary', { timeout: 120_000 }, () => {
+describe('active public release boundary', { timeout: 30_000 }, () => {
   it('accepts the migrated thought media through the verified release boundary', async () => {
     const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-release-thought-boundary-'));
     const releasesRoot = join(sandbox, 'releases');
@@ -95,7 +95,7 @@ describe('active public release boundary', { timeout: 120_000 }, () => {
       collection: 'thoughts',
       fallback: { src: '/assets/content/thoughts/why-i-read-in-the-ai-era/editorial-reading.png' },
     });
-  });
+  }, 120_000);
 
   it.each([
     ['private source locator', 'file:///Users/example/private/Blog/memory/thoughts/secret.md'],
