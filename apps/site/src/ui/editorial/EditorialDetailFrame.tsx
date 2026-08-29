@@ -5,6 +5,7 @@ export type EditorialDetailVariant = 'split' | 'review';
 export function EditorialDetailFrame({
   actions,
   children,
+  className,
   media,
   metadata,
   summary,
@@ -14,6 +15,7 @@ export function EditorialDetailFrame({
 }: {
   actions: ReactNode;
   children: ReactNode;
+  className?: string;
   media?: ReactNode;
   metadata?: ReactNode;
   summary?: string;
@@ -40,7 +42,11 @@ export function EditorialDetailFrame({
     : null;
 
   return (
-    <article className={`editorial-detail-frame editorial-detail-frame--${media ? variant : 'text-led'}`}>
+    <article className={[
+      'editorial-detail-frame',
+      `editorial-detail-frame--${media ? variant : 'text-led'}`,
+      className,
+    ].filter(Boolean).join(' ')}>
       <header className="editorial-detail-frame__hero">
         {variant === 'review' ? <>{resolvedMedia}{introduction}</> : <>{introduction}{resolvedMedia}</>}
       </header>

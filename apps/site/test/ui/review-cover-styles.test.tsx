@@ -125,6 +125,9 @@ describe('current review route cover styling', () => {
     }));
 
     expect(html).toContain('<a class="context-return" href="/reviews/">서평 목록으로</a>');
+    expect(html.indexOf('review-detail__cover-stage')).toBeLessThan(
+      html.indexOf('review-detail__identity'),
+    );
     await expect(computedObjectFits(
       html,
       '.review-detail__cover-stage img',
@@ -141,6 +144,8 @@ describe('current review route cover styling', () => {
     }));
 
     expect(html).toContain('판본 확인 · 표지 공개 권리 미확인');
+    expect(html).toContain('review-detail--text-led');
+    expect(html).not.toContain('review-detail__cover-stage');
     expect(html).not.toContain('/assets/content/reviews/black-swan/cover');
   });
 

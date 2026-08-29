@@ -26,7 +26,10 @@ describe('article reference-03 detail', () => {
       media: createElement('img', { src: '/assets/content/articles/pgvector-hybrid-search/hero.png', alt: '어두운 건축 면', width: 1536, height: 1024 }),
     }));
 
-    expect(html).toContain('editorial-detail-frame editorial-detail-frame--split');
+    expect(html).toContain('editorial-detail-frame editorial-detail-frame--split article-detail');
+    expect(html.indexOf('editorial-detail-frame__introduction')).toBeLessThan(
+      html.indexOf('editorial-detail-frame__media'),
+    );
     expect(html).toContain('<h1>pgvector로 벡터 검색 이해하기</h1>');
     expect(html).toContain('아티클');
     expect(html).toContain('<time dateTime="2026-08-29T00:00:00.000Z">2026.08.29</time>');
@@ -47,7 +50,7 @@ describe('article reference-03 detail', () => {
       record: article({ id: 'ai-design-references', href: '/articles/ai-design-references/', tags: [], bodyHtml: '<p>에세이 본문</p><h2 id="하나">하나</h2>' }),
       continuations: [],
     }));
-    expect(html).toContain('editorial-detail-frame editorial-detail-frame--text-led');
+    expect(html).toContain('editorial-detail-frame editorial-detail-frame--text-led article-detail');
     expect(html).not.toContain('editorial-detail-frame__media');
     expect(html).not.toContain('aria-label="절"');
     expect(html).not.toContain('article-colophon');

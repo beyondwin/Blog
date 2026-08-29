@@ -24,6 +24,7 @@ export function ArticleReadingPage({ continuations, media, record }: {
   return (
     <>
       <EditorialDetailFrame
+        className="article-detail"
         title={record.title}
         summary={reading.stake}
         metadata={metadata}

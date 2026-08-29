@@ -75,8 +75,27 @@ describe('editorial primitives', () => {
     expect(row).toContain('editorial-list-row editorial-list-row--text-led');
     expect(row).not.toContain('editorial-list-row__media');
     expect(detail).toContain('editorial-detail-frame editorial-detail-frame--text-led');
+    expect(detail).not.toContain('article-detail');
     expect(detail).not.toContain('editorial-detail-frame__media');
     expect(detail).toMatch(/actions[\s\S]*본문/u);
+  });
+
+  it('keeps split detail introduction before media and accepts an explicit owner class', () => {
+    const detail = renderToStaticMarkup(createElement(EditorialDetailFrame, {
+      className: 'article-detail',
+      title: '소유 범위가 있는 아티클',
+      actions: createElement('span', null, 'actions'),
+      media: createElement('img', { src: '/approved.webp', alt: '승인된 아티클 미디어' }),
+      children: createElement('p', null, '본문'),
+    }));
+
+    expect(detail).toContain('class="editorial-detail-frame editorial-detail-frame--split article-detail"');
+    expect(detail.indexOf('editorial-detail-frame__introduction')).toBeLessThan(
+      detail.indexOf('editorial-detail-frame__media'),
+    );
+    expect(detail.indexOf('editorial-detail-frame__actions')).toBeLessThan(
+      detail.indexOf('editorial-detail-frame__prose'),
+    );
   });
 
   it('preserves the complete book cover in review detail frames', () => {

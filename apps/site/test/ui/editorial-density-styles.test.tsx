@@ -8,6 +8,7 @@ type ContentBox = Box & { bottom: number };
 
 type Geometry = {
   detailIntro: Box;
+  secondaryDetailIntro: Box;
   filterTarget: Box;
   headerInner: Box;
   hero: Box;
@@ -45,6 +46,14 @@ type LedgerRowGeometry = {
   description: ContentBox;
   row: ContentBox;
   title: ContentBox;
+};
+
+type MobileDetailGeometry = {
+  actionsTop: number;
+  introductionTop: number;
+  mediaTop: number;
+  proseFontSize: string;
+  proseTop: number;
 };
 
 let browser: Browser;
@@ -112,6 +121,9 @@ const fixture = `
       <article class="article-detail">
         <div class="editorial-detail-frame editorial-detail-frame--text-led"><header class="editorial-detail-frame__hero"><div class="editorial-detail-frame__introduction"><h1>Primary detail</h1></div></header><div class="editorial-detail-frame__body"><div class="editorial-detail-frame__prose"><p>Primary reading body.</p></div></div></div>
       </article>
+      <article class="secondary-detail">
+        <div class="editorial-detail-frame editorial-detail-frame--text-led"><header class="editorial-detail-frame__hero"><div class="editorial-detail-frame__introduction"><h1>Secondary detail</h1></div></header><div class="editorial-detail-frame__body"><div class="editorial-detail-frame__prose"><p>Secondary reading body.</p></div></div></div>
+      </article>
     </main>
   </div>`;
 
@@ -137,6 +149,7 @@ async function geometryAt(width: number, height = 900): Promise<Geometry> {
         row: measuredBox('.article-index .editorial-list-row'),
         secondaryRow: measuredBox('.secondary-index .editorial-list-row'),
         detailIntro: measuredBox('.article-detail .editorial-detail-frame__introduction'),
+        secondaryDetailIntro: measuredBox('.secondary-detail .editorial-detail-frame__introduction'),
       };
     });
   } finally {
@@ -201,6 +214,38 @@ async function homeGeometryAt(width: number, height = 900): Promise<HomeGeometry
           descriptionFontSize: getComputedStyle(pick.querySelector('.form-home__pick-copy > span:not(.form-home__pick-label)')!).fontSize,
         })),
         viewportWidth: document.documentElement.clientWidth,
+      };
+    });
+  } finally {
+    await page.close();
+  }
+}
+
+async function mobileDetailGeometry(): Promise<MobileDetailGeometry> {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  try {
+    await page.setContent(`<!doctype html><html><head><style>${styles}</style></head><body>
+      <article class="article-detail">
+        <div class="editorial-detail-frame editorial-detail-frame--split">
+          <header class="editorial-detail-frame__hero">
+            <div class="editorial-detail-frame__introduction"><h1>Mobile detail</h1></div>
+            <figure class="editorial-detail-frame__media"><img alt="승인된 이미지" /></figure>
+          </header>
+          <div class="editorial-detail-frame__body">
+            <div class="editorial-detail-frame__actions">actions</div>
+            <div class="editorial-detail-frame__prose">body</div>
+          </div>
+        </div>
+      </article>
+    </body></html>`, { waitUntil: 'domcontentloaded' });
+    return await page.evaluate(() => {
+      const top = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().top;
+      return {
+        introductionTop: top('.editorial-detail-frame__introduction'),
+        mediaTop: top('.editorial-detail-frame__media'),
+        actionsTop: top('.editorial-detail-frame__actions'),
+        proseTop: top('.editorial-detail-frame__prose'),
+        proseFontSize: getComputedStyle(document.querySelector('.editorial-detail-frame__prose')!).fontSize,
       };
     });
   } finally {
@@ -289,6 +334,7 @@ describe('editorial density geometry', () => {
     expect(desktop.secondaryRow.height).toBe(250);
     expect.soft(desktop.detailIntro.height).toBeGreaterThanOrEqual(400);
     expect.soft(desktop.detailIntro.height).toBeLessThanOrEqual(440);
+    expect(desktop.secondaryDetailIntro.height).toBe(490);
   });
 
   it.each([768, 1179])('keeps the tablet header gutter between 32px and 48px at %ipx', async (width) => {
@@ -365,5 +411,14 @@ describe('editorial density geometry', () => {
     } finally {
       await page.close();
     }
+  });
+
+  it('keeps the primary detail mobile reading sequence and 16px body type', async () => {
+    const mobile = await mobileDetailGeometry();
+
+    expect(mobile.introductionTop).toBeLessThan(mobile.mediaTop);
+    expect(mobile.mediaTop).toBeLessThan(mobile.actionsTop);
+    expect(mobile.actionsTop).toBeLessThan(mobile.proseTop);
+    expect(mobile.proseFontSize).toBe('16px');
   });
 });

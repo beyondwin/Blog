@@ -479,6 +479,30 @@
   background: var(--ft-paper-bright);
 }
 
+@media (min-width: 768px) {
+  :is(.article-detail, .thought-reading .editorial-detail-frame) :is(.editorial-detail-frame__introduction, .editorial-detail-frame__media) {
+    min-height: 420px;
+  }
+
+  :is(.article-detail, .thought-reading .editorial-detail-frame) .editorial-detail-frame__introduction {
+    padding: clamp(36px, 5vw, 64px);
+  }
+
+  :is(.article-detail, .thought-reading .editorial-detail-frame) .editorial-detail-frame__introduction > p {
+    margin-block-start: 24px;
+  }
+
+  :is(.article-detail, .thought-reading .editorial-detail-frame) .editorial-detail-frame__metadata {
+    margin-block-start: 24px;
+  }
+
+  :is(.article-detail, .thought-reading .editorial-detail-frame) .editorial-detail-frame__body,
+  .review-detail__body {
+    gap: clamp(28px, 4vw, 56px);
+    padding: clamp(52px, 6vw, 80px) clamp(24px, 5vw, 64px);
+  }
+}
+
 .editorial-detail-frame__prose {
   min-width: 0;
   font-family: var(--ft-font-display);

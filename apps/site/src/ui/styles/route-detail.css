@@ -201,7 +201,7 @@
   text-align: center;
 }
 
-.review-detail--text-led .review-detail__introduction { padding-block-start: clamp(72px, 10vw, 128px); }
+.review-detail--text-led .review-detail__introduction { padding-block: clamp(48px, 6vw, 72px); }
 
 .review-detail__lane {
   margin: 0 0 20px;
