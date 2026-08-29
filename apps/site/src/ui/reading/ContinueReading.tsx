@@ -2,9 +2,9 @@ import type { ContinuationItem } from './select-continuations';
 
 const KIND_LABELS: Record<ContinuationItem['kind'], string> = {
   analysis: '조사',
-  article: '글',
+  article: '아티클',
   idea: '아이디어',
-  review: '책',
+  review: '서평',
   travel: '여행',
   thought: '생각',
   memory: '기억',
@@ -16,7 +16,7 @@ export function ContinueReading({
   items,
 }: {
   collectionHref: '/articles/' | '/reviews/';
-  collectionLabel: '아티클 전체 보기' | '글 전체 보기' | '책 전체 보기';
+  collectionLabel: '아티클 전체 보기';
   items: readonly ContinuationItem[];
 }) {
   const visibleItems = items.slice(0, 3);

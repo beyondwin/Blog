@@ -22,7 +22,7 @@ function article(id: string, overrides: Record<string, unknown> = {}): PublicRec
     collection: 'articles',
     id,
     href: `/articles/${id}/`,
-    title: `글 ${id}`,
+    title: `아티클 ${id}`,
     ...overrides,
   } as unknown as PublicRecord;
 }
@@ -33,7 +33,7 @@ function review(id: string, overrides: Record<string, unknown> = {}): PublicReco
     collection: 'reviews',
     id,
     href: `/reviews/${id}/`,
-    title: `책 ${id}`,
+    title: `서평 ${id}`,
     itemType: 'book',
     authors: ['저자'],
     readEditionVerified: true,
@@ -75,7 +75,7 @@ describe('selectContinuations', () => {
       'articles/current': current,
       'thoughts/reflection': thought,
     })).toEqual([
-      { href: '/thoughts/reflection/', title: '글 reflection', reason: '생각을 이어 간다.', kind: 'thought' },
+      { href: '/thoughts/reflection/', title: '아티클 reflection', reason: '생각을 이어 간다.', kind: 'thought' },
     ]);
   });
 
@@ -97,8 +97,8 @@ describe('selectContinuations', () => {
     };
 
     expect(selectContinuations(current, index)).toEqual([
-      { href: '/reviews/first/', title: '책 first', reason: '첫 번째 판단을 이어 간다.', kind: 'review' },
-      { href: '/articles/second/', title: '글 second', reason: '근거를 더 자세히 설명한다.', kind: 'article' },
+      { href: '/reviews/first/', title: '서평 first', reason: '첫 번째 판단을 이어 간다.', kind: 'review' },
+      { href: '/articles/second/', title: '아티클 second', reason: '근거를 더 자세히 설명한다.', kind: 'article' },
       { href: '/memory/third/', title: '기억 third', reason: '판단 기준을 기억으로 연결한다.', kind: 'memory' },
     ]);
   });
@@ -129,7 +129,7 @@ describe('selectContinuations', () => {
     };
 
     expect(selectContinuations(current, index)).toEqual([
-      { href: '/reviews/kept/', title: '책 kept', reason: '유효한 관계다.', kind: 'review' },
+      { href: '/reviews/kept/', title: '서평 kept', reason: '유효한 관계다.', kind: 'review' },
     ]);
   });
 
@@ -149,15 +149,18 @@ describe('selectContinuations', () => {
       ...['one', 'two', 'three', 'four'].map((id) => [`articles/${id}`, article(id)] as const),
     ]);
     expect(selectContinuations(current, index)).toEqual([
-      { href: '/articles/one/', title: '글 one', reason: '이유 one', kind: 'article' },
-      { href: '/articles/two/', title: '글 two', reason: '이유 two', kind: 'article' },
-      { href: '/articles/three/', title: '글 three', reason: '이유 three', kind: 'article' },
+      { href: '/articles/one/', title: '아티클 one', reason: '이유 one', kind: 'article' },
+      { href: '/articles/two/', title: '아티클 two', reason: '이유 two', kind: 'article' },
+      { href: '/articles/three/', title: '아티클 three', reason: '이유 three', kind: 'article' },
     ]);
   });
 
   it('renders clean continuation anchors and a separate explicit collection link', () => {
     const html = renderToStaticMarkup(createElement(ContinueReading, {
-      items: [{ href: '/reviews/first/', title: '첫 책', reason: '사람이 쓴 이유', kind: 'review' }],
+      items: [
+        { href: '/reviews/first/', title: '첫 기록', reason: '사람이 쓴 이유', kind: 'review' },
+        { href: '/articles/second/', title: '두 번째 기록', reason: '기술적 근거', kind: 'article' },
+      ],
       collectionHref: '/articles/',
       collectionLabel: '아티클 전체 보기',
     }));
@@ -165,7 +168,10 @@ describe('selectContinuations', () => {
     expect(html).toContain('<h2 id="continue-reading-title">이어서 읽기</h2>');
     expect(html).toContain('href="/reviews/first/"');
     expect(html).toContain('사람이 쓴 이유');
-    expect(html).toContain('책');
+    expect(html).toContain('<span>서평</span>');
+    expect(html).toContain('<span>아티클</span>');
+    expect(html).not.toContain('<span>책</span>');
+    expect(html).not.toContain('<span>글</span>');
     expect(html).toContain('<a class="continue-reading__collection" href="/articles/">아티클 전체 보기</a>');
     expect(html).not.toContain('__bw_');
   });

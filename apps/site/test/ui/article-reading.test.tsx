@@ -33,7 +33,7 @@ describe('article reference-03 detail', () => {
     expect(html).toContain('좋아요 · 준비 중');
     expect(html).toContain('댓글 · 준비 중');
     expect(html).toContain('링크 복사');
-    expect(html).toContain('<a class="context-return" href="/articles/">글 목록으로</a>');
+    expect(html).toContain('<a class="context-return" href="/articles/">아티클 목록으로</a>');
     expect(html).toContain('aria-label="절"');
     expect(html).toContain('href="#실제-구조"');
     expect(html).toContain('class="article-colophon"');

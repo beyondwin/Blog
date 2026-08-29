@@ -65,7 +65,7 @@ for (const viewport of [
 
     test('direct article keeps canonical return, resolved media, and the reading measure', async ({ page }) => {
       const errors = await gotoReadingPage(page, articlePath);
-      await expect(page.getByRole('link', { name: '글 목록으로' })).toHaveAttribute('href', '/articles/');
+      await expect(page.getByRole('link', { name: '아티클 목록으로' })).toHaveAttribute('href', '/articles/');
       await expect(page.locator('.editorial-detail-frame__media img')).toHaveCount(1);
       const metrics = await page.locator('.editorial-detail-frame__prose .prose').evaluate((node) => {
         const style = getComputedStyle(node);
@@ -100,7 +100,7 @@ for (const viewport of [
     test('valid list and search origins upgrade to bounded labels and clean safe hrefs', async ({ page }) => {
       await gotoWithStoredOrigin(page, articlePath, { kind: 'articles', anchorId: 'article-2' });
       await expect(page).toHaveURL(url(articlePath));
-      await expect(page.getByRole('link', { name: '글 목록으로' })).toHaveAttribute('href', '/articles/#article-2');
+      await expect(page.getByRole('link', { name: '아티클 목록으로' })).toHaveAttribute('href', '/articles/#article-2');
 
       await gotoWithStoredOrigin(page, articlePath, { kind: 'search', query: 'AI 판단', anchorId: 'result-2' });
       await expect(page).toHaveURL(url(articlePath));
@@ -116,11 +116,30 @@ for (const viewport of [
         600_001,
       );
       await expect(page).toHaveURL(url(articlePath));
-      await expect(page.getByRole('link', { name: '글 목록으로' })).toHaveAttribute('href', '/articles/');
+      await expect(page.getByRole('link', { name: '아티클 목록으로' })).toHaveAttribute('href', '/articles/');
       expect(page.url()).not.toContain('__bw_');
     });
   });
 }
+
+test('copy-link writes the exact absolute canonical metadata on every primary detail lane', async ({ context, page }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+  for (const path of [
+    articlePath,
+    reviewPath,
+    '/thoughts/why-i-read-in-the-ai-era/',
+  ]) {
+    await page.goto(url(path));
+    const canonical = await page.locator('link[rel="canonical"]').evaluate((link) => (
+      link as HTMLLinkElement
+    ).href);
+    expect(canonical).toMatch(/^https:\/\//u);
+
+    await page.getByRole('button', { name: '링크 복사' }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(canonical);
+  }
+});
 
 for (const flow of [
   {

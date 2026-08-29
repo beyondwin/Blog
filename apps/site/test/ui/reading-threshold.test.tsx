@@ -12,7 +12,7 @@ describe('quiet reading threshold', () => {
       title: '텍스트만 있는 글',
     }));
 
-    expect(html).toContain('<a class="context-return" href="/articles/">글 목록으로</a>');
+    expect(html).toContain('<a class="context-return" href="/articles/">아티클 목록으로</a>');
     expect(html).toContain('<h1>텍스트만 있는 글</h1>');
     expect(html).not.toContain('<img');
     expect(html.match(/reading-threshold__marker/gu)).toHaveLength(1);
@@ -39,8 +39,8 @@ describe('quiet reading threshold', () => {
   });
 
   it.each([
-    [{ kind: 'articles', anchorId: 'article-2' }, '글 목록으로', '/articles/#article-2'],
-    [{ kind: 'reviews', anchorId: 'review-2' }, '책 목록으로', '/reviews/#review-2'],
+    [{ kind: 'articles', anchorId: 'article-2' }, '아티클 목록으로', '/articles/#article-2'],
+    [{ kind: 'reviews', anchorId: 'review-2' }, '서평 목록으로', '/reviews/#review-2'],
     [{ kind: 'search', query: 'AI 판단', anchorId: 'result-2' }, '“AI 판단” 결과로', '/search/?q=AI+%ED%8C%90%EB%8B%A8#result-2'],
     [{ kind: 'analysis', anchorId: 'analysis-2' }, '조사 목록으로', '/analysis/#analysis-2'],
     [{ kind: 'ideas' }, '아이디어 목록으로', '/ideas/'],
@@ -56,7 +56,7 @@ describe('quiet reading threshold', () => {
     expect(contextReturnPresentation({ kind: 'search', query: 'bad\nquery', anchorId: 'safe' }, 'thoughts'))
       .toEqual({ label: '생각 목록으로', href: '/thoughts/' });
     expect(contextReturnPresentation({ kind: 'scene', focusId: 'retired-focus' }, 'articles'))
-      .toEqual({ label: '글 목록으로', href: '/articles/' });
+      .toEqual({ label: '아티클 목록으로', href: '/articles/' });
 
     const html = renderToStaticMarkup(createElement(ContextReturn, { collection: 'reviews' }));
     expect(html).toBe('<a class="context-return" href="/reviews/">서평 목록으로</a>');

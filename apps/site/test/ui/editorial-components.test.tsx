@@ -113,6 +113,26 @@ describe('editorial primitives', () => {
 });
 
 describe('copyCanonicalUrl', () => {
+  it('copies the resolved document canonical instead of a root-relative record href', async () => {
+    const writeText = vi.fn(async () => undefined);
+
+    await expect(copyCanonicalUrl('/articles/one/', { writeText }, {
+      canonicalHref: 'https://canonical.example/articles/one/',
+      documentUrl: 'http://127.0.0.1:4391/articles/one/',
+    })).resolves.toBe('copied');
+    expect(writeText).toHaveBeenCalledWith('https://canonical.example/articles/one/');
+  });
+
+  it('absolutizes the record href against the document when canonical metadata is unavailable', async () => {
+    const writeText = vi.fn(async () => undefined);
+
+    await expect(copyCanonicalUrl('/articles/one/', { writeText }, {
+      canonicalHref: null,
+      documentUrl: 'https://fallback.example/current/',
+    })).resolves.toBe('copied');
+    expect(writeText).toHaveBeenCalledWith('https://fallback.example/articles/one/');
+  });
+
   it('writes the exact canonical URL and reports success', async () => {
     const writeText = vi.fn(async () => undefined);
 

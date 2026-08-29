@@ -1,8 +1,10 @@
 # FORM & THOUGHT 공개 사이트 설계
 
-- 상태: approved target, implementation pending
+- 상태: built and approved locally; production origin은 `not_measured`, cutover authorization은 `false`
 - 기준일: 2026-08-28
 - 승인 근거: [ADR-0007 Decision evidence](adr/0007-form-and-thought-react-only-editorial-system.md#decision-evidence)
+- 구현 증거: [최종 acceptance](evidence/form-and-thought-final-acceptance.md),
+  [checksum-bound visual evidence](evidence/form-and-thought-astro-removal-manifest.md)
 - 결정: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)
 - 시각 기준: [FORM & THOUGHT 시각 스펙](form-and-thought-visual-spec.md)
 - 이미지 기준: [FORM & THOUGHT 이미지 아트 디렉션](form-and-thought-image-art-direction.md)
@@ -89,7 +91,8 @@ Public app은 top-level `memory/**`, private raw source, DB credential을 읽지
 
 ### 5.2 홈 `/`
 
-Desktop composition은 `reference-05-home.png`와 `reference-07-surface-set.jpg`의 좌상단 화면을 따른다.
+Desktop composition의 primary authority는 `reference-05-home`이다.
+`reference-07-surface-set`은 route region이 없는 secondary tone board로만 사용한다.
 
 1. Header 아래에 page width를 채우는 hero가 온다.
 2. Hero 왼쪽은 black field와 실제 대표 문장, 설명, `이 글 읽기` action이다.
@@ -101,7 +104,8 @@ Hero 문구는 실제 공개 콘텐츠에서 가져오며 reference의 가상 �
 
 ### 5.3 아티클 `/articles/`
 
-Desktop composition은 `reference-04-article-index.png`와 `reference-07-surface-set.jpg`의 상중앙 화면을 따른다.
+Desktop composition의 primary authority는 `reference-04-article-index`다.
+`reference-07-surface-set`은 색과 지면의 cross-route consistency만 보조한다.
 
 - 큰 `아티클` 제목과 오른쪽 한 줄 설명.
 - 얇은 horizontal rule 아래 filter row.
@@ -113,7 +117,7 @@ Desktop composition은 `reference-04-article-index.png`와 `reference-07-surface
 
 ### 5.4 서평 `/reviews/`
 
-Desktop composition은 `reference-06-review-and-detail.jpg`의 왼쪽 화면을 따른다.
+Desktop composition은 `reference-06-review-index-left` calibration region을 따른다.
 
 - 큰 `서평` 제목 아래 실제 review row를 쌓는다.
 - 왼쪽 image cell 안에서 판본 identity와 public redistribution rights가 모두 승인된 책 표지만 `object-fit: contain`으로 보여 주고 표지를 잘라내지 않는다.
@@ -124,7 +128,8 @@ Desktop composition은 `reference-06-review-and-detail.jpg`의 왼쪽 화면을 
 
 ### 5.5 생각 `/thoughts/`
 
-Desktop composition은 `reference-02-thought-index.png`와 `reference-07-surface-set.jpg`의 하중앙 화면을 따른다.
+Desktop composition의 primary authority는 `reference-02-thought-index`다. 콘텐츠는 사용자
+override인 실제 한 건과 완전히 빈 다섯 칸을 따른다.
 
 - 큰 `생각` 제목과 오른쪽 짧은 설명.
 - 본문은 정확히 3열 × 2행의 동일한 composition grid.
@@ -135,7 +140,7 @@ Desktop composition은 `reference-02-thought-index.png`와 `reference-07-surface
 
 ### 5.6 검색 `/search/`
 
-Desktop composition은 `reference-01-search.png`와 `reference-07-surface-set.jpg`의 우하단 화면을 따른다.
+Desktop composition의 primary authority는 `reference-01-search`다.
 
 - 큰 `검색` 제목과 오른쪽 설명.
 - 전체 폭 input과 오른쪽 search icon.
@@ -152,7 +157,7 @@ Desktop composition은 `reference-01-search.png`와 `reference-07-surface-set.jp
 | --- | --- | --- | --- |
 | 아티클 | `reference-03-detail` | off-white header 뒤 terracotta title field + dark media split | action rail + 좁은 text + figure |
 | 생각 | `reference-03-detail` | 아티클과 같은 split, media가 없으면 text-led field | action rail + 좁은 text, figure optional |
-| 서평 | `reference-06` 오른쪽 frame | image-led hero 뒤 centered title·책 정보·날짜 | action rail + verdict body + 실제 cover/figure |
+| 서평 | `reference-06-review-detail-right` | image-led hero 뒤 centered title·책 정보·날짜 | action rail + verdict body + 실제 cover/figure |
 
 이미지가 없는 콘텐츠는 빈 image box를 만들지 않는다. 작성자 표시가 필요할 경우 실제 author만 쓰고 날짜는 `YYYY.MM.DD`로 표현한다.
 
@@ -276,7 +281,10 @@ Astro는 최종 상태에 남지 않지만, 책임을 잃지 않도록 다음 �
 
 ### Browser
 
-최소 desktop 1440×900, calibrated portrait reference viewport, intermediate 768px, mobile 390×844, 320px/200% zoom에서 다음을 확인한다.
+공통 responsive matrix는 desktop 1440×900, portrait 1080×1440, intermediate 768px,
+mobile 390×844, 320px/200% zoom을 확인한다. Exact approved calibration은 Home 1440×1080,
+article index 1080×1440, article detail 1120×1400이며
+[최종 acceptance](evidence/form-and-thought-final-acceptance.md)가 둘을 구분해 기록한다.
 
 - header alignment와 navigation order.
 - 대응 reference와 route별 geometry.
@@ -296,7 +304,7 @@ Astro는 최종 상태에 남지 않지만, 책임을 잃지 않도록 다음 �
 
 ## 10. 구현 단위
 
-이 설계는 한 번에 검증 가능한 단일 program이지만 다음 dependency 순서를 가진다.
+이 설계는 아래 dependency 순서로 구현과 local acceptance를 마쳤다.
 
 1. React-only content/media/release contract와 thoughts migration.
 2. reference viewport calibration, shared shell, tokens, header, typography.

@@ -1,9 +1,11 @@
 # FORM & THOUGHT 시각 스펙
 
-- 상태: approved target, implementation pending
+- 상태: built and approved locally; production origin은 `not_measured`, cutover authorization은 `false`
 - 승인일: 2026-08-28
 - 결정: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)
 - reference inventory: [manifest.yml](assets/form-and-thought-reference/manifest.yml)
+- 구현 증거: [최종 acceptance](evidence/form-and-thought-final-acceptance.md),
+  [checksum-bound visual evidence](evidence/form-and-thought-astro-removal-manifest.md)
 
 ## 1. 권한과 해석 규칙
 
@@ -55,7 +57,7 @@ Reference bitmap 크기는 CSS viewport가 아니다. 첫 구현 전에 page-she
 
 `#AF6047` 위 paper/ink 조합은 normal-text AA에 미달하므로 작은 metadata에는 쓰지 않는다. 모든 최종 token pair, focus ring, disabled label은 실제 computed color로 WCAG 2.2 AA를 다시 측정한다. disabled icon도 의미를 식별할 수 있어야 하며 opacity만으로 상태를 표현하지 않는다.
 
-## 4. Typography gate
+## 4. Typography built truth
 
 | role | required character | desktop target | mobile target |
 | --- | --- | --- | --- |
@@ -64,15 +66,13 @@ Reference bitmap 크기는 CSS viewport가 아니다. 첫 구현 전에 page-she
 | Korean body | 읽기용 명조 | 17–18px / 1.85–1.95 | 16–17px / 1.8–1.9 |
 | Korean UI/meta | 중립 고딕, 날짜 tabular numeral | 14–16px / 1.5 | 14–16px / 1.5 |
 
-글꼴은 아직 구현 완료 값이 아니다. 후보 contact sheet 승인 뒤 다음을 기록해야 한다.
-
-- self-hosted file, official source, license, checksum, weight와 fallback.
-- wordmark box가 primary reference의 폭과 두 줄 높이에서 ±4% 이내인지.
-- 대표 한글 title의 지정 너비 줄바꿈이 reference와 한 줄 이상 달라지지 않는지.
-- body 40–46자 measure에서 faux bold, glyph collision, FOIT가 없는지.
-- `font-display`, subset, preload 여부와 전체 font byte budget.
-
-승인 전에는 package나 remote font를 built truth로 확정하지 않는다.
+승인된 production stack은 self-hosted Noto Serif KR 400, Cormorant Garamond 400,
+Noto Sans KR 400이다. 세 semantic WOFF2의 source, OFL, checksum과 총 247,368 bytes는
+[reference calibration](assets/form-and-thought-reference/calibration.yml)과
+`apps/site/public/fonts/LICENSES.md`가 소유한다. Remote font request는 0이고 세 role은 한 번씩
+preload한다. Production specimen에서 wordmark ink width delta는 reference 대비 +0.5298%로
+±4% gate 안이며, 대표 한글 title은 desktop/mobile 모두 두 줄이다. 본문은 desktop 17px,
+mobile 16px과 약 1.9 line-height를 유지한다.
 
 ## 5. Global geometry
 
@@ -106,7 +106,8 @@ Desktop menu는 non-modal popover로 focus trap을 쓰지 않는다. Mobile menu
 
 ### Home `/`
 
-- Primary: `reference-05-home`; `reference-07` home frame은 tone consistency만 보조한다.
+- Primary: `reference-05-home`; `reference-07-surface-set`은 route region이 없는
+  secondary tone-consistency board로만 보조한다.
 - inverse header + hero 전체는 첫 큰 dark block이다.
 - hero split은 text 43–48%, image 52–57%, 전체 약 16:8.5다.
 - hero 아래 32–44px에 서평·아티클·생각 세 pick을 동일 폭으로 둔다.
@@ -125,7 +126,7 @@ Desktop menu는 non-modal popover로 focus trap을 쓰지 않는다. Mobile menu
 
 ### Review index `/reviews/`
 
-- Primary: `reference-06`의 `review-index-left` region.
+- Primary: `reference-06-review-index-left` calibration region.
 - article과 같은 ledger rhythm을 쓰되 real cover는 landscape stage 중앙에서 `object-fit: contain`한다.
 - reference의 가상 landscape image 대신 실제 portrait cover를 쓰는 것은 data-truth exception이다.
 - cover stage 배경, 최대 높이, 중심선은 고정하고 cover 자체 shadow는 0–12px blur 한 단계만 허용한다.
@@ -156,7 +157,7 @@ Desktop menu는 non-modal popover로 focus trap을 쓰지 않는다. Mobile menu
 | --- | --- | --- | --- | --- | --- |
 | article | `reference-03-detail` | off-white inner | terracotta field 안 | terracotta 58–64% + dark media 36–42% | action rail + 520–640px text + figure |
 | thought | `reference-03-detail` | off-white inner | terracotta field 안, TOC/source panel 생략 가능 | article과 같은 split; media 없으면 terracotta/paper text-led | action rail + narrow text, figure optional |
-| review | `reference-06:review-detail-right` | hero image 위 inverse | hero 아래 centered | full-width image-led; 없으면 paper title-led | action rail + verdict body + real cover/figure |
+| review | `reference-06-review-detail-right` | hero image 위 inverse | hero 아래 centered | full-width image-led; 없으면 paper title-led | action rail + verdict body + real cover/figure |
 
 서로 다른 variant를 한 화면에서 혼합하지 않는다. no-media variant는 빈 image box를 만들지 않고 텍스트가 지정 column을 점유한다. detail metadata는 실제 author가 있을 때만 `by`, 그다음 `YYYY.MM.DD`; 가상 editor 이름을 쓰지 않는다.
 
@@ -221,4 +222,11 @@ Global requirements:
 5. 구조 차이는 평균 pixel score로 가리지 않는다. route별 block rectangle과 DOM/state contract가 모두 맞아야 한다.
 6. reference에 없는 변경이 필요하면 구현자가 임의 처리하지 않고 ADR/spec 변경 승인을 먼저 받는다.
 
-Typography와 generated image는 pending approval gate다. 그 외 route composition, detail variant, secondary route/search 범위, responsive DOM order는 이 문서로 확정됐다.
+공통 responsive matrix의 portrait cell은 1080×1440이다. Exact checksum-bound calibration은
+Home 1440×1080, article index 1080×1440, article detail 1120×1400이며 각각 승인 golden을 가진다.
+Typography gate는 위 production stack으로 통과했다. Generated media는 controller와 independent
+visual reviewer가 승인한 초기 calibration 3개와 후속 article expansion 12개, 합계 15개가
+전체 18개 public release asset에 들어갔고 DS02, DT02, AV04, AV06은 text-led HOLD로 남는다.
+Route composition, detail variant, secondary route/search 범위와 responsive DOM
+order의 local acceptance는 [최종 acceptance](evidence/form-and-thought-final-acceptance.md)에
+checksum과 함께 기록돼 있다.

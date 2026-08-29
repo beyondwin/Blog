@@ -14,7 +14,8 @@
 ## 현재 공개 제품
 
 워드마크는 두 줄 `FORM & THOUGHT`, primary navigation은 정확히
-`서평 · 아티클 · 생각 · 검색`이다. Home은 실제 네 primary lane의 편집 선택을 보여 준다.
+`서평 · 아티클 · 생각 · 검색`이다. Home은 실제 아티클 한 편의 hero와 서평·아티클·생각
+각 한 편을 고른 세 editorial pick을 보여 준다.
 primary corpus는 아티클 17, 서평 18, 생각 1이며 example은 공개하지 않는다.
 
 analysis, ideas, travel, tags와 public memory는 같은 shell의 secondary route로 남지만 primary
