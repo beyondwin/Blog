@@ -78,6 +78,13 @@ loader는 이 inventory와 공개 thought의 문장을 build-time에 대조한 �
 현재는 승인된 sample question만 이 fixture로 답하고, 나머지 질문은 deterministic search
 result로 분기한다. RAG/LLM provider는 아직 존재하지 않는다.
 
+검색 stage의 avatar는 immutable content release에 포함된 record media가 아니라 public shell
+asset `/images/form-and-thought-agent-avatar-v1.png`다. 단일 decision receipt는
+`docs/notes/project/assets/form-and-thought-second-brain-avatar/decision-manifest.yml`, 고정 SHA-256은
+`f29c064b1c0f77e5906a9c02e5b8e0a573ae6c44373b99fb75532c90fd481f20`이다. receipt의 권리 상태는
+`partially_verified`이고 independent legal review는 `not_measured`다. 이 shell asset 예외는
+public record나 private memory boundary를 넓히지 않는다.
+
 ## trusted MDX와 memory
 
 `packages/content/src/mdx/render.tsx`가 source MDX를 분석하고 허용된 component만 HTML로
@@ -93,6 +100,9 @@ public record로 변환하며 top-level `memory/**`를 읽지 않는다.
 
 각 `media.yml`은 source file, checksum, dimensions, alt, credit, provenance, rights를
 기록한다. strict validation과 release build가 같은 parser를 사용한다.
+
+아래 규칙은 immutable content-release media에 적용된다. 검색 avatar 같은 public shell asset은
+별도 checksum-bound decision receipt와 그 receipt에 적힌 권리 경계를 따른다.
 
 - repository-generated asset은 canonical required-batch registry,
   checksum-bound decision manifest, 정확히 `controller`와 `independent-visual-reviewer`, approved

@@ -125,10 +125,18 @@ analysis, ideas, travel, tags, memory는 같은 header, rule, serif hierarchy와
 
 ## 이미지와 권리
 
-public UI는 immutable release의 resolved media만 받는다. generated media는 controller와
-independent visual reviewer가 같은 checksum-bound decision batch를 승인하고 rights review가
-통과한 원본만 release에 들어간다. caveat는 `non-exclusive generated output;
-copyrightability/uniqueness not guaranteed`다. 승인되지 않은 후보는 text-led fallback이다.
+공개 content record가 쓰는 media는 immutable release의 resolved media만 받는다. generated
+content media는 controller와 independent visual reviewer가 같은 checksum-bound decision
+batch를 승인하고 rights review가 통과한 원본만 release에 들어간다. caveat는 `non-exclusive
+generated output; copyrightability/uniqueness not guaranteed`다. 승인되지 않은 후보는
+text-led fallback이다.
+
+검색 avatar는 content-release media가 아니라 checksum-bound public shell asset인
+`/images/form-and-thought-agent-avatar-v1.png`다. 이 예외의 단일 receipt는
+`docs/notes/project/assets/form-and-thought-second-brain-avatar/decision-manifest.yml`이며 SHA-256은
+`f29c064b1c0f77e5906a9c02e5b8e0a573ae6c44373b99fb75532c90fd481f20`다. 권리 상태는
+`partially_verified`, independent legal review는 `not_measured`이므로 content-release media의
+승인 완료 상태로 해석하지 않는다.
 
 서평 cover는 판본 identity와 redistribution receipt가 모두 승인돼야 byte를 공개한다. 현재
 생산 registry는 승인 0건이며 strict validation은 17건의 rights warning을 의도적으로 남긴다.

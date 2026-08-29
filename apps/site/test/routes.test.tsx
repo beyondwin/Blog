@@ -352,7 +352,11 @@ describe('React Router current-behavior static route contract', () => {
     expect(data.fixture.evidence.every((item: { canonicalPath: string }) => (
       item.canonicalPath === '/thoughts/why-i-read-in-the-ai-era/'
     ))).toBe(true);
-    expect(JSON.stringify(data.fixture)).not.toMatch(/bodyHtml|privatePath|memory\//u);
+    const serializedSearchLoader = JSON.stringify(data);
+    expect(serializedSearchLoader).not.toMatch(
+      /bodyHtml|privatePath|sourcePath|memory\/|\/Users\/|src\/content\//u,
+    );
+    expect(serializedSearchLoader).not.toMatch(/AI 대리인|AI DELEGATE|MIND 01/u);
     expect(new Set(data.inventory.map((item: { kind: string }) => item.kind))).toEqual(
       new Set(['article', 'review', 'thought']),
     );
