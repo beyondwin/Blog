@@ -12,7 +12,7 @@ test('360px test-only settled-DOM long title mutation remains truthful and conta
   expect(value.releaseRecordModified).toBe(false);
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto(canonicalUrl(value.route));
-  const title = page.locator('.reading-threshold h1');
+  const title = page.locator('.editorial-detail-frame__introduction h1');
   await title.evaluate((node, text) => { node.textContent = text; }, value.testTitle);
   await expect(title).toHaveText(value.testTitle);
   expect(await title.evaluate((node) => node.getBoundingClientRect().right <= document.documentElement.clientWidth)).toBe(true);
@@ -24,7 +24,7 @@ test('426px verified zero-relation record does not synthesize continuation items
   await page.setViewportSize(APPROVED_VIEWPORTS.mobile426);
   await page.goto(canonicalUrl(value.route));
   await expect(page.locator('.continue-reading li')).toHaveCount(value.expectedContinuationItems);
-  await expect(page.getByRole('link', { name: '글 전체 보기' })).toHaveAttribute('href', '/articles/');
+  await expect(page.getByRole('link', { name: '아티클 전체 보기' })).toHaveAttribute('href', '/articles/');
   await expectNoHorizontalOverflow(page);
 });
 

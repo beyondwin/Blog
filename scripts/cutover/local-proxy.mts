@@ -1,25 +1,18 @@
 import { constants as fsConstants } from 'node:fs';
-import {
-  lstat,
-  open,
-  realpath,
-} from 'node:fs/promises';
+import { lstat, open, realpath } from 'node:fs/promises';
 import http, { type IncomingHttpHeaders, type Server } from 'node:http';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-
-export type ProxyTarget = 'react' | 'astro';
+import { PUBLIC_SECURITY_HEADERS } from '../../apps/site/app/delivery.ts';
 
 export interface ProxyArguments {
   check: boolean;
   listen: { host: '127.0.0.1' | '::1'; port: number };
   react: URL;
-  astro: URL;
-  statePath: string;
   pidFile?: string;
 }
 
-const allowedValueArguments = new Set(['--listen', '--react', '--astro', '--state', '--pid-file']);
+const allowedValueArguments = new Set(['--listen', '--react', '--pid-file']);
 const hopByHopHeaders = new Set([
   'connection',
   'keep-alive',
@@ -40,19 +33,17 @@ function parseListen(value: string): ProxyArguments['listen'] {
   return { host: match[1] === '[::1]' ? '::1' : '127.0.0.1', port };
 }
 
-function parseUpstream(label: string, value: string): URL {
+function parseUpstream(value: string): URL {
   let url: URL;
   try {
     url = new URL(value);
   } catch (error) {
-    throw new Error(`${label} requires one valid URL`, { cause: error });
+    throw new Error('--react requires one valid URL', { cause: error });
   }
-  if (url.protocol !== 'http:') throw new Error(`${label} permits HTTP only`);
-  if (!['127.0.0.1', '[::1]'].includes(url.hostname)) {
-    throw new Error(`${label} permits exact loopback upstreams only`);
-  }
+  if (url.protocol !== 'http:') throw new Error('--react permits HTTP only');
+  if (!['127.0.0.1', '[::1]'].includes(url.hostname)) throw new Error('--react permits exact loopback upstreams only');
   if (!url.port || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
-    throw new Error(`${label} requires only an origin with an explicit port`);
+    throw new Error('--react requires only an origin with an explicit port');
   }
   return url;
 }
@@ -74,16 +65,14 @@ export function parseProxyArguments(argv: readonly string[]): ProxyArguments {
     values.set(argument, value);
     index += 1;
   }
-  for (const required of ['--listen', '--react', '--astro', '--state']) {
+  for (const required of ['--listen', '--react']) {
     if (!values.has(required)) throw new Error(`missing required argument: ${required}`);
   }
   if (!check && !values.has('--pid-file')) throw new Error('--pid-file is required at runtime');
   return {
     check,
     listen: parseListen(values.get('--listen')!),
-    react: parseUpstream('--react', values.get('--react')!),
-    astro: parseUpstream('--astro', values.get('--astro')!),
-    statePath: resolve(values.get('--state')!),
+    react: parseUpstream(values.get('--react')!),
     ...(values.has('--pid-file') ? { pidFile: resolve(values.get('--pid-file')!) } : {}),
   };
 }
@@ -91,91 +80,15 @@ export function parseProxyArguments(argv: readonly string[]): ProxyArguments {
 export async function assertOwnedCutoverPath(path: string): Promise<string> {
   const resolved = resolve(path);
   const root = dirname(resolved);
-  if (!cutoverRootPattern.test(root)) {
-    throw new Error('state and PID paths must be direct children of /tmp/beyondwin-cutover.*');
-  }
+  if (!cutoverRootPattern.test(root)) throw new Error('PID path must be a direct child of /tmp/beyondwin-cutover.*');
   const state = await lstat(root);
-  if (state.isSymbolicLink() || !state.isDirectory()) {
-    throw new Error('cutover root must be one real directory, not a symbolic link');
-  }
+  if (state.isSymbolicLink() || !state.isDirectory()) throw new Error('cutover root must be one real directory');
   if (typeof process.getuid === 'function' && state.uid !== process.getuid()) {
     throw new Error('cutover root must be owned by the current user');
   }
   const expectedRealPath = join(await realpath('/tmp'), basename(root));
   if (await realpath(root) !== expectedRealPath) throw new Error('cutover root real path changed');
   return root;
-}
-
-async function readStateFile(path: string): Promise<ProxyTarget> {
-  await assertOwnedCutoverPath(path);
-  let handle;
-  try {
-    handle = await open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ELOOP') {
-      throw new Error('proxy state must not be a symbolic link');
-    }
-    throw error;
-  }
-  try {
-    const state = await handle.stat();
-    if (!state.isFile() || state.nlink !== 1) throw new Error('proxy state must be one regular file');
-    if (typeof process.getuid === 'function' && state.uid !== process.getuid()) {
-      throw new Error('proxy state must be owned by the current user');
-    }
-    const value = (await handle.readFile('utf8')).trim();
-    if (value !== 'react' && value !== 'astro') throw new Error('proxy state must be react or astro');
-    return value;
-  } finally {
-    await handle.close();
-  }
-}
-
-export async function prepareStateFile(path: string): Promise<ProxyTarget> {
-  await assertOwnedCutoverPath(path);
-  let created = false;
-  let handle;
-  try {
-    handle = await open(
-      path,
-      fsConstants.O_RDWR | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW,
-      0o600,
-    );
-    created = true;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
-      if ((error as NodeJS.ErrnoException).code === 'ELOOP') {
-        throw new Error('proxy state must not be a symbolic link');
-      }
-      throw error;
-    }
-  }
-  if (created && handle) {
-    try {
-      await handle.writeFile('react\n', 'utf8');
-      await handle.sync();
-    } finally {
-      await handle.close();
-    }
-  }
-  return readStateFile(path);
-}
-
-export async function writeProxyTarget(path: string, target: ProxyTarget): Promise<void> {
-  if (target !== 'react' && target !== 'astro') throw new Error('proxy target must be react or astro');
-  await readStateFile(path);
-  const handle = await open(path, fsConstants.O_WRONLY | fsConstants.O_TRUNC | fsConstants.O_NOFOLLOW);
-  try {
-    const state = await handle.stat();
-    if (!state.isFile() || state.nlink !== 1) throw new Error('proxy state must be one regular file');
-    if (typeof process.getuid === 'function' && state.uid !== process.getuid()) {
-      throw new Error('proxy state must be owned by the current user');
-    }
-    await handle.writeFile(`${target}\n`, 'utf8');
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
 }
 
 async function portIsFree(port: number): Promise<boolean> {
@@ -194,18 +107,8 @@ export async function checkExactDrillPorts(
   checker: (port: number) => Promise<boolean> = portIsFree,
 ): Promise<void> {
   const occupied: number[] = [];
-  for (const port of [4390, 4391, 4392]) {
-    if (!await checker(port)) occupied.push(port);
-  }
-  if (occupied.length > 0) throw new Error(`cutover drill port occupied: ${occupied.join(', ')}`);
-}
-
-export function proxyCheckPayload(state: ProxyTarget): {
-  check: 'passed';
-  ports: [4390, 4391, 4392];
-  state: ProxyTarget;
-} {
-  return { check: 'passed', ports: [4390, 4391, 4392], state };
+  for (const port of [4390, 4391]) if (!await checker(port)) occupied.push(port);
+  if (occupied.length > 0) throw new Error(`React cutover drill port occupied: ${occupied.join(', ')}`);
 }
 
 function filteredHeaders(headers: IncomingHttpHeaders): IncomingHttpHeaders {
@@ -217,16 +120,11 @@ function filteredHeaders(headers: IncomingHttpHeaders): IncomingHttpHeaders {
 
 async function writePidFile(path: string): Promise<void> {
   await assertOwnedCutoverPath(path);
-  let handle;
-  try {
-    handle = await open(
-      path,
-      fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW,
-      0o600,
-    );
-  } catch (error) {
-    throw new Error('proxy PID file must be absent and non-symbolic', { cause: error });
-  }
+  const handle = await open(
+    path,
+    fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW,
+    0o600,
+  ).catch((error) => { throw new Error('proxy PID file must be absent and non-symbolic', { cause: error }); });
   try {
     await handle.writeFile(`${process.pid}\n`, 'utf8');
     await handle.sync();
@@ -236,54 +134,43 @@ async function writePidFile(path: string): Promise<void> {
 }
 
 export async function createProxyServer(options: ProxyArguments): Promise<Server> {
-  await prepareStateFile(options.statePath);
   if (!options.pidFile) throw new Error('proxy PID file is required at runtime');
   await assertOwnedCutoverPath(options.pidFile);
-  const server = http.createServer(async (request, response) => {
+  const server = http.createServer((request, response) => {
     if (request.method !== 'GET' && request.method !== 'HEAD') {
-      response.writeHead(405, { allow: 'GET, HEAD', 'content-type': 'text/plain; charset=utf-8' });
-      response.end('public cutover proxy accepts GET and HEAD only\n');
-      return;
-    }
-    let target: ProxyTarget;
-    try {
-      target = await readStateFile(options.statePath);
-    } catch (error) {
-      response.writeHead(503, {
-        'cache-control': 'no-store',
+      response.writeHead(405, {
+        ...PUBLIC_SECURITY_HEADERS,
+        allow: 'GET, HEAD',
         'content-type': 'text/plain; charset=utf-8',
-        'x-beyondwin-cutover-target': 'invalid',
       });
-      response.end(`invalid cutover state: ${String(error)}\n`);
+      response.end('public proxy accepts GET and HEAD only\n');
       return;
     }
-    const upstream = target === 'react' ? options.react : options.astro;
     const upstreamRequest = http.request({
-      protocol: upstream.protocol,
-      hostname: upstream.hostname,
-      port: upstream.port,
+      protocol: options.react.protocol,
+      hostname: options.react.hostname,
+      port: options.react.port,
       method: request.method,
       path: request.url ?? '/',
-      headers: {
-        ...filteredHeaders(request.headers),
-        host: upstream.host,
-      },
+      headers: { ...filteredHeaders(request.headers), host: options.react.host },
     }, (upstreamResponse) => {
       response.writeHead(upstreamResponse.statusCode ?? 502, {
         ...filteredHeaders(upstreamResponse.headers),
-        'x-beyondwin-cutover-target': target,
+        ...PUBLIC_SECURITY_HEADERS,
+        'X-Beyondwin-Renderer': 'react',
       });
       upstreamResponse.pipe(response);
     });
-    upstreamRequest.once('error', (error) => {
-      if (response.headersSent) response.destroy(error);
+    upstreamRequest.once('error', () => {
+      if (response.headersSent) response.destroy();
       else {
         response.writeHead(502, {
+          ...PUBLIC_SECURITY_HEADERS,
           'cache-control': 'no-store',
           'content-type': 'text/plain; charset=utf-8',
-          'x-beyondwin-cutover-target': target,
+          'X-Beyondwin-Renderer': 'react',
         });
-        response.end(`cutover target ${target} is unreachable\n`);
+        response.end('React public origin is unreachable\n');
       }
     });
     request.pipe(upstreamRequest);
@@ -305,27 +192,15 @@ export async function createProxyServer(options: ProxyArguments): Promise<Server
 }
 
 async function main(): Promise<void> {
-  const options = parseProxyArguments(process.argv.slice(2));
-  const state = await prepareStateFile(options.statePath);
-  if (options.check) {
+  const arguments_ = parseProxyArguments(process.argv.slice(2));
+  if (arguments_.check) {
     await checkExactDrillPorts();
-    process.stdout.write(`${JSON.stringify(proxyCheckPayload(state))}\n`);
+    process.stdout.write(`${JSON.stringify({ check: 'passed', ports: [4390, 4391], renderer: 'react' })}\n`);
     return;
   }
-  const server = await createProxyServer(options);
-  process.stdout.write(`${JSON.stringify({ pid: process.pid, listen: options.listen, statePath: options.statePath })}\n`);
-  const stop = (): void => {
-    server.close((error) => {
-      if (error) {
-        process.stderr.write(`${String(error)}\n`);
-        process.exitCode = 1;
-      }
-    });
-  };
-  process.once('SIGTERM', stop);
-  process.once('SIGINT', stop);
+  await createProxyServer(arguments_);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   await main();
 }

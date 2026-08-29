@@ -11,6 +11,7 @@ import {
   readdir,
   realpath,
   rename,
+  writeFile,
 } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +28,14 @@ import {
   verifiedReleaseAssetInventory,
   type VerifiedReleaseAsset,
 } from './verified-release-assets';
+import { fullPublicPaths } from './app/release.server';
+import {
+  PUBLIC_SECURITY_HEADERS,
+  resolveSiteOrigin,
+  robotsText,
+  sitemapXml,
+  type DeliveryMode,
+} from './app/delivery';
 
 interface ReactRouterBuildContext {
   environment: NodeJS.ProcessEnv;
@@ -38,6 +47,7 @@ interface StaticExportOptions {
   runReactRouterBuild?: (context: ReactRouterBuildContext) => Promise<void>;
   beforeFailedStagingRetention?: (context: StagingContext) => Promise<void>;
   beforeVerifiedStagingPublication?: (context: StagingContext) => Promise<void>;
+  deliveryMode?: DeliveryMode;
 }
 
 interface StagingContext {
@@ -319,6 +329,91 @@ async function copyVerifiedAssets(
   await verifyExportedAssets(out, expected);
 }
 
+function headersFile(): string {
+  return '/*\n' + Object.entries(PUBLIC_SECURITY_HEADERS)
+    .map(([name, value]) => `  ${name}: ${value}`)
+    .join('\n') + '\n';
+}
+
+function notFoundHtml(): string {
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<meta name="robots" content="noindex"><title>페이지를 찾을 수 없습니다 · FORM &amp; THOUGHT</title>'
+    + '<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="manifest" href="/site.webmanifest">'
+    + '</head><body><main><p>FORM &amp; THOUGHT</p><h1>페이지를 찾을 수 없습니다</h1>'
+    + '<p><a href="/">홈으로 돌아가기</a></p></main></body></html>\n';
+}
+
+function memoryMapRedirectHtml(origin: string): string {
+  const canonical = new URL('/memory/', `${origin}/`).href;
+  return '<!doctype html><html lang="ko"><head><meta charset="utf-8">'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<meta name="robots" content="noindex">'
+    + '<title>문장으로 이동 · FORM &amp; THOUGHT</title>'
+    + `<link rel="canonical" href="${canonical}">`
+    + `<meta property="og:url" content="${canonical}">`
+    + '<meta http-equiv="refresh" content="0;url=/memory/">'
+    + '</head><body><main><p>FORM &amp; THOUGHT</p>'
+    + '<p><a href="/memory/">문장으로 이동</a></p></main></body></html>\n';
+}
+
+async function ensureRealDeliveryDirectory(parent: string, name: string): Promise<string> {
+  const path = join(parent, name);
+  await mkdir(path).catch((error: NodeJS.ErrnoException) => {
+    if (error.code !== 'EEXIST') throw error;
+  });
+  const state = await lstat(path);
+  if (state.isSymbolicLink() || !state.isDirectory()) {
+    throw new Error(`Delivery artifact directory must be real: ${name}`);
+  }
+  return path;
+}
+
+async function writeMemoryMapCompatibilityRedirect(outputClient: string, origin: string): Promise<void> {
+  const memory = await ensureRealDeliveryDirectory(outputClient, 'memory');
+  const map = await ensureRealDeliveryDirectory(memory, 'map');
+  const path = join(map, 'index.html');
+  const state = await lstat(path).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (state && (state.isSymbolicLink() || !state.isFile())) {
+    throw new Error('Memory map compatibility document must be a real file');
+  }
+  const handle = await open(
+    path,
+    fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_TRUNC | fsConstants.O_NOFOLLOW,
+    0o644,
+  );
+  try {
+    await handle.writeFile(memoryMapRedirectHtml(origin), 'utf8');
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+}
+
+async function writeDeliveryArtifacts(
+  staged: OwnedStagedOutput,
+  active: VerifiedActivePublicRelease,
+  environment: NodeJS.ProcessEnv,
+  mode: DeliveryMode,
+): Promise<void> {
+  await assertOwnedStagedOutputCurrent(staged);
+  const outputClient = join(staged.outputRoot.path, 'client');
+  const origin = resolveSiteOrigin(environment, mode);
+  await writeMemoryMapCompatibilityRedirect(outputClient, origin);
+  const writes = [
+    ['sitemap.xml', sitemapXml(fullPublicPaths(active), origin)],
+    ['robots.txt', robotsText(origin)],
+    ['404.html', notFoundHtml()],
+    ['_headers', headersFile()],
+  ] as const;
+  for (const [name, contents] of writes) {
+    await writeFile(join(outputClient, name), contents, { encoding: 'utf8', flag: 'wx' });
+  }
+  await assertOwnedStagedOutputCurrent(staged);
+}
+
 async function publishVerifiedStaging(
   staged: OwnedStagedOutput,
   releasesRoot: string,
@@ -371,7 +466,21 @@ export async function buildStaticExport(options: StaticExportOptions): Promise<v
   const releasesRoot = join(repositoryRoot, 'build/public-releases');
   const initial = await readActiveRelease(releasesRoot);
   const binding = serializeReleaseBinding(initial);
-  const environment = { ...process.env, [PUBLIC_RELEASE_BINDING_ENV]: binding };
+  const configuredDeliveryMode = process.env.FORM_THOUGHT_DELIVERY_MODE;
+  if (configuredDeliveryMode !== undefined
+    && configuredDeliveryMode !== 'local'
+    && configuredDeliveryMode !== 'production') {
+    throw new Error('FORM_THOUGHT_DELIVERY_MODE must be local or production');
+  }
+  const deliveryMode = options.deliveryMode
+    ?? configuredDeliveryMode
+    ?? (process.env.NODE_ENV === 'test' ? 'local' : 'production');
+  const siteOrigin = resolveSiteOrigin(process.env, deliveryMode);
+  const environment = {
+    ...process.env,
+    [PUBLIC_RELEASE_BINDING_ENV]: binding,
+    VITE_FORM_THOUGHT_SITE_ORIGIN: siteOrigin,
+  };
   const runReactRouterBuild = options.runReactRouterBuild
     ?? ((context: ReactRouterBuildContext) => runProductionReactRouterBuild(spikeRoot, context.environment));
 
@@ -383,6 +492,12 @@ export async function buildStaticExport(options: StaticExportOptions): Promise<v
     staged = await stageOwnedOutput(outputTree);
     const afterBuild = await readBoundActiveRelease(releasesRoot, binding);
     await copyVerifiedAssets(staged, afterBuild);
+    await writeDeliveryArtifacts(
+      staged,
+      afterBuild,
+      environment,
+      deliveryMode,
+    );
     await readBoundActiveRelease(releasesRoot, binding);
     await options.beforeVerifiedStagingPublication?.({
       stagedOutput: staged.outputRoot.path,

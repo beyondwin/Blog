@@ -2,8 +2,8 @@ import type { LinksFunction } from 'react-router';
 import type { PublicRecord } from '@beyondwin/contracts';
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { HomePage, HOME_SELECTIONS, type HomePageData } from '../../src/ui/home/HomePage';
-import { type RouteCriticalCssHandle, publicMetadataTitle } from '../root';
-import { loadVerifiedRelease } from '../release.server';
+import { absoluteCanonical, type RouteCriticalCssHandle, publicMetadataTitle } from '../root';
+import { homeSelectionRecord, loadVerifiedRelease } from '../release.server';
 
 const homeCss = import.meta.env.SSR
   ? await import('../../src/ui/styles/route-home.css?inline').then((module) => module.default)
@@ -39,7 +39,15 @@ export async function loader(): Promise<HomeData> {
   const thoughtAsset = release.manifest.assets[`thoughts/${thought.id}/${HOME_SELECTIONS.thought.mediaId}`];
   if (!heroAsset) throw new Error(`Verified release is missing fixed home media articles/${hero.id}/${HOME_SELECTIONS.hero.mediaId}`);
   if (!thoughtAsset) throw new Error(`Verified release is missing fixed home media thoughts/${thought.id}/${HOME_SELECTIONS.thought.mediaId}`);
-  return { hero, picks: { review, article, thought }, assets: { hero: heroAsset, thought: thoughtAsset } };
+  return {
+    hero: homeSelectionRecord(hero),
+    picks: {
+      review: homeSelectionRecord(review),
+      article: homeSelectionRecord(article),
+      thought: homeSelectionRecord(thought),
+    },
+    assets: { hero: heroAsset, thought: thoughtAsset },
+  };
 }
 
 export const links: LinksFunction = () => [{
@@ -48,10 +56,15 @@ export const links: LinksFunction = () => [{
 }];
 
 export function meta() {
+  const description = '서평과 아티클, 생각을 한 지면에서 골라 읽는 FORM & THOUGHT.';
+  const canonical = absoluteCanonical('/');
   return [
     { title: publicMetadataTitle() },
-    { name: 'description', content: '서평과 아티클, 생각을 한 지면에서 골라 읽는 FORM & THOUGHT.' },
-    { tagName: 'link', rel: 'canonical', href: '/' },
+    { name: 'description', content: description },
+    { tagName: 'link', rel: 'canonical', href: canonical },
+    { property: 'og:title', content: publicMetadataTitle() },
+    { property: 'og:description', content: description },
+    { property: 'og:url', content: canonical },
   ];
 }
 

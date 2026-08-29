@@ -1,17 +1,14 @@
-import { execFile } from 'node:child_process';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
 
 const root = process.cwd();
-const execFileAsync = promisify(execFile);
 const manifestPaths = [
   'package.json',
   'apps/site/package.json',
   'packages/contracts/package.json',
   'packages/content/package.json',
-  'tools/parity/package.json',
 ];
 const approvedToolVersions = {
   typescript: '6.0.3',
@@ -24,8 +21,10 @@ const approvedToolVersions = {
 };
 
 type PackageManifest = {
+  name?: string;
   private?: boolean;
   engines?: { node?: string };
+  scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
@@ -46,119 +45,76 @@ function declaredDependencies(manifest: PackageManifest): Record<string, string>
   };
 }
 
-describe('Node 24 workspace contract', () => {
-  it('excludes rejected renderer evidence from root Vitest discovery', async () => {
-    const config = (await import('../vitest.config.mjs')).default as {
-      test?: { exclude?: string[] };
-    };
-
-    expect(config.test?.exclude).toContain('spikes/rejected/**');
-  });
-
-  it('declares the approved workspace roots and private Node 24 manifests', async () => {
+describe('React-only Node 24 workspace contract', () => {
+  it('declares only current workspace roots and private Node 24 manifests', async () => {
     const manifests = await Promise.all(manifestPaths.map(readManifest));
-
-    expect(manifests[0]?.workspaces).toEqual([
-      'apps/*',
-      'packages/*',
-      'spikes/*',
-      'tools/*',
-    ]);
-
+    expect(manifests[0]?.name).toBe('beyondwin-form-thought');
+    expect(manifests[0]?.workspaces).toEqual(['apps/*', 'packages/*', 'spikes/*']);
     for (const manifest of manifests) {
       expect(manifest.private).toBe(true);
       expect(manifest.engines?.node).toBe('>=24 <25');
     }
   });
 
-  it('pins migration tooling exactly and keeps public packages Astro-free', async () => {
-    const [rootManifest, ...publicManifests] = await Promise.all(
-      manifestPaths.map(readManifest),
-    );
-    const rootDependencies = declaredDependencies(rootManifest);
-
-    expect(rootDependencies).toMatchObject(approvedToolVersions);
-    for (const version of Object.values(approvedToolVersions)) {
-      expect(version).not.toMatch(/^[~^]/);
-    }
-
-    for (const manifest of publicManifests) {
+  it('pins approved tooling and has zero Astro packages or legacy scripts', async () => {
+    const [rootManifest, ...publicManifests] = await Promise.all(manifestPaths.map(readManifest));
+    expect(declaredDependencies(rootManifest)).toMatchObject(approvedToolVersions);
+    for (const manifest of [rootManifest, ...publicManifests]) {
       const dependencies = declaredDependencies(manifest);
-      expect(Object.values(dependencies)).not.toContain('latest');
-      expect(Object.values(dependencies).every((version) => !/^[~^]/.test(version))).toBe(true);
       expect(Object.keys(dependencies)).not.toContain('astro');
       expect(Object.keys(dependencies).some((name) => name.startsWith('@astrojs/'))).toBe(false);
     }
+    for (const script of ['legacy:dev', 'legacy:build', 'legacy:preview', 'parity:capture:astro', 'cutover:rollback']) {
+      expect(rootManifest.scripts).not.toHaveProperty(script);
+    }
   });
 
-  it('keeps rejected Next evidence outside the root Astro diagnostic boundary', async () => {
-    const generatedRoot = resolve(root, 'spikes/rejected/site-next/out');
-    const sentinel = resolve(generatedRoot, 'root-scan-boundary-reviewer.js');
-    const {
-      BASE_URL,
-      DEV,
-      MODE,
-      PROD,
-      SSR,
-      TEST,
-      VITEST,
-      VITEST_MODE,
-      VITEST_POOL_ID,
-      VITEST_WORKER_ID,
-      ...environment
-    } = process.env;
-    await mkdir(generatedRoot, { recursive: true });
-    await writeFile(sentinel, 'const generatedOutputMustNotBeScanned = true;\n');
-    try {
-      const { stdout } = await execFileAsync('npm', ['exec', '--', 'astro', 'check'], {
-        cwd: root,
-        env: { ...environment, NODE_ENV: 'production' },
-        maxBuffer: 1024 * 1024,
-      });
-      expect(stdout).not.toContain('spikes/rejected/site-next/out');
-      expect(stdout).not.toContain('root-scan-boundary-reviewer.js');
-    } finally {
-      await rm(sentinel, { force: true });
-    }
-  }, 120_000);
+  it('seals the final ordered validation chain', async () => {
+    const manifest = await readManifest('package.json');
+    expect(manifest.scripts?.validate).toBe([
+      'npm run agent:check',
+      'node scripts/validate-content.mjs',
+      'npm run media:validate -- --strict',
+      'npm run article:quality',
+      'npm run memory:validate',
+      'npm test',
+      'npm run typecheck:workspaces',
+      'npm run public-release:build',
+      'npm run public-release:verify',
+      'npm run public-release:clean-test',
+      'npm run site:build',
+    ].join(' && '));
+    expect(manifest.scripts?.test).toBe('vitest run');
+    expect(manifest.scripts?.['test:workspaces']).not.toMatch(/parity|astro/iu);
+  });
 
-  it('keeps selected React Router output outside the root Astro diagnostic boundary', async () => {
-    const generatedRoots = [
-      resolve(root, 'apps/site/build'),
-      resolve(root, 'apps/site/.react-router'),
-    ];
-    const sentinels = generatedRoots.map((generatedRoot, index) => (
-      resolve(generatedRoot, `root-scan-boundary-react-router-${index}.js`)
-    ));
-    const {
-      BASE_URL,
-      DEV,
-      MODE,
-      PROD,
-      SSR,
-      TEST,
-      VITEST,
-      VITEST_MODE,
-      VITEST_POOL_ID,
-      VITEST_WORKER_ID,
-      ...environment
-    } = process.env;
-    await Promise.all(generatedRoots.map((generatedRoot) => mkdir(generatedRoot, { recursive: true })));
-    await Promise.all(sentinels.map((sentinel) => writeFile(
-      sentinel,
-      'const generatedReactRouterOutputMustNotBeScanned = true;\n',
-    )));
-    try {
-      const { stdout } = await execFileAsync('npm', ['exec', '--', 'astro', 'check'], {
-        cwd: root,
-        env: { ...environment, NODE_ENV: 'production' },
-        maxBuffer: 1024 * 1024,
-      });
-      expect(stdout).not.toContain('apps/site/build');
-      expect(stdout).not.toContain('apps/site/.react-router');
-      expect(stdout).not.toContain('root-scan-boundary-react-router');
-    } finally {
-      await Promise.all(sentinels.map((sentinel) => rm(sentinel, { force: true })));
+  it('has no tracked Astro source/config/import/script residue', async () => {
+    const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'buffer' })
+      .toString('utf8').split('\0').filter(Boolean);
+    expect(tracked.filter((path) => path.endsWith('.astro') || path === 'astro.config.mjs')).toEqual([]);
+    for (const path of [
+      'package.json',
+      'package-lock.json',
+      'tsconfig.json',
+      ...tracked.filter((entry) => /^(?:apps|packages|scripts|tests)\/.+\.(?:[cm]?[jt]sx?|json)$/u.test(entry))
+        .filter((entry) => ![
+          'scripts/memory/seed.mjs',
+          'scripts/memory.seed.test.mjs',
+          'tests/workspace-contract.test.ts',
+        ].includes(entry)),
+    ]) {
+      const source = await readFile(resolve(root, path), 'utf8');
+      expect(source, path).not.toMatch(/(?:from\s+['"]astro(?:\/|['"])|astro:|astro\/tsconfigs|(?:^|["'])astro["']|@astrojs\/)/imu);
     }
-  }, 120_000);
+  });
+
+  it('uses the repository TypeScript base without framework inheritance', async () => {
+    const configuration = JSON.parse(await readFile(resolve(root, 'tsconfig.json'), 'utf8'));
+    expect(configuration.extends).toBe('./tsconfig.base.json');
+  });
+
+  it('owns the native release verifier at the React Router runtime boundary', async () => {
+    const siteManifest = await readManifest('apps/site/package.json');
+    expect(siteManifest.dependencies?.sharp).toBe('0.35.3');
+  });
 });

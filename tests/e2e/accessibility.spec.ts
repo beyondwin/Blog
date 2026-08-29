@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { expectNoHorizontalOverflow, observeRuntimeIssues } from './support';
+import { expectNoHorizontalOverflow, observeRuntimeIssues, waitForFirstFrameImages } from './support';
 
 const REPRESENTATIVE_SURFACES = [
   { name: 'home desktop', viewport: { width: 1440, height: 900 }, path: '/' },
@@ -36,7 +36,10 @@ for (const entry of REPRESENTATIVE_SURFACES) {
     const brokenImages = await page.evaluate(async () => (await Promise.all([...document.images]
       .filter((image) => image.getBoundingClientRect().width > 0)
       .map(async (image) => ({
-        decoded: await image.decode().then(() => true, () => false),
+        decoded: await Promise.race([
+          (image.loading = 'eager', image.decode()).then(() => true, () => false),
+          new Promise<boolean>((resolve) => setTimeout(resolve, 5_000, false)),
+        ]),
         naturalWidth: image.naturalWidth,
         src: image.currentSrc || image.src,
       })))).filter((image) => !image.decoded || image.naturalWidth <= 0));
@@ -55,4 +58,36 @@ test('390px reduced motion leaves the representative Home surface without runnin
   await page.evaluate(() => document.fonts.ready);
   expect(await page.evaluate(() => document.getAnimations()
     .filter((animation) => animation.playState === 'running').length)).toBe(0);
+});
+
+test('first-frame readiness skips below-fold lazy images and bounds visible or eager failures', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 100 });
+  const pixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+  await page.setContent(`
+    <style>body { margin: 0; } img { display: block; width: 10px; height: 10px; } .spacer { height: 500px; }</style>
+    <img id="visible-fail" src="${pixel}" alt="">
+    <div class="spacer"></div>
+    <img id="lazy-below-fold" loading="lazy" src="${pixel}" alt="">
+    <img id="eager-below-fold" loading="eager" src="${pixel}" alt="">
+  `);
+  await page.evaluate(() => {
+    const calls: string[] = [];
+    Object.defineProperty(window, '__firstFrameDecodeCalls', { value: calls, configurable: true });
+    HTMLImageElement.prototype.decode = function decode() {
+      calls.push(this.id);
+      if (this.id === 'visible-fail') return Promise.reject(new Error('visible decode failed'));
+      return new Promise<void>(() => undefined);
+    };
+  });
+
+  const startedAt = Date.now();
+  const failures = await waitForFirstFrameImages(page, 25);
+  expect(Date.now() - startedAt).toBeLessThan(500);
+  expect(failures).toEqual([
+    expect.objectContaining({ id: 'visible-fail', reason: 'decode-rejected', visible: true, eager: false }),
+    expect.objectContaining({ id: 'eager-below-fold', reason: 'timeout', visible: false, eager: true }),
+  ]);
+  expect(await page.evaluate(() => (
+    (window as typeof window & { __firstFrameDecodeCalls: string[] }).__firstFrameDecodeCalls
+  ))).toEqual(['visible-fail', 'eager-below-fold']);
 });

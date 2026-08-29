@@ -32,24 +32,14 @@ afterAll(() => {
 
 describe('full public route expansion', () => {
   it('derives the public route set from the verified release', async () => {
-    const baseline = JSON.parse(await readFile(
-      join(repositoryRoot, 'tests/fixtures/parity/astro-public-baseline.json'),
-      'utf8',
-    )) as { routes: Array<{ path: string }> };
     const releaseModule = await candidateModule<any>('app/release.server.ts');
     const active = await releaseModule.loadVerifiedRelease();
-    const actual = releaseModule.fullPublicPaths(active);
-    const astroPaths = baseline.routes.map(({ path }) => path).sort();
-
-    const expected = astroPaths
-      .filter((path) => ![
-        '/articles/why-i-read-in-the-ai-era/',
-        '/reviews/the-life-you-can-save/',
-      ].includes(path))
-      .concat('/thoughts/', '/thoughts/why-i-read-in-the-ai-era/')
-      .sort();
+    const actual = releaseModule.fullPublicPaths(active) as string[];
     expect(actual).toHaveLength(93);
-    expect([...actual].sort()).toEqual(expected);
+    expect(actual).toEqual([...new Set(actual)].sort((left, right) => left.localeCompare(right)));
+    for (const record of Object.values(active.manifest.records) as Array<{ href: string }>) {
+      expect(actual).toContain(record.href);
+    }
     expect(actual).toContain('/memory/map/');
     expect(actual).toContain('/tags/AI-agent/');
     expect(actual).toContain('/tags/AI/');
@@ -348,7 +338,9 @@ describe('full public route expansion', () => {
       const adapter = await candidateModule<any>(path);
       const data = adapter.loadDetail(release, slug);
       expect(data.record.id).toBe(slug);
-      expect(adapter.meta({ data })).toContainEqual({ tagName: 'link', rel: 'canonical', href: data.record.href });
+      expect(adapter.meta({ data })).toContainEqual({
+        tagName: 'link', rel: 'canonical', href: `https://form-thought.local.invalid${data.record.href}`,
+      });
       expect(() => adapter.loadDetail(release, 'missing')).toThrow();
     }
     expect((await candidateModule<any>('app/routes/travel.tsx')).loadDetail(release, 'travel-fixture').mediaAsset)

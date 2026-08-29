@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { waitForFirstFrameImages } from './support';
 
 const OUTPUT_ROOT = path.resolve('output/playwright/form-and-thought-reference-comparison');
 const ACTUAL_DIR = path.join(OUTPUT_ROOT, 'actual');
@@ -133,12 +134,8 @@ async function ready(page: Page, surface: Surface, viewport: { width: number; he
   await page.setViewportSize(viewport);
   await page.goto(surface.path);
   await page.waitForLoadState('networkidle');
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await Promise.all([...document.images]
-      .filter((image) => image.getBoundingClientRect().width > 0)
-      .map((image) => image.decode().catch(() => undefined)));
-  });
+  await page.evaluate(() => document.fonts.ready);
+  expect(await waitForFirstFrameImages(page)).toEqual([]);
 }
 
 async function measure(page: Page, surface: Surface, viewport: Viewport | Reference['viewport']) {

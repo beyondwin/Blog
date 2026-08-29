@@ -1,165 +1,58 @@
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import {
-  assertProductionGate,
-  verifyPublicSiteEvidence,
-  type PublicSiteEvidence,
-} from './verify-public-site.mts';
+import { LOCAL_SITE_ORIGIN, PUBLIC_SECURITY_HEADERS, robotsText, sitemapXml } from '../../apps/site/app/delivery';
+import { assertProductionBoundary, verifyStaticDelivery } from './verify-public-site.mts';
 import { cleanHostCommandEnvironment } from './verify-clean-host.mts';
 
-function blankEvidence(): PublicSiteEvidence {
-  return {
-    schema_version: 2,
-    implementation_commit: '',
-    release: null,
-    builds: null,
-    route_parity: null,
-    task14: null,
-    local_proxy: null,
-    clean_host: null,
-    execution_log: [],
-    production_host: null,
-    production_cutover_authorized: false,
-    production_cutover_at: null,
-    rollback_drill_at: null,
-    observation_started_at: null,
-    observation_completed_at: null,
-    observation_errors: null,
-    astro_removal_ready: false,
-  };
-}
-
-describe('public cutover evidence refusal gate', () => {
-  it('uses an explicit task-owned clean-host allowlist under hostile ambient input', () => {
+describe('React-only public-site verification', () => {
+  it('uses an explicit Node 24 clean-host environment and drops hostile ambient secrets', () => {
     const environment = cleanHostCommandEnvironment({
       PATH: '/hostile/bin',
-      NODE_ENV: 'production',
-      npm_config_production: 'true',
-      npm_config_omit: 'dev',
-      HTTPS_PROXY: 'http://secret.example',
-      NPM_TOKEN: 'secret',
       OPENAI_API_KEY: 'secret',
-      npm_config_registry: 'https://secret.example',
-      npm_config_userconfig: '/Users/example/.npmrc',
-    }, {
-      tempRoot: '/tmp/beyondwin-clean-host.test',
-      phase: 'install',
-    });
-    expect(Object.keys(environment).sort()).toEqual([
-      'CI', 'NO_COLOR', 'NPM_CONFIG_AUDIT', 'NPM_CONFIG_CACHE', 'NPM_CONFIG_FUND',
-      'NPM_CONFIG_GLOBALCONFIG', 'NPM_CONFIG_UPDATE_NOTIFIER', 'NPM_CONFIG_USERCONFIG', 'PATH', 'TMPDIR', 'TZ',
-      'XDG_CACHE_HOME', 'XDG_CONFIG_HOME',
-    ]);
+      NPM_TOKEN: 'secret',
+      HTTPS_PROXY: 'http://secret.example',
+    }, '/tmp/beyondwin-clean-host.test');
     expect(environment.PATH).toBe('/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin');
-    expect(environment.NPM_CONFIG_USERCONFIG).toBe('/tmp/beyondwin-clean-host.test/config/npmrc');
-    expect(environment.NPM_CONFIG_GLOBALCONFIG).toBe('/tmp/beyondwin-clean-host.test/config/npmrc-global');
-    expect(JSON.stringify(environment)).not.toMatch(/secret|proxy|token|api_key|production|omit/iu);
+    expect(JSON.stringify(environment)).not.toMatch(/secret|token|api_key|proxy/iu);
   });
 
-  it('refuses local eligibility when any required release/build/parity/proxy/clean-host proof is absent', async () => {
-    await expect(verifyPublicSiteEvidence(blankEvidence(), { mode: 'local' }))
-      .rejects.toThrow(/commit|release|build|parity|proxy|clean-host/iu);
-  });
-
-  it('refuses Astro removal on blank production observation fields even with a production flag', async () => {
-    await expect(verifyPublicSiteEvidence(blankEvidence(), {
-      mode: 'astro-removal',
-      authorizeProduction: true,
-      productionHost: 'https://public.example',
-      now: new Date('2026-08-26T02:00:00.000Z'),
-    })).rejects.toThrow(/production|observation|Astro removal/iu);
-  });
-
-  it('never treats the production flag itself as a direct host/release authorization record', async () => {
-    const evidence = blankEvidence();
-    evidence.release = {
-      release_id: 'a'.repeat(64),
-      active_pointer_hash: `sha256:${'b'.repeat(64)}`,
-      manifest_hash: `sha256:${'c'.repeat(64)}`,
-      artifact_hash: `sha256:${'d'.repeat(64)}`,
-    };
-    evidence.production_cutover_authorized = true;
-    evidence.production_host = 'https://public.example';
-    evidence.production_cutover_at = '2026-08-26T00:00:00.000Z';
-    evidence.rollback_drill_at = '2026-08-26T00:05:00.000Z';
-    evidence.observation_started_at = '2026-08-26T00:10:00.000Z';
-    evidence.observation_completed_at = '2026-08-26T01:10:00.000Z';
-    evidence.observation_errors = [];
-    evidence.astro_removal_ready = true;
-    await expect(verifyPublicSiteEvidence(evidence, {
-      mode: 'astro-removal',
-      authorizeProduction: true,
-      productionHost: 'https://public.example',
-      now: new Date('2026-08-26T02:00:00.000Z'),
-    })).rejects.toThrow(/direct[_ ]user[_ ]production[_ ]authorization/iu);
-  });
-
-  it('requires an exact HTTPS host and typed host/release/time-bound direct authorization', () => {
-    const evidence = blankEvidence();
-    evidence.release = {
-      release_id: 'a'.repeat(64),
-      active_pointer_hash: `sha256:${'b'.repeat(64)}`,
-      manifest_hash: `sha256:${'c'.repeat(64)}`,
-      artifact_hash: `sha256:${'d'.repeat(64)}`,
-    };
-    evidence.production_cutover_authorized = true;
-    evidence.production_host = 'https://public.example';
-    evidence.production_cutover_at = '2026-08-25T00:00:00.000Z';
-    evidence.rollback_drill_at = '2026-08-25T00:05:00.000Z';
-    evidence.observation_started_at = '2026-08-25T00:10:00.000Z';
-    evidence.observation_completed_at = '2026-08-25T01:10:00.000Z';
-    evidence.observation_errors = [];
-    evidence.astro_removal_ready = true;
-    evidence.execution_log = [{
-      schema_version: 1,
-      event_kind: 'direct_user_production_authorization',
-      host: 'https://public.example',
-      release_id: 'a'.repeat(64),
-      authorized_at: '2026-08-24T23:59:00.000Z',
-    }, {
-      schema_version: 1,
-      event_kind: 'production_cutover',
-      host: 'https://public.example',
-      release_id: 'a'.repeat(64),
-      at: '2026-08-25T00:00:00.000Z',
-    }, {
-      schema_version: 1,
-      event_kind: 'production_rollback_drill',
-      host: 'https://public.example',
-      release_id: 'a'.repeat(64),
-      at: '2026-08-25T00:05:00.000Z',
-    }, {
-      schema_version: 1,
-      event_kind: 'production_observation_started',
-      host: 'https://public.example',
-      release_id: 'a'.repeat(64),
-      at: '2026-08-25T00:10:00.000Z',
-    }, {
-      schema_version: 1,
-      event_kind: 'production_observation_completed',
-      host: 'https://public.example',
-      release_id: 'a'.repeat(64),
-      at: '2026-08-25T01:10:00.000Z',
-      blocking_errors: [],
-    }];
-    expect(() => assertProductionGate(evidence, {
-      mode: 'astro-removal',
-      authorizeProduction: true,
-      productionHost: 'https://public.example',
-      now: new Date('2026-08-26T00:00:00.000Z'),
+  it('fails closed on all production/canonical authority because no domain is approved', () => {
+    expect(() => assertProductionBoundary({
+      productionCanonicalOrigin: 'not_measured',
+      production_cutover_authorized: false,
+      productionHost: null,
     })).not.toThrow();
-    expect(() => assertProductionGate(evidence, {
-      mode: 'astro-removal',
-      authorizeProduction: true,
-      productionHost: 'https://other.example',
-      now: new Date('2026-08-26T00:00:00.000Z'),
-    })).toThrow(/host/iu);
-    const future = structuredClone(evidence);
-    future.observation_completed_at = '2026-08-27T00:00:00.000Z';
-    expect(() => assertProductionGate(future, {
-      mode: 'astro-removal',
-      authorizeProduction: true,
+    expect(() => assertProductionBoundary({
+      productionCanonicalOrigin: 'https://guessed.example',
+      production_cutover_authorized: false,
+      productionHost: null,
+    })).toThrow(/not_measured/iu);
+    expect(() => assertProductionBoundary({
+      productionCanonicalOrigin: 'not_measured',
+      production_cutover_authorized: true,
       productionHost: 'https://public.example',
-      now: new Date('2026-08-26T00:00:00.000Z'),
-    })).toThrow(/future|timestamp|ordered/iu);
+    })).toThrow(/unauthorized/iu);
+  });
+
+  it('verifies exact route output, local sitemap/robots, branded 404, and headers', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'form-thought-public-site-'));
+    await mkdir(join(root, 'articles'), { recursive: true });
+    await writeFile(join(root, 'index.html'), '<h1>Home</h1>');
+    await writeFile(join(root, 'articles/index.html'), '<h1>Articles</h1>');
+    await writeFile(join(root, 'sitemap.xml'), sitemapXml(['/', '/articles/'], LOCAL_SITE_ORIGIN));
+    await writeFile(join(root, 'robots.txt'), robotsText(LOCAL_SITE_ORIGIN));
+    await writeFile(join(root, '404.html'), '<title>페이지를 찾을 수 없습니다 · FORM &amp; THOUGHT</title>');
+    await writeFile(join(root, 'site.webmanifest'), JSON.stringify({ name: 'FORM & THOUGHT' }));
+    await writeFile(join(root, 'favicon.svg'), '<svg><path fill="#AF6047"/></svg>');
+    await writeFile(join(root, '_headers'), `/*\n${Object.entries(PUBLIC_SECURITY_HEADERS)
+      .map(([name, value]) => `  ${name}: ${value}`).join('\n')}\n`);
+    await expect(verifyStaticDelivery(root, ['/', '/articles/'], LOCAL_SITE_ORIGIN)).resolves.toEqual({
+      routeCount: 2,
+      sitemapCount: 2,
+    });
+    await writeFile(join(root, 'robots.txt'), 'User-agent: *\n');
+    await expect(verifyStaticDelivery(root, ['/', '/articles/'], LOCAL_SITE_ORIGIN)).rejects.toThrow(/robots/iu);
   });
 });

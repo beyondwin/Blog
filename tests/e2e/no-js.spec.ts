@@ -4,6 +4,24 @@ import { expectNoHorizontalOverflow } from './support';
 const BASE_URL = 'http://127.0.0.1:4397';
 const PRIMARY_HREFS = ['/reviews/', '/articles/', '/thoughts/', '/search/'] as const;
 
+test('static host serves release-derived discovery, security headers, and an actual branded 404', async ({ request }) => {
+  const [sitemap, robots, missing] = await Promise.all([
+    request.get('/sitemap.xml'),
+    request.get('/robots.txt'),
+    request.get('/definitely-not-a-public-route/'),
+  ]);
+  expect(sitemap.status()).toBe(200);
+  expect((await sitemap.text()).match(/<url>/gu)).toHaveLength(93);
+  expect(await robots.text()).toContain('Sitemap: https://form-thought.local.invalid/sitemap.xml');
+  expect(missing.status()).toBe(404);
+  expect(await missing.text()).toContain('<title>페이지를 찾을 수 없습니다 · FORM &amp; THOUGHT</title>');
+  expect(missing.headers()).toEqual(expect.objectContaining({
+    'content-security-policy': expect.stringContaining("default-src 'self'"),
+    'referrer-policy': 'strict-origin-when-cross-origin',
+    'x-content-type-options': 'nosniff',
+  }));
+});
+
 async function noJsPage(browser: Browser, viewport: { width: number; height: number }) {
   const context = await browser.newContext({ javaScriptEnabled: false, viewport, baseURL: BASE_URL });
   return { context, page: await context.newPage() };

@@ -4,7 +4,7 @@ import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node
 import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
 import { parse as parseYaml } from 'yaml';
-import { parseMediaManifest } from '../src/lib/content/mediaManifest.mjs';
+import { parseMediaManifest } from '../packages/content/src/media/media-manifest.mjs';
 import {
   assertGeneratedMediaRegistrySelections,
   GENERATED_MEDIA_APPROVAL_REGISTRY_PATH,

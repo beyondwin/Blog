@@ -1,99 +1,92 @@
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { isPublicRecord } from '../packages/contracts/src/public-release.ts';
+import {
+  loadPublicMemoryRecords,
+  loadSourceRecords,
+} from '../packages/content/src/source-records.ts';
+import {
+  findPublicBoundaryHits,
+  readActiveRelease,
+} from '../packages/content/src/release/read-release.ts';
+import { renderTrustedMdx } from '../packages/content/src/mdx/render.tsx';
+import { fullPublicPaths } from '../apps/site/app/release.server.ts';
 
 const root = process.cwd();
-
-async function source(path) {
-  return readFile(join(root, path), 'utf8');
-}
+const release = await readActiveRelease(join(root, 'build', 'public-releases'));
+const sourceRecords = await loadSourceRecords(root);
+const memoryRecords = await loadPublicMemoryRecords(root);
+const publicPaths = new Set(fullPublicPaths(release));
 
 describe('public route publication guard', () => {
-  it('requires the shared selector at every route that reads a collection directly', async () => {
-    const directSurfaces = [
-      'src/pages/analysis/[slug].astro',
-      'src/pages/articles/[slug].astro',
-      'src/pages/articles/index.astro',
-      'src/pages/ideas/[slug].astro',
-      'src/pages/reviews/[slug].astro',
-      'src/pages/reviews/index.astro',
-      'src/pages/travel/[slug].astro',
-    ];
+  it('derives every public route from the verified release and excludes every non-public source', () => {
+    const publicRecords = sourceRecords.filter(isPublicRecord);
+    const nonPublicRecords = sourceRecords.filter((record) => !isPublicRecord(record));
 
-    for (const path of directSurfaces) {
-      const route = await source(path);
-      expect(route, path).toContain('isPublicEntry');
-      expect(route, path).not.toMatch(/!\s*data\.draft|data\.draft\s*!==\s*true/);
-      for (const call of route.matchAll(/getCollection\(([\s\S]*?)\)/g)) {
-        expect(call[1], `${path} getCollection selector`).toContain('isPublicEntry');
-      }
+    expect(publicPaths.size).toBe(93);
+    for (const record of [...publicRecords, ...memoryRecords]) {
+      expect(publicPaths.has(record.href), `${record.collection}/${record.id} missing`).toBe(true);
     }
-  });
-
-  it('keeps home, search, collection lists, and nested tag routes behind public aggregators', async () => {
-    const surfaces = {
-      'src/pages/index.astro': 'loadJudgmentScene',
-      'src/lib/scenes/judgmentScene.ts': 'getContentByCollection',
-      'src/pages/search/index.astro': 'loadSearchRecords',
-      'src/lib/searchData.ts': 'getAllContent',
-      'src/pages/analysis/index.astro': 'getContentByCollection',
-      'src/pages/ideas/index.astro': 'getContentByCollection',
-      'src/pages/travel/index.astro': 'getContentByCollection',
-      'src/pages/tags/index.astro': 'getAllContent',
-      'src/pages/tags/[tag].astro': 'getAllContent',
-    };
-
-    for (const [path, publicLoader] of Object.entries(surfaces)) {
-      expect(await source(path), path).toContain(publicLoader);
+    for (const record of nonPublicRecords) {
+      expect(publicPaths.has(record.href), `${record.collection}/${record.id} leaked`).toBe(false);
     }
-
-    const content = await source('src/lib/content.ts');
-    expect(content).toContain('getCollection(\n    collection,\n    isPublicEntry,\n  )');
-    expect(content).not.toMatch(/!\s*data\.draft|data\.draft\s*!==\s*true/);
-  });
-});
-
-describe('home route contract', () => {
-  it('home route renders the approved Public Atlas scene', async () => {
-    const home = await readFile(join(root, 'src/pages/index.astro'), 'utf8');
-    expect(home).toContain('PublicScene');
-    expect(home).toContain('loadJudgmentScene');
-    expect(home).not.toContain('selectHomeThought');
-    expect(home).not.toContain('featuredReview');
-    expect(home).not.toContain('home-book');
-    expect(home).not.toContain('Editor');
-    expect(home).not.toContain('READING NOTE');
-    expect(home).not.toContain('지금 펼쳐 둔 기록');
-    expect(home).not.toContain('/memory/?thought=');
-  });
-});
-
-describe('sentence and search surfaces', () => {
-  it('memory index is a reading sheet', async () => {
-    const page = await source('src/pages/memory.astro');
-    expect(page).toContain('sortMemoryReading');
-    expect(page).not.toContain('memory-workbench');
-    expect(page).not.toContain('주제 · 근거 필터');
-    expect(page).not.toContain('관계 지도');
+    expect(publicPaths).toEqual(new Set([...publicPaths].sort((left, right) => left.localeCompare(right))));
   });
 
-  it('map redirects home to sentences', async () => {
-    const page = await source('src/pages/memory/map.astro');
-    expect(page).toContain('Astro.redirect');
+  it('keeps the complete fixed discovery surface alongside release and tag routes', () => {
+    for (const path of [
+      '/',
+      '/analysis/',
+      '/articles/',
+      '/ideas/',
+      '/memory/',
+      '/memory/map/',
+      '/reviews/',
+      '/search/',
+      '/tags/',
+      '/thoughts/',
+      '/travel/',
+    ]) {
+      expect(publicPaths).toContain(path);
+    }
+    expect(publicPaths).toContain('/tags/AI-agent/');
+    expect(publicPaths).toContain('/articles/graphify-code-knowledge-graph-deep-dive/');
+    expect(publicPaths).toContain('/reviews/black-swan/');
+    expect(publicPaths).toContain('/thoughts/why-i-read-in-the-ai-era/');
   });
 
-  it('empty search inventory is writing, books, and sentences', async () => {
-    const page = await source('src/pages/search/index.astro');
-    expect(page).toContain('emptyQueryKinds');
-    expect(page).toContain("['writing', 'book', 'sentence']");
+  it('accepts the verified public manifest and detects representative private-boundary leaks', () => {
+    expect(release.boundaryHits).toEqual([]);
+    expect(findPublicBoundaryHits(release.manifest)).toEqual([]);
+    expect(findPublicBoundaryHits({
+      privatePath: '/Users/example/private-note.md',
+      bodyHtml: '<p>safe</p>',
+    })).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'forbidden-key', marker: 'privatePath' }),
+      expect.objectContaining({ kind: 'private-locator', marker: 'private filesystem locator' }),
+    ]));
+    expect(findPublicBoundaryHits({
+      bodyHtml: '<p>{"rawPrompt":"private instruction"}</p>',
+    })).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'serialized-private-field' }),
+    ]));
   });
 
-  it('search topics do not mint retired workbench hrefs', async () => {
-    const data = await source('src/lib/searchData.ts');
-    const presentation = await source('src/lib/searchPresentation.ts');
-    expect(data).not.toContain('/memory/?topic=');
-    expect(presentation).not.toContain('/memory/?topic=');
-    expect(presentation).toContain('/search/?q=');
-    expect(data).toContain('topicRecordHref');
+  it('renders only the trusted repository MDX grammar', async () => {
+    await expect(renderTrustedMdx([
+      '## Public heading',
+      '',
+      '<Callout title="Decision">Only public fields.</Callout>',
+    ].join('\n'), { media: new Map() })).resolves.toContain(
+      '<aside class="callout"><strong>Decision</strong><p>Only public fields.</p></aside>',
+    );
+
+    for (const source of [
+      'import Secret from "./private"',
+      '{globalThis.process.env.SECRET}',
+      '<Unknown />',
+    ]) {
+      await expect(renderTrustedMdx(source, { media: new Map() })).rejects.toThrow(/trusted MDX/iu);
+    }
   });
 });

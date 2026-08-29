@@ -8,8 +8,9 @@
   },
   "scripts": {
     "dev": "react-router dev",
-    "build": "tsx build-static-export.ts",
-    "preview": "vite preview --outDir build/client --host 127.0.0.1",
+    "build": "FORM_THOUGHT_DELIVERY_MODE=local tsx build-static-export.ts",
+    "build:production": "FORM_THOUGHT_DELIVERY_MODE=production tsx build-static-export.ts",
+    "preview": "tsx serve-static.ts",
     "typecheck": "react-router typegen && tsc --noEmit --project tsconfig.json",
     "test": "vitest run test"
   },
@@ -19,7 +20,8 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-router": "8.3.0",
-    "isbot": "5.2.1"
+    "isbot": "5.2.1",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@react-router/dev": "8.3.0",

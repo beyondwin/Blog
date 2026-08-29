@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { APPROVED_VIEWPORTS, canonicalUrl } from './support';
 
-const detailPath = '/articles/why-i-read-in-the-ai-era/';
-const rowAnchor = 'record-articles-why-i-read-in-the-ai-era';
+const detailPath = '/articles/graphify-code-knowledge-graph-deep-dive/';
+const rowAnchor = 'record-articles-graphify-code-knowledge-graph-deep-dive';
 
 test('Ctrl, Cmd, Shift, middle, and explicit new-tab activations keep a clean canonical href and are not intercepted', async ({ page }) => {
   await page.setViewportSize(APPROVED_VIEWPORTS.desktop);
@@ -51,7 +51,7 @@ test('ordinary continuation does not inherit the incoming origin', async ({ page
   await page.goto(canonicalUrl('/articles/'));
   await page.locator(`#${rowAnchor}`).getByRole('link').click();
   await expect(page).toHaveURL(canonicalUrl(detailPath));
-  const continuation = page.getByRole('link', { name: '글 전체 보기' });
+  const continuation = page.getByRole('link', { name: '아티클 전체 보기' });
   await expect(continuation).toHaveAttribute('href', '/articles/');
   expect(await page.evaluate(() => Object.keys(sessionStorage).filter((key) => key.startsWith('bw:origin:')))).toEqual([]);
   await continuation.click();

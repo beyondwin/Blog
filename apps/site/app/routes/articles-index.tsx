@@ -2,7 +2,7 @@ import { SiteShell } from '../../src/ui/components/SiteShell';
 import { ArticleIndexPage } from '../../src/ui/articles/ArticleIndexPage';
 import { assertCompleteArticleInventory, normalizeArticleTopic } from '../../src/ui/articles/articleTopics';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
-import { loadVerifiedRelease, recordsForCollection } from '../release.server';
+import { listingAssets, listingRecord, loadVerifiedRelease, recordsForCollection } from '../release.server';
 
 const indexCss = import.meta.env.SSR
   ? await import('../../src/ui/styles/route-index.css?inline').then((module) => module.default)
@@ -14,7 +14,11 @@ export async function loader({ request }: { request?: Request } = {}) {
   const records = recordsForCollection(release, 'articles');
   assertCompleteArticleInventory(records);
   const selectedTopic = normalizeArticleTopic(request ? new URL(request.url).searchParams.get('topic') : null);
-  return { records, assets: release.manifest.assets, selectedTopic };
+  return {
+    records: records.map(listingRecord),
+    assets: listingAssets(release, records),
+    selectedTopic,
+  };
 }
 
 export function ArticlesIndexPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {

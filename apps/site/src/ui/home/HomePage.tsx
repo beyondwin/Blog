@@ -2,9 +2,13 @@ import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { ResponsivePicture } from '../../../app/root';
 
-type ArticleRecord = Extract<PublicRecord, { collection: 'articles' }>;
-type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
-type ThoughtRecord = Extract<PublicRecord, { collection: 'thoughts' }>;
+type HomeRecord<C extends PublicRecord['collection']> = Pick<
+  Extract<PublicRecord, { collection: C }>,
+  'collection' | 'description' | 'href' | 'id' | 'title'
+>;
+type ArticleRecord = HomeRecord<'articles'>;
+type ReviewRecord = HomeRecord<'reviews'> & Pick<Extract<PublicRecord, { collection: 'reviews' }>, 'verdict'>;
+type ThoughtRecord = HomeRecord<'thoughts'>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 
 export const HOME_SELECTIONS = {

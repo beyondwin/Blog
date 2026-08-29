@@ -3,7 +3,11 @@ import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import { ResponsivePicture } from '../../../app/root';
 import { EditorialPageHeader } from '../editorial/EditorialPageHeader';
 
-type ThoughtRecord = Extract<PublicRecord, { collection: 'thoughts' }>;
+type FullThoughtRecord = Extract<PublicRecord, { collection: 'thoughts' }>;
+type ThoughtRecord = Pick<
+  FullThoughtRecord,
+  'id' | 'href' | 'title' | 'description' | 'createdAt' | 'featuredMedia'
+>;
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
 const THOUGHT_CARD_SIZES = '(max-width: 767px) calc(100vw - 44px), (max-width: 1179px) 46vw, 380px';
 

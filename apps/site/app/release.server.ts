@@ -108,6 +108,75 @@ export function recordsForCollection<C extends CandidateCollection>(
   return records as Array<CandidateRecord<C>>;
 }
 
+export type ListingRecord<C extends CandidateCollection> = Omit<
+  CandidateRecord<C>,
+  'bodyHtml' | 'media' | 'memoryLinks' | 'relationships'
+>;
+
+export function listingRecord<C extends CandidateCollection>(record: CandidateRecord<C>): ListingRecord<C> {
+  const {
+    bodyHtml: _bodyHtml,
+    media: _media,
+    memoryLinks: _memoryLinks,
+    relationships: _relationships,
+    ...listing
+  } = record;
+  return listing;
+}
+
+type HomeSelectionCollection = 'articles' | 'reviews' | 'thoughts';
+
+export type HomeSelectionRecord<C extends HomeSelectionCollection> = C extends HomeSelectionCollection
+  ? {
+      collection: C;
+      description: string;
+      href: string;
+      id: string;
+      title: string;
+    } & (C extends 'reviews' ? { verdict: string } : object)
+  : never;
+
+export function homeSelectionRecord(
+  record: CandidateRecord<'articles'>,
+): HomeSelectionRecord<'articles'>;
+export function homeSelectionRecord(
+  record: CandidateRecord<'reviews'>,
+): HomeSelectionRecord<'reviews'>;
+export function homeSelectionRecord(
+  record: CandidateRecord<'thoughts'>,
+): HomeSelectionRecord<'thoughts'>;
+export function homeSelectionRecord(
+  record: CandidateRecord<HomeSelectionCollection>,
+): HomeSelectionRecord<HomeSelectionCollection> {
+  const base = {
+    collection: record.collection,
+    description: record.description,
+    href: record.href,
+    id: record.id,
+    title: record.title,
+  };
+  if (record.collection === 'reviews') {
+    return { ...base, verdict: record.verdict } as HomeSelectionRecord<HomeSelectionCollection>;
+  }
+  return base as HomeSelectionRecord<HomeSelectionCollection>;
+}
+
+export function listingAssets(
+  release: CandidateRelease,
+  records: readonly PublicRecord[],
+): CandidateRelease['manifest']['assets'] {
+  const keys = new Set(records.flatMap((record) => {
+    if (record.collection === 'reviews') {
+      return record.coverMedia ? [`reviews/${record.id}/${record.coverMedia}`] : [];
+    }
+    if (record.collection === 'articles' || record.collection === 'thoughts') {
+      return record.featuredMedia ? [`${record.collection}/${record.id}/${record.featuredMedia}`] : [];
+    }
+    return [];
+  }));
+  return Object.fromEntries(Object.entries(release.manifest.assets).filter(([key]) => keys.has(key)));
+}
+
 export function recordAnchor(collection: PublicCollection, id: string): string {
   return createRecordAnchor(collection, id);
 }

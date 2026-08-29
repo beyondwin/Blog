@@ -83,10 +83,8 @@ description: Use this project workflow when its scoped task is requested.
   await put(root, 'docs/INDEX.md', `[Agent Runbook](notes/project/agent-runbook.md)
 [Guide](notes/project/guide.md)
 `);
-  await put(root, 'src/pages/index.astro', `---
-const memoryUrl = '/memory/';
----
-<a href={memoryUrl}>Memory</a>
+  await put(root, 'apps/site/app/root.tsx', `const memoryUrl = '/memory/';
+export function Root() { return <a href={memoryUrl}>Memory</a>; }
 `);
 
   return root;
@@ -492,14 +490,12 @@ description: Metadata does not match its directory.
     const root = await makeValidRoot();
     try {
       expect(await checkAgentSetup(root)).toEqual([]);
-      await put(root, 'src/pages/private.astro', `---
-import privateThoughts from '../../memory/private.json';
----
-<p>{privateThoughts.length}</p>
+      await put(root, 'apps/site/app/routes/private.tsx', `import privateThoughts from '../../../../memory/private.json';
+export function Private() { return <p>{privateThoughts.length}</p>; }
 `);
 
       expect(await checkAgentSetup(root)).toContain(
-        'src/pages/private.astro: public source references top-level memory/**',
+        'apps/site/app/routes/private.tsx: public source references top-level memory/**',
       );
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -509,42 +505,40 @@ import privateThoughts from '../../memory/private.json';
   it('detects static private-memory module and filesystem references only', async () => {
     const root = await makeValidRoot();
     try {
-      await put(root, 'src/pages/private.astro', `---
-export { privateThoughts } from '../../memory/private.js';
----
+      await put(root, 'apps/site/app/routes/private.tsx', `export { privateThoughts } from '../../../../memory/private.js';
 `);
       await put(root, 'src/content/articles/private.mdx', `import privateThoughts from '../../../memory/private.js';
 
 # Private import
 `);
-      await put(root, 'src/lib/dynamic.ts', `export async function loadPrivate() {
-  return import(\`../../memory/private.js\`);
+      await put(root, 'packages/content/src/dynamic.ts', `export async function loadPrivate() {
+  return import(\`../../../memory/private.js\`);
 }
 `);
-      await put(root, 'src/lib/filesystem.ts', `import { readFileSync } from 'node:fs';
+      await put(root, 'packages/content/src/filesystem.ts', `import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const value = readFileSync(join(process.cwd(), 'memory', 'private.json'), 'utf8');
 `);
-      await put(root, 'src/lib/unresolved.ts', `export function load(projectRoot, slug) {
+      await put(root, 'packages/content/src/unresolved.ts', `export function load(projectRoot, slug) {
   return readFileSync(join(projectRoot, 'memory', slug));
 }
 `);
-      await put(root, 'src/lib/warning.ts', `export const warning = '../../memory/private.json';
+      await put(root, 'packages/content/src/warning.ts', `export const warning = '../../../memory/private.json';
 `);
 
       const errors = await checkAgentSetup(root);
       expect(errors).toEqual(expect.arrayContaining([
         'src/content/articles/private.mdx: public source references top-level memory/**',
-        'src/lib/dynamic.ts: public source references top-level memory/**',
-        'src/lib/filesystem.ts: public source references top-level memory/**',
-        'src/pages/private.astro: public source references top-level memory/**',
+        'packages/content/src/dynamic.ts: public source references top-level memory/**',
+        'packages/content/src/filesystem.ts: public source references top-level memory/**',
+        'apps/site/app/routes/private.tsx: public source references top-level memory/**',
       ]));
       expect(errors).not.toContain(
-        'src/lib/unresolved.ts: public source references top-level memory/**',
+        'packages/content/src/unresolved.ts: public source references top-level memory/**',
       );
       expect(errors).not.toContain(
-        'src/lib/warning.ts: public source references top-level memory/**',
+        'packages/content/src/warning.ts: public source references top-level memory/**',
       );
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -554,44 +548,44 @@ export const value = readFileSync(join(process.cwd(), 'memory', 'private.json'),
   it('covers multiline imports and common path APIs without scanning code-like text', async () => {
     const root = await makeValidRoot();
     try {
-      await put(root, 'src/lib/multiline.ts', `import {
+      await put(root, 'packages/content/src/multiline.ts', `import {
   privateThoughts,
-} from '../../memory/private.js';
+} from '../../../memory/private.js';
 `);
-      await put(root, 'src/lib/required.cjs', `module.exports = require('../../memory/private.json');\n`);
-      await put(root, 'src/lib/read.mts', `import { readFile } from 'node:fs/promises';
+      await put(root, 'packages/content/src/required.cjs', `module.exports = require('../../../memory/private.json');\n`);
+      await put(root, 'packages/content/src/read.mts', `import { readFile } from 'node:fs/promises';
 
 export const data = readFile('memory/private.json');
 `);
-      await put(root, 'src/lib/resolved.ts', `import { resolve } from 'node:path';
+      await put(root, 'packages/content/src/resolved.ts', `import { resolve } from 'node:path';
 
 export const path = resolve(process.cwd(), 'memory', 'private.json');
 `);
-      await put(root, 'src/lib/promise.ts', `export const warning = Promise.resolve('memory/private.json');\n`);
-      await put(root, 'src/lib/code-like.ts', `export const examples = [
-  "require('../../memory/private.json')",
+      await put(root, 'packages/content/src/promise.ts', `export const warning = Promise.resolve('memory/private.json');\n`);
+      await put(root, 'packages/content/src/code-like.ts', `export const examples = [
+  "require('../../../memory/private.json')",
   \`readFile('memory/private.json')\`,
 ];
 `);
-      await put(root, 'src/lib/commented.ts', `// require('../../memory/private.json')
+      await put(root, 'packages/content/src/commented.ts', `// require('../../../memory/private.json')
 /* readFile('memory/private.json') */
 `);
 
       const errors = await checkAgentSetup(root);
       expect(errors).toEqual(expect.arrayContaining([
-        'src/lib/multiline.ts: public source references top-level memory/**',
-        'src/lib/read.mts: public source references top-level memory/**',
-        'src/lib/required.cjs: public source references top-level memory/**',
-        'src/lib/resolved.ts: public source references top-level memory/**',
+        'packages/content/src/multiline.ts: public source references top-level memory/**',
+        'packages/content/src/read.mts: public source references top-level memory/**',
+        'packages/content/src/required.cjs: public source references top-level memory/**',
+        'packages/content/src/resolved.ts: public source references top-level memory/**',
       ]));
       expect(errors).not.toContain(
-        'src/lib/code-like.ts: public source references top-level memory/**',
+        'packages/content/src/code-like.ts: public source references top-level memory/**',
       );
       expect(errors).not.toContain(
-        'src/lib/commented.ts: public source references top-level memory/**',
+        'packages/content/src/commented.ts: public source references top-level memory/**',
       );
       expect(errors).not.toContain(
-        'src/lib/promise.ts: public source references top-level memory/**',
+        'packages/content/src/promise.ts: public source references top-level memory/**',
       );
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -601,28 +595,28 @@ export const path = resolve(process.cwd(), 'memory', 'private.json');
   it('detects private-memory reads through common fs promises imports and requires', async () => {
     const root = await makeValidRoot();
     try {
-      await put(root, 'src/lib/promises-named.ts', `import { promises as fs } from 'node:fs';
+      await put(root, 'packages/content/src/promises-named.ts', `import { promises as fs } from 'node:fs';
 
 export const data = fs.readFile('memory/private.json');
 `);
-      await put(root, 'src/lib/promises-namespace.ts', `import * as fs from 'node:fs';
+      await put(root, 'packages/content/src/promises-namespace.ts', `import * as fs from 'node:fs';
 
 export const data = fs.promises.readFile('memory/private.json');
 `);
-      await put(root, 'src/lib/promises-destructured.cjs', `const { promises: fs } = require('node:fs');
+      await put(root, 'packages/content/src/promises-destructured.cjs', `const { promises: fs } = require('node:fs');
 
 module.exports = fs.readFile('memory/private.json');
 `);
-      await put(root, 'src/lib/promises-required.cjs', `const fs = require('node:fs');
+      await put(root, 'packages/content/src/promises-required.cjs', `const fs = require('node:fs');
 
 module.exports = fs.promises.readFile('memory/private.json');
 `);
 
       expect(await checkAgentSetup(root)).toEqual(expect.arrayContaining([
-        'src/lib/promises-destructured.cjs: public source references top-level memory/**',
-        'src/lib/promises-named.ts: public source references top-level memory/**',
-        'src/lib/promises-namespace.ts: public source references top-level memory/**',
-        'src/lib/promises-required.cjs: public source references top-level memory/**',
+        'packages/content/src/promises-destructured.cjs: public source references top-level memory/**',
+        'packages/content/src/promises-named.ts: public source references top-level memory/**',
+        'packages/content/src/promises-namespace.ts: public source references top-level memory/**',
+        'packages/content/src/promises-required.cjs: public source references top-level memory/**',
       ]));
     } finally {
       await rm(root, { recursive: true, force: true });

@@ -14,6 +14,10 @@ import {
 } from './articleTopics';
 
 type ReleaseAsset = PublicReleaseManifest['assets'][string];
+type ArticleListingRecord = Pick<
+  ArticleRecord,
+  'id' | 'href' | 'title' | 'description' | 'updatedAt' | 'featuredMedia'
+>;
 
 export function browserArticleTopic(fallback: ArticleTopicFilter, search?: string): ArticleTopicFilter {
   if (search === undefined) return fallback;
@@ -26,7 +30,7 @@ export function ArticleIndexPage({
   selectedTopic = '전체',
 }: {
   assets?: ReadonlyMap<string, ReleaseAsset>;
-  records: readonly ArticleRecord[];
+  records: readonly ArticleListingRecord[];
   selectedTopic?: ArticleTopicFilter;
 }) {
   const [visibleTopic, setVisibleTopic] = useState(selectedTopic);

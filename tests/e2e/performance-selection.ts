@@ -1,14 +1,28 @@
-import { DECISION_ROUTES, type DecisionRoute } from '../../tools/parity/src/compare-contracts';
-
 export const PERFORMANCE_ROUTE_SELECTOR_ENV = 'BEYONDWIN_PERFORMANCE_ROUTES';
 const PERFORMANCE_COMMAND = 'npx playwright test tests/e2e/performance.spec.ts --project=chromium-151';
 const NODE_24_PREFIX = 'PATH=/opt/homebrew/opt/node@24/bin:$PATH';
 const ROUTES_BY_NAME = {
   home: '/',
-  article: '/articles/why-i-read-in-the-ai-era/',
-  review: '/reviews/black-swan/',
-  memory: '/memory/agent-harnesses-are-operating-systems/',
-} as const satisfies Record<string, DecisionRoute>;
+  articles: '/articles/',
+  reviews: '/reviews/',
+  thoughts: '/thoughts/',
+  search: '/search/',
+  'article-detail': '/articles/graphify-code-knowledge-graph-deep-dive/',
+  'review-detail': '/reviews/black-swan/',
+  'thought-detail': '/thoughts/why-i-read-in-the-ai-era/',
+} as const;
+
+export const PERFORMANCE_ROUTES = Object.values(ROUTES_BY_NAME);
+
+export const PERFORMANCE_BUDGETS = {
+  lcpMsMax: 2_500,
+  clsMax: 0.05,
+  initialJsGzipBytesMax: 128 * 1024,
+  fontBytesMax: 250 * 1024,
+  firstFrameImageBytesMax: 512 * 1024,
+} as const;
+
+export type PerformanceRoute = (typeof PERFORMANCE_ROUTES)[number];
 
 type PerformanceRouteName = keyof typeof ROUTES_BY_NAME;
 
@@ -17,7 +31,7 @@ const ALL_ROUTE_NAMES = Object.keys(ROUTES_BY_NAME) as PerformanceRouteName[];
 export interface PerformanceRouteSelection {
   selector: string | null;
   routeNames: string[];
-  routes: DecisionRoute[];
+  routes: PerformanceRoute[];
   exactCommand: string;
   outputPath: string;
 }
@@ -27,7 +41,7 @@ export function selectPerformanceRoutes(selector: string | undefined): Performan
     return {
       selector: null,
       routeNames: [...ALL_ROUTE_NAMES],
-      routes: [...DECISION_ROUTES],
+      routes: [...PERFORMANCE_ROUTES],
       exactCommand: `${NODE_24_PREFIX} ${PERFORMANCE_COMMAND}`,
       outputPath: 'output/playwright/task14/performance-matrix.json',
     };

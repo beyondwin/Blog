@@ -1,7 +1,23 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 
-export type ReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
+type FullReviewRecord = Extract<PublicRecord, { collection: 'reviews' }>;
+export type ReviewRecord = Pick<
+  FullReviewRecord,
+  | 'id'
+  | 'href'
+  | 'title'
+  | 'authors'
+  | 'verdict'
+  | 'description'
+  | 'completedAt'
+  | 'createdAt'
+  | 'editionLabel'
+  | 'publisher'
+  | 'coverState'
+  | 'readEditionVerified'
+  | 'coverMedia'
+>;
 export type ReleaseAsset = PublicReleaseManifest['assets'][string];
 export type CoverRightsState = 'approved' | 'warning' | 'hold' | 'unverified';
 

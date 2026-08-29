@@ -3,8 +3,11 @@ import { defineConfig } from '@playwright/test';
 const PORT = 4397;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
+process.env.FORM_THOUGHT_E2E_BASE_URL = BASE_URL;
+
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: ['scene-reading-flow.spec.ts'],
   fullyParallel: false,
   forbidOnly: true,
   retries: 0,

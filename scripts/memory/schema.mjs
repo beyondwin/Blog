@@ -18,6 +18,9 @@ export const ALLOWED_EDGE_TYPES = new Set([
   'thesis-tag',
 ]);
 export const PUBLIC_SURFACE = 'memory-public';
+export const ALLOWED_HISTORICAL_SOURCE_TOMBSTONES = new Set([
+  'src/pages/memory.astro',
+]);
 
 const REQUIRED_THOUGHT_FIELDS = [
   'schema_version',
@@ -142,7 +145,10 @@ export async function validateSource(source, options = {}) {
     errors.push(`${label}: source.url must be an http or https URL`);
   }
 
-  if (requireResolvedSources && source.path && isSafeLocalPath(source.path)) {
+  if (requireResolvedSources
+    && source.path
+    && isSafeLocalPath(source.path)
+    && !ALLOWED_HISTORICAL_SOURCE_TOMBSTONES.has(source.path)) {
     const exists = await localPathExists(root, source.path);
     if (!exists) {
       errors.push(`${label}: source.path does not exist`);

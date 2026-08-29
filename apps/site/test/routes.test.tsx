@@ -14,6 +14,7 @@ const ESTABLISHED_ARTICLE_ID = ARTICLE_ID;
 const REVIEW_ID = 'black-swan';
 const MEMORY_ID = 'agent-harnesses-are-operating-systems';
 const THOUGHT_ID = 'why-i-read-in-the-ai-era';
+const LOCAL_ORIGIN = 'https://form-thought.local.invalid';
 const candidateRoot = fileURLToPath(new URL('..', import.meta.url));
 const releaseBindingEnvironment = 'BEYONDWIN_PUBLIC_RELEASE_BINDING_V1';
 const originalReleaseBinding = process.env[releaseBindingEnvironment];
@@ -93,6 +94,34 @@ describe('React Router current-behavior static route contract', () => {
     const devRequire = createRequire(devPackagePath);
     expect(devRequire('@react-router/dev/package.json').version).toBe('8.3.0');
     expect(devRequire('vite/package.json').version).toBe('8.2.2');
+  });
+
+  it('keeps index and Home hydration payloads bounded and excludes full MDX bodies', async () => {
+    const [articlesIndex, reviewsIndex, home] = await Promise.all([
+      candidateModule<any>('app/routes/articles-index.tsx'),
+      candidateModule<any>('app/routes/reviews-index.tsx'),
+      candidateModule<any>('app/routes/home.tsx'),
+    ]);
+    for (const data of [await articlesIndex.loader(), await reviewsIndex.loader()]) {
+      expect(data.records.length).toBeGreaterThan(0);
+      expect(data.records.every((record: Record<string, unknown>) => !Object.hasOwn(record, 'bodyHtml'))).toBe(true);
+      expect(data.records.every((record: Record<string, unknown>) => !Object.hasOwn(record, 'memoryLinks'))).toBe(true);
+      expect(data.records.every((record: Record<string, unknown>) => !Object.hasOwn(record, 'relationships'))).toBe(true);
+    }
+    const homeData = await home.loader();
+    expect(Object.keys(homeData.hero).sort()).toEqual(['collection', 'description', 'href', 'id', 'title']);
+    expect(Object.keys(homeData.picks.article).sort()).toEqual(['collection', 'description', 'href', 'id', 'title']);
+    expect(Object.keys(homeData.picks.thought).sort()).toEqual(['collection', 'description', 'href', 'id', 'title']);
+    expect(Object.keys(homeData.picks.review).sort()).toEqual([
+      'collection', 'description', 'href', 'id', 'title', 'verdict',
+    ]);
+    expect(Object.keys(homeData.assets).sort()).toEqual(['hero', 'thought']);
+    const serializedHome = JSON.stringify(homeData);
+    for (const forbidden of ['body', 'bodyHtml', 'media', 'memoryLinks', 'relationships']) {
+      expect(serializedHome).not.toContain(`"${forbidden}"`);
+    }
+    expect(serializedHome).not.toContain('Graphify는 분명 쓸모가 있다.');
+    expect(serializedHome).not.toContain('AI 때문에 책을 읽기 시작했다.');
   });
 
   it('inlines route-scoped parity CSS and prioritizes the home LCP image', async () => {
@@ -182,13 +211,16 @@ describe('React Router current-behavior static route contract', () => {
     expect(home.meta({ data: homeData })).toEqual([
       { title: 'FORM & THOUGHT' },
       { name: 'description', content: '서평과 아티클, 생각을 한 지면에서 골라 읽는 FORM & THOUGHT.' },
-      { tagName: 'link', rel: 'canonical', href: '/' },
+      { tagName: 'link', rel: 'canonical', href: `${LOCAL_ORIGIN}/` },
+      { property: 'og:title', content: 'FORM & THOUGHT' },
+      { property: 'og:description', content: '서평과 아티클, 생각을 한 지면에서 골라 읽는 FORM & THOUGHT.' },
+      { property: 'og:url', content: `${LOCAL_ORIGIN}/` },
     ]);
     expect(article.meta({ data: articleData })).toContainEqual({
-      tagName: 'link', rel: 'canonical', href: `/articles/${ARTICLE_ID}/`,
+      tagName: 'link', rel: 'canonical', href: `${LOCAL_ORIGIN}/articles/${ARTICLE_ID}/`,
     });
     expect(review.meta({ data: reviewData })).toContainEqual({
-      tagName: 'link', rel: 'canonical', href: `/reviews/${REVIEW_ID}/`,
+      tagName: 'link', rel: 'canonical', href: `${LOCAL_ORIGIN}/reviews/${REVIEW_ID}/`,
     });
     expect(review.meta({ data: verdictReviewData })).toContainEqual({
       name: 'description', content: '예술 도둑은 중독에 관한 기록이다.',
@@ -196,7 +228,7 @@ describe('React Router current-behavior static route contract', () => {
     expect(review.reviewCoverPreload(reviewData.coverAsset)).toBeNull();
     expect(review.reviewCoverPreload(coverlessReviewData.coverAsset)).toBeNull();
     expect(memory.meta({ data: memoryData })).toContainEqual({
-      tagName: 'link', rel: 'canonical', href: `/memory/${MEMORY_ID}/`,
+      tagName: 'link', rel: 'canonical', href: `${LOCAL_ORIGIN}/memory/${MEMORY_ID}/`,
     });
 
     for (const data of [homeData, articleData, reviewData, memoryData]) {
@@ -249,9 +281,9 @@ describe('React Router current-behavior static route contract', () => {
       expect(html).not.toContain('<meta name="description"');
       expect(html).not.toContain('<link rel="canonical"');
     }
-    expect(articleHtml).toContain(`<link rel="canonical" href="/articles/${ARTICLE_ID}/"/>`);
-    expect(reviewHtml).toContain(`<link rel="canonical" href="/reviews/${REVIEW_ID}/"/>`);
-    expect(memoryHtml).toContain(`<link rel="canonical" href="/memory/${MEMORY_ID}/"/>`);
+    expect(articleHtml).toContain(`<link rel="canonical" href="${LOCAL_ORIGIN}/articles/${ARTICLE_ID}/"/>`);
+    expect(reviewHtml).toContain(`<link rel="canonical" href="${LOCAL_ORIGIN}/reviews/${REVIEW_ID}/"/>`);
+    expect(memoryHtml).toContain(`<link rel="canonical" href="${LOCAL_ORIGIN}/memory/${MEMORY_ID}/"/>`);
     for (const html of [homeHtml, articleHtml, reviewHtml, memoryHtml]) {
       expect(html).not.toContain('data-discover=');
       expect(html).not.toContain('memory/thoughts');
@@ -269,14 +301,16 @@ describe('React Router current-behavior static route contract', () => {
     expect(detailData.featuredAsset?.fallback.src).toBe(
       '/assets/content/thoughts/why-i-read-in-the-ai-era/editorial-reading.png',
     );
-    expect(thought.meta({ data: detailData })).toEqual([
+    expect(thought.meta({ data: detailData })).toEqual(expect.arrayContaining([
       { title: 'AI 시대에, 나는 왜 책을 읽는가 · FORM & THOUGHT' },
       {
         name: 'description',
         content: '지식에 도달하는 비용이 싸진 시대에, 더 많은 답을 모으기보다 답을 쉽게 믿지 않기 위해 책을 읽고 함께 읽는다.',
       },
-      { tagName: 'link', rel: 'canonical', href: `/thoughts/${THOUGHT_ID}/` },
-    ]);
+      { tagName: 'link', rel: 'canonical', href: `${LOCAL_ORIGIN}/thoughts/${THOUGHT_ID}/` },
+      { property: 'og:url', content: `${LOCAL_ORIGIN}/thoughts/${THOUGHT_ID}/` },
+      { name: 'twitter:card', content: 'summary' },
+    ]));
     await expect(thought.loader({ params: { slug: 'missing-thought' } })).rejects.toMatchObject({ status: 404 });
 
     const indexHtml = renderToStaticMarkup(createElement(
@@ -296,7 +330,7 @@ describe('React Router current-behavior static route contract', () => {
     expect(detailHtml).toContain('좋아요 · 준비 중');
     expect(detailHtml).toContain('<a class="context-return" href="/thoughts/">생각 목록으로</a>');
     expect(detailHtml).not.toMatch(/article-toc|article-colophon/u);
-    expect(detailHtml).toContain(`<link rel="canonical" href="/thoughts/${THOUGHT_ID}/"/>`);
+    expect(detailHtml).toContain(`<link rel="canonical" href="${LOCAL_ORIGIN}/thoughts/${THOUGHT_ID}/"/>`);
     for (const html of [indexHtml, detailHtml]) {
       expect(html).toContain('href="/thoughts/" aria-current="page"');
     }
@@ -374,10 +408,16 @@ describe('React Router current-behavior static route contract', () => {
   it('uses FORM & THOUGHT metadata for Home', async () => {
     const home = await candidateModule<any>('app/routes/home.tsx');
 
+    expect(home.meta()).toContainEqual({
+      tagName: 'link', rel: 'canonical', href: 'https://form-thought.local.invalid/',
+    });
     expect(home.meta()).toEqual([
       { title: 'FORM & THOUGHT' },
       { name: 'description', content: '서평과 아티클, 생각을 한 지면에서 골라 읽는 FORM & THOUGHT.' },
-      { tagName: 'link', rel: 'canonical', href: '/' },
+      { tagName: 'link', rel: 'canonical', href: `${LOCAL_ORIGIN}/` },
+      { property: 'og:title', content: 'FORM & THOUGHT' },
+      { property: 'og:description', content: '서평과 아티클, 생각을 한 지면에서 골라 읽는 FORM & THOUGHT.' },
+      { property: 'og:url', content: `${LOCAL_ORIGIN}/` },
     ]);
   });
 

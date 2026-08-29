@@ -1,8 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { APPROVED_VIEWPORTS, canonicalUrl, expectNoHorizontalOverflow } from './support';
 
-const articlePath = '/articles/why-i-read-in-the-ai-era/';
-const textOnlyArticlePath = '/articles/ai-design-references/';
+const articlePath = '/articles/graphify-code-knowledge-graph-deep-dive/';
 const reviewPath = '/reviews/black-swan/';
 
 function url(path: string): string {
@@ -28,7 +27,6 @@ async function gotoReadingPage(page: Page, path: string) {
 }
 
 type TestOrigin =
-  | { kind: 'scene'; focusId: string }
   | { kind: 'articles'; anchorId: string }
   | { kind: 'search'; query: string; anchorId: string };
 
@@ -49,7 +47,6 @@ async function gotoWithStoredOrigin(
   }, { originValue: origin, targetPath: path, tokenValue: token, age: ageMs });
   const destination = new URL(path, canonicalUrl('/'));
   destination.searchParams.set('__bw_from', origin.kind);
-  if (origin.kind === 'scene') destination.searchParams.set('__bw_focus', origin.focusId);
   if (origin.kind === 'articles' || origin.kind === 'search') {
     destination.searchParams.set('__bw_anchor', origin.anchorId);
   }
@@ -66,12 +63,11 @@ for (const viewport of [
   test.describe(`${viewport.width}px quiet reading`, () => {
     test.use({ viewport });
 
-    test('direct article is text-only when no threshold media resolves and keeps the reading measure', async ({ page }) => {
-      const errors = await gotoReadingPage(page, textOnlyArticlePath);
+    test('direct article keeps canonical return, resolved media, and the reading measure', async ({ page }) => {
+      const errors = await gotoReadingPage(page, articlePath);
       await expect(page.getByRole('link', { name: '글 목록으로' })).toHaveAttribute('href', '/articles/');
-      await expect(page.locator('.reading-threshold img')).toHaveCount(0);
-      await expect(page.locator('.reading-threshold__marker')).toHaveCount(1);
-      const metrics = await page.locator('.reading-detail__body .prose').evaluate((node) => {
+      await expect(page.locator('.editorial-detail-frame__media img')).toHaveCount(1);
+      const metrics = await page.locator('.editorial-detail-frame__prose .prose').evaluate((node) => {
         const style = getComputedStyle(node);
         return {
           fontSize: Number.parseFloat(style.fontSize),
@@ -88,13 +84,13 @@ for (const viewport of [
       }
     });
 
-    test('direct review renders the resolved cover as the only shadowed object', async ({ page }) => {
+    test('direct review truthfully remains text-led when the public release has no approved cover', async ({ page }) => {
       const errors = await gotoReadingPage(page, reviewPath);
-      await expect(page.getByRole('link', { name: '책 목록으로' })).toHaveAttribute('href', '/reviews/');
-      const cover = page.locator('.reading-threshold__media-image--review');
-      await expect(cover).toHaveCount(1);
-      expect(await cover.evaluate((node) => getComputedStyle(node).boxShadow)).not.toBe('none');
-      await expect(page.locator('.reading-sheet')).toHaveCSS('box-shadow', 'none');
+      await expect(page.getByRole('link', { name: '서평 목록으로' })).toHaveAttribute('href', '/reviews/');
+      await expect(page.locator('.review-detail')).toHaveClass(/review-detail--text-led/u);
+      await expect(page.locator('.review-detail__cover-stage img')).toHaveCount(0);
+      await expect(page.getByText('판본 확인 · 표지 공개 권리 미확인', { exact: true })).toBeVisible();
+      await expect(page.locator('.review-detail')).toHaveCSS('box-shadow', 'none');
       expect(errors).toEqual([]);
       if (process.env.BEYONDWIN_CAPTURE_SCREENSHOTS === '1') {
         await page.screenshot({ path: `output/playwright/task12/review-${viewport.width}.png`, fullPage: true });
@@ -116,7 +112,7 @@ for (const viewport of [
       await gotoWithStoredOrigin(
         page,
         articlePath,
-        { kind: 'scene', focusId: 'reading-desk-cobalt' },
+        { kind: 'articles', anchorId: 'record-articles-graphify-code-knowledge-graph-deep-dive' },
         600_001,
       );
       await expect(page).toHaveURL(url(articlePath));
@@ -126,35 +122,13 @@ for (const viewport of [
   });
 }
 
-test('eligible scene origin returns through browser history and keeps clean continuation anchors', async ({ page }) => {
-  await page.setViewportSize(APPROVED_VIEWPORTS.desktop);
-  await page.goto(url('/'));
-  await page.locator('[data-scene-object="reading-desk-cobalt"]').click();
-  await expect(page).toHaveURL(/\?focus=reading-desk-cobalt$/u);
-  const focusedReadLink = page.locator('[data-scene-read]');
-  await expect(focusedReadLink).toBeFocused();
-  await focusedReadLink.click();
-  await expect(page).toHaveURL(url(articlePath));
-  const contextualReturn = page.getByRole('link', { name: '장면으로 돌아가기' });
-  await expect(contextualReturn).toHaveAttribute('href', '/?focus=reading-desk-cobalt');
-  await contextualReturn.focus();
-  await expect(contextualReturn).toBeFocused();
-  await expect(contextualReturn).toHaveCSS('outline-color', 'rgb(43, 99, 232)');
-  await expect(page.locator('.continue-reading li')).toHaveCount(0);
-  await expect(page.getByRole('link', { name: '글 전체 보기' })).toHaveAttribute('href', '/articles/');
-  expect(await page.getByRole('link', { name: '글 전체 보기' }).getAttribute('href')).not.toContain('__bw_');
-  await contextualReturn.click();
-  await expect(page).toHaveURL(/\?focus=reading-desk-cobalt$/u);
-});
-
 for (const flow of [
   {
     name: 'article',
     viewport: APPROVED_VIEWPORTS.desktop,
     listPath: '/articles/',
-    detailPath: '/articles/why-i-read-in-the-ai-era/',
-    anchorId: 'record-articles-why-i-read-in-the-ai-era',
-    returnLabel: '글 목록으로',
+    detailPath: articlePath,
+    anchorId: 'record-articles-graphify-code-knowledge-graph-deep-dive',
   },
   {
     name: 'review',
@@ -162,10 +136,9 @@ for (const flow of [
     listPath: '/reviews/',
     detailPath: '/reviews/siddhartha/',
     anchorId: 'record-reviews-siddhartha',
-    returnLabel: '책 목록으로',
   },
 ] as const) {
-  test(`${flow.name} list returns to the exact anchored reading position`, async ({ page }) => {
+  test(`${flow.name} native history returns to the exact anchored reading position`, async ({ page }) => {
     await page.setViewportSize(flow.viewport);
     await page.goto(url(flow.listPath));
     const row = page.locator(`#${flow.anchorId}`);
@@ -178,9 +151,7 @@ for (const flow of [
 
     await row.getByRole('link').click();
     await expect(page).toHaveURL(url(flow.detailPath));
-    const contextualReturn = page.getByRole('link', { name: flow.returnLabel });
-    await expect(contextualReturn).toHaveAttribute('href', `${flow.listPath}#${flow.anchorId}`);
-    await contextualReturn.click();
+    await page.goBack();
 
     await expect(page).toHaveURL(url(flow.listPath));
     await expect(row).toBeVisible();

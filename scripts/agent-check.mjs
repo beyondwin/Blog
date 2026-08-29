@@ -33,7 +33,6 @@ const requiredCatalogFields = [
 const requiredTopicFields = ['id', 'name', 'description', 'folder'];
 const markdownExtensions = new Set(['.md', '.mdx']);
 const sourceExtensions = new Set([
-  '.astro',
   '.cjs',
   '.cts',
   '.js',
@@ -896,10 +895,19 @@ async function checkDocs(root, errors) {
 }
 
 async function checkPrivateMemoryBoundary(root, errors) {
-  for (const file of await collectFiles(resolve(root, 'src'), sourceExtensions)) {
-    const source = await readText(file);
-    if (source && referencesPrivateMemory(root, file, source)) {
-      errors.push(`${repoPath(root, file)}: public source references top-level memory/**`);
+  const publicSourceRoots = [
+    'apps/site/app',
+    'apps/site/src',
+    'packages/contracts/src',
+    'packages/content/src',
+    'src',
+  ];
+  for (const publicSourceRoot of publicSourceRoots) {
+    for (const file of await collectFiles(resolve(root, publicSourceRoot), sourceExtensions)) {
+      const source = await readText(file);
+      if (source && referencesPrivateMemory(root, file, source)) {
+        errors.push(`${repoPath(root, file)}: public source references top-level memory/**`);
+      }
     }
   }
 }

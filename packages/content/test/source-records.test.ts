@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { beforeAll, describe, expect, expectTypeOf, it } from 'vitest';
 import { isPublicRecord } from '../../contracts/src/public-release';
 import {
@@ -11,6 +12,7 @@ import {
   resolveSourceMedia,
 } from '../src/source-records';
 import { writeReleaseFixture } from './helpers/release-fixture';
+import { readActiveRelease } from '../src/release/read-release';
 
 const expectedPublicIds = [
   'articles/agents-md-vs-agent-skills-evidence',
@@ -377,16 +379,16 @@ describe('framework-neutral corpus loading', () => {
   const root = process.cwd();
   let records: Awaited<ReturnType<typeof loadSourceRecords>>;
   let memoryRecords: Awaited<ReturnType<typeof loadPublicMemoryRecords>>;
-  let baselineRoutes: Set<string>;
+  let releaseRoutes: Set<string>;
 
   beforeAll(async () => {
     records = await loadSourceRecords(root);
     memoryRecords = await loadPublicMemoryRecords(root);
-    const baseline = JSON.parse(await readFile(
-      new URL('../../../tests/fixtures/parity/astro-public-baseline.json', import.meta.url),
-      'utf8',
-    )) as { routes: Array<{ path: string }> };
-    baselineRoutes = new Set(baseline.routes.map((route) => route.path));
+    const activeRelease = await readActiveRelease(join(root, 'build/public-releases'));
+    const releaseModule = await import(/* @vite-ignore */ pathToFileURL(
+      resolve(root, 'apps/site/app/release.server.ts'),
+    ).href) as { fullPublicPaths(release: typeof activeRelease): string[] };
+    releaseRoutes = new Set(releaseModule.fullPublicPaths(activeRelease));
   });
 
   it('parses all 41 MDX records without Astro imports and preserves authored bodies', () => {
@@ -400,7 +402,7 @@ describe('framework-neutral corpus loading', () => {
     expect(records.find((record) => record.id === 'why-i-read-in-the-ai-era')?.body).toContain('나는 AI 때문에 책을 읽기 시작했다.');
   });
 
-  it('reconciles the complete public ID set against the frozen Astro baseline', () => {
+  it('reconciles the complete public ID set against the verified React release inventory', () => {
     const publicContent = records.filter(isPublicRecord);
     const actualPublicIds = [
       ...publicContent.map((record) => `${record.collection}/${record.id}`),
@@ -409,14 +411,10 @@ describe('framework-neutral corpus loading', () => {
 
     expect(actualPublicIds).toEqual(expectedPublicIds);
     for (const record of publicContent) {
-      if (record.collection === 'thoughts') {
-        expect(baselineRoutes.has(record.href), `${record.collection}/${record.id} must not retain the old Astro route`).toBe(false);
-      } else {
-        expect(baselineRoutes.has(record.href), `${record.collection}/${record.id} missing from baseline`).toBe(true);
-      }
+      expect(releaseRoutes.has(record.href), `${record.collection}/${record.id} missing from React release`).toBe(true);
     }
     for (const record of memoryRecords) {
-      expect(baselineRoutes.has(record.href), `memory/${record.id} missing from baseline`).toBe(true);
+      expect(releaseRoutes.has(record.href), `memory/${record.id} missing from React release`).toBe(true);
     }
   });
 
@@ -425,7 +423,7 @@ describe('framework-neutral corpus loading', () => {
 
     expect(nonPublic.map((record) => `${record.collection}/${record.id}`).sort()).toEqual(expectedNonPublicIds);
     for (const record of nonPublic) {
-      expect(baselineRoutes.has(record.href), `${record.collection}/${record.id} leaked into baseline`).toBe(false);
+      expect(releaseRoutes.has(record.href), `${record.collection}/${record.id} leaked into React release`).toBe(false);
     }
   });
 

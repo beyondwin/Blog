@@ -1,6 +1,7 @@
 import type { PublicRecord } from '@beyondwin/contracts';
 import type { PublicReleaseManifest } from '@beyondwin/content/release';
 import {
+  absoluteCanonical,
   type RouteCriticalCssHandle,
   DocumentMetadata,
   publicMetadataTitle,
@@ -67,7 +68,7 @@ export function meta({ data }: { data?: ReviewData }) {
   return data ? [
     { title: publicMetadataTitle(data.record.title) },
     { name: 'description', content: reviewDescription(data.record) },
-    { tagName: 'link', rel: 'canonical', href: data.record.href },
+    { tagName: 'link', rel: 'canonical', href: absoluteCanonical(data.record.href) },
   ] : [];
 }
 

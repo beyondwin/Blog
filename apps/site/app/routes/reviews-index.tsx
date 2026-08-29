@@ -1,7 +1,7 @@
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { BookIndexPage } from '../../src/ui/reviews/BookIndexPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
-import { loadVerifiedRelease, recordsForCollection } from '../release.server';
+import { listingAssets, listingRecord, loadVerifiedRelease, recordsForCollection } from '../release.server';
 
 const indexCss = import.meta.env.SSR
   ? await import('../../src/ui/styles/route-index.css?inline').then((module) => module.default)
@@ -9,9 +9,10 @@ const indexCss = import.meta.env.SSR
 export const handle: RouteCriticalCssHandle = { criticalCss: indexCss };
 export async function loader() {
   const release = await loadVerifiedRelease();
+  const records = recordsForCollection(release, 'reviews');
   return {
-    records: recordsForCollection(release, 'reviews'),
-    assets: release.manifest.assets,
+    records: records.map(listingRecord),
+    assets: listingAssets(release, records),
   };
 }
 export function ReviewsIndexPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {

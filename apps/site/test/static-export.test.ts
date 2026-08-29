@@ -91,11 +91,16 @@ describe('fail-closed React Router static export orchestration', () => {
       runReactRouterBuild: async () => {
       await mkdir(join(fixture.spikeRoot, 'build/client/assets'), { recursive: true });
       await mkdir(join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era'), { recursive: true });
+      await mkdir(join(fixture.spikeRoot, 'build/client/memory/map'), { recursive: true });
       await writeFile(join(fixture.spikeRoot, 'build/client/index.html'), '<h1>verified candidate output</h1>');
       await writeFile(
         join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era/index.html'),
         '<a href="/thoughts/why-i-read-in-the-ai-era/">canonical thought</a>',
       );
+        await writeFile(
+          join(fixture.spikeRoot, 'build/client/memory/map/index.html'),
+          '<!doctype html><meta http-equiv="refresh" content="2;url=/memory/"><a href="/memory/">Redirect</a>',
+        );
         await writeFile(join(fixture.spikeRoot, 'build/client/__spa-fallback.html'), '<h1>static fallback</h1>');
         await writeFile(join(fixture.spikeRoot, 'build/client/assets/root-generated.js'), 'framework asset');
       },
@@ -114,6 +119,22 @@ describe('fail-closed React Router static export orchestration', () => {
       join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era/index.html'),
       'utf8',
     )).toContain('canonical thought');
+    const memoryMap = await readFile(
+      join(fixture.spikeRoot, 'build/client/memory/map/index.html'),
+      'utf8',
+    );
+    expect(memoryMap).toContain('<link rel="canonical" href="https://form-thought.local.invalid/memory/">');
+    expect(memoryMap).toContain('<meta property="og:url" content="https://form-thought.local.invalid/memory/">');
+    const sitemap = await readFile(join(fixture.spikeRoot, 'build/client/sitemap.xml'), 'utf8');
+    expect(sitemap).toContain('<loc>https://form-thought.local.invalid/</loc>');
+    expect(sitemap).toContain('<loc>https://form-thought.local.invalid/articles/public-fixture/</loc>');
+    expect(sitemap).not.toContain('thoughts/why-i-read-in-the-ai-era');
+    expect(await readFile(join(fixture.spikeRoot, 'build/client/robots.txt'), 'utf8'))
+      .toContain('Sitemap: https://form-thought.local.invalid/sitemap.xml');
+    expect(await readFile(join(fixture.spikeRoot, 'build/client/404.html'), 'utf8'))
+      .toMatch(/FORM &amp; THOUGHT|FORM & THOUGHT/u);
+    expect(await readFile(join(fixture.spikeRoot, 'build/client/_headers'), 'utf8'))
+      .toMatch(/Content-Security-Policy:[^\n]+\n  Referrer-Policy: strict-origin-when-cross-origin\n  X-Content-Type-Options: nosniff/u);
   }, 30_000);
 
   it('refuses publication when a verified staged asset changes after copy', async () => {

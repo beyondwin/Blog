@@ -132,6 +132,22 @@ describe('public memory projection', () => {
     await expect(buildPublicMemory(inputs, { root })).rejects.toThrow('source.path does not exist');
   });
 
+  it('preserves only the sealed historical memory-page locator after renderer removal', async () => {
+    const root = await makeProjectionRoot();
+    await writeThought(root, 'context-quality-is-routing-problem', publicThought
+      .replace('src/content/articles/context-refinement-system-design.mdx', 'src/pages/memory.astro'));
+    await writeFile(join(root, 'memory/edges.jsonl'), '');
+    await writeFile(join(root, 'memory/sources.jsonl'), '');
+
+    const inputs = await collectMemoryInputs({ root });
+    const projection = await buildPublicMemory(inputs, { root, generatedAt: '2026-05-24T00:00:00.000Z' });
+
+    expect(projection.sources).toContainEqual(expect.objectContaining({
+      path: 'src/pages/memory.astro',
+      title: 'Context Refinement System 설계 요약',
+    }));
+  });
+
   it('writes formatted public memory JSON', async () => {
     const root = await makeProjectionRoot();
     const outputPath = join(root, 'src/data/memory.public.json');

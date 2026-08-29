@@ -61,7 +61,10 @@ test('426px search returns to the same bounded query and exact result', async ({
   }));
 
   await result.getByRole('link').click();
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', detailPath);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://form-thought.local.invalid/articles/graphify-code-knowledge-graph-deep-dive/',
+  );
   expect(new URL(page.url()).pathname).toBe(detailPath);
   await page.goBack();
 

@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { sealChangedSurfacePerformance } from './evidence-contracts.mts';
+import { assertReactPerformanceReceipt } from './evidence-contracts.mts';
 
 function argumentsFor(argv: readonly string[]): { input: string; output: string } {
   const values = new Map<string, string>();
@@ -18,7 +18,7 @@ function argumentsFor(argv: readonly string[]): { input: string; output: string 
 
 const cli = argumentsFor(process.argv.slice(2));
 const source = JSON.parse(await readFile(cli.input, 'utf8')) as unknown;
-const receipt = sealChangedSurfacePerformance(source);
+const summary = assertReactPerformanceReceipt(source);
 await mkdir(dirname(cli.output), { recursive: true });
-await writeFile(cli.output, `${JSON.stringify(receipt, null, 2)}\n`);
-process.stdout.write(`${JSON.stringify({ sealed: true, output: cli.output })}\n`);
+await writeFile(cli.output, `${JSON.stringify(source, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({ sealed: true, output: cli.output, ...summary })}\n`);

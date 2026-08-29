@@ -1,5 +1,5 @@
 {
-  "name": "url-to-astro-publishing",
+  "name": "beyondwin-form-thought",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,34 +9,24 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "spikes/*",
-    "tools/*"
+    "spikes/*"
   ],
   "scripts": {
-    "legacy:dev": "astro dev",
-    "legacy:build": "astro check && astro build",
-    "legacy:preview": "astro preview",
     "site:dev": "npm run dev --workspace @beyondwin/site",
     "site:build": "npm run build --workspace @beyondwin/site",
+    "site:build:production": "npm run build:production --workspace @beyondwin/site",
     "site:preview": "npm run preview --workspace @beyondwin/site --",
     "site:test": "npm run test --workspace @beyondwin/site",
     "public-release:build": "tsx packages/content/src/cli.ts build",
     "public-release:verify": "tsx packages/content/src/cli.ts verify",
     "public-release:clean-test": "tsx packages/content/src/cli.ts clean-test",
-    "parity:capture:astro": "npm run legacy:build && node tools/parity/src/capture-astro-baseline.ts",
-    "parity:capture:renderer": "tsx tools/parity/src/capture-renderer.ts",
-    "parity:compare-renderers": "tsx tools/parity/src/compare-contracts.ts --baseline tests/fixtures/parity/astro-renderer-baseline.json --next docs/notes/project/evidence/next-renderer-report.json --react-router docs/notes/project/evidence/react-router-renderer-report.json --output docs/notes/project/evidence/public-renderer-report.json",
-    "parity:select-renderer": "tsx tools/parity/src/select-renderer.ts --baseline tests/fixtures/parity/astro-renderer-baseline.json --next docs/notes/project/evidence/next-renderer-report.json --react-router docs/notes/project/evidence/react-router-renderer-report.json",
-    "parity:verify-selection": "tsx tools/parity/src/verify-promotion.ts --report docs/notes/project/evidence/public-renderer-report.json",
     "cutover:proxy": "tsx scripts/cutover/local-proxy.mts",
-    "cutover:rollback": "tsx scripts/cutover/verify-rollback.mts",
     "cutover:clean-host": "tsx scripts/cutover/verify-clean-host.mts",
     "cutover:seal-performance": "tsx scripts/cutover/seal-performance-receipt.mts",
     "cutover:verify": "tsx scripts/cutover/verify-public-site.mts",
     "test": "vitest run",
-    "test:workspaces": "vitest run tests/workspace-contract.test.ts packages/contracts/test packages/content/test tools/parity/test",
+    "test:workspaces": "vitest run tests/workspace-contract.test.ts packages/contracts/test packages/content/test",
     "typecheck:workspaces": "npm run typecheck --workspaces --if-present",
-    "validate:migration": "npm run test:workspaces && npm run typecheck:workspaces",
     "sync": "node scripts/sync.mjs",
     "content:new": "node scripts/create-content-entry.mjs",
     "article:new": "node scripts/create-article-packet.mjs",
@@ -47,15 +37,12 @@
     "memory:validate": "node scripts/memory/project.mjs --validate",
     "media:validate": "node scripts/validate-media.mjs",
     "agent:check": "node scripts/agent-check.mjs",
-    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm run test && npm run legacy:build"
+    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm test && npm run typecheck:workspaces && npm run public-release:build && npm run public-release:verify && npm run public-release:clean-test && npm run site:build"
   },
   "dependencies": {
-    "@astrojs/mdx": "^7.0.0",
-    "astro": "latest",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.62.1",
     "@types/node": "24.13.3",

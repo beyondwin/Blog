@@ -3,8 +3,10 @@ import { readdir, readFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import matter from 'gray-matter';
 import { describe, expect, it } from 'vitest';
-import { isPublicEntry } from '../src/lib/content/publication';
-import { parseMediaManifest } from '../src/lib/content/mediaManifest.mjs';
+import { isPublicRecord } from '../packages/contracts/src/public-release.ts';
+import { parseMediaManifest } from '../packages/content/src/media/media-manifest.mjs';
+import { readActiveRelease } from '../packages/content/src/release/read-release.ts';
+import { fullPublicPaths } from '../apps/site/app/release.server.ts';
 
 const root = process.cwd();
 const contentCollections = ['analysis', 'articles', 'ideas', 'reviews', 'travel', 'thoughts'];
@@ -43,20 +45,24 @@ const entriesByCollection = Object.fromEntries(await Promise.all(
 ));
 const allEntries = contentCollections.flatMap((collection) => entriesByCollection[collection]);
 const realArticles = entriesByCollection.articles.filter((entry) => entry.data.draft !== true);
-const publicArticles = entriesByCollection.articles.filter((entry) => isPublicEntry({
-  data: { ...entry.data, draft: entry.data.draft ?? false },
+const publicArticles = entriesByCollection.articles.filter((entry) => isPublicRecord({
+  ...entry.data,
+  draft: entry.data.draft ?? false,
 }));
 const realReviews = entriesByCollection.reviews.filter((entry) => entry.data.draft !== true);
 const realThoughts = entriesByCollection.thoughts.filter((entry) => entry.data.draft !== true);
-const publicThoughts = entriesByCollection.thoughts.filter((entry) => isPublicEntry({
-  data: { ...entry.data, draft: entry.data.draft ?? false },
+const publicThoughts = entriesByCollection.thoughts.filter((entry) => isPublicRecord({
+  ...entry.data,
+  draft: entry.data.draft ?? false,
 }));
 const exampleEntries = allEntries.filter((entry) => entry.slug.startsWith('example-'));
-const publicEntries = allEntries.filter((entry) => isPublicEntry({
-  data: { ...entry.data, draft: entry.data.draft ?? false },
+const publicEntries = allEntries.filter((entry) => isPublicRecord({
+  ...entry.data,
+  draft: entry.data.draft ?? false,
 }));
 const publicMemory = JSON.parse(await readFile(join(root, 'src', 'data', 'memory.public.json'), 'utf8'));
-const astroConfig = await readFile(join(root, 'astro.config.mjs'), 'utf8');
+const activeRelease = await readActiveRelease(join(root, 'build', 'public-releases'));
+const publicPaths = new Set(fullPublicPaths(activeRelease));
 
 function publicSourcePathsForThought(slug) {
   const thought = publicMemory.thoughts.find((candidate) => candidate.slug === slug);
@@ -136,9 +142,9 @@ describe('existing content migration contract', () => {
     expect(reviewSlugs).not.toContain('the-life-you-can-save');
   });
 
-  it('keeps the legacy review route as a static redirect', () => {
-    expect(astroConfig).toContain("'/reviews/the-life-you-can-save/'");
-    expect(astroConfig).toContain("'/reviews/doing-good-better/'");
+  it('publishes only the canonical Doing Good Better route without a compatibility redirect', () => {
+    expect(publicPaths).toContain('/reviews/doing-good-better/');
+    expect(publicPaths).not.toContain('/reviews/the-life-you-can-save/');
   });
 
   it('preserves exact article sources as direct public-memory links', () => {

@@ -38,7 +38,7 @@ describe('official public-site Playwright contract', () => {
     const { stdout, stderr } = await execFileAsync('npm', [
       'run', 'site:preview', '--', '--host', '127.0.0.1', '--port', '4391', '--help',
     ]);
-    expect(stdout).toContain('vite preview');
+    expect(stdout).toContain('FORM & THOUGHT static preview');
     expect(stderr).not.toContain('Unknown cli config');
   }, 30_000);
 });

@@ -8,6 +8,7 @@ const candidateRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(candidateRoot, '../..');
 const execFileAsync = promisify(execFile);
 let homeHtml = '';
+let homeData = '';
 let articlesIndexHtml = '';
 let articleHtml = '';
 let reviewsIndexHtml = '';
@@ -16,6 +17,7 @@ let memoryHtml = '';
 let thoughtsIndexHtml = '';
 let thoughtHtml = '';
 let searchHtml = '';
+let memoryMapHtml = '';
 
 const ARTICLE_IDS = [
   'agents-md-vs-agent-skills-evidence', 'ai-design-references', 'andrej-karpathy-skills-analysis',
@@ -50,10 +52,11 @@ beforeAll(async () => {
     env: { ...process.env, NODE_ENV: 'production' },
   });
   [
-    homeHtml, articlesIndexHtml, articleHtml, reviewsIndexHtml, reviewHtml,
-    memoryHtml, thoughtsIndexHtml, thoughtHtml, searchHtml,
+    homeHtml, homeData, articlesIndexHtml, articleHtml, reviewsIndexHtml, reviewHtml,
+    memoryHtml, thoughtsIndexHtml, thoughtHtml, searchHtml, memoryMapHtml,
   ] = await Promise.all([
     readFile(join(candidateRoot, 'build/client/index.html'), 'utf8'),
+    readFile(join(candidateRoot, 'build/client/_.data'), 'utf8'),
     readFile(join(candidateRoot, 'build/client/articles/index.html'), 'utf8'),
     readFile(join(
       candidateRoot,
@@ -71,10 +74,30 @@ beforeAll(async () => {
       'build/client/thoughts/why-i-read-in-the-ai-era/index.html',
     ), 'utf8'),
     readFile(join(candidateRoot, 'build/client/search/index.html'), 'utf8'),
+    readFile(join(candidateRoot, 'build/client/memory/map/index.html'), 'utf8'),
   ]);
 }, 120_000);
 
 describe('React Router emitted critical output', () => {
+  it('emits a bounded Home payload and canonicalizes the compatibility redirect to its destination', () => {
+    for (const output of [homeHtml, homeData]) {
+      for (const forbidden of ['bodyHtml', 'memoryLinks', 'relationships']) {
+        expect(output).not.toContain(forbidden);
+      }
+      expect(output).not.toContain('Graphify는 분명 쓸모가 있다.');
+      expect(output).not.toContain('AI 때문에 책을 읽기 시작했다.');
+    }
+    expect(homeHtml).toContain('<link rel="canonical" href="https://form-thought.local.invalid/"/>');
+    expect(homeHtml).toContain('<meta property="og:url" content="https://form-thought.local.invalid/"/>');
+    expect(memoryMapHtml).toContain(
+      '<link rel="canonical" href="https://form-thought.local.invalid/memory/">',
+    );
+    expect(memoryMapHtml).toContain(
+      '<meta property="og:url" content="https://form-thought.local.invalid/memory/">',
+    );
+    expect(memoryMapHtml).not.toContain('form-thought.local.invalid/memory/map/');
+  });
+
   it('keeps the eager Framework bootstrap without dead activation output', () => {
     const moduleScripts = [...homeHtml.matchAll(
       /<script\b(?=[^>]*\btype="module")[^>]*>([\s\S]*?)<\/script>/gu,
@@ -171,7 +194,7 @@ describe('React Router emitted critical output', () => {
     expect(thoughtsIndexHtml).toContain('<title>생각 · FORM &amp; THOUGHT</title>');
     expect(thoughtsIndexHtml).toContain('href="/thoughts/why-i-read-in-the-ai-era/"');
     expect(thoughtHtml).toContain('<title>AI 시대에, 나는 왜 책을 읽는가 · FORM &amp; THOUGHT</title>');
-    expect(thoughtHtml).toContain('<link rel="canonical" href="/thoughts/why-i-read-in-the-ai-era/"/>');
+    expect(thoughtHtml).toContain('<link rel="canonical" href="https://form-thought.local.invalid/thoughts/why-i-read-in-the-ai-era/"/>');
     expect(thoughtHtml).toContain('AI 때문에 책을 읽기 시작했다.');
     expect(thoughtHtml).toContain('<meta name="theme-color" content="#F2EFE9"/>');
     await expect(access(join(

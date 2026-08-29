@@ -1,7 +1,7 @@
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { ThoughtIndexPage } from '../../src/ui/thoughts/ThoughtIndexPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
-import { loadVerifiedRelease, recordsForCollection } from '../release.server';
+import { listingAssets, listingRecord, loadVerifiedRelease, recordsForCollection } from '../release.server';
 
 const thoughtCss = import.meta.env.SSR
   ? await import('../../src/ui/styles/route-thought.css?inline').then((module) => module.default)
@@ -11,9 +11,10 @@ export const handle: RouteCriticalCssHandle = { criticalCss: thoughtCss };
 
 export async function loader() {
   const release = await loadVerifiedRelease();
+  const records = recordsForCollection(release, 'thoughts');
   return {
-    records: recordsForCollection(release, 'thoughts'),
-    assets: release.manifest.assets,
+    records: records.map(listingRecord),
+    assets: listingAssets(release, records),
   };
 }
 
