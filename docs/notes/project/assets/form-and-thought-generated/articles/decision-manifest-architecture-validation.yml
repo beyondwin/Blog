@@ -1,0 +1,241 @@
+version: 1
+batchId: architecture-validation
+generator:
+  provider: openai
+  generator: codex-built-in-image-generation
+  model: not-exposed-by-built-in-tool
+  modelVersion: not-exposed-by-built-in-tool
+  promptVersion: form-and-thought-articles-v1
+  generatedAt: 2026-08-29T00:35:17.843Z
+approval:
+  state: approved
+  selectedCandidateIds:
+    - AV01
+    - AV02
+    - AV03
+    - AV05
+  approvedBy:
+    - controller
+    - independent-visual-reviewer
+  recordedAt: 2026-08-29T09:53:20+09:00
+  evidence: Controller and independent visual reviewer approved exactly AV01/AV02/AV03/AV05. AV04 remains text-led because only five of the exact-six ceiling slots are visible; AV06 remains text-led because a center join makes the exact-one slab read as two pieces.
+rightsReview:
+  state: approved
+  decision: approve-repository-publication
+  checkedAt: 2026-08-29
+  decidedBy: controller
+  caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed
+  sources:
+    - url: https://openai.com/policies/terms-of-use/
+      checkedAt: 2026-08-29
+    - url: https://openai.com/policies/service-terms/
+      checkedAt: 2026-08-29
+  inspection:
+    externalImageInputs: false
+    namedOrLivingArtist: false
+    recognizablePersonOrProduct: false
+    readableMark: false
+approvedContactSheet:
+  path: docs/notes/project/assets/form-and-thought-generated/articles/approved-contact-sheet-architecture-validation.png
+  checksum: sha256:2609106c83a7d728a111ab54b9e7165b02bc3a9e9b5f99b20454655056fa06d8
+assets:
+  - candidateId: AV01
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: agents-md-vs-agent-skills-evidence
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/agents-md-vs-agent-skills-evidence/editorial-hero.png
+    checksum: sha256:e1cfaa836bd1b398db6272e29dc5e3eb2183dfd64b284e9a437967fe47caa6a6
+    width: 1536
+    height: 1024
+    promptId: av01-agents-md-vs-agent-skills-evidence-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.65
+          - 0.5
+        safeArea:
+          - 470
+          - 70
+          - 1320
+          - 940
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 120
+          - 1536
+          - 851
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.65
+          - 0.5
+        safeArea:
+          - 470
+          - 70
+          - 1320
+          - 940
+  - candidateId: AV02
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: aws-static-frontend-serverless-bff
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/aws-static-frontend-serverless-bff/editorial-hero.png
+    checksum: sha256:f24b078f07c7240069882bdd0485b5da6a6b02076f6082bfa67d3aa6769ef010
+    width: 1536
+    height: 1024
+    promptId: av02-aws-static-frontend-serverless-bff-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.63
+          - 0.49
+        safeArea:
+          - 280
+          - 80
+          - 1320
+          - 930
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 120
+          - 1536
+          - 851
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.63
+          - 0.49
+        safeArea:
+          - 280
+          - 80
+          - 1320
+          - 930
+  - candidateId: AV03
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: karpathy-delete-everything-keep-graph
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/karpathy-delete-everything-keep-graph/editorial-hero.png
+    checksum: sha256:5f897c521a5b41adce8a4cd39fcaad6a83c78ae004a150399a862acf1d07b53d
+    width: 1536
+    height: 1024
+    promptId: av03-karpathy-delete-everything-keep-graph-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.55
+          - 0.67
+        safeArea:
+          - 130
+          - 40
+          - 1420
+          - 970
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 220
+          - 1536
+          - 951
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.55
+          - 0.67
+        safeArea:
+          - 130
+          - 40
+          - 1420
+          - 970
+  - candidateId: AV05
+    slot: homePick/indexLandscape
+    collection: articles
+    recordId: shared-ai-conversation-evidence-boundaries
+    mediaId: editorial-hero
+    file: editorial-hero.png
+    sourcePath: src/assets/content/articles/shared-ai-conversation-evidence-boundaries/editorial-hero.png
+    checksum: sha256:0ab6390f902cc7cd76c672bcd90f01619ec3e965b69a23a99fe6b788987fbf13
+    width: 1536
+    height: 1024
+    promptId: av05-shared-ai-conversation-evidence-boundaries-v1
+    placements:
+      - slot: indexLandscape
+        desktopCrop:
+          - 0
+          - 46
+          - 1536
+          - 977
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.57
+          - 0.48
+        safeArea:
+          - 420
+          - 170
+          - 1270
+          - 800
+      - slot: detailHero
+        desktopCrop:
+          - 0
+          - 120
+          - 1536
+          - 851
+        mobileCrop:
+          - 86
+          - 0
+          - 1451
+          - 1024
+        focalPoint:
+          - 0.57
+          - 0.48
+        safeArea:
+          - 420
+          - 170
+          - 1270
+          - 800

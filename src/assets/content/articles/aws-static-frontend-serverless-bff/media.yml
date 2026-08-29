@@ -3,8 +3,8 @@ items:
   - id: editorial-hero
     file: editorial-hero.png
     kind: illustration
-    alt: 콘크리트 벽의 점검구와 낮은 계단, 테라코타 점검 면이 놓인 장면
-    caption: 유행하는 그래프 제품보다 관찰·검증·복구 표면을 남기는 구조
+    alt: 테라코타 벽과 검은 벽 사이에 좁고 깊은 통로가 난 장면
+    caption: 고정된 프런트와 통제된 백엔드 경계 사이의 좁은 통로
     credit: OpenAI image generation for beyondwin
     sourcePath: docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-architecture-validation.yml
     sourceKind: repository-generated
@@ -14,10 +14,10 @@ items:
       model: not-exposed-by-built-in-tool
       modelVersion: not-exposed-by-built-in-tool
       promptVersion: form-and-thought-articles-v1
-      candidateId: AV03
+      candidateId: AV02
       decisionManifestChecksum: sha256:b5ca8796c1443b48a577839991dc787882060d4f79ece9eef69c3068f66ef097
-    verifiedAt: "2026-08-29"
+    verifiedAt: 2026-08-29
     rightsNote: "Repository publication approved with caveat: non-exclusive generated output; copyrightability/uniqueness not guaranteed"
     width: 1536
     height: 1024
-    checksum: sha256:5f897c521a5b41adce8a4cd39fcaad6a83c78ae004a150399a862acf1d07b53d
+    checksum: sha256:f24b078f07c7240069882bdd0485b5da6a6b02076f6082bfa67d3aa6769ef010

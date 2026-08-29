@@ -54,6 +54,17 @@
       "selections": [
         { "candidateId": "DT01", "collection": "articles", "recordId": "pgvector-hybrid-search", "mediaId": "editorial-hero" }
       ]
+    },
+    {
+      "batchId": "architecture-validation",
+      "decisionManifest": "docs/notes/project/assets/form-and-thought-generated/articles/decision-manifest-architecture-validation.yml",
+      "decisionManifestChecksum": "sha256:b5ca8796c1443b48a577839991dc787882060d4f79ece9eef69c3068f66ef097",
+      "selections": [
+        { "candidateId": "AV01", "collection": "articles", "recordId": "agents-md-vs-agent-skills-evidence", "mediaId": "editorial-hero" },
+        { "candidateId": "AV02", "collection": "articles", "recordId": "aws-static-frontend-serverless-bff", "mediaId": "editorial-hero" },
+        { "candidateId": "AV03", "collection": "articles", "recordId": "karpathy-delete-everything-keep-graph", "mediaId": "editorial-hero" },
+        { "candidateId": "AV05", "collection": "articles", "recordId": "shared-ai-conversation-evidence-boundaries", "mediaId": "editorial-hero" }
+      ]
     }
   ]
 }
