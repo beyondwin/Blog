@@ -14,6 +14,37 @@ workflow:
     - from: researching
       to: hold
       condition: candidate or redistribution grant is absent or ambiguous
+task4:
+  entrySnapshot:
+    recordedAt: "2026-08-30"
+    readyForIndependentReviewRecordIds: []
+  approvalPathEvidence:
+    status: not_measured
+    reason: Task 3 produced zero ready-for-independent-review records with both exact candidate bytes and applicable public-website redistribution evidence, so no real approval transition was available to review or promote.
+  exitSnapshot:
+    recordedAt: "2026-08-30"
+    approvedRecordIds: []
+    holdRecordIds:
+      - changing-their-minds
+      - lord-of-the-flies
+      - black-swan
+      - nevertheless
+      - goethe-said-everything
+      - devotion-of-suspect-x
+      - poor-charlies-almanack
+      - art-thief
+      - siddhartha
+      - habitus
+      - how-adam-smith-can-change-your-life
+      - lolita
+      - future-arrived-first
+      - how-we-crossed-winter
+      - convenience-store-woman
+      - miracles-of-namiya-general-store
+      - doing-good-better
+      - factfulness
+    promotedSourceRecordIds: []
+    changedMdxCoverRecordIds: []
 records:
   - recordId: changing-their-minds
     bibliographicIdentity:

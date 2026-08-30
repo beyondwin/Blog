@@ -227,6 +227,23 @@ const expectedIds = [
   'doing-good-better',
   'factfulness',
 ];
+const expectedTask4Outcome = {
+  entrySnapshot: {
+    recordedAt: '2026-08-30',
+    readyForIndependentReviewRecordIds: [],
+  },
+  approvalPathEvidence: {
+    status: 'not_measured',
+    reason: 'Task 3 produced zero ready-for-independent-review records with both exact candidate bytes and applicable public-website redistribution evidence, so no real approval transition was available to review or promote.',
+  },
+  exitSnapshot: {
+    recordedAt: '2026-08-30',
+    approvedRecordIds: [],
+    holdRecordIds: expectedIds,
+    promotedSourceRecordIds: [],
+    changedMdxCoverRecordIds: [],
+  },
+};
 const controlledStates = new Set(['researching', 'ready-for-independent-review', 'approved', 'hold']);
 const directHoldBases = new Set(['absent-candidate', 'ambiguous-candidate', 'absent-grant', 'ambiguous-grant']);
 const directHoldExpectations = {
@@ -507,6 +524,51 @@ function assertValidLedger(candidate, snapshot) {
   }
 }
 
+function expectedSourceCoverMetadata(recordId) {
+  return recordId === 'devotion-of-suspect-x'
+    ? { coverState: 'hold', coverMedia: null }
+    : { coverState: 'verified', coverMedia: 'cover' };
+}
+
+function assertTask4Outcome(candidate, repositoryState) {
+  expect(candidate.task4, 'explicit Task 4 entry and outcome contract').toEqual(expectedTask4Outcome);
+
+  const readyRecordIds = candidate.records
+    .filter((record) => record.state === 'ready-for-independent-review')
+    .map((record) => record.recordId);
+  const approvedRecordIds = candidate.records
+    .filter((record) => record.state === 'approved')
+    .map((record) => record.recordId);
+  const holdRecordIds = candidate.records
+    .filter((record) => record.state === 'hold')
+    .map((record) => record.recordId);
+  const promotedSourceRecordIds = expectedIds.filter((recordId) => (
+    !isDeepStrictEqual(repositoryState.media[recordId], expected[recordId].media)
+  ));
+  const changedMdxCoverRecordIds = expectedIds.filter((recordId) => (
+    !isDeepStrictEqual(repositoryState.sourceCoverMetadata[recordId], expectedSourceCoverMetadata(recordId))
+  ));
+
+  expect(candidate.task4.entrySnapshot.readyForIndependentReviewRecordIds).toEqual(readyRecordIds);
+  expect(readyRecordIds, 'Task 4 entry ready set is explicitly empty').toHaveLength(0);
+  expect(candidate.task4.approvalPathEvidence.status).toBe('not_measured');
+  expect(candidate.task4.approvalPathEvidence.reason).toContain('zero ready-for-independent-review records');
+  expect(candidate.task4.exitSnapshot.approvedRecordIds).toEqual(approvedRecordIds);
+  expect(candidate.task4.exitSnapshot.holdRecordIds).toEqual(holdRecordIds);
+  expect(holdRecordIds, 'all current records remain fail-closed HOLD').toHaveLength(expectedIds.length);
+  expect(candidate.task4.exitSnapshot.promotedSourceRecordIds).toEqual(promotedSourceRecordIds);
+  expect(candidate.task4.exitSnapshot.changedMdxCoverRecordIds).toEqual(changedMdxCoverRecordIds);
+  expect(promotedSourceRecordIds, 'no Task 4 source promotion occurred').toEqual([]);
+  expect(changedMdxCoverRecordIds, 'no Task 4 MDX cover transition occurred').toEqual([]);
+
+  expect(repositoryState.approvalArtifacts.decisions).toEqual(
+    Object.fromEntries(expectedIds.map((recordId) => [recordId, false])),
+  );
+  expect(repositoryState.approvalArtifacts.registry).toEqual({ version: 1, approvals: [] });
+  expect(repositoryState.approvalArtifacts.rightsEvidencePaths).toEqual([]);
+  expect(repositoryState.approvalArtifacts.receiptIds).toEqual([]);
+}
+
 async function repositorySnapshot() {
   const records = (await loadSourceRecords(root))
     .filter((record) => record.collection === 'reviews' && record.status === 'published' && record.draft !== true);
@@ -518,10 +580,15 @@ async function repositorySnapshot() {
   }, 'reviews').map((record) => record.id);
   const identities = {};
   const media = {};
+  const sourceCoverMetadata = {};
   const receiptIds = [];
 
   for (const record of records) {
     identities[record.id] = sourceIdentity(record);
+    sourceCoverMetadata[record.id] = {
+      coverState: record.coverState,
+      coverMedia: record.coverMedia ?? null,
+    };
     const manifestPath = `src/assets/content/reviews/${record.id}/media.yml`;
     const manifest = existsSync(join(root, manifestPath))
       ? parseYaml(await readFile(join(root, manifestPath), 'utf8'))
@@ -550,11 +617,13 @@ async function repositorySnapshot() {
     sourceIds: presentationIds,
     identities,
     media,
+    sourceCoverMetadata,
     approvalArtifacts: {
       decisions: Object.fromEntries(expectedIds.map((id) => [
         id,
         existsSync(join(root, `docs/notes/project/assets/review-cover-rights/${id}/redistribution-decision.yml`)),
       ])),
+      registry,
       registryIds: registry.approvals.map((approval) => approval.recordId),
       rightsEvidencePaths,
       receiptIds,
@@ -587,6 +656,10 @@ describe('review cover rights research inventory', () => {
     expect(snapshot.approvalArtifacts.registryIds).toEqual([]);
     expect(snapshot.approvalArtifacts.rightsEvidencePaths).toEqual([]);
     expect(snapshot.approvalArtifacts.receiptIds).toEqual([]);
+  });
+
+  it('records the empty Task 4 approval target as not_measured without vacuous promotion evidence', () => {
+    assertTask4Outcome(ledger, snapshot);
   });
 
   it('binds tracked Task 3 tuples to exact editions, frozen candidate facts, and current rights research', async () => {
