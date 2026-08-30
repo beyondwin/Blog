@@ -23,7 +23,7 @@ function article(id: string, index: number): ArticleRecord {
     description: `${id} 설명.`, createdAt: '2026-07-12T00:00:00.000Z',
     updatedAt: `2026-08-${String(29 - index).padStart(2, '0')}T00:00:00.000Z`,
     tags: index % 2 === 0 ? ['source-grounded'] : [], media: [], relationships: [],
-    memoryLinks: [], bodyHtml: '<p><strong>실제 판단.</strong></p>',
+    memoryLinks: [], bodyHtml: '<p><strong>실제 판단.</strong></p>', includeInAnswers: false,
     ...(id === 'graphify-code-knowledge-graph-deep-dive' ? { featuredMedia: 'editorial-hero' } : {}),
   } as ArticleRecord;
 }

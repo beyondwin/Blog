@@ -23,6 +23,7 @@ function article(id: string, overrides: Record<string, unknown> = {}): PublicRec
     id,
     href: `/articles/${id}/`,
     title: `아티클 ${id}`,
+    includeInAnswers: false,
     ...overrides,
   } satisfies PublicRecord;
 }
@@ -38,6 +39,7 @@ function review(id: string, overrides: Record<string, unknown> = {}): PublicReco
     itemTitle: `서평 ${id}`,
     authors: ['저자'],
     readEditionVerified: true,
+    includeInAnswers: false,
     ...overrides,
   } satisfies PublicRecord;
 }

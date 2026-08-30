@@ -15,7 +15,7 @@ function article(id: string, overrides: Record<string, unknown> = {}): ArticleRe
     collection: 'articles', id, href: `/articles/${id}/`, title: `아티클 ${id}`,
     description: `${id} 설명`, createdAt: '2026-07-12T00:00:00.000Z',
     updatedAt: '2026-08-29T00:00:00.000Z', tags: [], media: [], relationships: [],
-    memoryLinks: [], bodyHtml: '<p>본문</p>', ...overrides,
+    memoryLinks: [], bodyHtml: '<p>본문</p>', includeInAnswers: false, ...overrides,
   } as ArticleRecord;
 }
 
@@ -37,7 +37,7 @@ function thought(): ThoughtRecord {
     href: '/thoughts/why-i-read-in-the-ai-era/', title: 'AI 시대에, 나는 왜 책을 읽는가',
     description: '답을 쉽게 믿지 않기 위해 읽는다.', createdAt: '2026-08-16T00:00:00.000Z',
     updatedAt: '2026-08-16T00:00:00.000Z', tags: ['reading'], media: [], relationships: [],
-    memoryLinks: [], bodyHtml: '<p>본문</p>', featuredMedia: 'editorial-reading',
+    memoryLinks: [], bodyHtml: '<p>본문</p>', featuredMedia: 'editorial-reading', includeInAnswers: false,
   } as ThoughtRecord;
 }
 

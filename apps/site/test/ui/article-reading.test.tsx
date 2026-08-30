@@ -9,7 +9,7 @@ function article(overrides: Record<string, unknown> = {}) {
     collection: 'articles', id: 'pgvector-hybrid-search', href: '/articles/pgvector-hybrid-search/',
     title: 'pgvector로 벡터 검색 이해하기', description: '임베딩과 키워드 검색을 함께 쓰는 기준.',
     createdAt: '2026-07-12T00:00:00.000Z', updatedAt: '2026-08-29T00:00:00.000Z',
-    tags: ['source-grounded'], media: [], relationships: [], memoryLinks: [],
+    tags: ['source-grounded'], media: [], relationships: [], memoryLinks: [], includeInAnswers: false,
     bodyHtml: [
       '<p><strong>벡터 검색은 의미가 가까운 줄을 찾는다.</strong></p>',
       '<h2 id="실제-구조">실제 구조</h2><p>실제 본문</p>',

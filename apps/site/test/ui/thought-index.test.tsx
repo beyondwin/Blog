@@ -23,6 +23,7 @@ const thought: ThoughtRecord = {
   memoryLinks: [],
   bodyHtml: '<p>AI 때문에 책을 읽기 시작했다.</p>',
   featuredMedia: 'editorial-reading',
+  includeInAnswers: false,
 };
 
 const editorialReading = {

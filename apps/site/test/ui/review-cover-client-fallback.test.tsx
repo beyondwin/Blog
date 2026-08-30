@@ -106,6 +106,7 @@ const record = {
   coverState: 'verified',
   coverMedia: 'cover',
   readEditionVerified: true,
+  includeInAnswers: false,
 } satisfies ReviewRecord;
 
 function HydrationFixture() {

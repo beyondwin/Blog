@@ -91,6 +91,7 @@ const reviewRecord = {
   coverState: 'verified',
   coverMedia: 'cover',
   readEditionVerified: true,
+  includeInAnswers: false,
 } satisfies ReviewRecord;
 
 let browser: Browser;

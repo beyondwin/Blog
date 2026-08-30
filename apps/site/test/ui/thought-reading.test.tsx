@@ -20,6 +20,7 @@ const thought: ThoughtRecord = {
   memoryLinks: [],
   bodyHtml: '<p>AI 때문에 책을 읽기 시작했다.</p><p>그래서 책을 읽는다.</p>',
   featuredMedia: 'editorial-reading',
+  includeInAnswers: false,
 };
 
 describe('thought reference-03 detail', () => {

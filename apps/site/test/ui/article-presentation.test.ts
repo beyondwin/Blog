@@ -20,6 +20,7 @@ const base = {
   relationships: [],
   memoryLinks: [],
   bodyHtml: '<p>본문</p>',
+  includeInAnswers: false,
 };
 
 function article(id: string, overrides: Record<string, unknown> = {}) {
