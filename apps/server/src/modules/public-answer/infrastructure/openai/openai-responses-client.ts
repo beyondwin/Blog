@@ -143,7 +143,7 @@ function readWithSignal(
 ): Promise<ReadableStreamReadResult<Uint8Array>> {
   if (signal.aborted) {
     cancelReaderWithoutWaiting(reader);
-    return Promise.reject(signal.reason ?? new Error('provider response request aborted'));
+    return Promise.reject(signal.reason);
   }
   const pending = reader.read();
   return new Promise((resolve, reject) => {
@@ -156,14 +156,14 @@ function readWithSignal(
     };
     const onAbort = () => finish(() => {
       cancelReaderWithoutWaiting(reader, pending);
-      reject(signal.reason ?? new Error('provider response request aborted'));
+      reject(signal.reason);
     });
     signal.addEventListener('abort', onAbort, { once: true });
     if (signal.aborted) onAbort();
     pending.then(
       (value) => finish(() => resolve(value)),
       () => finish(() => {
-        if (signal.aborted) reject(signal.reason ?? new Error('provider response request aborted'));
+        if (signal.aborted) reject(signal.reason);
         else reject(new PublicAnswerInvalidResponseError('provider response is invalid'));
       }),
     );
@@ -190,7 +190,7 @@ async function readCappedBody(response: Response, signal: AbortSignal): Promise<
       chunks.push(next.value);
     }
   } catch (error) {
-    if (signal.aborted) throw signal.reason ?? error;
+    if (signal.aborted) throw signal.reason;
     if (error instanceof PublicAnswerInvalidResponseError) throw error;
     throw new PublicAnswerInvalidResponseError('provider response is invalid');
   } finally {
@@ -253,8 +253,8 @@ export class OpenAiResponsesClient {
         redirect: 'error',
         signal,
       });
-    } catch (error) {
-      if (signal.aborted) throw signal.reason ?? error;
+    } catch {
+      if (signal.aborted) throw signal.reason;
       throw new PublicAnswerTransportError('provider response request failed');
     }
     if (!response.ok || (response.status >= 300 && response.status < 400)) {

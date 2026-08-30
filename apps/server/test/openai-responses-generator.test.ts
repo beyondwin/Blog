@@ -341,6 +341,51 @@ describe('OpenAiResponsesClient', () => {
     expect(observed).toBeInstanceOf(Error);
     expect((observed as Error).message).toBe('provider response request failed');
   });
+
+  it('preserves an exact null abort reason when fetch rejects with provider text', async () => {
+    const controller = new AbortController();
+    const client = new OpenAiResponsesClient('fixture-key', async () => {
+      controller.abort(null);
+      throw new Error('provider-secret-fetch-after-null-abort');
+    });
+    const observed = await client.structured(canonical, {
+      schemaName: 'schema', applicationKind: 'generation', schema: { type: 'object' },
+    }, controller.signal).then(() => 'resolved', (reason) => reason);
+    expect(observed).toBeNull();
+    expect(JSON.stringify(observed)).not.toMatch(/provider-secret/u);
+  });
+
+  it('settles a null-reason signal-only abort against a stalled body and handles its late secret rejection', async () => {
+    const controller = new AbortController();
+    let rejectRead!: (reason: unknown) => void;
+    const reader = {
+      read: () => new Promise<ReadableStreamReadResult<Uint8Array>>((_resolve, reject) => { rejectRead = reject; }),
+      cancel: () => new Promise<void>(() => undefined),
+      releaseLock: vi.fn(),
+    };
+    const response = { ok: true, status: 200, body: { getReader: () => reader } } as unknown as Response;
+    const client = new OpenAiResponsesClient('fixture-key', async () => response);
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const pending = client.structured(canonical, {
+        schemaName: 'schema', applicationKind: 'generation', schema: { type: 'object' },
+      }, controller.signal).then(() => 'resolved', (reason) => reason);
+      setTimeout(() => controller.abort(null), 5);
+      const observed = await Promise.race([
+        pending,
+        new Promise<'still-pending'>((resolve) => setTimeout(() => resolve('still-pending'), 75)),
+      ]);
+      rejectRead(new Error('provider-secret-late-body-after-null-abort'));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(observed).toBeNull();
+      expect(JSON.stringify(observed)).not.toMatch(/provider-secret/u);
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
 });
 
 describe('synthetic loopback protocol receipts', () => {
