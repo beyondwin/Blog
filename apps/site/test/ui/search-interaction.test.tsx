@@ -58,7 +58,7 @@ const inventory: SearchInventoryItem[] = [{
   topics: ['Graphify', 'AI'],
 }];
 
-function clientPlugin(serverMarkup: string): Plugin {
+function clientPlugin(serverMarkup: string, options: { deferHydration?: boolean } = {}): Plugin {
   const entryId = '\0second-brain-search-client.tsx';
   return {
     name: 'second-brain-search-client',
@@ -78,12 +78,15 @@ function clientPlugin(serverMarkup: string): Plugin {
         import ${JSON.stringify(searchStylesPath)};
         const fixture = ${JSON.stringify(fixture)};
         const inventory = ${JSON.stringify(inventory)};
-        window.__secondBrainRoot = hydrateRoot(
-          document.querySelector('#root'),
-          <SiteShell currentSection="search">
-            <SearchPage fixture={fixture} initialQuery="" inventory={inventory} />
-          </SiteShell>,
-        );
+        const hydrate = () => {
+          window.__secondBrainRoot = hydrateRoot(
+            document.querySelector('#root'),
+            <SiteShell currentSection="search">
+              <SearchPage fixture={fixture} initialQuery="" inventory={inventory} />
+            </SiteShell>,
+          );
+        };
+        ${options.deferHydration ? 'window.__hydrateSecondBrainSearch = hydrate;' : 'hydrate();'}
       `;
     },
     async transform(code, id) {
@@ -115,7 +118,7 @@ function renderApplication() {
   });
 }
 
-async function startHarness() {
+async function startHarness(options: { deferHydration?: boolean } = {}) {
   const markup = renderToString(renderApplication());
   const server = await createServer({
     configFile: false,
@@ -123,7 +126,7 @@ async function startHarness() {
     cacheDir: await freshViteCacheRoot(),
     publicDir: join(repositoryRoot, 'apps/site/public'),
     logLevel: 'silent',
-    plugins: [clientPlugin(markup)],
+    plugins: [clientPlugin(markup, options)],
     server: { host: '127.0.0.1', port: 0, strictPort: false },
   });
   await server.listen();
@@ -158,6 +161,96 @@ async function targetBoxesBelowMinimum(page: Page) {
 }
 
 describe('second-brain search client interaction', () => {
+  it('marks an avatar request that failed before hydration as an error without changing stage geometry', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness({ deferHydration: true });
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.route('**/images/form-and-thought-agent-avatar-v1.png', (route) => route.abort('failed'));
+      await page.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'domcontentloaded' });
+      await expect.poll(() => page.locator('.agent-stage__portrait').evaluate((image) => {
+        const portrait = image as HTMLImageElement;
+        return portrait.complete && portrait.naturalWidth === 0;
+      })).toBe(true);
+      const before = await page.locator('.agent-stage').evaluate((element) => element.getBoundingClientRect().toJSON());
+
+      await page.evaluate(() => (window as typeof window & { __hydrateSecondBrainSearch?: () => void }).__hydrateSecondBrainSearch?.());
+      await expect.poll(() => page.locator('.agent-stage').getAttribute('data-image-state'), { timeout: 4_000 }).toBe('error');
+      expect(await page.locator('.agent-stage').evaluate((element) => element.getBoundingClientRect().toJSON())).toEqual(before);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 60_000);
+
+  it('keeps the approved desktop and mobile search composition measurable', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+
+      const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await desktop.emulateMedia({ reducedMotion: 'reduce' });
+      await desktop.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'networkidle' });
+      const desktopBounds = await desktop.evaluate(() => {
+        const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
+        return {
+          header: rect('.site-header__inner'),
+          stage: rect('.second-brain-search__stage'),
+          avatar: rect('.agent-stage'),
+          dialogue: rect('.second-brain-dialogue'),
+          order: Array.from(document.querySelector('.second-brain-search__stage')?.children ?? []).map((child) => child.className),
+        };
+      });
+      expect(desktopBounds.header?.height).toBeCloseTo(88, 1);
+      expect(desktopBounds.stage).toMatchObject({ x: 0, y: 88, width: 1440, height: 812 });
+      expect(desktopBounds.avatar?.width).toBeCloseTo(705.6, 1);
+      expect(desktopBounds.dialogue?.x).toBeCloseTo(705.6, 1);
+      expect(desktopBounds.dialogue?.width).toBeCloseTo(734.4, 1);
+      expect(desktopBounds.order).toEqual(['agent-stage', 'second-brain-dialogue']);
+      await desktop.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await desktop.getByRole('button', { name: '근거 3개 보기' }).click();
+      const panel = await desktop.locator('.evidence-panel').evaluate((element) => element.getBoundingClientRect().toJSON());
+      expect(panel).toMatchObject({ x: 0, y: 0, height: 900 });
+      expect(panel.width).toBeCloseTo(705.6, 1);
+
+      const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await mobile.emulateMedia({ reducedMotion: 'reduce' });
+      await mobile.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'networkidle' });
+      const mobileBounds = await mobile.evaluate(() => {
+        const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
+        return {
+          header: rect('.site-header__inner'),
+          stage: rect('.second-brain-search__stage'),
+          avatar: rect('.agent-stage'),
+          dialogue: rect('.second-brain-dialogue'),
+          order: Array.from(document.querySelector('.second-brain-search__stage')?.children ?? []).map((child) => child.className),
+        };
+      });
+      expect(mobileBounds.header?.height).toBeCloseTo(72, 1);
+      expect(mobileBounds.stage?.y).toBeCloseTo(72, 1);
+      expect(mobileBounds.avatar).toMatchObject({ x: 0, y: 72, width: 390 });
+      expect(mobileBounds.avatar?.height).toBeCloseTo(303.84, 1);
+      expect(mobileBounds.dialogue?.y).toBeCloseTo(375.84, 1);
+      expect(mobileBounds.dialogue?.width).toBe(390);
+      expect(mobileBounds.order).toEqual(['agent-stage', 'second-brain-dialogue']);
+      await mobile.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await mobile.getByRole('button', { name: '근거 3개 보기' }).click();
+      const sheet = await mobile.locator('.evidence-panel').evaluate((element) => element.getBoundingClientRect().toJSON());
+      expect(sheet).toMatchObject({ x: 0, width: 390, bottom: 844 });
+      expect(sheet.height).toBeLessThanOrEqual(641.5);
+      expect(await mobile.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 60_000);
+
   it('answers only the sample, manages evidence focus, and falls back to real search', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;
@@ -186,7 +279,15 @@ describe('second-brain search client interaction', () => {
       await followUp.press('Enter');
       await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('search-results');
       await expect.poll(() => page.getByRole('heading', { name: '검색 결과' }).count()).toBe(1);
+      await expect.poll(() => page.getByRole('status').textContent()).toBe('“Graphify”에 이어지는 공개 기록 1건을 찾았습니다.');
       expect(await page.locator('body').textContent()).not.toContain(fixture.answerLead);
+
+      const search = page.getByRole('searchbox', { name: '기록에 묻기' });
+      await search.fill('존재하지않는검색어');
+      await search.press('Enter');
+      await expect.poll(() => page.getByRole('heading', { name: '일치하는 결과가 없습니다.' }).count()).toBe(1);
+      await expect.poll(() => page.getByRole('status').textContent()).toBe('“존재하지않는검색어”에 이어지는 공개 기록을 찾지 못했습니다.');
+      await expect.poll(() => page.locator('[aria-live="polite"]').count()).toBe(1);
       expect(errors).toEqual([]);
     } finally {
       await browser?.close();
@@ -302,6 +403,7 @@ describe('second-brain search client interaction', () => {
 
       await expect.poll(() => page.locator('.site-shell').getAttribute('inert')).toBe('');
       await expect.poll(() => page.getByRole('dialog', { name: '이 답의 기억' }).count()).toBe(1);
+      await expect.poll(() => page.locator('[aria-live="polite"]').count()).toBe(1);
       expect(await page.getByRole('link', { name: 'FORM & THOUGHT 홈' }).count()).toBe(0);
       expect(await page.getByRole('link', { name: '본문으로 건너뛰기' }).count()).toBe(0);
       const backdrop = await page.locator('.evidence-backdrop').boundingBox();

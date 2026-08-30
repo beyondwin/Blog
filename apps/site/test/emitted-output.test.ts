@@ -19,6 +19,7 @@ let memoryHtml = '';
 let thoughtsIndexHtml = '';
 let thoughtHtml = '';
 let searchHtml = '';
+let searchData = '';
 let memoryMapHtml = '';
 
 const ARTICLE_IDS = [
@@ -55,7 +56,7 @@ beforeAll(async () => {
   });
   [
     homeHtml, homeData, articlesIndexHtml, articleHtml, reviewsIndexHtml, reviewHtml,
-    memoryHtml, thoughtsIndexHtml, thoughtHtml, searchHtml, memoryMapHtml,
+    memoryHtml, thoughtsIndexHtml, thoughtHtml, searchHtml, searchData, memoryMapHtml,
   ] = await Promise.all([
     readFile(join(candidateRoot, 'build/client/index.html'), 'utf8'),
     readFile(join(candidateRoot, 'build/client/_.data'), 'utf8'),
@@ -76,6 +77,7 @@ beforeAll(async () => {
       'build/client/thoughts/why-i-read-in-the-ai-era/index.html',
     ), 'utf8'),
     readFile(join(candidateRoot, 'build/client/search/index.html'), 'utf8'),
+    readFile(join(candidateRoot, 'build/client/search/_.data'), 'utf8'),
     readFile(join(candidateRoot, 'build/client/memory/map/index.html'), 'utf8'),
   ]);
 }, 120_000);
@@ -196,6 +198,15 @@ describe('React Router emitted critical output', () => {
       'f29c064b1c0f77e5906a9c02e5b8e0a573ae6c44373b99fb75532c90fd481f20',
     );
     expect(searchHtml).toContain('src="/images/form-and-thought-agent-avatar-v1.png"');
+  });
+
+  it('keeps both emitted search payloads free of private material and rejected agent labels', () => {
+    for (const output of [searchHtml, searchData]) {
+      expect(output).not.toMatch(
+        /bodyHtml|privatePath|sourcePath|memory\/|\/Users\/|src\/content\//u,
+      );
+      expect(output).not.toMatch(/AI 대리인|AI DELEGATE|MIND 01/u);
+    }
   });
 
   it('keeps the no-JS article document as a complete ledger with six canonical filter anchors', () => {

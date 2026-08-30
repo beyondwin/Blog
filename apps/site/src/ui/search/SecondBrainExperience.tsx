@@ -17,7 +17,7 @@ import {
   resolveAskSubmission,
   type PublicAnswerFixture,
 } from './secondBrain';
-import { boundedSearchQuery, type SearchInventoryItem } from './searchModel';
+import { boundedSearchQuery, searchMatches, type SearchInventoryItem } from './searchModel';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -29,6 +29,10 @@ function ArrowIcon() {
 function AgentStage({ fixture }: { fixture: PublicAnswerFixture }) {
   const [imageFailed, setImageFailed] = useState(false);
   const stageRef = useRef<HTMLElement>(null);
+  const portraitRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    if (portraitRef.current?.complete && portraitRef.current.naturalWidth === 0) setImageFailed(true);
+  }, []);
   const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     if (typeof window !== 'undefined' && window.matchMedia(REDUCED_MOTION_QUERY).matches) return;
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -56,6 +60,7 @@ function AgentStage({ fixture }: { fixture: PublicAnswerFixture }) {
       <div className="agent-stage__rule" aria-hidden="true" />
       <div className="agent-stage__portrait-frame">
         <img
+          ref={portraitRef}
           className="agent-stage__portrait"
           src="/images/form-and-thought-agent-avatar-v1.png"
           alt="종이와 기록으로 구성된 인물"
@@ -200,7 +205,7 @@ function EvidencePanel({ closeRef, fixture, onClose, onSelect, panelRef, selecte
               </button>
             ))}
           </div>
-          <article className="evidence-panel__preview" aria-live="polite">
+          <article className="evidence-panel__preview">
             <p className="evidence-panel__meta">{selected.collectionLabel} · {selected.dateLabel} · {selected.locatorLabel}</p>
             <blockquote>“{selected.excerpt}”</blockquote>
             <p className="evidence-panel__context">{selected.context}</p>
@@ -215,11 +220,16 @@ function EvidencePanel({ closeRef, fixture, onClose, onSelect, panelRef, selecte
   );
 }
 
-function progressStatus(view: string): string {
+function progressStatus(view: string, query: string, resultCount: number): string {
   if (view === 'retrieving') return '관련 기록을 찾고 있습니다.';
   if (view === 'connecting') return '생각 사이를 잇고 있습니다.';
   if (view === 'composing') return '답을 쓰고 있습니다.';
   if (view === 'answered' || view === 'evidence-open') return '공개된 기록을 바탕으로 답했습니다.';
+  if (view === 'search-results') {
+    return resultCount > 0
+      ? `“${query}”에 이어지는 공개 기록 ${resultCount}건을 찾았습니다.`
+      : `“${query}”에 이어지는 공개 기록을 찾지 못했습니다.`;
+  }
   return '질문을 기다리고 있습니다.';
 }
 
@@ -363,6 +373,7 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
   const progressView = state.view === 'retrieving' || state.view === 'connecting' || state.view === 'composing'
     ? state.view : null;
   const answerVisible = state.view === 'answered' || state.view === 'evidence-open';
+  const resultCount = state.view === 'search-results' ? searchMatches(inventory, state.query).length : 0;
 
   return (
     <section className="second-brain-search" data-view={state.view} aria-label="공개 기록에 묻기">
@@ -397,7 +408,9 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
                 </div>
               )}
             </div>
-            <p className="visually-hidden" role="status" aria-live="polite">{progressStatus(state.view)}</p>
+            <p className="visually-hidden" role="status" aria-live="polite">
+              {progressStatus(state.view, state.query, resultCount)}
+            </p>
           </section>
         </div>
         {state.view === 'search-results' ? (
