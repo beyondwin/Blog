@@ -7,6 +7,7 @@ import {
   loadSourceRecords,
   resolveSourceMedia,
 } from '../packages/content/src/source-records.ts';
+import { recordsForCollection } from '../apps/site/app/release.server.ts';
 
 const root = process.cwd();
 const inventoryPath = process.env.REVIEW_COVER_RIGHTS_INVENTORY_PATH
@@ -111,12 +112,67 @@ const expected = {
   },
 };
 
-const expectedIds = Object.keys(expected).sort();
+const expectedIds = [
+  'changing-their-minds',
+  'lord-of-the-flies',
+  'black-swan',
+  'nevertheless',
+  'goethe-said-everything',
+  'devotion-of-suspect-x',
+  'poor-charlies-almanack',
+  'art-thief',
+  'siddhartha',
+  'habitus',
+  'how-adam-smith-can-change-your-life',
+  'lolita',
+  'future-arrived-first',
+  'how-we-crossed-winter',
+  'convenience-store-woman',
+  'miracles-of-namiya-general-store',
+  'doing-good-better',
+  'factfulness',
+];
 const controlledStates = new Set(['researching', 'ready-for-independent-review', 'approved', 'hold']);
 const directHoldBases = new Set(['absent-candidate', 'ambiguous-candidate', 'absent-grant', 'ambiguous-grant']);
+const validDirectHoldFindings = {
+  'absent-candidate': {
+    subject: 'candidate',
+    outcome: 'absent',
+    locator: { kind: 'source', value: 'https://publisher.example/catalog/exact-edition' },
+    finding: 'The checked authoritative catalog has no exact-edition cover candidate.',
+  },
+  'ambiguous-candidate': {
+    subject: 'candidate',
+    outcome: 'ambiguous',
+    locator: { kind: 'source', value: 'https://publisher.example/catalog/candidate' },
+    finding: 'The checked candidate cannot be tied to the exact bibliographic identity.',
+  },
+  'absent-grant': {
+    subject: 'redistribution-grant',
+    outcome: 'absent',
+    locator: { kind: 'source', value: 'https://publisher.example/terms' },
+    finding: 'The checked authoritative terms contain no public-website redistribution grant.',
+  },
+  'ambiguous-grant': {
+    subject: 'redistribution-grant',
+    outcome: 'ambiguous',
+    locator: { kind: 'rights-evidence', value: 'docs/notes/project/assets/review-cover-rights/example/rights-evidence.txt' },
+    finding: 'The checked evidence does not bind its grant to the exact candidate bytes.',
+  },
+};
 
 function clone(value) {
   return structuredClone(value);
+}
+
+function transitionToDirectHold(candidate, holdBasis) {
+  const record = candidate.records[0];
+  record.state = 'hold';
+  record.stateHistory.push({ state: 'hold', recordedAt: '2026-08-30' });
+  record.holdBasis = holdBasis;
+  record.holdReason = `Research established ${holdBasis}.`;
+  record.recordedResearchFinding = clone(validDirectHoldFindings[holdBasis]);
+  return record;
 }
 
 function sourceIdentity(record) {
@@ -128,6 +184,53 @@ function sourceIdentity(record) {
     editionLabel: record.editionLabel,
     ...(record.publicationYear === undefined ? {} : { publicationYear: record.publicationYear }),
   };
+}
+
+function expectedSeedEvidence(recordId, literal) {
+  const sourceFinding = recordId === 'devotion-of-suspect-x'
+    ? 'Parsed published bibliographic identity recorded without an inferred publication year; the source record is cover hold.'
+    : recordId === 'factfulness'
+      ? 'Parsed published bibliographic identity and exact authored author order recorded without an inferred publication year.'
+      : 'Parsed published bibliographic identity recorded without an inferred publication year.';
+  if (!literal.media) {
+    return {
+      checkedSources: [
+        {
+          kind: 'repository-source-record',
+          locator: `src/content/reviews/${recordId}.mdx`,
+          finding: sourceFinding,
+        },
+        {
+          kind: 'repository-media-bundle-check',
+          locator: `src/assets/content/reviews/${recordId}/`,
+          finding: 'No source media bundle exists, so no URL, checksum, dimensions, or candidate bytes are invented.',
+        },
+      ],
+      decisionReason: 'No repository candidate exists; live research must find exact candidate bytes and an applicable grant or move this record to hold.',
+    };
+  }
+  return {
+    checkedSources: [
+      {
+        kind: 'repository-source-record',
+        locator: `src/content/reviews/${recordId}.mdx`,
+        finding: sourceFinding,
+      },
+      {
+        kind: 'repository-identification-media',
+        locator: `src/assets/content/reviews/${recordId}/media.yml`,
+        finding: 'Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.',
+      },
+    ],
+    decisionReason: 'Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.',
+  };
+}
+
+function receiptIdsForManifest(recordId, manifest) {
+  if (!Array.isArray(manifest.items)) throw new Error(`${recordId}: media manifest items must be an array`);
+  return manifest.items
+    .filter((item) => item && typeof item === 'object' && item.redistributionApproval !== undefined)
+    .map((item) => `${recordId}:${item.id}`);
 }
 
 function assertValidLedger(candidate, snapshot) {
@@ -172,40 +275,65 @@ function assertValidLedger(candidate, snapshot) {
       if (from === 'researching' && to === 'hold') {
         expect(directHoldBases.has(record.holdBasis), `${record.recordId}: direct hold basis`).toBe(true);
         expect(record.holdReason?.trim(), `${record.recordId}: direct hold reason`).toBeTruthy();
+        const finding = record.recordedResearchFinding;
+        const expectedFinding = validDirectHoldFindings[record.holdBasis];
+        expect(finding && typeof finding === 'object', `${record.recordId}: structured direct hold finding`).toBe(true);
+        expect(Object.keys(finding).sort(), `${record.recordId}: exact direct hold finding fields`).toEqual([
+          'finding',
+          'locator',
+          'outcome',
+          'subject',
+        ]);
+        expect(finding.subject, `${record.recordId}: direct hold subject`).toBe(expectedFinding.subject);
+        expect(finding.outcome, `${record.recordId}: direct hold outcome`).toBe(expectedFinding.outcome);
+        expect(finding.locator && typeof finding.locator === 'object', `${record.recordId}: structured direct hold locator`).toBe(true);
+        expect(Object.keys(finding.locator).sort(), `${record.recordId}: exact direct hold locator fields`).toEqual(['kind', 'value']);
+        expect(['source', 'rights-evidence']).toContain(finding.locator.kind);
+        if (finding.subject === 'candidate') expect(finding.locator.kind).toBe('source');
+        expect(finding.locator.value?.trim(), `${record.recordId}: direct hold locator value`).toBeTruthy();
+        expect(finding.finding?.trim(), `${record.recordId}: direct hold finding`).toBeTruthy();
       }
     }
 
-    expect(Array.isArray(record.checkedSources), `${record.recordId}: checked sources`).toBe(true);
-    expect(record.checkedSources.length, `${record.recordId}: checked source count`).toBeGreaterThan(0);
-    for (const source of record.checkedSources) {
-      expect(source.kind?.trim(), `${record.recordId}: source kind`).toBeTruthy();
-      expect(source.locator?.trim(), `${record.recordId}: source locator`).toBeTruthy();
-      expect(source.finding?.trim(), `${record.recordId}: source finding`).toBeTruthy();
-    }
-    expect(record.decisionReason?.trim(), `${record.recordId}: decision reason`).toBeTruthy();
+    const seedEvidence = expectedSeedEvidence(record.recordId, literal);
+    expect(record.checkedSources, `${record.recordId}: frozen repository evidence`).toEqual(seedEvidence.checkedSources);
+    expect(record.decisionReason, `${record.recordId}: frozen seed decision semantics`).toBe(seedEvidence.decisionReason);
 
     expect(snapshot.approvalArtifacts.decisions[record.recordId], `${record.recordId}: no canonical decision`).toBe(false);
     expect(snapshot.approvalArtifacts.registryIds).not.toContain(record.recordId);
-    expect(snapshot.approvalArtifacts.receiptIds).not.toContain(record.recordId);
+    expect(
+      snapshot.approvalArtifacts.receiptIds.filter((receiptId) => receiptId.startsWith(`${record.recordId}:`)),
+      `${record.recordId}: no receipt on any media item`,
+    ).toEqual([]);
   }
 }
 
 async function repositorySnapshot() {
   const records = (await loadSourceRecords(root))
     .filter((record) => record.collection === 'reviews' && record.status === 'published' && record.draft !== true);
+  const presentationIds = recordsForCollection({
+    releasePath: root,
+    manifest: {
+      records: Object.fromEntries(records.map((record) => [record.id, record])),
+    },
+  }, 'reviews').map((record) => record.id);
   const identities = {};
   const media = {};
   const receiptIds = [];
 
   for (const record of records) {
     identities[record.id] = sourceIdentity(record);
+    const manifestPath = `src/assets/content/reviews/${record.id}/media.yml`;
+    const manifest = existsSync(join(root, manifestPath))
+      ? parseYaml(await readFile(join(root, manifestPath), 'utf8'))
+      : null;
+    if (manifest) receiptIds.push(...receiptIdsForManifest(record.id, manifest));
     if (!record.coverMedia) {
       media[record.id] = null;
       continue;
     }
     const resolved = await resolveSourceMedia(root, 'reviews', record.id, record.coverMedia);
-    const manifestPath = `src/assets/content/reviews/${record.id}/media.yml`;
-    const manifest = parseYaml(await readFile(join(root, manifestPath), 'utf8'));
+    if (!manifest) throw new Error(`${manifestPath}: referenced media manifest is missing`);
     const item = manifest.items.find((entry) => entry.id === record.coverMedia);
     media[record.id] = {
       sourceUrl: item.sourceUrl,
@@ -213,12 +341,11 @@ async function repositorySnapshot() {
       width: resolved.width,
       height: resolved.height,
     };
-    if (item.redistributionApproval) receiptIds.push(record.id);
   }
 
   const registry = JSON.parse(await readFile(join(root, registryPath), 'utf8'));
   return {
-    sourceIds: records.map((record) => record.id).sort(),
+    sourceIds: presentationIds,
     identities,
     media,
     approvalArtifacts: {
@@ -290,11 +417,69 @@ describe('review cover rights research inventory', () => {
   it.each([
     ['canonical decision', (value) => { value.decisions['art-thief'] = true; }],
     ['approval registry tuple', (value) => { value.registryIds.push('art-thief'); }],
-    ['media receipt', (value) => { value.receiptIds.push('art-thief'); }],
+    ['media receipt', (value) => { value.receiptIds.push('art-thief:cover'); }],
   ])('rejects a premature %s', (_label, mutate) => {
     const changedSnapshot = clone(snapshot);
     mutate(changedSnapshot.approvalArtifacts);
     expect(() => assertValidLedger(ledger, changedSnapshot)).toThrow();
+  });
+
+  it.each([
+    ['wrong-record source locator', (record) => { record.checkedSources[0].locator = 'src/content/reviews/black-swan.mdx'; }],
+    ['wrong source kind', (record) => { record.checkedSources[0].kind = 'live-web-research'; }],
+    ['grant-claim drift', (record) => { record.checkedSources[1].finding = 'The product page grants exact public redistribution rights.'; }],
+    ['decision-reason drift', (record) => { record.decisionReason = 'The existing product URL authorizes public redistribution.'; }],
+  ])('rejects frozen seed evidence with %s', (_label, mutate) => {
+    const changed = clone(ledger);
+    mutate(changed.records.find((record) => record.recordId === 'art-thief'));
+    expect(() => assertValidLedger(changed, snapshot)).toThrow();
+  });
+
+  it('finds a premature receipt on an unreferenced media fixture item', () => {
+    expect(receiptIdsForManifest('art-thief', {
+      items: [
+        { id: 'cover' },
+        { id: 'unreferenced-cover', redistributionApproval: { decisionId: 'premature' } },
+      ],
+    })).toEqual(['art-thief:unreferenced-cover']);
+  });
+
+  it('rejects a premature receipt reported on an unreferenced media item', () => {
+    const changedSnapshot = clone(snapshot);
+    changedSnapshot.approvalArtifacts.receiptIds.push('art-thief:unreferenced-cover');
+    expect(() => assertValidLedger(ledger, changedSnapshot)).toThrow();
+  });
+
+  it.each(Object.keys(validDirectHoldFindings))('accepts a structured %s direct-hold finding', (holdBasis) => {
+    const changed = clone(ledger);
+    transitionToDirectHold(changed, holdBasis);
+    expect(() => assertValidLedger(changed, snapshot)).not.toThrow();
+  });
+
+  it.each(Object.keys(validDirectHoldFindings))('rejects %s without its recorded research finding', (holdBasis) => {
+    const changed = clone(ledger);
+    const record = transitionToDirectHold(changed, holdBasis);
+    delete record.recordedResearchFinding;
+    expect(() => assertValidLedger(changed, snapshot)).toThrow();
+  });
+
+  it.each(Object.keys(validDirectHoldFindings))('rejects %s when the recorded outcome contradicts its basis', (holdBasis) => {
+    const changed = clone(ledger);
+    const record = transitionToDirectHold(changed, holdBasis);
+    record.recordedResearchFinding.outcome = record.recordedResearchFinding.outcome === 'absent' ? 'ambiguous' : 'absent';
+    expect(() => assertValidLedger(changed, snapshot)).toThrow();
+  });
+
+  it.each([
+    ['unsupported locator kind', (finding) => { finding.locator.kind = 'product-page'; }],
+    ['empty locator value', (finding) => { finding.locator.value = ''; }],
+    ['empty finding', (finding) => { finding.finding = ''; }],
+    ['unknown field', (finding) => { finding.note = 'unchecked'; }],
+  ])('rejects direct-hold evidence with an %s', (_label, mutate) => {
+    const changed = clone(ledger);
+    const record = transitionToDirectHold(changed, 'absent-grant');
+    mutate(record.recordedResearchFinding);
+    expect(() => assertValidLedger(changed, snapshot)).toThrow();
   });
 
   it('rejects a published review corpus outside the exact 18 IDs', () => {

@@ -15,19 +15,19 @@ workflow:
       to: hold
       condition: candidate or redistribution grant is absent or ambiguous
 records:
-  - recordId: art-thief
+  - recordId: changing-their-minds
     bibliographicIdentity:
-      title: 예술 도둑
+      title: 그들의 생각을 바꾸는 방법
       authors:
-        - 마이클 핀클
-      publisher: 생각의힘
-      isbn13: "9791193166659"
-      editionLabel: 생각의힘 2024 초판, 염지선 옮김
+        - 데이비드 맥레이니
+      publisher: 웅진지식하우스
+      isbn13: "9788901269405"
+      editionLabel: 웅진지식하우스 2023 종이책, 이수경 옮김
     currentMedia:
       state: existing
-      sourceUrl: https://image.yes24.com/goods/133133202/XL
-      checksum: sha256:2d3a8e4d6cb4828a56dfae42edbb22e6b8c85141df46289ea5fabe978d491671
-      width: 771
+      sourceUrl: https://image.yes24.com/goods/117664857/XL
+      checksum: sha256:394821abfdccd4283ae779e148c0c521a5baa4c48e9b7518e5f29ebafeb3e4d4
+      width: 802
       height: 1200
     state: researching
     stateHistory:
@@ -35,10 +35,37 @@ records:
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
-        locator: src/content/reviews/art-thief.mdx
+        locator: src/content/reviews/changing-their-minds.mdx
         finding: Parsed published bibliographic identity recorded without an inferred publication year.
       - kind: repository-identification-media
-        locator: src/assets/content/reviews/art-thief/media.yml
+        locator: src/assets/content/reviews/changing-their-minds/media.yml
+        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
+    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+
+  - recordId: lord-of-the-flies
+    bibliographicIdentity:
+      title: 파리대왕
+      authors:
+        - 윌리엄 골딩
+      publisher: 민음사
+      isbn13: "9788937460197"
+      editionLabel: 민음사 세계문학전집 19, 1999 반양장, 유종호 옮김
+    currentMedia:
+      state: existing
+      sourceUrl: https://minumsa.minumsa.com/wp-content/uploads/bookcover/019_%ED%8C%8C%EB%A6%AC%EB%8C%80%EC%99%95-500x842.jpg
+      checksum: sha256:d52e4c5aa9fac202335b4a3a2b324891bfa8ee7aecc79f550df6d205af187308
+      width: 500
+      height: 842
+    state: researching
+    stateHistory:
+      - state: researching
+        recordedAt: "2026-08-30"
+    checkedSources:
+      - kind: repository-source-record
+        locator: src/content/reviews/lord-of-the-flies.mdx
+        finding: Parsed published bibliographic identity recorded without an inferred publication year.
+      - kind: repository-identification-media
+        locator: src/assets/content/reviews/lord-of-the-flies/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
@@ -69,19 +96,19 @@ records:
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
-  - recordId: changing-their-minds
+  - recordId: nevertheless
     bibliographicIdentity:
-      title: 그들의 생각을 바꾸는 방법
+      title: 그럼에도 불구하고
       authors:
-        - 데이비드 맥레이니
-      publisher: 웅진지식하우스
-      isbn13: "9788901269405"
-      editionLabel: 웅진지식하우스 2023 종이책, 이수경 옮김
+        - 공지영
+      publisher: 위즈덤하우스
+      isbn13: "9791191119305"
+      editionLabel: 위즈덤하우스 2020 일반판
     currentMedia:
       state: existing
-      sourceUrl: https://image.yes24.com/goods/117664857/XL
-      checksum: sha256:394821abfdccd4283ae779e148c0c521a5baa4c48e9b7518e5f29ebafeb3e4d4
-      width: 802
+      sourceUrl: https://image.yes24.com/goods/93760424/XL
+      checksum: sha256:85212b4b57d272697a81d63646f08217acd331b8177a4fea9fd1a45e60b91259
+      width: 808
       height: 1200
     state: researching
     stateHistory:
@@ -89,146 +116,10 @@ records:
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
-        locator: src/content/reviews/changing-their-minds.mdx
+        locator: src/content/reviews/nevertheless.mdx
         finding: Parsed published bibliographic identity recorded without an inferred publication year.
       - kind: repository-identification-media
-        locator: src/assets/content/reviews/changing-their-minds/media.yml
-        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
-    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
-
-  - recordId: convenience-store-woman
-    bibliographicIdentity:
-      title: 편의점 인간
-      authors:
-        - 무라타 사야카
-      publisher: 살림출판사
-      isbn13: "9788952235268"
-      editionLabel: 살림출판사 2016 양장, 김석희 옮김
-    currentMedia:
-      state: existing
-      sourceUrl: https://image.yes24.com/goods/33129949/XL
-      checksum: sha256:a4264d7125c3e846cf3da624261846af82d3270fe04a8b9e0752b9389a987cb8
-      width: 826
-      height: 1200
-    state: researching
-    stateHistory:
-      - state: researching
-        recordedAt: "2026-08-30"
-    checkedSources:
-      - kind: repository-source-record
-        locator: src/content/reviews/convenience-store-woman.mdx
-        finding: Parsed published bibliographic identity recorded without an inferred publication year.
-      - kind: repository-identification-media
-        locator: src/assets/content/reviews/convenience-store-woman/media.yml
-        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
-    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
-
-  - recordId: devotion-of-suspect-x
-    bibliographicIdentity:
-      title: 용의자 X의 헌신
-      authors:
-        - 히가시노 게이고
-      publisher: 현대문학
-      isbn13: "9788972753698"
-      editionLabel: 현대문학 2006 양장, 양억관 옮김
-    currentMedia:
-      state: absent
-      reason: no source media bundle exists
-    state: researching
-    stateHistory:
-      - state: researching
-        recordedAt: "2026-08-30"
-    checkedSources:
-      - kind: repository-source-record
-        locator: src/content/reviews/devotion-of-suspect-x.mdx
-        finding: Parsed published bibliographic identity recorded without an inferred publication year; the source record is cover hold.
-      - kind: repository-media-bundle-check
-        locator: src/assets/content/reviews/devotion-of-suspect-x/
-        finding: No source media bundle exists, so no URL, checksum, dimensions, or candidate bytes are invented.
-    queuedChecks:
-      - exact-candidate-and-redistribution-grant
-    decisionReason: No repository candidate exists; live research must find exact candidate bytes and an applicable grant or move this record to hold.
-
-  - recordId: doing-good-better
-    bibliographicIdentity:
-      title: 냉정한 이타주의자
-      authors:
-        - 윌리엄 맥어스킬
-      publisher: 부키
-      isbn13: "9788960515833"
-      editionLabel: 부키 2017 한국어 초판, 전미영 옮김
-    currentMedia:
-      state: existing
-      sourceUrl: https://www.bookie.co.kr/bookimg/97889605158335.jpg
-      checksum: sha256:83c15615cc72eff0d32a02a677d8c6215eb6beb9bacc55cfdf074c2d0f386bf1
-      width: 1000
-      height: 1417
-    state: researching
-    stateHistory:
-      - state: researching
-        recordedAt: "2026-08-30"
-    checkedSources:
-      - kind: repository-source-record
-        locator: src/content/reviews/doing-good-better.mdx
-        finding: Parsed published bibliographic identity recorded without an inferred publication year.
-      - kind: repository-identification-media
-        locator: src/assets/content/reviews/doing-good-better/media.yml
-        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
-    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
-
-  - recordId: factfulness
-    bibliographicIdentity:
-      title: 팩트풀니스
-      authors:
-        - 한스 로슬링
-        - 올라 로슬링
-        - 안나 로슬링 뢴룬드
-      publisher: 김영사
-      isbn13: "9788934985068"
-      editionLabel: 김영사 2019판, 이창신 옮김
-    currentMedia:
-      state: existing
-      sourceUrl: https://image.yes24.com/goods/69724044/XL
-      checksum: sha256:b33eafae337acb129da7309fda02ead4bbb1f950f5ccbd789806af63f4827caf
-      width: 787
-      height: 1200
-    state: researching
-    stateHistory:
-      - state: researching
-        recordedAt: "2026-08-30"
-    checkedSources:
-      - kind: repository-source-record
-        locator: src/content/reviews/factfulness.mdx
-        finding: Parsed published bibliographic identity and exact authored author order recorded without an inferred publication year.
-      - kind: repository-identification-media
-        locator: src/assets/content/reviews/factfulness/media.yml
-        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
-    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
-
-  - recordId: future-arrived-first
-    bibliographicIdentity:
-      title: 먼저 온 미래
-      authors:
-        - 장강명
-      publisher: 동아시아
-      isbn13: "9788962626605"
-      editionLabel: 동아시아 2025 초판
-    currentMedia:
-      state: existing
-      sourceUrl: https://www.kobic.net/bookImage/book/coverImg/202507/9788962626605C001.jpg
-      checksum: sha256:ec4fc247f075c2afeb2c3777b4897ff2166f7e34685bd4940b298de75a12901b
-      width: 458
-      height: 703
-    state: researching
-    stateHistory:
-      - state: researching
-        recordedAt: "2026-08-30"
-    checkedSources:
-      - kind: repository-source-record
-        locator: src/content/reviews/future-arrived-first.mdx
-        finding: Parsed published bibliographic identity recorded without an inferred publication year.
-      - kind: repository-identification-media
-        locator: src/assets/content/reviews/future-arrived-first/media.yml
+        locator: src/assets/content/reviews/nevertheless/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
@@ -259,6 +150,112 @@ records:
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
+  - recordId: devotion-of-suspect-x
+    bibliographicIdentity:
+      title: 용의자 X의 헌신
+      authors:
+        - 히가시노 게이고
+      publisher: 현대문학
+      isbn13: "9788972753698"
+      editionLabel: 현대문학 2006 양장, 양억관 옮김
+    currentMedia:
+      state: absent
+      reason: no source media bundle exists
+    state: researching
+    stateHistory:
+      - state: researching
+        recordedAt: "2026-08-30"
+    checkedSources:
+      - kind: repository-source-record
+        locator: src/content/reviews/devotion-of-suspect-x.mdx
+        finding: Parsed published bibliographic identity recorded without an inferred publication year; the source record is cover hold.
+      - kind: repository-media-bundle-check
+        locator: src/assets/content/reviews/devotion-of-suspect-x/
+        finding: No source media bundle exists, so no URL, checksum, dimensions, or candidate bytes are invented.
+    queuedChecks:
+      - exact-candidate-and-redistribution-grant
+    decisionReason: No repository candidate exists; live research must find exact candidate bytes and an applicable grant or move this record to hold.
+
+  - recordId: poor-charlies-almanack
+    bibliographicIdentity:
+      title: 가난한 찰리의 연감
+      authors:
+        - 찰리 멍거
+      publisher: 김영사
+      isbn13: "9788934911388"
+      editionLabel: 김영사 2024 공식 번역 양장, 피터 코프먼 엮음, 김태훈 옮김
+    currentMedia:
+      state: existing
+      sourceUrl: https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg
+      checksum: sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a
+      width: 600
+      height: 866
+    state: researching
+    stateHistory:
+      - state: researching
+        recordedAt: "2026-08-30"
+    checkedSources:
+      - kind: repository-source-record
+        locator: src/content/reviews/poor-charlies-almanack.mdx
+        finding: Parsed published bibliographic identity recorded without an inferred publication year.
+      - kind: repository-identification-media
+        locator: src/assets/content/reviews/poor-charlies-almanack/media.yml
+        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
+    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+
+  - recordId: art-thief
+    bibliographicIdentity:
+      title: 예술 도둑
+      authors:
+        - 마이클 핀클
+      publisher: 생각의힘
+      isbn13: "9791193166659"
+      editionLabel: 생각의힘 2024 초판, 염지선 옮김
+    currentMedia:
+      state: existing
+      sourceUrl: https://image.yes24.com/goods/133133202/XL
+      checksum: sha256:2d3a8e4d6cb4828a56dfae42edbb22e6b8c85141df46289ea5fabe978d491671
+      width: 771
+      height: 1200
+    state: researching
+    stateHistory:
+      - state: researching
+        recordedAt: "2026-08-30"
+    checkedSources:
+      - kind: repository-source-record
+        locator: src/content/reviews/art-thief.mdx
+        finding: Parsed published bibliographic identity recorded without an inferred publication year.
+      - kind: repository-identification-media
+        locator: src/assets/content/reviews/art-thief/media.yml
+        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
+    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+
+  - recordId: siddhartha
+    bibliographicIdentity:
+      title: 싯다르타
+      authors:
+        - 헤르만 헤세
+      publisher: 문학동네
+      isbn13: "9788954654418"
+      editionLabel: 문학동네 세계문학전집 173, 2018 원판, 권혁준 옮김
+    currentMedia:
+      state: existing
+      sourceUrl: https://image.yes24.com/goods/67723866/XL
+      checksum: sha256:4e957b1fb0ada2f2582c40cd54215fec63c9ecf2c0c222250be93eda067e8251
+      width: 801
+      height: 1200
+    state: researching
+    stateHistory:
+      - state: researching
+        recordedAt: "2026-08-30"
+    checkedSources:
+      - kind: repository-source-record
+        locator: src/content/reviews/siddhartha.mdx
+        finding: Parsed published bibliographic identity recorded without an inferred publication year.
+      - kind: repository-identification-media
+        locator: src/assets/content/reviews/siddhartha/media.yml
+        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
+    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
   - recordId: habitus
     bibliographicIdentity:
       title: 아비투스
@@ -313,33 +310,6 @@ records:
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
-  - recordId: how-we-crossed-winter
-    bibliographicIdentity:
-      title: 우리가 겨울을 지나온 방식
-      authors:
-        - 문미순
-      publisher: 나무옆의자
-      isbn13: "9791161571492"
-      editionLabel: 나무옆의자 2023 일반판
-    currentMedia:
-      state: existing
-      sourceUrl: https://image.yes24.com/goods/118785110/XL
-      checksum: sha256:12461752be2a87ba403d03e214102ba53492d9cd28e559bc21352e13bba463e6
-      width: 809
-      height: 1200
-    state: researching
-    stateHistory:
-      - state: researching
-        recordedAt: "2026-08-30"
-    checkedSources:
-      - kind: repository-source-record
-        locator: src/content/reviews/how-we-crossed-winter.mdx
-        finding: Parsed published bibliographic identity recorded without an inferred publication year.
-      - kind: repository-identification-media
-        locator: src/assets/content/reviews/how-we-crossed-winter/media.yml
-        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
-    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
-
   - recordId: lolita
     bibliographicIdentity:
       title: 롤리타
@@ -367,30 +337,84 @@ records:
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
-  - recordId: lord-of-the-flies
+  - recordId: future-arrived-first
     bibliographicIdentity:
-      title: 파리대왕
+      title: 먼저 온 미래
       authors:
-        - 윌리엄 골딩
-      publisher: 민음사
-      isbn13: "9788937460197"
-      editionLabel: 민음사 세계문학전집 19, 1999 반양장, 유종호 옮김
+        - 장강명
+      publisher: 동아시아
+      isbn13: "9788962626605"
+      editionLabel: 동아시아 2025 초판
     currentMedia:
       state: existing
-      sourceUrl: https://minumsa.minumsa.com/wp-content/uploads/bookcover/019_%ED%8C%8C%EB%A6%AC%EB%8C%80%EC%99%95-500x842.jpg
-      checksum: sha256:d52e4c5aa9fac202335b4a3a2b324891bfa8ee7aecc79f550df6d205af187308
-      width: 500
-      height: 842
+      sourceUrl: https://www.kobic.net/bookImage/book/coverImg/202507/9788962626605C001.jpg
+      checksum: sha256:ec4fc247f075c2afeb2c3777b4897ff2166f7e34685bd4940b298de75a12901b
+      width: 458
+      height: 703
     state: researching
     stateHistory:
       - state: researching
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
-        locator: src/content/reviews/lord-of-the-flies.mdx
+        locator: src/content/reviews/future-arrived-first.mdx
         finding: Parsed published bibliographic identity recorded without an inferred publication year.
       - kind: repository-identification-media
-        locator: src/assets/content/reviews/lord-of-the-flies/media.yml
+        locator: src/assets/content/reviews/future-arrived-first/media.yml
+        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
+    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+
+  - recordId: how-we-crossed-winter
+    bibliographicIdentity:
+      title: 우리가 겨울을 지나온 방식
+      authors:
+        - 문미순
+      publisher: 나무옆의자
+      isbn13: "9791161571492"
+      editionLabel: 나무옆의자 2023 일반판
+    currentMedia:
+      state: existing
+      sourceUrl: https://image.yes24.com/goods/118785110/XL
+      checksum: sha256:12461752be2a87ba403d03e214102ba53492d9cd28e559bc21352e13bba463e6
+      width: 809
+      height: 1200
+    state: researching
+    stateHistory:
+      - state: researching
+        recordedAt: "2026-08-30"
+    checkedSources:
+      - kind: repository-source-record
+        locator: src/content/reviews/how-we-crossed-winter.mdx
+        finding: Parsed published bibliographic identity recorded without an inferred publication year.
+      - kind: repository-identification-media
+        locator: src/assets/content/reviews/how-we-crossed-winter/media.yml
+        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
+    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+
+  - recordId: convenience-store-woman
+    bibliographicIdentity:
+      title: 편의점 인간
+      authors:
+        - 무라타 사야카
+      publisher: 살림출판사
+      isbn13: "9788952235268"
+      editionLabel: 살림출판사 2016 양장, 김석희 옮김
+    currentMedia:
+      state: existing
+      sourceUrl: https://image.yes24.com/goods/33129949/XL
+      checksum: sha256:a4264d7125c3e846cf3da624261846af82d3270fe04a8b9e0752b9389a987cb8
+      width: 826
+      height: 1200
+    state: researching
+    stateHistory:
+      - state: researching
+        recordedAt: "2026-08-30"
+    checkedSources:
+      - kind: repository-source-record
+        locator: src/content/reviews/convenience-store-woman.mdx
+        finding: Parsed published bibliographic identity recorded without an inferred publication year.
+      - kind: repository-identification-media
+        locator: src/assets/content/reviews/convenience-store-woman/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
@@ -421,73 +445,48 @@ records:
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
-  - recordId: nevertheless
+  - recordId: doing-good-better
     bibliographicIdentity:
-      title: 그럼에도 불구하고
+      title: 냉정한 이타주의자
       authors:
-        - 공지영
-      publisher: 위즈덤하우스
-      isbn13: "9791191119305"
-      editionLabel: 위즈덤하우스 2020 일반판
+        - 윌리엄 맥어스킬
+      publisher: 부키
+      isbn13: "9788960515833"
+      editionLabel: 부키 2017 한국어 초판, 전미영 옮김
     currentMedia:
       state: existing
-      sourceUrl: https://image.yes24.com/goods/93760424/XL
-      checksum: sha256:85212b4b57d272697a81d63646f08217acd331b8177a4fea9fd1a45e60b91259
-      width: 808
-      height: 1200
+      sourceUrl: https://www.bookie.co.kr/bookimg/97889605158335.jpg
+      checksum: sha256:83c15615cc72eff0d32a02a677d8c6215eb6beb9bacc55cfdf074c2d0f386bf1
+      width: 1000
+      height: 1417
     state: researching
     stateHistory:
       - state: researching
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
-        locator: src/content/reviews/nevertheless.mdx
+        locator: src/content/reviews/doing-good-better.mdx
         finding: Parsed published bibliographic identity recorded without an inferred publication year.
       - kind: repository-identification-media
-        locator: src/assets/content/reviews/nevertheless/media.yml
+        locator: src/assets/content/reviews/doing-good-better/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
 
-  - recordId: poor-charlies-almanack
+  - recordId: factfulness
     bibliographicIdentity:
-      title: 가난한 찰리의 연감
+      title: 팩트풀니스
       authors:
-        - 찰리 멍거
+        - 한스 로슬링
+        - 올라 로슬링
+        - 안나 로슬링 뢴룬드
       publisher: 김영사
-      isbn13: "9788934911388"
-      editionLabel: 김영사 2024 공식 번역 양장, 피터 코프먼 엮음, 김태훈 옮김
+      isbn13: "9788934985068"
+      editionLabel: 김영사 2019판, 이창신 옮김
     currentMedia:
       state: existing
-      sourceUrl: https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg
-      checksum: sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a
-      width: 600
-      height: 866
-    state: researching
-    stateHistory:
-      - state: researching
-        recordedAt: "2026-08-30"
-    checkedSources:
-      - kind: repository-source-record
-        locator: src/content/reviews/poor-charlies-almanack.mdx
-        finding: Parsed published bibliographic identity recorded without an inferred publication year.
-      - kind: repository-identification-media
-        locator: src/assets/content/reviews/poor-charlies-almanack/media.yml
-        finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
-    decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
-
-  - recordId: siddhartha
-    bibliographicIdentity:
-      title: 싯다르타
-      authors:
-        - 헤르만 헤세
-      publisher: 문학동네
-      isbn13: "9788954654418"
-      editionLabel: 문학동네 세계문학전집 173, 2018 원판, 권혁준 옮김
-    currentMedia:
-      state: existing
-      sourceUrl: https://image.yes24.com/goods/67723866/XL
-      checksum: sha256:4e957b1fb0ada2f2582c40cd54215fec63c9ecf2c0c222250be93eda067e8251
-      width: 801
+      sourceUrl: https://image.yes24.com/goods/69724044/XL
+      checksum: sha256:b33eafae337acb129da7309fda02ead4bbb1f950f5ccbd789806af63f4827caf
+      width: 787
       height: 1200
     state: researching
     stateHistory:
@@ -495,9 +494,9 @@ records:
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
-        locator: src/content/reviews/siddhartha.mdx
-        finding: Parsed published bibliographic identity recorded without an inferred publication year.
+        locator: src/content/reviews/factfulness.mdx
+        finding: Parsed published bibliographic identity and exact authored author order recorded without an inferred publication year.
       - kind: repository-identification-media
-        locator: src/assets/content/reviews/siddhartha/media.yml
+        locator: src/assets/content/reviews/factfulness/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
