@@ -16,6 +16,8 @@ const root = process.cwd();
 const inventoryPath = process.env.REVIEW_COVER_RIGHTS_INVENTORY_PATH
   ?? 'docs/notes/project/assets/review-cover-rights/inventory.yml';
 const registryPath = 'packages/content/review-cover-redistribution-approvals.json';
+const quarantineRequired = process.env.REVIEW_COVER_QUARANTINE_REQUIRED === '1';
+const rightsEvidenceExtensions = ['html', 'pdf', 'txt', 'png', 'jpg'];
 
 const expectedTransitions = [
   {
@@ -189,9 +191,9 @@ const expectedTask3Research = {
   'lord-of-the-flies': task3Literal('lord-of-the-flies', { identityUrl: 'https://minumsa.minumsa.com/book/1689/', candidateUrl: 'https://minumsa.minumsa.com/wp-content/uploads/bookcover/019_%ED%8C%8C%EB%A6%AC%EB%8C%80%EC%99%95-500x842.jpg', checksum: 'sha256:d52e4c5aa9fac202335b4a3a2b324891bfa8ee7aecc79f550df6d205af187308', width: 500, height: 842, authority: '민음사', authorityRole: 'publisher-and-candidate-host', termsUrl: 'https://minumsa.com/terms' }),
   'black-swan': task3Literal('black-swan', { identityUrl: 'https://dl.nanet.go.kr/detail/MONO12024000082438', candidateUrl: 'https://bnk.kpipa.or.kr/files/onix/book/trd/2018/04/30/s_o_9788990247674.jpg', checksum: 'sha256:2b59925c7925d38b5460450f070be24a22ee34a69dfb7ded04d269998b7d0ebd', width: 458, height: 671, authority: '한국출판문화산업진흥원 출판유통통합전산망', authorityRole: 'official-candidate-host', termsUrl: 'https://bnk.kpipa.or.kr/home/v3/center/centerGuideUseTerms' }),
   nevertheless: task3Literal('nevertheless', { identityUrl: 'https://www.yes24.com/product/goods/93760424', candidateUrl: 'https://image.yes24.com/goods/93760424/XL', checksum: 'sha256:37212146a870cfb5f71366c924995340c08a2facf819f718e330f79d6e869bb2', width: 808, height: 1200, ...yes24Host }),
-  'goethe-said-everything': task3Literal('goethe-said-everything', { identityUrl: 'https://lib.ftc.go.kr/search/DetailView.ax?cid=159846', candidateUrl: 'https://image.yes24.com/goods/164510819/XL', checksum: 'sha256:dfa171a06be873225b70434dbfae6e829bf41aff7e2791eea2564248bb42416c', width: 850, height: 1200, ...yes24Host, holdBasis: 'ambiguous-candidate' }),
+  'goethe-said-everything': task3Literal('goethe-said-everything', { identityUrl: 'https://library.hira.or.kr/search/detail/CATTOT000000038861', candidateUrl: 'https://image.yes24.com/goods/164510819/XL', checksum: 'sha256:dfa171a06be873225b70434dbfae6e829bf41aff7e2791eea2564248bb42416c', width: 850, height: 1200, ...yes24Host, holdBasis: 'ambiguous-candidate' }),
   'devotion-of-suspect-x': task3Literal('devotion-of-suspect-x', { identityUrl: 'https://www.yes24.com/product/goods/2131596', candidateUrl: 'https://image.yes24.com/goods/2131596/XL', checksum: 'sha256:23188229a93c29714b09a74dce682277ed053cf81755dc652bfcd3679412f8be', width: 270, height: 400, ...yes24Host }),
-  'poor-charlies-almanack': task3Literal('poor-charlies-almanack', { identityUrl: 'https://www.yes24.com/Product/Goods/135966968', candidateUrl: 'https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg', checksum: 'sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a', width: 600, height: 866, authority: '김영사', authorityRole: 'publisher-rightsholder', termsUrl: 'https://m.gimmyoungbs.com/p_base.php?action=rule' }),
+  'poor-charlies-almanack': task3Literal('poor-charlies-almanack', { identityUrl: 'https://www.yes24.com/Product/Goods/135966968', candidateUrl: 'https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg', checksum: 'sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a', width: 600, height: 866, authority: '김영사', authorityRole: 'publisher-rightsholder', termsUrl: 'https://www.gimmyoung.com/book/guide/copyright' }),
   'art-thief': task3Literal('art-thief', { identityUrl: 'https://www.yes24.com/Product/Goods/133133202', candidateUrl: 'https://image.yes24.com/goods/133133202/XL', checksum: 'sha256:b147a958a1a6714f2c57e1ea64e8798918c2714834af3c4b82ea082d4e603412', width: 771, height: 1200, ...yes24Host }),
   siddhartha: task3Literal('siddhartha', { identityUrl: 'https://www.yes24.com/Product/Goods/67723866', candidateUrl: 'https://image.yes24.com/goods/67723866/XL', checksum: 'sha256:e10928fb67f013780eb4c3c3c4da0e0963837cdb51224d4b1e1ad5a291a6e988', width: 801, height: 1200, authority: '문학동네', authorityRole: 'publisher-rightsholder', termsUrl: 'https://munhak.com/customerCenter/guide/secondCopyright' }),
   habitus: task3Literal('habitus', { identityUrl: 'https://www.yes24.com/Product/Goods/118146744', candidateUrl: 'https://image.yes24.com/goods/118146744/XL', checksum: 'sha256:8f9e221a1ae7fcd14abd42a4b14ed2f895b3274bb7fb171f164bb777f41810fc', width: 857, height: 1200, ...yes24Host }),
@@ -313,7 +315,32 @@ async function decodedCandidateFacts(candidate) {
   };
 }
 
-async function assertTask3ResearchRecord(record, { verifyCandidateBytes = true } = {}) {
+function quarantineByteGate(records, {
+  required = quarantineRequired,
+  candidateExists = (candidatePath) => existsSync(join(root, candidatePath)),
+} = {}) {
+  const availableCount = records.filter((record) => candidateExists(record.task3Research.candidate.path)).length;
+  if (required && availableCount !== expectedIds.length) {
+    throw new Error(`strict quarantine byte gate requires ${expectedIds.length} candidates; found ${availableCount}`);
+  }
+  if (!required && availableCount !== 0 && availableCount !== expectedIds.length) {
+    throw new Error(`default quarantine byte gate requires zero or ${expectedIds.length} candidates; found ${availableCount}`);
+  }
+  return availableCount === expectedIds.length;
+}
+
+async function assertCandidateBytes(record) {
+  const expectedCandidate = expectedTask3Research[record.recordId].candidate;
+  const decoded = await decodedCandidateFacts(record.task3Research.candidate);
+  expect(decoded, `${record.recordId}: exact retrieved candidate bytes`).toEqual({
+    checksum: expectedCandidate.checksum,
+    width: expectedCandidate.width,
+    height: expectedCandidate.height,
+    format: expectedCandidate.extension === 'jpg' ? 'jpeg' : expectedCandidate.extension,
+  });
+}
+
+async function assertTask3ResearchRecord(record) {
   const expectedResearch = expectedTask3Research[record.recordId];
   expect(expectedResearch, `${record.recordId}: independently frozen Task 3 research literal`).toBeDefined();
   expect(record.task3Research, `${record.recordId}: exact Task 3 research tuple`).toEqual({
@@ -327,15 +354,6 @@ async function assertTask3ResearchRecord(record, { verifyCandidateBytes = true }
     state: 'hold',
     recordedAt: '2026-08-30',
   });
-  if (verifyCandidateBytes) {
-    const decoded = await decodedCandidateFacts(record.task3Research.candidate);
-    expect(decoded, `${record.recordId}: exact retrieved candidate bytes`).toEqual({
-      checksum: expectedResearch.candidate.checksum,
-      width: expectedResearch.candidate.width,
-      height: expectedResearch.candidate.height,
-      format: expectedResearch.candidate.extension === 'jpg' ? 'jpeg' : expectedResearch.candidate.extension,
-    });
-  }
 }
 
 function expectedSeedEvidence(recordId, literal) {
@@ -479,6 +497,10 @@ function assertValidLedger(candidate, snapshot) {
     expect(snapshot.approvalArtifacts.decisions[record.recordId], `${record.recordId}: no canonical decision`).toBe(false);
     expect(snapshot.approvalArtifacts.registryIds).not.toContain(record.recordId);
     expect(
+      snapshot.approvalArtifacts.rightsEvidencePaths.filter((evidencePath) => evidencePath.startsWith(`docs/notes/project/assets/review-cover-rights/${record.recordId}/`)),
+      `${record.recordId}: HOLD has no record-local rights evidence artifact`,
+    ).toEqual([]);
+    expect(
       snapshot.approvalArtifacts.receiptIds.filter((receiptId) => receiptId.startsWith(`${record.recordId}:`)),
       `${record.recordId}: no receipt on any media item`,
     ).toEqual([]);
@@ -521,6 +543,9 @@ async function repositorySnapshot() {
   }
 
   const registry = JSON.parse(await readFile(join(root, registryPath), 'utf8'));
+  const rightsEvidencePaths = expectedIds.flatMap((recordId) => rightsEvidenceExtensions
+    .map((extension) => `docs/notes/project/assets/review-cover-rights/${recordId}/rights-evidence.${extension}`))
+    .filter((evidencePath) => existsSync(join(root, evidencePath)));
   return {
     sourceIds: presentationIds,
     identities,
@@ -531,6 +556,7 @@ async function repositorySnapshot() {
         existsSync(join(root, `docs/notes/project/assets/review-cover-rights/${id}/redistribution-decision.yml`)),
       ])),
       registryIds: registry.approvals.map((approval) => approval.recordId),
+      rightsEvidencePaths,
       receiptIds,
     },
   };
@@ -559,16 +585,36 @@ describe('review cover rights research inventory', () => {
     expect(ledger.records.map((record) => record.state)).toEqual(Array(18).fill('hold'));
     expect(Object.values(snapshot.approvalArtifacts.decisions)).not.toContain(true);
     expect(snapshot.approvalArtifacts.registryIds).toEqual([]);
+    expect(snapshot.approvalArtifacts.rightsEvidencePaths).toEqual([]);
     expect(snapshot.approvalArtifacts.receiptIds).toEqual([]);
   });
 
-  it('binds all Task 3 outcomes to exact editions, retrieved candidate bytes, and current rights research', async () => {
-    const availableCandidates = ledger.records.filter((record) => existsSync(join(root, record.task3Research.candidate.path)));
-    expect([0, expectedIds.length], 'ignored quarantine is either absent or complete').toContain(availableCandidates.length);
+  it('binds tracked Task 3 tuples to exact editions, frozen candidate facts, and current rights research', async () => {
     for (const recordId of expectedIds) {
       const record = ledger.records.find((entry) => entry.recordId === recordId);
-      await assertTask3ResearchRecord(record, { verifyCandidateBytes: availableCandidates.length === expectedIds.length });
+      await assertTask3ResearchRecord(record);
     }
+  });
+
+  it('applies the local quarantine byte gate and decodes every candidate when present or strictly required', async () => {
+    const verifyCandidateBytes = quarantineByteGate(ledger.records);
+    if (verifyCandidateBytes) {
+      for (const record of ledger.records) await assertCandidateBytes(record);
+    }
+  });
+
+  it('rejects an all-absent quarantine fixture in strict mode', () => {
+    expect(() => quarantineByteGate(ledger.records, {
+      required: true,
+      candidateExists: () => false,
+    })).toThrow('strict quarantine byte gate requires 18 candidates; found 0');
+  });
+
+  it('rejects a partial quarantine fixture in default hermetic mode', () => {
+    expect(() => quarantineByteGate(ledger.records, {
+      required: false,
+      candidateExists: (candidatePath) => candidatePath.includes('/changing-their-minds/'),
+    })).toThrow('default quarantine byte gate requires zero or 18 candidates; found 1');
   });
 
   it.each([
@@ -621,6 +667,14 @@ describe('review cover rights research inventory', () => {
   ])('rejects a premature %s', (_label, mutate) => {
     const changedSnapshot = clone(snapshot);
     mutate(changedSnapshot.approvalArtifacts);
+    expect(() => assertValidLedger(ledger, changedSnapshot)).toThrow();
+  });
+
+  it.each(rightsEvidenceExtensions)('rejects a stray HOLD rights-evidence.%s artifact', (extension) => {
+    const changedSnapshot = clone(snapshot);
+    changedSnapshot.approvalArtifacts.rightsEvidencePaths.push(
+      `docs/notes/project/assets/review-cover-rights/art-thief/rights-evidence.${extension}`,
+    );
     expect(() => assertValidLedger(ledger, changedSnapshot)).toThrow();
   });
 

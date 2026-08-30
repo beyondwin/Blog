@@ -303,7 +303,7 @@ records:
     task3Research:
       identitySource:
         kind: authoritative-edition-catalog
-        url: https://lib.ftc.go.kr/search/DetailView.ax?cid=159846
+        url: https://library.hira.or.kr/search/detail/CATTOT000000038861
         retrievedAt: "2026-08-30"
         finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2025 publication year.
       candidate:
@@ -445,7 +445,7 @@ records:
       rightsResearch:
         authority: 김영사
         authorityRole: publisher-rightsholder
-        termsUrl: https://m.gimmyoungbs.com/p_base.php?action=rule
+        termsUrl: https://www.gimmyoung.com/book/guide/copyright
         retrievedAt: "2026-08-30"
         outcome: absent
         finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
@@ -458,7 +458,7 @@ records:
         outcome: absent
         locator:
           kind: source
-          value: https://m.gimmyoungbs.com/p_base.php?action=rule
+          value: https://www.gimmyoung.com/book/guide/copyright
         finding: The checked authoritative terms contain no public-website redistribution grant.
     recordedResearchFinding: *poor-charlies-almanack-hold-finding
 
