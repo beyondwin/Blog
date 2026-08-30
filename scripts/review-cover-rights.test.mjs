@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { lstat, readFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import sharp from 'sharp';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -227,10 +228,36 @@ const expectedIds = [
   'doing-good-better',
   'factfulness',
 ];
+const expectedTask4SourceMediaSurface = {
+  captureVersion: 1,
+  rootEntriesChecksum: 'sha256:f2f461589381f91123f7f0b397dec5c010fc233c354ffe530f201bbc9057f955',
+  surfaceChecksum: 'sha256:87a8c265885f868bf56c8be9f2c6f694414dcdccae28effa62fc593ec7411200',
+  recordChecksums: {
+    'changing-their-minds': 'sha256:471f56fd0eadb03cd86913af7a6b932802c021bf28ca1352512336086856ad80',
+    'lord-of-the-flies': 'sha256:72964e37ed8fb5e0c451fd06fa0e899cc2275cb4eec682e85bcd97d4c2aca0c5',
+    'black-swan': 'sha256:e0663a8dfffccd7df283d9b169bd65e06dae61888df3071b868b88b87028f69f',
+    nevertheless: 'sha256:030f8fb084a4d1a7cc7b79abd82283c9aadbdb617160cec6260eee27ac9118dc',
+    'goethe-said-everything': 'sha256:a7cacbefe631164922347fb95d57ac58371d5be143bafb112ac9481e87d23aca',
+    'devotion-of-suspect-x': 'sha256:4ea8dec7ded25fd59b1263bcd4023c5a4a3dcc7bb13bfef2174c6732e2f798d8',
+    'poor-charlies-almanack': 'sha256:2550e744fe4161f07d0ec436911f34b95fba19e110db7ae026d6cc2db1c527ce',
+    'art-thief': 'sha256:56bdcd153fe5de64e0079ce59a0ea884423bb9a6dc32522254ceccfa66ccf6db',
+    siddhartha: 'sha256:522a0ace4b12f05d2b1e2d28d8862e075a8fd10aa27281ba3316681f6abbd31b',
+    habitus: 'sha256:ebfc70052bb886b8d27b180dd29566b14d76afeeabb2feedc527bd7f78a27ca3',
+    'how-adam-smith-can-change-your-life': 'sha256:949f2ee12330ec7129a22033c5101e411c7ec77e3aca08fdb16b4c2a4690fedc',
+    lolita: 'sha256:d07e37680b7f1c8b7447fe37896cdb886610504ab2d3f5555013a62e4a94f89f',
+    'future-arrived-first': 'sha256:98d41824c944a1d339c25dc356bb38a6f03a23976695348356e1a18538dc0df6',
+    'how-we-crossed-winter': 'sha256:aacfc46a7951a86f24c38ede08bcb8c279f9739938ad3a75350bd6fcee71fb22',
+    'convenience-store-woman': 'sha256:81cde1cdb818eeef8435d07447c98fc76867702fd12abbac2e9fd32ece5db2d9',
+    'miracles-of-namiya-general-store': 'sha256:ee5e18885d3c8a104e26db3cf033733b23a8f07a66ddc551c0f42ea900b3ca8e',
+    'doing-good-better': 'sha256:85d1d48de8a3cd0129ada5af1c99ee59942576e9cc4f07aecc6c2c810e5d6257',
+    factfulness: 'sha256:745d288eb48cfd53ef3351b8b8a1b08159d77ddadafd27f2674a6e6588e35303',
+  },
+};
 const expectedTask4Outcome = {
   entrySnapshot: {
     recordedAt: '2026-08-30',
     readyForIndependentReviewRecordIds: [],
+    sourceMediaSurface: expectedTask4SourceMediaSurface,
   },
   approvalPathEvidence: {
     status: 'not_measured',
@@ -530,6 +557,138 @@ function expectedSourceCoverMetadata(recordId) {
     : { coverState: 'verified', coverMedia: 'cover' };
 }
 
+function sha256(value) {
+  return `sha256:${createHash('sha256').update(value).digest('hex')}`;
+}
+
+function sourceMediaEntryKind(entry) {
+  if (entry.isFile()) return 'file';
+  if (entry.isDirectory()) return 'directory';
+  if (entry.isSymbolicLink()) return 'symlink';
+  return 'other';
+}
+
+async function captureReviewSourceMediaSurface(repositoryRoot) {
+  const sourceRoot = join(repositoryRoot, 'src/assets/content/reviews');
+  const rootDirectoryEntries = (await readdir(sourceRoot, { withFileTypes: true }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const rootEntries = rootDirectoryEntries.map((entry) => ({
+    name: entry.name,
+    kind: sourceMediaEntryKind(entry),
+  }));
+  const records = {};
+
+  for (const recordId of expectedIds) {
+    const recordDirectory = join(sourceRoot, recordId);
+    let directoryInfo;
+    try {
+      directoryInfo = await lstat(recordDirectory);
+    } catch (error) {
+      if (error?.code === 'ENOENT') {
+        records[recordId] = {
+          directoryState: 'absent',
+          entries: [],
+          manifest: null,
+          files: [],
+        };
+        continue;
+      }
+      throw error;
+    }
+
+    if (!directoryInfo.isDirectory()) {
+      records[recordId] = {
+        directoryState: directoryInfo.isSymbolicLink() ? 'symlink' : 'other',
+        entries: [],
+        manifest: null,
+        files: [],
+      };
+      continue;
+    }
+
+    const directoryEntries = (await readdir(recordDirectory, { withFileTypes: true }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+    const entries = directoryEntries.map((entry) => ({
+      name: entry.name,
+      kind: sourceMediaEntryKind(entry),
+    }));
+    let manifest = null;
+    const files = [];
+
+    for (const entry of directoryEntries) {
+      if (!entry.isFile()) continue;
+      const filePath = `src/assets/content/reviews/${recordId}/${entry.name}`;
+      const bytes = await readFile(join(repositoryRoot, filePath));
+      if (entry.name === 'media.yml') {
+        const parsed = parseYaml(bytes.toString('utf8'));
+        manifest = {
+          path: filePath,
+          checksum: sha256(bytes),
+          byteLength: bytes.length,
+          parsed,
+          receiptItemIds: Array.isArray(parsed?.items)
+            ? parsed.items
+              .filter((item) => item && typeof item === 'object' && Object.hasOwn(item, 'redistributionApproval'))
+              .map((item) => item.id)
+            : [],
+        };
+        continue;
+      }
+
+      let metadata = {};
+      try {
+        metadata = await sharp(bytes).metadata();
+      } catch {
+        // A non-raster file is still part of the frozen source surface.
+      }
+      files.push({
+        path: filePath,
+        checksum: sha256(bytes),
+        byteLength: bytes.length,
+        format: metadata.format ?? null,
+        width: metadata.width ?? null,
+        height: metadata.height ?? null,
+      });
+    }
+
+    records[recordId] = {
+      directoryState: 'present',
+      entries,
+      manifest,
+      files,
+    };
+  }
+
+  return { rootEntries, records };
+}
+
+function sourceMediaSurfaceChecksums(surface) {
+  return {
+    captureVersion: 1,
+    rootEntriesChecksum: sha256(Buffer.from(JSON.stringify(surface.rootEntries))),
+    surfaceChecksum: sha256(Buffer.from(JSON.stringify(surface))),
+    recordChecksums: Object.fromEntries(expectedIds.map((recordId) => [
+      recordId,
+      sha256(Buffer.from(JSON.stringify(surface.records[recordId]))),
+    ])),
+  };
+}
+
+async function withReviewSourceMediaFixture(run) {
+  const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-task4-review-source-'));
+  try {
+    await mkdir(join(sandbox, 'src/assets/content'), { recursive: true });
+    await cp(
+      join(root, 'src/assets/content/reviews'),
+      join(sandbox, 'src/assets/content/reviews'),
+      { recursive: true },
+    );
+    await run(sandbox);
+  } finally {
+    await rm(sandbox, { recursive: true, force: true });
+  }
+}
+
 function assertTask4Outcome(candidate, repositoryState) {
   expect(candidate.task4, 'explicit Task 4 entry and outcome contract').toEqual(expectedTask4Outcome);
 
@@ -542,13 +701,25 @@ function assertTask4Outcome(candidate, repositoryState) {
   const holdRecordIds = candidate.records
     .filter((record) => record.state === 'hold')
     .map((record) => record.recordId);
+  const sourceMediaChecksums = sourceMediaSurfaceChecksums(repositoryState.sourceMediaSurface);
   const promotedSourceRecordIds = expectedIds.filter((recordId) => (
-    !isDeepStrictEqual(repositoryState.media[recordId], expected[recordId].media)
+    sourceMediaChecksums.recordChecksums[recordId]
+      !== expectedTask4SourceMediaSurface.recordChecksums[recordId]
   ));
+  const expectedRootEntryNames = new Set(expectedIds.filter((recordId) => recordId !== 'devotion-of-suspect-x'));
+  for (const entry of repositoryState.sourceMediaSurface.rootEntries) {
+    if (entry.kind !== 'directory' || !expectedRootEntryNames.has(entry.name)) {
+      promotedSourceRecordIds.push(entry.name);
+    }
+  }
   const changedMdxCoverRecordIds = expectedIds.filter((recordId) => (
     !isDeepStrictEqual(repositoryState.sourceCoverMetadata[recordId], expectedSourceCoverMetadata(recordId))
   ));
 
+  expect(
+    sourceMediaChecksums,
+    'complete Task 4 review source media surface: every directory entry, raw media.yml byte checksum, parsed full item, receipt presence, and every media file tuple',
+  ).toEqual(expectedTask4SourceMediaSurface);
   expect(candidate.task4.entrySnapshot.readyForIndependentReviewRecordIds).toEqual(readyRecordIds);
   expect(readyRecordIds, 'Task 4 entry ready set is explicitly empty').toHaveLength(0);
   expect(candidate.task4.approvalPathEvidence.status).toBe('not_measured');
@@ -610,6 +781,7 @@ async function repositorySnapshot() {
   }
 
   const registry = JSON.parse(await readFile(join(root, registryPath), 'utf8'));
+  const sourceMediaSurface = await captureReviewSourceMediaSurface(root);
   const rightsEvidencePaths = expectedIds.flatMap((recordId) => rightsEvidenceExtensions
     .map((extension) => `docs/notes/project/assets/review-cover-rights/${recordId}/rights-evidence.${extension}`))
     .filter((evidencePath) => existsSync(join(root, evidencePath)));
@@ -617,6 +789,7 @@ async function repositorySnapshot() {
     sourceIds: presentationIds,
     identities,
     media,
+    sourceMediaSurface,
     sourceCoverMetadata,
     approvalArtifacts: {
       decisions: Object.fromEntries(expectedIds.map((id) => [
@@ -660,6 +833,75 @@ describe('review cover rights research inventory', () => {
 
   it('records the empty Task 4 approval target as not_measured without vacuous promotion evidence', () => {
     assertTask4Outcome(ledger, snapshot);
+  });
+
+  it('rejects a declared receipt-free cover copied into the source-media-absent HOLD record', async () => {
+    await withReviewSourceMediaFixture(async (sandbox) => {
+      const targetDirectory = join(sandbox, 'src/assets/content/reviews/devotion-of-suspect-x');
+      await mkdir(targetDirectory, { recursive: true });
+      await cp(
+        join(sandbox, 'src/assets/content/reviews/art-thief/cover.jpg'),
+        join(targetDirectory, 'cover.jpg'),
+      );
+      const coverBytes = await readFile(join(targetDirectory, 'cover.jpg'));
+      const sourceManifest = parseYaml(await readFile(
+        join(sandbox, 'src/assets/content/reviews/art-thief/media.yml'),
+        'utf8',
+      ));
+      const promotedItem = {
+        ...sourceManifest.items[0],
+        alt: '용의자 X의 헌신 현대문학 2006 양장 표지',
+        sourceUrl: 'https://image.yes24.com/goods/2131596/XL',
+        isbn13: '9788972753698',
+        edition: '현대문학 2006 양장, 양억관 옮김',
+        checksum: sha256(coverBytes),
+      };
+      await writeFile(
+        join(targetDirectory, 'media.yml'),
+        stringifyYaml({ version: 1, items: [promotedItem] }),
+      );
+
+      const changedSurface = await captureReviewSourceMediaSurface(sandbox);
+      expect(changedSurface.records['devotion-of-suspect-x'].manifest.receiptItemIds).toEqual([]);
+      const changedSnapshot = clone(snapshot);
+      changedSnapshot.sourceMediaSurface = changedSurface;
+      expect(() => assertTask4Outcome(ledger, changedSnapshot)).toThrow(
+        'complete Task 4 review source media surface',
+      );
+    });
+  });
+
+  it('rejects an extra declared receipt-free item and file in an existing HOLD bundle', async () => {
+    await withReviewSourceMediaFixture(async (sandbox) => {
+      const targetDirectory = join(sandbox, 'src/assets/content/reviews/art-thief');
+      await cp(
+        join(sandbox, 'src/assets/content/reviews/black-swan/cover.jpg'),
+        join(targetDirectory, 'alternate-cover.jpg'),
+      );
+      const manifestPath = join(targetDirectory, 'media.yml');
+      const manifest = parseYaml(await readFile(manifestPath, 'utf8'));
+      const alternateManifest = parseYaml(await readFile(
+        join(sandbox, 'src/assets/content/reviews/black-swan/media.yml'),
+        'utf8',
+      ));
+      manifest.items.push({
+        ...alternateManifest.items[0],
+        id: 'alternate-cover',
+        file: 'alternate-cover.jpg',
+      });
+      await writeFile(manifestPath, stringifyYaml(manifest));
+
+      const changedSurface = await captureReviewSourceMediaSurface(sandbox);
+      expect(changedSurface.records['art-thief'].manifest.receiptItemIds).toEqual([]);
+      expect(changedSurface.records['art-thief'].files.map((file) => file.path)).toContain(
+        'src/assets/content/reviews/art-thief/alternate-cover.jpg',
+      );
+      const changedSnapshot = clone(snapshot);
+      changedSnapshot.sourceMediaSurface = changedSurface;
+      expect(() => assertTask4Outcome(ledger, changedSnapshot)).toThrow(
+        'complete Task 4 review source media surface',
+      );
+    });
   });
 
   it('binds tracked Task 3 tuples to exact editions, frozen candidate facts, and current rights research', async () => {

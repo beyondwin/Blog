@@ -18,6 +18,29 @@ task4:
   entrySnapshot:
     recordedAt: "2026-08-30"
     readyForIndependentReviewRecordIds: []
+    sourceMediaSurface:
+      captureVersion: 1
+      rootEntriesChecksum: sha256:f2f461589381f91123f7f0b397dec5c010fc233c354ffe530f201bbc9057f955
+      surfaceChecksum: sha256:87a8c265885f868bf56c8be9f2c6f694414dcdccae28effa62fc593ec7411200
+      recordChecksums:
+        changing-their-minds: sha256:471f56fd0eadb03cd86913af7a6b932802c021bf28ca1352512336086856ad80
+        lord-of-the-flies: sha256:72964e37ed8fb5e0c451fd06fa0e899cc2275cb4eec682e85bcd97d4c2aca0c5
+        black-swan: sha256:e0663a8dfffccd7df283d9b169bd65e06dae61888df3071b868b88b87028f69f
+        nevertheless: sha256:030f8fb084a4d1a7cc7b79abd82283c9aadbdb617160cec6260eee27ac9118dc
+        goethe-said-everything: sha256:a7cacbefe631164922347fb95d57ac58371d5be143bafb112ac9481e87d23aca
+        devotion-of-suspect-x: sha256:4ea8dec7ded25fd59b1263bcd4023c5a4a3dcc7bb13bfef2174c6732e2f798d8
+        poor-charlies-almanack: sha256:2550e744fe4161f07d0ec436911f34b95fba19e110db7ae026d6cc2db1c527ce
+        art-thief: sha256:56bdcd153fe5de64e0079ce59a0ea884423bb9a6dc32522254ceccfa66ccf6db
+        siddhartha: sha256:522a0ace4b12f05d2b1e2d28d8862e075a8fd10aa27281ba3316681f6abbd31b
+        habitus: sha256:ebfc70052bb886b8d27b180dd29566b14d76afeeabb2feedc527bd7f78a27ca3
+        how-adam-smith-can-change-your-life: sha256:949f2ee12330ec7129a22033c5101e411c7ec77e3aca08fdb16b4c2a4690fedc
+        lolita: sha256:d07e37680b7f1c8b7447fe37896cdb886610504ab2d3f5555013a62e4a94f89f
+        future-arrived-first: sha256:98d41824c944a1d339c25dc356bb38a6f03a23976695348356e1a18538dc0df6
+        how-we-crossed-winter: sha256:aacfc46a7951a86f24c38ede08bcb8c279f9739938ad3a75350bd6fcee71fb22
+        convenience-store-woman: sha256:81cde1cdb818eeef8435d07447c98fc76867702fd12abbac2e9fd32ece5db2d9
+        miracles-of-namiya-general-store: sha256:ee5e18885d3c8a104e26db3cf033733b23a8f07a66ddc551c0f42ea900b3ca8e
+        doing-good-better: sha256:85d1d48de8a3cd0129ada5af1c99ee59942576e9cc4f07aecc6c2c810e5d6257
+        factfulness: sha256:745d288eb48cfd53ef3351b8b8a1b08159d77ddadafd27f2674a6e6588e35303
   approvalPathEvidence:
     status: not_measured
     reason: Task 3 produced zero ready-for-independent-review records with both exact candidate bytes and applicable public-website redistribution evidence, so no real approval transition was available to review or promote.
