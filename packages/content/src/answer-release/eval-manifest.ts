@@ -54,11 +54,12 @@ export function validatePublicAnswerEvalManifest(
   deferred: Array<PublicAnswerEvalManifest['cases'][number] & { reason: 'deferred-unapproved-record' }>;
   corpusMetricStatus: 'not_measured';
 } {
+  const validatedManifest = publicAnswerEvalManifestSchema.parse(manifest);
   const materializedRecordIds = new Set(chunks.map((chunk) => chunk.recordId));
   const runnable: PublicAnswerEvalManifest['cases'] = [];
   const deferred: Array<PublicAnswerEvalManifest['cases'][number] & { reason: 'deferred-unapproved-record' }> = [];
 
-  for (const item of manifest.cases) {
+  for (const item of validatedManifest.cases) {
     if (item.expectedEvidence.every((evidence) => materializedRecordIds.has(evidence.recordId))) {
       runnable.push(item);
     } else {

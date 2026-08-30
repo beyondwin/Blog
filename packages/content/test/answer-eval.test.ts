@@ -53,6 +53,20 @@ describe('public answer evaluation manifest', () => {
     expect(result.corpusMetricStatus).toBe('not_measured');
   });
 
+  it('rejects expected and forbidden evidence overlap when a typed manifest bypasses the parser', async () => {
+    const manifest = parsePublicAnswerEvalManifest(await fixture());
+    const first = manifest.cases[0]!;
+    const invalid = {
+      ...manifest,
+      cases: [{
+        ...first,
+        forbiddenRecordIds: [first.expectedEvidence[0]!.recordId],
+      }, ...manifest.cases.slice(1)],
+    } as typeof manifest;
+
+    expect(() => validatePublicAnswerEvalManifest(invalid, [])).toThrow(/forbidden|overlap/i);
+  });
+
   it('rejects malformed or private evaluation cases instead of accepting synthetic authority', async () => {
     const source = await fixture() as {
       schemaVersion: number;
