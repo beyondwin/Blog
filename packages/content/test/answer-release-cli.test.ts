@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 import {
   copyFile,
   mkdir,
+  mkdtemp,
+  readdir,
   readFile,
   rm,
   writeFile,
@@ -34,11 +36,11 @@ type CliFixture = {
   contentRelease: VerifiedActivePublicRelease;
 };
 
-async function createCliFixture(): Promise<CliFixture> {
-  const root = await import('node:fs/promises').then(({ mkdtemp }) => mkdtemp(join(
+async function createCliFixture(options: { thoughtProse?: string } = {}): Promise<CliFixture> {
+  const root = await mkdtemp(join(
     process.env.TMPDIR ?? '/tmp',
     'beyondwin-answer-cli-',
-  )));
+  ));
   sandboxes.push(root);
   await writeReleaseFixture(root, { featuredMedia: false });
   await writeFile(join(root, 'src/content/thoughts/why-i-read-in-the-ai-era.mdx'), [
@@ -54,7 +56,7 @@ async function createCliFixture(): Promise<CliFixture> {
     '',
     '## Fixture heading',
     '',
-    'CLI_CHUNK_SECRET must never cross the command output boundary.',
+    options.thoughtProse ?? 'CLI_CHUNK_SECRET must never cross the command output boundary.',
     '',
   ].join('\n'));
   const publicReleasesRoot = join(root, 'build/public-releases');
@@ -101,6 +103,17 @@ async function writeApproval(path: string, approval: unknown): Promise<void> {
   await writeFile(path, `${JSON.stringify(approval)}\n`);
 }
 
+async function expectAnswerReleaseSurfaceAbsent(answerReleasesRoot: string): Promise<void> {
+  let entries: string[];
+  try {
+    entries = await readdir(answerReleasesRoot);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  expect(entries).toEqual([]);
+}
+
 afterEach(async () => {
   await Promise.all(sandboxes.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
@@ -110,17 +123,44 @@ describe('public answer release CLI', { timeout: 90_000 }, () => {
     const fixture = await createCliFixture();
     const result = runCli(fixture.root, 'approval-candidate', 'thoughts/why-i-read-in-the-ai-era');
     const output = parseBoundedJson(result, ['schemaVersion', 'entries']);
+    const materialized = Object.values(fixture.contentRelease.manifest.records)
+      .find((record) => record.collection === 'thoughts' && record.id === 'why-i-read-in-the-ai-era')!;
+    const expectedChecksum = canonicalPublicRecordChecksum(materialized);
 
     expect(output).toEqual({
       entries: [{
-        recordChecksum: expect.stringMatching(/^sha256:[a-f0-9]{64}$/u),
+        recordChecksum: expectedChecksum,
         recordId: 'thoughts/why-i-read-in-the-ai-era',
       }],
       schemaVersion: 1,
     });
     await expect(readFile(fixture.approvalPath)).rejects.toMatchObject({ code: 'ENOENT' });
-    await expect(readFile(join(fixture.answerReleasesRoot, 'active.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    await expectAnswerReleaseSurfaceAbsent(fixture.answerReleasesRoot);
     expectNoCorpusLeak(result);
+
+    const changed = await createCliFixture({
+      thoughtProse: 'Changed verified public bytes produce a different checksum-bound candidate.',
+    });
+    const changedResult = runCli(changed.root, 'approval-candidate', 'thoughts/why-i-read-in-the-ai-era');
+    const changedOutput = parseBoundedJson(changedResult, ['schemaVersion', 'entries']) as {
+      entries: Array<{ recordChecksum: string; recordId: string }>;
+      schemaVersion: 1;
+    };
+    const changedMaterialized = Object.values(changed.contentRelease.manifest.records)
+      .find((record) => record.collection === 'thoughts' && record.id === 'why-i-read-in-the-ai-era')!;
+    const changedExpectedChecksum = canonicalPublicRecordChecksum(changedMaterialized);
+
+    expect(changedOutput).toEqual({
+      entries: [{
+        recordChecksum: changedExpectedChecksum,
+        recordId: 'thoughts/why-i-read-in-the-ai-era',
+      }],
+      schemaVersion: 1,
+    });
+    expect(changedExpectedChecksum).not.toBe(expectedChecksum);
+    await expect(readFile(changed.approvalPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expectAnswerReleaseSurfaceAbsent(changed.answerReleasesRoot);
+    expectNoCorpusLeak(changedResult);
   });
 
   it('builds and verifies bootstrap and empty authorities from release bytes and the strict eval manifest', async () => {
@@ -256,7 +296,7 @@ describe('public answer release CLI', { timeout: 90_000 }, () => {
       const result = runCli(fixture.root, 'build');
       expect(result.status).not.toBe(0);
       expectNoCorpusLeak(result);
-      await expect(readFile(join(fixture.answerReleasesRoot, 'active.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+      await expectAnswerReleaseSurfaceAbsent(fixture.answerReleasesRoot);
     }
   });
 
