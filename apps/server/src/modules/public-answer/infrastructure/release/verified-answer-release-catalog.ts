@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import type { ServerConfig } from '../../../../config/server-config.js';
 import type { AnswerReleaseCatalogSource } from '../../application/ports/answer-release-catalog.js';
 import type { AnswerReleaseCatalogSnapshot, AuthorizedEvidence } from '../../domain/public-answer.js';
+import { readProviderEmbeddingReceipt } from '../openai/provider-embedding-receipt.js';
 
 const serverVerifiedAnswerRelease = Symbol('ServerVerifiedActivePublicAnswerRelease');
 interface PublicAnswerCorpusApproval { readonly schemaVersion: 1; readonly entries: readonly unknown[] }
@@ -14,7 +15,7 @@ export interface VerifiedActivePublicAnswerReleaseAuthority {
   readonly [serverVerifiedAnswerRelease]: true;
   readonly releasePath: string; readonly contentReleaseId: string; readonly answerReleaseId: string;
   readonly manifestHash: string; readonly artifactHash: string; readonly corpusApprovalHash: string;
-  readonly manifest: { readonly identity: { readonly contentManifestHash: string } };
+  readonly manifest: { readonly identity: { readonly contentManifestHash: string; readonly normalizerVersion?: string } };
   readonly chunks: readonly { readonly chunkId: string; readonly recordId: string; readonly canonicalPath: string }[];
   readonly evidence: readonly {
     readonly evidenceId: string; readonly chunkId: string; readonly recordId: string; readonly collectionLabel: string;
@@ -97,10 +98,12 @@ const defaultReaders: CatalogReaders = {
 };
 
 export interface VerifiedCatalogSnapshot extends AnswerReleaseCatalogSnapshot {
+  readonly normalizerVersion: string;
   readonly embeddingSource: 'fixture' | 'provider';
   readonly embeddingReceiptHash: string;
   readonly evidenceById: ReadonlyMap<string, AuthorizedEvidence>;
   readonly chunkById: ReadonlyMap<string, VerifiedActivePublicAnswerReleaseAuthority['chunks'][number]>;
+  readonly chunkChecksumById: ReadonlyMap<string, string>;
   readonly tombstones: ReadonlySet<string>;
 }
 
@@ -167,6 +170,7 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
         binding_id: string; content_release_id: string; answer_release_id: string; content_manifest_hash: string;
         answer_manifest_hash: string; answer_artifact_hash: string; embedding_source: 'fixture' | 'provider';
         embedding_receipt_hash: string; chunk_count: number;
+        index_checksum: string;
       }>("SELECT * FROM public_answer_release_bindings WHERE state='active'");
       if (bindingResult.rowCount !== 1) throw new Error('catalog requires exactly one active binding');
       const binding = bindingResult.rows[0]!;
@@ -174,6 +178,14 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
         || binding.content_manifest_hash !== release.manifest.identity.contentManifestHash
         || binding.answer_manifest_hash !== release.manifestHash || binding.answer_artifact_hash !== release.artifactHash
         || binding.chunk_count !== release.chunks.length) throw new Error('filesystem release and active binding mismatch');
+      if (binding.embedding_source === 'provider') {
+        if (!this.config.providerEmbeddingReceiptRoot) throw new Error('provider binding requires configured durable receipt root');
+        const receipt = await readProviderEmbeddingReceipt(this.config.providerEmbeddingReceiptRoot, binding.answer_release_id, binding.embedding_receipt_hash);
+        if (receipt.contentReleaseId !== binding.content_release_id || receipt.answerReleaseId !== binding.answer_release_id
+          || receipt.contentManifestHash !== binding.content_manifest_hash || receipt.answerManifestHash !== binding.answer_manifest_hash
+          || receipt.answerArtifactHash !== binding.answer_artifact_hash || receipt.corpusApprovalHash !== release.corpusApprovalHash
+          || receipt.indexChecksum !== binding.index_checksum) throw new Error('active provider binding durable receipt mismatch');
+      }
       const tombstoneRows = (await client.query<{ entity_kind: 'record' | 'evidence'; entity_id: string }>(
         'SELECT entity_kind,entity_id FROM public_answer_tombstones ORDER BY entity_kind,entity_id')).rows;
       await client.query('COMMIT');
@@ -194,11 +206,12 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
         excerptChecksum: item.excerptChecksum,
       }) satisfies AuthorizedEvidence] as const));
       const chunkById = immutableMap(chunks.map((item) => [item.chunkId, Object.freeze({ ...item })] as const));
+      const chunkChecksumById = immutableMap(release.indexInputs.map((item) => [item.chunkId, item.chunkChecksum] as const));
       const snapshot: VerifiedCatalogSnapshot = {
         bindingId: binding.binding_id, contentReleaseId: release.contentReleaseId, answerReleaseId: release.answerReleaseId,
         corpusApprovalHash: release.corpusApprovalHash, chunkCount: chunks.length,
         embeddingSource: binding.embedding_source, embeddingReceiptHash: binding.embedding_receipt_hash,
-        evidenceById, chunkById, tombstones,
+        normalizerVersion: release.manifest.identity.normalizerVersion ?? 'nfkc-lower-hangul-ngram-v1', evidenceById, chunkById, chunkChecksumById, tombstones,
         isBoundTo: (contentReleaseId, answerReleaseId) => (
           contentReleaseId === release.contentReleaseId && answerReleaseId === release.answerReleaseId
         ),

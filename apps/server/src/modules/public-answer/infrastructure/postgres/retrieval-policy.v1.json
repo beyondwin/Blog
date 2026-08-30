@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "normalizerVersion": "nfkc-lower-hangul-ngram-v1",
+  "lexical": { "components": { "fts": 1, "trigram": 1 }, "combiner": "max" },
+  "candidateLimitPerBranch": 20,
+  "rrfK": 60,
+  "maxEvidence": 6,
+  "tieBreak": "rrfScore-desc/chunkId-asc",
+  "diversityTargetRecords": 3,
+  "sufficiency": {
+    "minimumSelected": 2,
+    "firstMinimumRrfScore": "1/61",
+    "secondMinimumRrfScore": "1/70",
+    "requiresLexicalTopRank": 5,
+    "requiresVectorTopRank": 5
+  },
+  "evaluation": { "runnable": 1, "deferred": 19, "aggregateThresholds": "not_measured" }
+}

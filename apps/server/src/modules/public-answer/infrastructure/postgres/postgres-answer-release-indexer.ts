@@ -4,6 +4,7 @@ import type { Pool, PoolClient } from 'pg';
 
 import type { EmbeddingClient } from '../../application/ports/embedding-client.js';
 import type { VerifiedActivePublicAnswerReleaseAuthority } from '../release/verified-answer-release-catalog.js';
+import { createProviderEmbeddingReceipt, estimateEmbeddingCostMicroUsd, type ProviderEmbeddingReceipt } from '../openai/provider-embedding-receipt.js';
 
 const MODEL = 'text-embedding-3-large' as const;
 const DIMENSIONS = 3072 as const;
@@ -81,7 +82,7 @@ export interface PreparedEmbeddingSet {
 export interface EmbeddingProvenanceReceipt {
   readonly schemaVersion: 1;
   readonly bindingId: string;
-  readonly source: 'fixture';
+  readonly source: 'fixture' | 'provider';
   readonly model: typeof MODEL;
   readonly dimensions: typeof DIMENSIONS;
   readonly contentReleaseId: string;
@@ -105,7 +106,7 @@ export interface CompletedEmbeddingCache {
   reopenReceipt(receiptHash: string): Promise<EmbeddingProvenanceReceipt>;
   lookup(input: Readonly<{
     chunkChecksum: string; model: typeof MODEL; dimensions: typeof DIMENSIONS;
-    source: 'fixture'; receiptHash: string;
+    source: 'fixture' | 'provider'; receiptHash: string;
   }>): Promise<readonly number[] | null>;
 }
 
@@ -188,15 +189,18 @@ async function embedBatches(
   signal: AbortSignal,
   batchSize: number,
 ): Promise<{ vectors: readonly (readonly number[])[]; usage: { calls: number; inputTokens: number; outputTokens: number } }> {
-  const vectors: (readonly number[])[] = [];
+  const unique = [...new Map(release.indexInputs.map((item) => [item.chunkChecksum, item])).values()];
+  const byChecksum = new Map<string, readonly number[]>();
   const usage = { calls: 0, inputTokens: 0, outputTokens: 0 };
-  for (let start = 0; start < release.indexInputs.length; start += batchSize) {
+  for (let start = 0; start < unique.length; start += batchSize) {
     if (signal.aborted) throw signal.reason ?? new Error('embedding preparation aborted');
-    const response = await client.embed(release.indexInputs.slice(start, start + batchSize).map((item) => item.text), signal);
-    vectors.push(...response.vectors); usage.calls += 1;
+    const batch = unique.slice(start, start + batchSize);
+    const response = await client.embed(batch.map((item) => item.text), signal);
+    if (response.vectors.length !== batch.length) throw new Error('embedding batch count mismatch');
+    batch.forEach((item, index) => byChecksum.set(item.chunkChecksum, response.vectors[index]!)); usage.calls += 1;
     usage.inputTokens += response.usage.inputTokens; usage.outputTokens += response.usage.outputTokens;
   }
-  return { vectors, usage };
+  return { vectors: release.indexInputs.map((item) => byChecksum.get(item.chunkChecksum)!), usage };
 }
 
 function deterministicUuid(hash: string): string {
@@ -237,7 +241,7 @@ function receiptProvenance(receipt: EmbeddingProvenanceReceipt) {
 
 function assertReceipt(release: VerifiedActivePublicAnswerReleaseAuthority, prepared: PreparedEmbeddingSet, receipt: EmbeddingProvenanceReceipt): void {
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(receipt.bindingId)
-    || receipt.source !== 'fixture'
+    || !['fixture', 'provider'].includes(receipt.source)
     || !Number.isInteger(receipt.calls) || !Number.isInteger(receipt.inputTokens) || !Number.isInteger(receipt.outputTokens)
     || !Number.isInteger(receipt.costUsdMicros)
     || receipt.calls < 0 || receipt.inputTokens < 0 || receipt.outputTokens < 0 || receipt.costUsdMicros < 0) {
@@ -259,7 +263,47 @@ function assertReceipt(release: VerifiedActivePublicAnswerReleaseAuthority, prep
   });
   if (receipt.indexChecksum !== expectedIndex) throw new Error('embedding provenance index checksum mismatch');
   const { receiptHash, ...receiptBody } = receipt;
-  if (receiptHash !== checksum(receiptBody)) throw new Error('embedding provenance receipt hash mismatch');
+  if (receipt.source === 'fixture' ? receiptHash !== checksum(receiptBody)
+    : !/^sha256:[a-f0-9]{64}$/u.test(receiptHash) || receipt.bindingId !== deterministicUuid(receiptHash)) {
+    throw new Error('embedding provenance receipt hash mismatch');
+  }
+}
+
+function assertProviderAuthorization(prepared: PreparedEmbeddingSet, receipt: EmbeddingProvenanceReceipt, authority: ProviderEmbeddingReceipt): void {
+  const exactEntries = prepared.vectors.map(({ chunkChecksum, vectorChecksum }) => ({ chunkChecksum, vectorChecksum }));
+  if (authority.embeddingReceiptHash !== receipt.receiptHash || authority.contentReleaseId !== receipt.contentReleaseId
+    || authority.answerReleaseId !== receipt.answerReleaseId || authority.contentManifestHash !== receipt.contentManifestHash
+    || authority.answerManifestHash !== receipt.answerManifestHash || authority.answerArtifactHash !== receipt.answerArtifactHash
+    || authority.corpusApprovalHash !== receipt.corpusApprovalHash || authority.embeddingModel !== receipt.model
+    || authority.embeddingDimensions !== receipt.dimensions || authority.embeddingSource !== receipt.source
+    || authority.providerVectorSetChecksum !== receipt.vectorSetChecksum || authority.indexChecksum !== receipt.indexChecksum
+    || authority.inputTokens !== receipt.inputTokens || authority.costMicroUsd !== receipt.costUsdMicros
+    || canonical(authority.entries) !== canonical(exactEntries)) throw new Error('provider activation receipt authority mismatch');
+}
+
+export function createProviderEmbeddingAuthorities(
+  release: VerifiedActivePublicAnswerReleaseAuthority,
+  prepared: PreparedEmbeddingSet,
+  input: Readonly<{ providerDataControlReceiptHash: string; providerPricingReceiptHash: string; createdAt: string; completedAt: string }>,
+): Readonly<{ durable: ProviderEmbeddingReceipt; activation: EmbeddingProvenanceReceipt }> {
+  const provenance = {
+    schemaVersion: 1 as const, source: 'provider' as const, model: MODEL, dimensions: DIMENSIONS,
+    ...releaseHashes(release), vectorSetChecksum: prepared.vectorSetChecksum, chunkCount: prepared.vectors.length,
+    calls: prepared.usage.calls, inputTokens: prepared.usage.inputTokens, outputTokens: prepared.usage.outputTokens,
+    costUsdMicros: estimateEmbeddingCostMicroUsd(prepared.usage.inputTokens),
+  };
+  const rows = prepared.indexRows.map((row) => ({ ...row, source: 'provider' }));
+  const indexChecksum = checksum({ rows, provenance });
+  const durable = createProviderEmbeddingReceipt({
+    schemaVersion: 1, ...releaseHashes(release), providerDataControlReceiptHash: input.providerDataControlReceiptHash,
+    providerPricingReceiptHash: input.providerPricingReceiptHash, embeddingModel: MODEL, embeddingDimensions: DIMENSIONS,
+    embeddingSource: 'provider', entries: prepared.vectors.map((entry) => ({ chunkChecksum: entry.chunkChecksum, vectorChecksum: entry.vectorChecksum })),
+    inputTokens: prepared.usage.inputTokens, costMicroUsd: provenance.costUsdMicros,
+    providerVectorSetChecksum: prepared.vectorSetChecksum, indexChecksum, createdAt: input.createdAt, completedAt: input.completedAt,
+  });
+  const activation = Object.freeze({ ...provenance, indexChecksum, bindingId: deterministicUuid(durable.embeddingReceiptHash), receiptHash: durable.embeddingReceiptHash });
+  assertReceipt(release, prepared, activation);
+  return Object.freeze({ durable, activation });
 }
 
 function vectorText(values: readonly number[]): string { return `[${values.join(',')}]`; }
@@ -295,17 +339,28 @@ export class PostgresAnswerReleaseIndexer {
     receipt: EmbeddingProvenanceReceipt,
     pool: Pool,
     signal: AbortSignal,
+    providerAuthorization?: ProviderEmbeddingReceipt,
   ): Promise<Readonly<{ bindingId: string; answerReleaseId: string; state: 'active' }>> {
     if (signal.aborted) throw signal.reason ?? new Error('index activation aborted');
-    if ((receipt as { source: string }).source === 'provider') {
-      throw new Error('provider activation requires Task 4 strict-reopened authorization');
+    if (receipt.source === 'provider') {
+      if (!providerAuthorization) throw new Error('provider activation requires Task 4 strict-reopened authorization');
+      assertProviderAuthorization(prepared, receipt, providerAuthorization);
     }
-    if (this.nodeEnv === 'production') throw new Error('fixture provenance is forbidden in production');
+    if (this.nodeEnv === 'production' && receipt.source !== 'provider') throw new Error('fixture provenance is forbidden in production');
     assertReceipt(release, prepared, receipt);
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [GLOBAL_ACTIVATION_LOCK]);
+      const candidateIds = prepared.indexRows.flatMap((row) => [
+        { kind: 'record', id: row.recordId },
+        ...release.evidence.filter((item) => item.chunkId === row.chunkId).map((item) => ({ kind: 'evidence', id: item.evidenceId })),
+      ]);
+      for (const candidate of candidateIds) {
+        const forbidden = await client.query(`SELECT 1 FROM public_answer_tombstones t WHERE t.entity_kind=$1 AND t.entity_id=$2
+          UNION ALL SELECT 1 FROM public_answer_deletion_receipts d WHERE d.entity_kind=$1 AND d.entity_id=$2 LIMIT 1`, [candidate.kind, candidate.id]);
+        if (forbidden.rowCount) throw new Error('candidate release reintroduces a tombstoned or verified-deleted entity');
+      }
       const exists = await client.query('SELECT state FROM public_answer_release_bindings WHERE binding_id=$1', [receipt.bindingId]);
       if (exists.rowCount) {
         await assertExisting(client, receipt, prepared);

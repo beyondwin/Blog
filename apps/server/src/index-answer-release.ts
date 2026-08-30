@@ -1,8 +1,13 @@
 import { pathToFileURL } from 'node:url';
+import { rm } from 'node:fs/promises';
 
 import { parseServerConfig } from './config/server-config.js';
 import { DeterministicEmbeddingClient } from './modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
+import { readProviderDataControlReceipt } from './config/provider-data-control-receipt.js';
+import { OpenAIEmbeddingClient } from './modules/public-answer/infrastructure/openai/openai-embedding-client.js';
+import { estimateEmbeddingCostMicroUsd, readBundledProviderPricing, readProviderEmbeddingReceipt, writeProviderEmbeddingReceipt } from './modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
 import {
+  createProviderEmbeddingAuthorities,
   createFixtureEmbeddingReceipt,
   type EmbeddingProvenanceReceipt,
   PostgresAnswerReleaseIndexer,
@@ -27,6 +32,20 @@ export interface ActivatedBindingAuthority {
   answerManifestHash: string; answerArtifactHash: string; corpusApprovalHash: string;
   embeddingModel: string; embeddingDimensions: number; embeddingSource: string;
   embeddingReceiptHash: string; chunkCount: number; indexChecksum: string;
+}
+
+export function parseIndexEmbeddingMode(argv: readonly string[]): 'fixture' | 'provider' {
+  if (argv.length === 1 && argv[0] === '--embedding-mode=fixture') return 'fixture';
+  if (argv.length === 2 && argv[0] === '--embedding-mode=provider' && argv[1] === '--confirm-live-provider') return 'provider';
+  throw new Error('indexing requires one explicit embedding mode and provider confirmation');
+}
+
+export function providerIndexBudget(inputs: readonly { chunkChecksum: string; text: string }[]): Readonly<{ tokenUpperBound: number; costUpperBoundMicroUsd: number }> {
+  const unique = [...new Map(inputs.map((item) => [item.chunkChecksum, item])).values()];
+  const tokenUpperBound = unique.reduce((total, item) => total + Buffer.byteLength(item.text, 'utf8'), 0);
+  const costUpperBoundMicroUsd = estimateEmbeddingCostMicroUsd(tokenUpperBound);
+  if (tokenUpperBound > 100_000 || costUpperBoundMicroUsd > 20_000) throw new Error('provider indexing maximum exceeded before call');
+  return Object.freeze({ tokenUpperBound, costUpperBoundMicroUsd });
 }
 
 export function assertCompleteActivatedBinding(
@@ -61,17 +80,43 @@ export async function indexAnswerRelease(
   env: NodeJS.ProcessEnv,
   stdout: (value: string) => void = (value) => process.stdout.write(value),
 ): Promise<void> {
-  if (argv.length !== 1 || argv[0] !== '--embedding-mode=fixture') throw new Error('only explicit fixture indexing is installed');
+  const mode = parseIndexEmbeddingMode(argv); const fixture = mode === 'fixture'; const provider = mode === 'provider';
   const config = await parseServerConfig(env);
-  if (config.publicAskMode !== 'fixture') throw new Error('fixture indexing requires fixture mode');
+  if (fixture && config.publicAskMode !== 'fixture') throw new Error('fixture indexing requires fixture mode');
+  if (provider && config.publicAskMode !== 'provider') throw new Error('provider indexing requires provider mode');
   const { answer } = await readVerifiedAnswerReleaseAuthority(config);
   const pool = createPostgresPool(config.databaseUrl);
   try {
     await runPostgresMigrations(pool);
-    const prepared = await prepareEmbeddingSet(answer, new DeterministicEmbeddingClient(config.nodeEnv), new AbortController().signal);
-    const receipt = createFixtureEmbeddingReceipt(prepared);
-    const activated = await new PostgresAnswerReleaseIndexer(config.nodeEnv)
-      .activate(answer, prepared, receipt, pool, new AbortController().signal);
+    if (provider) stdout('{"kind":"cost-warning","maxEmbeddingTokens":100000,"maxMicroUsd":20000}\n');
+    const budget = provider ? providerIndexBudget(answer.indexInputs) : null;
+    const pricing = provider ? await readBundledProviderPricing() : null;
+    if (provider && budget!.costUpperBoundMicroUsd !== estimateEmbeddingCostMicroUsd(budget!.tokenUpperBound, pricing!.embeddingInputMicroUsdPerMillionTokens)) throw new Error('provider pricing arithmetic mismatch');
+    if (provider && (!config.openAiApiKey || !config.providerDataControlReceiptPath || !config.providerEmbeddingReceiptRoot)) {
+      throw new Error('provider indexing requires key, data-control receipt, pricing, and receipt root');
+    }
+    const dataControl = provider ? await readProviderDataControlReceipt(config.providerDataControlReceiptPath!) : null;
+    const startedAt = new Date().toISOString();
+    const prepared = await prepareEmbeddingSet(answer, provider
+      ? new OpenAIEmbeddingClient(config.openAiApiKey!) : new DeterministicEmbeddingClient(config.nodeEnv), new AbortController().signal);
+    const providerAuthorities = provider ? createProviderEmbeddingAuthorities(answer, prepared, {
+      providerDataControlReceiptHash: dataControl!.receiptHash, providerPricingReceiptHash: pricing!.receiptHash,
+      createdAt: startedAt, completedAt: new Date().toISOString(),
+    }) : null;
+    if (providerAuthorities && (providerAuthorities.durable.inputTokens > 100_000 || providerAuthorities.durable.costMicroUsd > 20_000)) {
+      throw new Error('provider indexing measured maximum exceeded');
+    }
+    const receipt = providerAuthorities?.activation ?? createFixtureEmbeddingReceipt(prepared);
+    let reopenedProvider; let providerReceiptPath: string | undefined;
+    if (providerAuthorities) {
+      providerReceiptPath = await writeProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, providerAuthorities.durable);
+      try { reopenedProvider = await readProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, answer.answerReleaseId, providerAuthorities.durable.embeddingReceiptHash); }
+      catch (error) { await rm(providerReceiptPath, { force: true }); throw error; }
+    }
+    let activated;
+    try { activated = await new PostgresAnswerReleaseIndexer(config.nodeEnv)
+      .activate(answer, prepared, receipt, pool, new AbortController().signal, reopenedProvider); }
+    catch (error) { if (providerReceiptPath) await rm(providerReceiptPath, { force: true }); throw error; }
     const reread = await pool.query<ActivatedBindingRow>(`SELECT binding_id,content_release_id,answer_release_id,
       content_manifest_hash,answer_manifest_hash,answer_artifact_hash,embedding_model,embedding_dimensions,
       embedding_source,embedding_receipt_hash,chunk_count,index_checksum,state
