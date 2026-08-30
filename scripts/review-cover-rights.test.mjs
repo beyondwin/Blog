@@ -192,8 +192,8 @@ const expectedTask3Research = {
   'lord-of-the-flies': task3Literal('lord-of-the-flies', { identityUrl: 'https://minumsa.minumsa.com/book/1689/', candidateUrl: 'https://minumsa.minumsa.com/wp-content/uploads/bookcover/019_%ED%8C%8C%EB%A6%AC%EB%8C%80%EC%99%95-500x842.jpg', checksum: 'sha256:d52e4c5aa9fac202335b4a3a2b324891bfa8ee7aecc79f550df6d205af187308', width: 500, height: 842, authority: '민음사', authorityRole: 'publisher-and-candidate-host', termsUrl: 'https://minumsa.com/terms' }),
   'black-swan': task3Literal('black-swan', { identityUrl: 'https://dl.nanet.go.kr/detail/MONO12024000082438', candidateUrl: 'https://bnk.kpipa.or.kr/files/onix/book/trd/2018/04/30/s_o_9788990247674.jpg', checksum: 'sha256:2b59925c7925d38b5460450f070be24a22ee34a69dfb7ded04d269998b7d0ebd', width: 458, height: 671, authority: '한국출판문화산업진흥원 출판유통통합전산망', authorityRole: 'official-candidate-host', termsUrl: 'https://bnk.kpipa.or.kr/home/v3/center/centerGuideUseTerms' }),
   nevertheless: task3Literal('nevertheless', { identityUrl: 'https://www.yes24.com/product/goods/93760424', candidateUrl: 'https://image.yes24.com/goods/93760424/XL', checksum: 'sha256:37212146a870cfb5f71366c924995340c08a2facf819f718e330f79d6e869bb2', width: 808, height: 1200, ...yes24Host }),
-  'goethe-said-everything': task3Literal('goethe-said-everything', { identityUrl: 'https://library.hira.or.kr/search/detail/CATTOT000000038861', candidateUrl: 'https://image.yes24.com/goods/164510819/XL', checksum: 'sha256:dfa171a06be873225b70434dbfae6e829bf41aff7e2791eea2564248bb42416c', width: 850, height: 1200, ...yes24Host, holdBasis: 'ambiguous-candidate' }),
-  'devotion-of-suspect-x': task3Literal('devotion-of-suspect-x', { identityUrl: 'https://www.yes24.com/product/goods/2131596', candidateUrl: 'https://image.yes24.com/goods/2131596/XL', checksum: 'sha256:23188229a93c29714b09a74dce682277ed053cf81755dc652bfcd3679412f8be', width: 270, height: 400, ...yes24Host }),
+  'goethe-said-everything': task3Literal('goethe-said-everything', { identityUrl: 'https://www.library.kr/bookpoint/search/detail/9791194530701', candidateUrl: 'https://image.aladin.co.kr/product/37676/59/cover500/k212032349_1.jpg', checksum: 'sha256:439d75a02e894acf41854e7e90118951a0a016715c0c4bc1b49e1ebfec89b264', width: 500, height: 734, authority: '알라딘', authorityRole: 'official-distributor-candidate-host', termsUrl: 'https://aladin.co.kr/cs_center/wcs_guide_detail.aspx?pn=firstguide_08' }),
+  'devotion-of-suspect-x': task3Literal('devotion-of-suspect-x', { identityUrl: 'https://gslib.sen.go.kr/gslib/intro/search/detail.do?isbn=9788972753698&menu_idx=5&vCtrl=5311387643&vLoca=111005', candidateUrl: 'https://image.aladin.co.kr/product/67/47/cover500/8972753696_3.jpg', checksum: 'sha256:e794d9e6092d9c4934de1581ae1e5bffdea7b43594be7ec59d2429bfd94b2139', width: 500, height: 743, authority: '알라딘', authorityRole: 'official-distributor-candidate-host', termsUrl: 'https://aladin.co.kr/cs_center/wcs_guide_detail.aspx?pn=firstguide_08' }),
   'poor-charlies-almanack': task3Literal('poor-charlies-almanack', { identityUrl: 'https://www.yes24.com/Product/Goods/135966968', candidateUrl: 'https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg', checksum: 'sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a', width: 600, height: 866, authority: '김영사', authorityRole: 'publisher-rightsholder', termsUrl: 'https://www.gimmyoung.com/book/guide/copyright' }),
   'art-thief': task3Literal('art-thief', { identityUrl: 'https://www.yes24.com/Product/Goods/133133202', candidateUrl: 'https://image.yes24.com/goods/133133202/XL', checksum: 'sha256:b147a958a1a6714f2c57e1ea64e8798918c2714834af3c4b82ea082d4e603412', width: 771, height: 1200, ...yes24Host }),
   siddhartha: task3Literal('siddhartha', { identityUrl: 'https://www.yes24.com/Product/Goods/67723866', candidateUrl: 'https://image.yes24.com/goods/67723866/XL', checksum: 'sha256:e10928fb67f013780eb4c3c3c4da0e0963837cdb51224d4b1e1ad5a291a6e988', width: 801, height: 1200, authority: '문학동네', authorityRole: 'publisher-rightsholder', termsUrl: 'https://munhak.com/customerCenter/guide/secondCopyright' }),
@@ -420,7 +420,7 @@ function expectedSeedEvidence(recordId, literal) {
           finding: 'No source media bundle exists, so no URL, checksum, dimensions, or candidate bytes are invented.',
         },
       ],
-      decisionReason: 'No repository candidate exists; live research must find exact candidate bytes and an applicable grant or move this record to hold.',
+      decisionReason: 'An exact candidate now exists in quarantine, but no applicable rightsholder grant permits promotion into the public source bundle.',
     };
   }
   return {
@@ -500,7 +500,7 @@ function assertValidLedger(candidate, snapshot) {
     } else {
       expect(record.currentMedia, `${record.recordId}: absent media tuple`).toEqual({ state: 'absent', reason: 'no source media bundle exists' });
       expect(snapshot.media[record.recordId], `${record.recordId}: no decoded media`).toBeNull();
-      expect(record.queuedChecks).toContain('exact-candidate-and-redistribution-grant');
+      expect(record.queuedChecks).toContain('rightsholder-redistribution-evidence');
     }
 
     expect(controlledStates.has(record.state), `${record.recordId}: controlled state`).toBe(true);
@@ -823,7 +823,7 @@ describe('review cover rights research inventory', () => {
     expect(ledger.records.filter((record) => record.currentMedia.state === 'absent').map((record) => record.recordId)).toEqual(['devotion-of-suspect-x']);
   });
 
-  it('preserves the Task 2 research seed while recording only completed Task 3 transitions', () => {
+  it('preserves exact candidates while keeping rights-incomplete records fail-closed', () => {
     expect(ledger.records.map((record) => record.state)).toEqual(Array(18).fill('hold'));
     expect(Object.values(snapshot.approvalArtifacts.decisions)).not.toContain(true);
     expect(snapshot.approvalArtifacts.registryIds).toEqual([]);

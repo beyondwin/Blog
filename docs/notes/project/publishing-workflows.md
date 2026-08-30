@@ -144,8 +144,12 @@ HOLD 18건이다. HOLD ID는 `changing-their-minds`, `lord-of-the-flies`, `black
 `goethe-said-everything`, `devotion-of-suspect-x`, `poor-charlies-almanack`, `art-thief`, `siddhartha`,
 `habitus`, `how-adam-smith-can-change-your-life`, `lolita`, `future-arrived-first`,
 `how-we-crossed-winter`, `convenience-store-woman`, `miracles-of-namiya-general-store`,
-`doing-good-better`, `factfulness`다. production registry도 승인 0건이다. identification-only source
-cover가 있는 17건의 strict rights warning은 의도적으로 유지하고, source cover 자체가 없는
+`doing-good-better`, `factfulness`다. 권리 판단과 별개로 quarantine의 18개 후보는 모두 exact-edition
+identity와 최소 300px 폭을 충족한다. `goethe-said-everything`은 잘못 연결됐던 여름 에디션을 2025
+초판 후보로, `devotion-of-suspect-x`는 270px 후보를 500px exact-edition 후보로 교체해 tuple을 다시
+동결했다. 다만 controller 승인은 권리자 또는 정식 대리인의 grant를 대신하지 않으므로 두 후보를
+포함한 18건 모두 HOLD이며 production registry도 승인 0건이다. identification-only source cover가
+있는 17건의 strict rights warning은 의도적으로 유지하고, source cover 자체가 없는
 `devotion-of-suspect-x`도 text-led다. 실제 approval/promotion path, approved-cover presentation과
 실제 approved cover request failure는 모두 `not_measured`다. synthetic review fallback test는
 automated dependency evidence일 뿐 real-data 동작을 측정했다는 뜻이 아니다.

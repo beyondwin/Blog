@@ -357,36 +357,36 @@ records:
     task3Research:
       identitySource:
         kind: authoritative-edition-catalog
-        url: https://library.hira.or.kr/search/detail/CATTOT000000038861
+        url: https://www.library.kr/bookpoint/search/detail/9791194530701
         retrievedAt: "2026-08-30"
         finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2025 publication year.
       candidate:
         path: .superpowers/review-cover-intake/goethe-said-everything/cover.jpg
-        sourceUrl: https://image.yes24.com/goods/164510819/XL
-        checksum: sha256:dfa171a06be873225b70434dbfae6e829bf41aff7e2791eea2564248bb42416c
-        width: 850
-        height: 1200
+        sourceUrl: https://image.aladin.co.kr/product/37676/59/cover500/k212032349_1.jpg
+        checksum: sha256:439d75a02e894acf41854e7e90118951a0a016715c0c4bc1b49e1ebfec89b264
+        width: 500
+        height: 734
         kind: book-cover
         extension: jpg
         retrievedAt: "2026-08-30"
       rightsResearch:
-        authority: 예스이십사
+        authority: 알라딘
         authorityRole: official-distributor-candidate-host
-        termsUrl: https://www.yes24.com/notice/service.aspx
+        termsUrl: https://aladin.co.kr/cs_center/wcs_guide_detail.aspx?pn=firstguide_08
         retrievedAt: "2026-08-30"
         outcome: absent
         finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
-    holdBasis: ambiguous-candidate
-    holdReason: The currently offered candidate URL resolves to a changed edition and cannot be bound to the recorded edition.
+    holdBasis: absent-grant
+    holdReason: An exact 2025-edition candidate replaced the changed summer-edition image, but no rightsholder grant authorizes public website redistribution of the replacement bytes.
     researchFindings:
       - &goethe-said-everything-hold-finding
         recordId: goethe-said-everything
-        subject: candidate
-        outcome: ambiguous
+        subject: redistribution-grant
+        outcome: absent
         locator:
           kind: source
-          value: https://image.yes24.com/goods/164510819/XL
-        finding: The checked candidate cannot be tied to the exact bibliographic identity.
+          value: https://aladin.co.kr/cs_center/wcs_guide_detail.aspx?pn=firstguide_08
+        finding: The checked authoritative terms contain no public-website redistribution grant.
     recordedResearchFinding: *goethe-said-everything-hold-finding
 
   - recordId: devotion-of-suspect-x
@@ -415,27 +415,27 @@ records:
         locator: src/assets/content/reviews/devotion-of-suspect-x/
         finding: No source media bundle exists, so no URL, checksum, dimensions, or candidate bytes are invented.
     queuedChecks:
-      - exact-candidate-and-redistribution-grant
-    decisionReason: No repository candidate exists; live research must find exact candidate bytes and an applicable grant or move this record to hold.
+      - rightsholder-redistribution-evidence
+    decisionReason: An exact candidate now exists in quarantine, but no applicable rightsholder grant permits promotion into the public source bundle.
     task3Research:
       identitySource:
         kind: authoritative-edition-catalog
-        url: https://www.yes24.com/product/goods/2131596
+        url: https://gslib.sen.go.kr/gslib/intro/search/detail.do?isbn=9788972753698&menu_idx=5&vCtrl=5311387643&vLoca=111005
         retrievedAt: "2026-08-30"
         finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2006 publication year.
       candidate:
         path: .superpowers/review-cover-intake/devotion-of-suspect-x/cover.jpg
-        sourceUrl: https://image.yes24.com/goods/2131596/XL
-        checksum: sha256:23188229a93c29714b09a74dce682277ed053cf81755dc652bfcd3679412f8be
-        width: 270
-        height: 400
+        sourceUrl: https://image.aladin.co.kr/product/67/47/cover500/8972753696_3.jpg
+        checksum: sha256:e794d9e6092d9c4934de1581ae1e5bffdea7b43594be7ec59d2429bfd94b2139
+        width: 500
+        height: 743
         kind: book-cover
         extension: jpg
         retrievedAt: "2026-08-30"
       rightsResearch:
-        authority: 예스이십사
+        authority: 알라딘
         authorityRole: official-distributor-candidate-host
-        termsUrl: https://www.yes24.com/notice/service.aspx
+        termsUrl: https://aladin.co.kr/cs_center/wcs_guide_detail.aspx?pn=firstguide_08
         retrievedAt: "2026-08-30"
         outcome: absent
         finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
@@ -448,7 +448,7 @@ records:
         outcome: absent
         locator:
           kind: source
-          value: https://www.yes24.com/notice/service.aspx
+          value: https://aladin.co.kr/cs_center/wcs_guide_detail.aspx?pn=firstguide_08
         finding: The checked authoritative terms contain no public-website redistribution grant.
     recordedResearchFinding: *devotion-of-suspect-x-hold-finding
 
