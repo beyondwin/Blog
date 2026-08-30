@@ -49,6 +49,7 @@ export interface AnswerReleaseCatalogSnapshot {
   readonly chunkCount: number;
   isBoundTo(contentReleaseId: string, answerReleaseId: string): boolean;
   evidenceFor(ids: readonly string[]): readonly AuthorizedEvidence[];
+  hasAuthorizedEvidenceLocation(evidence: AuthorizedEvidence): boolean;
 }
 
 export interface AnswerPublicQuestionCommand {

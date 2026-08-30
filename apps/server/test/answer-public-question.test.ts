@@ -74,6 +74,7 @@ function catalog(overrides: Partial<AnswerReleaseCatalogSnapshot> = {}): AnswerR
     evidenceFor(ids) {
       return ids.includes(EVIDENCE.evidenceId) ? [EVIDENCE] : [];
     },
+    hasAuthorizedEvidenceLocation() { return true; },
     ...overrides,
   };
   return Object.freeze(snapshot);

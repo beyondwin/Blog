@@ -5,7 +5,7 @@ import type { AuthorizedEvidence, GeneratedClaim } from '../../domain/public-ans
 
 const EVIDENCE_ID = /^[a-f0-9]{64}$/u;
 const UNSAFE_MARKUP = /<\/?[a-z!][^>]*>|!?\[[^\]]*\]\([^)]*\)|https?:\/\//iu;
-const INSTRUCTION_METADATA = /(?:^|\s)(?:recordId|chunkId|recordTitle|collectionLabel|canonicalPath|locator|checksum|releaseId|bindingId|approval(?:Hash)?|receipt(?:Hash)?|system|developer|assistant)\s*:/iu;
+const INSTRUCTION_METADATA = /(?:^|[^\p{L}\p{N}_])(?:recordId|chunkId|recordTitle|collectionLabel|canonicalPath|locator|checksum|releaseId|bindingId|approval(?:Hash)?|receipt(?:Hash)?|system|developer|assistant)\s*:/iu;
 
 function fail(reason: string): ReturnType<DeterministicAnswerVerifier['verify']> {
   return Object.freeze({ ok: false, reason });
@@ -117,7 +117,8 @@ export class CitationVerifier implements DeterministicAnswerVerifier {
       if (authority.answerReleaseId !== input.catalog.answerReleaseId) return fail('answer-release-mismatch');
       if ([...authority.excerpt].length > 1_200 || checksum(authority.excerpt) !== authority.excerptChecksum) return fail('excerpt-integrity');
       if (!directCanonicalPath(authority.canonicalPath) || authority.locator.label.trim().length === 0
-        || !Number.isInteger(authority.locator.ordinal) || authority.locator.ordinal < 1) return fail('canonical-locator');
+        || !Number.isInteger(authority.locator.ordinal) || authority.locator.ordinal < 1
+        || !input.catalog.hasAuthorizedEvidenceLocation(authority)) return fail('canonical-locator');
     }
 
     const sentenceUnits: SupportedSentenceUnit[] = [];

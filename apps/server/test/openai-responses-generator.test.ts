@@ -267,6 +267,80 @@ describe('OpenAiResponsesClient', () => {
       schemaName: 'schema', applicationKind: 'generation', schema: { type: 'object' },
     }, controller.signal)).rejects.toThrow('body-aborted');
   });
+
+  it('settles a signal-only abort against a never-settling body without an unhandled late rejection', async () => {
+    const controller = new AbortController();
+    const trustedReason = new Error('trusted-abort-reason');
+    let rejectRead!: (reason: unknown) => void;
+    let cancelCalls = 0;
+    const reader = {
+      read: () => new Promise<ReadableStreamReadResult<Uint8Array>>((_resolve, reject) => { rejectRead = reject; }),
+      cancel: () => { cancelCalls += 1; return new Promise<void>(() => undefined); },
+      releaseLock: vi.fn(),
+    };
+    const fakeResponse = { ok: true, status: 200, body: { getReader: () => reader } } as unknown as Response;
+    const client = new OpenAiResponsesClient('fixture-key', async () => fakeResponse);
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const pending = client.structured(canonical, {
+        schemaName: 'schema', applicationKind: 'generation', schema: { type: 'object' },
+      }, controller.signal).then(() => 'resolved' as const, (error) => error);
+      setTimeout(() => controller.abort(trustedReason), 5);
+      const observed = await Promise.race([
+        pending,
+        new Promise<'still-pending'>((resolve) => setTimeout(() => resolve('still-pending'), 75)),
+      ]);
+      rejectRead(new Error('late-provider-secret'));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(observed).toBe(trustedReason);
+      expect(cancelCalls).toBe(1);
+      expect(reader.releaseLock).toHaveBeenCalled();
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
+
+  it.each([
+    ['transport', async () => { throw new Error('provider-secret-transport'); }],
+    ['body stream', async () => new Response(new ReadableStream({ start(stream) { stream.error(new Error('provider-secret-stream')); } }), { status: 200 })],
+    ['body reader', async () => ({
+      ok: true, status: 200, body: { getReader() { throw new Error('provider-secret-reader'); } },
+    } as unknown as Response)],
+  ])('removes untrusted %s errors from the complete application error chain', async (_label, fetcher) => {
+    const client = new OpenAiResponsesClient('fixture-key', fetcher);
+    const caught = await client.structured(canonical, {
+      schemaName: 'schema', applicationKind: 'generation', schema: { type: 'object' },
+    }, new AbortController().signal).then(() => undefined, (error) => error as Error & { cause?: unknown });
+    const chain: unknown[] = [];
+    let cursor: unknown = caught;
+    while (cursor instanceof Error) {
+      chain.push({ name: cursor.name, message: cursor.message });
+      cursor = (cursor as Error & { cause?: unknown }).cause;
+    }
+    expect(chain).toHaveLength(1);
+    expect(JSON.stringify(chain)).not.toMatch(/provider-secret/u);
+    expect((caught as Error & { cause?: unknown }).cause).toBeUndefined();
+  });
+
+  it('does not await an abort-ignoring non-success body cancellation', async () => {
+    const fakeResponse = {
+      ok: false,
+      status: 500,
+      body: { cancel: () => new Promise<void>(() => undefined) },
+    } as unknown as Response;
+    const client = new OpenAiResponsesClient('fixture-key', async () => fakeResponse);
+    const observed = await Promise.race([
+      client.structured(canonical, {
+        schemaName: 'schema', applicationKind: 'generation', schema: { type: 'object' },
+      }, new AbortController().signal).then(() => 'resolved', (error) => error),
+      new Promise<'still-pending'>((resolve) => setTimeout(() => resolve('still-pending'), 75)),
+    ]);
+    expect(observed).toBeInstanceOf(Error);
+    expect((observed as Error).message).toBe('provider response request failed');
+  });
 });
 
 describe('synthetic loopback protocol receipts', () => {

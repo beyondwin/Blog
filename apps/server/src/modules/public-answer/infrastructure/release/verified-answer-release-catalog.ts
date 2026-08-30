@@ -145,6 +145,18 @@ function immutableSet<T>(values: readonly T[]): ReadonlySet<T> {
   });
 }
 
+function evidenceLocationKey(evidence: Pick<AuthorizedEvidence,
+  'evidenceId' | 'recordId' | 'canonicalPath' | 'locator'>): string {
+  return [
+    evidence.evidenceId,
+    evidence.recordId,
+    evidence.canonicalPath,
+    evidence.locator.kind,
+    evidence.locator.label,
+    String(evidence.locator.ordinal),
+  ].join('\0');
+}
+
 export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogSource {
   constructor(
     private readonly config: Readonly<ServerConfig>,
@@ -206,6 +218,7 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
         canonicalPath: item.canonicalPath, locator: Object.freeze({ ...item.locator }), excerpt: item.excerpt,
         excerptChecksum: item.excerptChecksum,
       }) satisfies AuthorizedEvidence] as const));
+      const authorizedEvidenceLocations = immutableSet(evidence.map((item) => evidenceLocationKey(item)));
       const chunkById = immutableMap(chunks.map((item) => [item.chunkId, Object.freeze({ ...item })] as const));
       const chunkChecksumById = immutableMap(release.indexInputs.map((item) => [item.chunkId, item.chunkChecksum] as const));
       const snapshot: VerifiedCatalogSnapshot = {
@@ -217,6 +230,13 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
           contentReleaseId === release.contentReleaseId && answerReleaseId === release.answerReleaseId
         ),
         evidenceFor: (ids) => Object.freeze(ids.flatMap((id) => evidenceById.get(id) ?? [])),
+        hasAuthorizedEvidenceLocation: (candidate) => {
+          const authority = evidenceById.get(candidate.evidenceId);
+          const record = records[candidate.recordId];
+          return Boolean(authority && record && record.href === candidate.canonicalPath
+            && authorizedEvidenceLocations.has(evidenceLocationKey(candidate))
+            && evidenceLocationKey(authority) === evidenceLocationKey(candidate));
+        },
       };
       return Object.freeze(snapshot);
     } catch (error) {

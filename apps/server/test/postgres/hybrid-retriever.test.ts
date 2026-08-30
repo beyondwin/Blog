@@ -11,6 +11,7 @@ function catalog() {
     chunkById: new Map([['a', Object.freeze({ chunkId: 'a', recordId: 'record-a', canonicalPath: '/a/' })]]),
     chunkChecksumById: new Map([['a', `sha256:${'4'.repeat(64)}`]]),
     isBoundTo: () => true, evidenceFor: (ids: readonly string[]) => ids.flatMap((id) => id === 'e1' ? [evidence] : []),
+    hasAuthorizedEvidenceLocation: () => true,
   });
 }
 

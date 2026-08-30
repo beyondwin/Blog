@@ -14,6 +14,7 @@ import { assertCompleteActivatedBinding, runIndexAnswerReleaseCli } from '../src
 import postgresConfig from '../vitest.postgres.config.js';
 import {
   readVerifiedAnswerReleaseAuthority,
+  VerifiedAnswerReleaseCatalogSource,
 } from '../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 import {
   runTestPostgresHarnessFromArgv,
@@ -47,6 +48,69 @@ type AssertFalse<T extends false> = T;
 type _PlainReleaseCannotCrossAuthorityBoundary = AssertFalse<PlainRelease extends VerifiedActivePublicAnswerReleaseAuthority ? true : false>;
 
 describe('deterministic fixture embedding preparation', () => {
+  it('seals route and locator membership to the pinned public manifest and verified evidence', async () => {
+    const answerReleaseId = 'a'.repeat(64);
+    const contentReleaseId = 'b'.repeat(64);
+    const evidenceId = 'e'.repeat(64);
+    const canonicalEvidence = {
+      evidenceId,
+      chunkId: 'c'.repeat(64),
+      recordId: 'articles/example',
+      collectionLabel: '기록',
+      recordTitle: 'Example',
+      canonicalPath: '/articles/example/',
+      locator: { kind: 'heading-paragraph' as const, label: '판단', ordinal: 1 },
+      excerpt: '검증된 공개 기록입니다.',
+      excerptChecksum: `sha256:${'d'.repeat(64)}`,
+    };
+    const release = {
+      releasePath: '/answer/release', contentReleaseId, answerReleaseId,
+      manifestHash: `sha256:${'1'.repeat(64)}`, artifactHash: `sha256:${'2'.repeat(64)}`,
+      corpusApprovalHash: `sha256:${'3'.repeat(64)}`,
+      manifest: { identity: { contentManifestHash: `sha256:${'4'.repeat(64)}`, normalizerVersion: 'nfkc-lower-hangul-ngram-v1' } },
+      chunks: [{ chunkId: canonicalEvidence.chunkId, recordId: canonicalEvidence.recordId, canonicalPath: canonicalEvidence.canonicalPath }],
+      evidence: [canonicalEvidence],
+      indexInputs: [{ chunkId: canonicalEvidence.chunkId, chunkChecksum: `sha256:${'5'.repeat(64)}` }],
+    };
+    const content = {
+      manifest: { releaseId: contentReleaseId, records: { [canonicalEvidence.recordId]: { href: canonicalEvidence.canonicalPath } } },
+      manifestHash: `sha256:${'6'.repeat(64)}`, artifactHash: `sha256:${'7'.repeat(64)}`,
+    };
+    const client = {
+      async query(sql: string) {
+        if (sql.includes('public_answer_release_bindings')) return { rowCount: 1, rows: [{
+          binding_id: '11111111-1111-4111-8111-111111111111', content_release_id: contentReleaseId,
+          answer_release_id: answerReleaseId, content_manifest_hash: release.manifest.identity.contentManifestHash,
+          answer_manifest_hash: release.manifestHash, answer_artifact_hash: release.artifactHash,
+          embedding_source: 'fixture', embedding_receipt_hash: `sha256:${'8'.repeat(64)}`,
+          chunk_count: 1, index_checksum: `sha256:${'9'.repeat(64)}`,
+        }] };
+        if (sql.includes('public_answer_tombstones')) return { rowCount: 0, rows: [] };
+        return { rowCount: 0, rows: [] };
+      },
+      release() {},
+    };
+    const source = new VerifiedAnswerReleaseCatalogSource({} as any, {
+      async connect() { return client; },
+    } as any, {
+      async readApproval() { return { schemaVersion: 1, entries: [] }; },
+      async readContent() { return content; },
+      async readAnswer() { return release as any; },
+      async verifyAnswer() { return undefined; },
+    });
+
+    const snapshot = await source.snapshot(new AbortController().signal);
+    const authorized = snapshot.evidenceFor([evidenceId])[0]!;
+    expect(snapshot.hasAuthorizedEvidenceLocation(authorized)).toBe(true);
+    expect(snapshot.hasAuthorizedEvidenceLocation({ ...authorized, canonicalPath: '/articles/alias/' })).toBe(false);
+    expect(snapshot.hasAuthorizedEvidenceLocation({
+      ...authorized, locator: { ...authorized.locator, label: '존재하지 않는 문단' },
+    })).toBe(false);
+    expect(snapshot.hasAuthorizedEvidenceLocation({
+      ...authorized, locator: { ...authorized.locator, ordinal: 999 },
+    })).toBe(false);
+  });
+
   it('detaches and recursively freezes verified authority before sealing preparation', async () => {
     const original = {
       releasePath: '/answer/release', answerReleaseId: 'a'.repeat(64), contentReleaseId: 'b'.repeat(64),

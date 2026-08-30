@@ -48,7 +48,8 @@ function assertEvidenceApplication(value: unknown): void {
 function assertApplicationData(text: string, kind: ResponsesApplicationKind): void {
   let decoded: unknown;
   try { decoded = JSON.parse(text); } catch (error) {
-    throw new PublicAnswerInvalidResponseError('provider application data is invalid JSON', { cause: error });
+    void error;
+    throw new PublicAnswerInvalidResponseError('provider application data is invalid JSON');
   }
   const record = exactKeys(
     decoded,
@@ -115,18 +116,75 @@ export function assertExactResponsesRequest(actual: unknown, expected: unknown, 
   }
 }
 
+function releaseReader(reader: ReadableStreamDefaultReader<Uint8Array>): void {
+  try { reader.releaseLock(); } catch { /* A pending read releases through its attached settlement handler. */ }
+}
+
+function cancelReaderWithoutWaiting(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  pending?: Promise<ReadableStreamReadResult<Uint8Array>>,
+): void {
+  try {
+    const cancellation = reader.cancel();
+    void cancellation.then(() => releaseReader(reader), () => releaseReader(reader));
+  } catch { /* The abort outcome must not depend on provider cancellation cooperation. */ }
+  releaseReader(reader);
+  if (pending) void pending.then(() => releaseReader(reader), () => releaseReader(reader));
+}
+
+function cancelBodyWithoutWaiting(body: ReadableStream<Uint8Array> | null): void {
+  if (!body) return;
+  try { void body.cancel().catch(() => undefined); } catch { /* Provider cancellation is untrusted and best-effort. */ }
+}
+
+function readWithSignal(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  signal: AbortSignal,
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  if (signal.aborted) {
+    cancelReaderWithoutWaiting(reader);
+    return Promise.reject(signal.reason ?? new Error('provider response request aborted'));
+  }
+  const pending = reader.read();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (operation: () => void) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      operation();
+    };
+    const onAbort = () => finish(() => {
+      cancelReaderWithoutWaiting(reader, pending);
+      reject(signal.reason ?? new Error('provider response request aborted'));
+    });
+    signal.addEventListener('abort', onAbort, { once: true });
+    if (signal.aborted) onAbort();
+    pending.then(
+      (value) => finish(() => resolve(value)),
+      () => finish(() => {
+        if (signal.aborted) reject(signal.reason ?? new Error('provider response request aborted'));
+        else reject(new PublicAnswerInvalidResponseError('provider response is invalid'));
+      }),
+    );
+  });
+}
+
 async function readCappedBody(response: Response, signal: AbortSignal): Promise<unknown> {
   if (!response.body) throw new PublicAnswerInvalidResponseError('provider response is invalid');
-  const reader = response.body.getReader();
+  let reader: ReadableStreamDefaultReader<Uint8Array>;
+  try { reader = response.body.getReader(); } catch {
+    throw new PublicAnswerInvalidResponseError('provider response is invalid');
+  }
   const chunks: Uint8Array[] = [];
   let total = 0;
   try {
     while (true) {
-      const next = await reader.read();
+      const next = await readWithSignal(reader, signal);
       if (next.done) break;
       total += next.value.byteLength;
       if (total > RESPONSE_CAP) {
-        await reader.cancel().catch(() => undefined);
+        cancelReaderWithoutWaiting(reader);
         throw new PublicAnswerInvalidResponseError('provider response exceeded byte cap');
       }
       chunks.push(next.value);
@@ -134,7 +192,9 @@ async function readCappedBody(response: Response, signal: AbortSignal): Promise<
   } catch (error) {
     if (signal.aborted) throw signal.reason ?? error;
     if (error instanceof PublicAnswerInvalidResponseError) throw error;
-    throw new PublicAnswerInvalidResponseError('provider response is invalid', { cause: error });
+    throw new PublicAnswerInvalidResponseError('provider response is invalid');
+  } finally {
+    releaseReader(reader);
   }
   const bytes = new Uint8Array(total);
   let offset = 0;
@@ -142,7 +202,8 @@ async function readCappedBody(response: Response, signal: AbortSignal): Promise<
   try {
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   } catch (error) {
-    throw new PublicAnswerInvalidResponseError('provider response is invalid', { cause: error });
+    void error;
+    throw new PublicAnswerInvalidResponseError('provider response is invalid');
   }
 }
 
@@ -167,7 +228,8 @@ function extractStructured(parsed: unknown): StructuredResponse {
   }
   let value: unknown;
   try { value = JSON.parse(content.text); } catch (error) {
-    throw new PublicAnswerInvalidResponseError('provider response is invalid', { cause: error });
+    void error;
+    throw new PublicAnswerInvalidResponseError('provider response is invalid');
   }
   return Object.freeze({
     value,
@@ -193,10 +255,10 @@ export class OpenAiResponsesClient {
       });
     } catch (error) {
       if (signal.aborted) throw signal.reason ?? error;
-      throw new PublicAnswerTransportError('provider response request failed', { cause: error });
+      throw new PublicAnswerTransportError('provider response request failed');
     }
     if (!response.ok || (response.status >= 300 && response.status < 400)) {
-      await response.body?.cancel().catch(() => undefined);
+      cancelBodyWithoutWaiting(response.body);
       throw new PublicAnswerTransportError('provider response request failed');
     }
     return extractStructured(await readCappedBody(response, signal));
