@@ -82,6 +82,14 @@ describe('server configuration', () => {
       verifierIdentityHash: `sha256:${'5'.repeat(64)}`, approvedAt: '2026-08-29T00:00:00.000Z',
       expiresAt: '2099-09-01T00:00:00.000Z',
     });
+    const reorderedEdge = canonicalEdgeReachabilityReceipt({
+      expiresAt: '2099-09-01T00:00:00.000Z', approvedAt: '2026-08-29T00:00:00.000Z',
+      verifierIdentityHash: `sha256:${'5'.repeat(64)}`,
+      providerProjectSpendCapEvidenceChecksum: provider.spendCapEvidenceChecksum,
+      trustedProxyAddresses: ['127.0.0.1'], publicOrigin: 'https://example.com/', replicaCount: 1,
+      edgeOnly: true, schemaVersion: 1,
+    });
+    expect(reorderedEdge).toEqual(edge);
     await writeFile(edgePath, `${JSON.stringify(edge, null, 2)}\n`);
     await expect(parseServerConfig(base({
       NODE_ENV: 'production', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),

@@ -20,7 +20,18 @@ function hash(value: string | Buffer): string {
 }
 
 export function canonicalEdgeReachabilityReceipt(input: EdgeReachabilityReceiptInput): Readonly<SealedEdgeReachabilityReceipt> {
-  return Object.freeze({ ...input, trustedProxyAddresses: Object.freeze([...input.trustedProxyAddresses]), evidenceChecksum: hash(JSON.stringify(input)) });
+  const normalized: EdgeReachabilityReceiptInput = {
+    schemaVersion: input.schemaVersion,
+    edgeOnly: input.edgeOnly,
+    replicaCount: input.replicaCount,
+    publicOrigin: input.publicOrigin,
+    trustedProxyAddresses: Object.freeze([...input.trustedProxyAddresses]),
+    providerProjectSpendCapEvidenceChecksum: input.providerProjectSpendCapEvidenceChecksum,
+    verifierIdentityHash: input.verifierIdentityHash,
+    approvedAt: input.approvedAt,
+    expiresAt: input.expiresAt,
+  };
+  return Object.freeze({ ...normalized, evidenceChecksum: hash(JSON.stringify(normalized)) });
 }
 
 async function readEdgeReachabilityReceipt(
@@ -49,7 +60,18 @@ async function readEdgeReachabilityReceipt(
     if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join('\0') !== [...keys].sort().join('\0')) {
       throw new Error('edge reachability receipt has missing or unknown fields');
     }
-    const { evidenceChecksum, ...input } = parsed;
+    const input: EdgeReachabilityReceiptInput = {
+      schemaVersion: parsed.schemaVersion as 1,
+      edgeOnly: parsed.edgeOnly as true,
+      replicaCount: parsed.replicaCount as 1,
+      publicOrigin: parsed.publicOrigin as string,
+      trustedProxyAddresses: parsed.trustedProxyAddresses as string[],
+      providerProjectSpendCapEvidenceChecksum: parsed.providerProjectSpendCapEvidenceChecksum as string,
+      verifierIdentityHash: parsed.verifierIdentityHash as string,
+      approvedAt: parsed.approvedAt as string,
+      expiresAt: parsed.expiresAt as string,
+    };
+    const evidenceChecksum = parsed.evidenceChecksum;
     if (evidenceChecksum !== hash(JSON.stringify(input)) || typeof evidenceChecksum !== 'string' || !checksumPattern.test(evidenceChecksum)) {
       throw new Error('edge reachability evidence checksum does not match');
     }
