@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 import { parse as parseYaml } from 'yaml';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -134,29 +135,25 @@ const expectedIds = [
 ];
 const controlledStates = new Set(['researching', 'ready-for-independent-review', 'approved', 'hold']);
 const directHoldBases = new Set(['absent-candidate', 'ambiguous-candidate', 'absent-grant', 'ambiguous-grant']);
-const validDirectHoldFindings = {
+const directHoldExpectations = {
   'absent-candidate': {
     subject: 'candidate',
     outcome: 'absent',
-    locator: { kind: 'source', value: 'https://publisher.example/catalog/exact-edition' },
     finding: 'The checked authoritative catalog has no exact-edition cover candidate.',
   },
   'ambiguous-candidate': {
     subject: 'candidate',
     outcome: 'ambiguous',
-    locator: { kind: 'source', value: 'https://publisher.example/catalog/candidate' },
     finding: 'The checked candidate cannot be tied to the exact bibliographic identity.',
   },
   'absent-grant': {
     subject: 'redistribution-grant',
     outcome: 'absent',
-    locator: { kind: 'source', value: 'https://publisher.example/terms' },
     finding: 'The checked authoritative terms contain no public-website redistribution grant.',
   },
   'ambiguous-grant': {
     subject: 'redistribution-grant',
     outcome: 'ambiguous',
-    locator: { kind: 'rights-evidence', value: 'docs/notes/project/assets/review-cover-rights/example/rights-evidence.txt' },
     finding: 'The checked evidence does not bind its grant to the exact candidate bytes.',
   },
 };
@@ -165,13 +162,29 @@ function clone(value) {
   return structuredClone(value);
 }
 
+function directHoldFinding(record, holdBasis) {
+  const expectation = directHoldExpectations[holdBasis];
+  const isbn13 = expected[record.recordId].identity.isbn13;
+  return {
+    recordId: record.recordId,
+    subject: expectation.subject,
+    outcome: expectation.outcome,
+    locator: holdBasis === 'ambiguous-grant'
+      ? { kind: 'rights-evidence', value: `docs/notes/project/assets/review-cover-rights/${record.recordId}/rights-evidence.txt` }
+      : { kind: 'source', value: `https://publisher.example/research/${isbn13}/${holdBasis}` },
+    finding: expectation.finding,
+  };
+}
+
 function transitionToDirectHold(candidate, holdBasis) {
   const record = candidate.records[0];
+  const finding = directHoldFinding(record, holdBasis);
   record.state = 'hold';
   record.stateHistory.push({ state: 'hold', recordedAt: '2026-08-30' });
   record.holdBasis = holdBasis;
   record.holdReason = `Research established ${holdBasis}.`;
-  record.recordedResearchFinding = clone(validDirectHoldFindings[holdBasis]);
+  record.researchFindings = [clone(finding)];
+  record.recordedResearchFinding = clone(finding);
   return record;
 }
 
@@ -233,6 +246,34 @@ function receiptIdsForManifest(recordId, manifest) {
     .map((item) => `${recordId}:${item.id}`);
 }
 
+function assertResearchFindingShape(recordId, finding) {
+  expect(finding && typeof finding === 'object', `${recordId}: structured research finding`).toBe(true);
+  expect(Object.keys(finding).sort(), `${recordId}: exact research finding fields`).toEqual([
+    'finding',
+    'locator',
+    'outcome',
+    'recordId',
+    'subject',
+  ]);
+  expect(finding.recordId, `${recordId}: research finding record`).toBe(recordId);
+  expect(['candidate', 'redistribution-grant']).toContain(finding.subject);
+  expect(['absent', 'ambiguous']).toContain(finding.outcome);
+  expect(finding.locator && typeof finding.locator === 'object', `${recordId}: structured research locator`).toBe(true);
+  expect(Object.keys(finding.locator).sort(), `${recordId}: exact research locator fields`).toEqual(['kind', 'value']);
+  expect(['source', 'rights-evidence']).toContain(finding.locator.kind);
+  expect(finding.locator.value?.trim(), `${recordId}: research locator value`).toBeTruthy();
+  if (finding.locator.kind === 'source') {
+    expect(() => new URL(finding.locator.value), `${recordId}: source locator URL`).not.toThrow();
+    expect(['http:', 'https:']).toContain(new URL(finding.locator.value).protocol);
+  } else {
+    expect(finding.locator.value, `${recordId}: record-local rights evidence`).toMatch(
+      new RegExp(`^docs/notes/project/assets/review-cover-rights/${recordId}/rights-evidence\\.(?:html|pdf|txt|png|jpg)$`),
+    );
+  }
+  if (finding.subject === 'candidate') expect(finding.locator.kind).toBe('source');
+  expect(finding.finding?.trim(), `${recordId}: research finding`).toBeTruthy();
+}
+
 function assertValidLedger(candidate, snapshot) {
   expect(candidate.version).toBe(1);
   expect(candidate.redistributionPrinciple).toBe('Product and image URLs identify candidates only; they do not establish public redistribution rights.');
@@ -276,22 +317,19 @@ function assertValidLedger(candidate, snapshot) {
         expect(directHoldBases.has(record.holdBasis), `${record.recordId}: direct hold basis`).toBe(true);
         expect(record.holdReason?.trim(), `${record.recordId}: direct hold reason`).toBeTruthy();
         const finding = record.recordedResearchFinding;
-        const expectedFinding = validDirectHoldFindings[record.holdBasis];
-        expect(finding && typeof finding === 'object', `${record.recordId}: structured direct hold finding`).toBe(true);
-        expect(Object.keys(finding).sort(), `${record.recordId}: exact direct hold finding fields`).toEqual([
-          'finding',
-          'locator',
-          'outcome',
-          'subject',
-        ]);
+        const expectedFinding = directHoldExpectations[record.holdBasis];
+        assertResearchFindingShape(record.recordId, finding);
         expect(finding.subject, `${record.recordId}: direct hold subject`).toBe(expectedFinding.subject);
         expect(finding.outcome, `${record.recordId}: direct hold outcome`).toBe(expectedFinding.outcome);
-        expect(finding.locator && typeof finding.locator === 'object', `${record.recordId}: structured direct hold locator`).toBe(true);
-        expect(Object.keys(finding.locator).sort(), `${record.recordId}: exact direct hold locator fields`).toEqual(['kind', 'value']);
-        expect(['source', 'rights-evidence']).toContain(finding.locator.kind);
-        if (finding.subject === 'candidate') expect(finding.locator.kind).toBe('source');
-        expect(finding.locator.value?.trim(), `${record.recordId}: direct hold locator value`).toBeTruthy();
-        expect(finding.finding?.trim(), `${record.recordId}: direct hold finding`).toBeTruthy();
+        expect(Array.isArray(record.researchFindings), `${record.recordId}: checked research findings`).toBe(true);
+        expect(record.researchFindings.length, `${record.recordId}: checked research finding count`).toBeGreaterThan(0);
+        for (const checkedFinding of record.researchFindings) {
+          assertResearchFindingShape(record.recordId, checkedFinding);
+        }
+        expect(
+          record.researchFindings.filter((checkedFinding) => isDeepStrictEqual(checkedFinding, finding)),
+          `${record.recordId}: direct hold matches exactly one checked record-local fact`,
+        ).toHaveLength(1);
       }
     }
 
@@ -450,23 +488,46 @@ describe('review cover rights research inventory', () => {
     expect(() => assertValidLedger(ledger, changedSnapshot)).toThrow();
   });
 
-  it.each(Object.keys(validDirectHoldFindings))('accepts a structured %s direct-hold finding', (holdBasis) => {
+  it.each(Object.keys(directHoldExpectations))('accepts a structured %s direct-hold finding', (holdBasis) => {
     const changed = clone(ledger);
     transitionToDirectHold(changed, holdBasis);
     expect(() => assertValidLedger(changed, snapshot)).not.toThrow();
   });
 
-  it.each(Object.keys(validDirectHoldFindings))('rejects %s without its recorded research finding', (holdBasis) => {
+  it.each(Object.keys(directHoldExpectations))('rejects %s without its recorded research finding', (holdBasis) => {
     const changed = clone(ledger);
     const record = transitionToDirectHold(changed, holdBasis);
     delete record.recordedResearchFinding;
     expect(() => assertValidLedger(changed, snapshot)).toThrow();
   });
 
-  it.each(Object.keys(validDirectHoldFindings))('rejects %s when the recorded outcome contradicts its basis', (holdBasis) => {
+  it.each(Object.keys(directHoldExpectations))('rejects %s when the recorded outcome contradicts its basis', (holdBasis) => {
     const changed = clone(ledger);
     const record = transitionToDirectHold(changed, holdBasis);
     record.recordedResearchFinding.outcome = record.recordedResearchFinding.outcome === 'absent' ? 'ambiguous' : 'absent';
+    expect(() => assertValidLedger(changed, snapshot)).toThrow();
+  });
+
+  it.each(Object.keys(directHoldExpectations))('rejects %s without a checked record-local research fact', (holdBasis) => {
+    const changed = clone(ledger);
+    const record = transitionToDirectHold(changed, holdBasis);
+    delete record.researchFindings;
+    expect(() => assertValidLedger(changed, snapshot)).toThrow();
+  });
+
+  it.each(Object.keys(directHoldExpectations))('rejects %s with another record\'s valid locator', (holdBasis) => {
+    const changed = clone(ledger);
+    const record = transitionToDirectHold(changed, holdBasis);
+    record.recordedResearchFinding.locator = holdBasis === 'ambiguous-grant'
+      ? { kind: 'rights-evidence', value: 'docs/notes/project/assets/review-cover-rights/black-swan/rights-evidence.txt' }
+      : { kind: 'source', value: `https://publisher.example/research/${expected['black-swan'].identity.isbn13}/${holdBasis}` };
+    expect(() => assertValidLedger(changed, snapshot)).toThrow();
+  });
+
+  it.each(Object.keys(directHoldExpectations))('rejects %s with a contradictory non-empty finding', (holdBasis) => {
+    const changed = clone(ledger);
+    const record = transitionToDirectHold(changed, holdBasis);
+    record.recordedResearchFinding.finding = 'The source proves the opposite outcome for a different review.';
     expect(() => assertValidLedger(changed, snapshot)).toThrow();
   });
 
