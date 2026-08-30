@@ -10,7 +10,7 @@ const LEXICAL_SQL = `WITH scored AS (
          ts_rank_cd(c.search_vector,websearch_to_tsquery('simple',$3)) AS fts,
          similarity(c.search_text,$3) AS trigram
   FROM public_answer_chunks c JOIN public_answer_release_bindings b
-    ON b.binding_id=c.binding_id AND b.binding_id=$1::uuid AND b.state='active'
+    ON b.binding_id=c.binding_id AND b.binding_id=$1::uuid
   WHERE c.answer_release_id=$2 AND NOT EXISTS (
     SELECT 1 FROM public_answer_tombstones t WHERE t.entity_kind='record' AND t.entity_id=c.record_id)
 ), normalized AS (
@@ -22,7 +22,7 @@ SELECT chunk_id,chunk_checksum,record_id,score FROM normalized WHERE score>0 ORD
 
 const VECTOR_SQL = `SELECT c.chunk_id,c.chunk_checksum,c.record_id,1-(c.embedding <=> $2::vector) AS score
 FROM public_answer_chunks c JOIN public_answer_release_bindings b
- ON b.binding_id=c.binding_id AND b.binding_id=$1::uuid AND b.state='active'
+ ON b.binding_id=c.binding_id AND b.binding_id=$1::uuid
 WHERE c.answer_release_id=$3 AND NOT EXISTS (
   SELECT 1 FROM public_answer_tombstones t WHERE t.entity_kind='record' AND t.entity_id=c.record_id)
 ORDER BY c.embedding <=> $2::vector,c.chunk_id ASC LIMIT 20`;
