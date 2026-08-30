@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { VerifiedActivePublicAnswerReleaseAuthority } from '../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 
 import { DeterministicEmbeddingClient } from '../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
@@ -10,10 +10,24 @@ import {
 import { assertCompleteActivatedBinding, runIndexAnswerReleaseCli } from '../src/index-answer-release.js';
 import postgresConfig from '../vitest.postgres.config.js';
 import {
+  readVerifiedAnswerReleaseAuthority,
+} from '../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
+import {
+  runTestPostgresHarnessFromArgv,
   runTestPostgresHarness,
   type HarnessRun,
   type TestPostgresHarnessDependencies,
 } from '../scripts/with-test-postgres.mjs';
+
+const authorityFixture = vi.hoisted(() => ({ release: null as any }));
+vi.mock('@beyondwin/content/answer-release', () => ({
+  async readPublicAnswerCorpusApproval() { return { schemaVersion: 1, entries: [] }; },
+  async readActiveAnswerRelease() { return authorityFixture.release; },
+  async verifyAnswerReleaseDirectory() { return authorityFixture.release; },
+}));
+vi.mock('@beyondwin/content/release', () => ({
+  async readActiveRelease() { return { manifest: { releaseId: 'content', records: {} }, manifestHash: 'mh', artifactHash: 'ah' }; },
+}));
 
 type PlainRelease = {
   contentReleaseId: string;
@@ -29,6 +43,40 @@ type AssertFalse<T extends false> = T;
 type _PlainReleaseCannotCrossAuthorityBoundary = AssertFalse<PlainRelease extends VerifiedActivePublicAnswerReleaseAuthority ? true : false>;
 
 describe('deterministic fixture embedding preparation', () => {
+  it('detaches and recursively freezes verified authority before sealing preparation', async () => {
+    const original = {
+      releasePath: '/answer/release', answerReleaseId: 'a'.repeat(64), contentReleaseId: 'b'.repeat(64),
+      manifest: { identity: { contentManifestHash: `sha256:${'c'.repeat(64)}`, nested: { value: 'original' } } },
+      manifestHash: `sha256:${'c'.repeat(64)}`, artifactHash: `sha256:${'d'.repeat(64)}`,
+      corpusApprovalHash: `sha256:${'e'.repeat(64)}`,
+      chunks: [{ chunkId: '1'.repeat(64), recordId: 'articles/example', canonicalPath: '/articles/example/', headingPath: ['Chunk'] }],
+      evidence: [{
+        evidenceId: '3'.repeat(64), chunkId: '1'.repeat(64), recordId: 'articles/example', collectionLabel: '기록',
+        recordTitle: 'Example', canonicalPath: '/articles/example/',
+        locator: { kind: 'heading-paragraph', label: 'Heading', ordinal: 1 }, excerpt: 'text',
+        excerptChecksum: `sha256:${'4'.repeat(64)}`,
+      }],
+      indexInputs: [{
+        chunkId: '1'.repeat(64), chunkChecksum: `sha256:${'2'.repeat(64)}`, recordId: 'articles/example',
+        canonicalPath: '/articles/example/', title: 'Example', headingPath: ['Heading'], text: 'public text', searchText: 'public text',
+      }],
+    };
+    authorityFixture.release = original;
+    const { answer } = await readVerifiedAnswerReleaseAuthority({
+      corpusApprovalPath: '/approval', contentReleaseRoot: '/content', answerReleaseRoot: '/answer',
+    });
+    const prepared = await prepareEmbeddingSet(answer, new DeterministicEmbeddingClient('test'), new AbortController().signal);
+    const receipt = createFixtureEmbeddingReceipt(prepared);
+    original.manifest.identity.nested.value = 'mutated';
+    original.indexInputs[0]!.headingPath[0] = 'mutated';
+    expect((answer.manifest.identity as any).nested.value).toBe('original');
+    expect(answer.indexInputs[0]!.headingPath).toEqual(['Heading']);
+    expect(Object.isFrozen(answer.manifest)).toBe(true);
+    expect(() => ((answer.evidence[0]!.locator as { label: string }).label = 'forged')).toThrow(TypeError);
+    expect(() => ((answer.indexInputs[0]!.headingPath as string[])[0] = 'forged')).toThrow(TypeError);
+    expect(createFixtureEmbeddingReceipt(prepared)).toEqual(receipt);
+  });
+
   it('creates stable finite normalized 3072-dimensional vectors and provenance-bound checksums', async () => {
     const client = new DeterministicEmbeddingClient('test');
     const release = {
@@ -51,6 +99,11 @@ describe('deterministic fixture embedding preparation', () => {
     expect(first.indexChecksum).toMatch(/^sha256:[a-f0-9]{64}$/u);
     expect(first.usage).toEqual({ calls: 1, inputTokens: 3, outputTokens: 0, estimatedCostUsdMicros: 0 });
     expect(Object.isFrozen(first)).toBe(true);
+    expect(Object.isFrozen(first.indexRows)).toBe(true);
+    expect(Object.isFrozen(first.indexRows[0])).toBe(true);
+    expect(Object.isFrozen(first.indexRows[0]!.headingPath)).toBe(true);
+    expect(() => ((first.indexRows[0] as { title: string }).title = 'forged')).toThrow(TypeError);
+    expect(() => ((first.indexRows[0]!.headingPath as string[])[0] = 'forged')).toThrow(TypeError);
   });
 
   it('does not call the embedding client for an empty verified release', async () => {
@@ -208,5 +261,17 @@ describe('disposable Postgres harness contract', () => {
     });
     await expect(runTestPostgresHarness('test', failed.dependencies)).rejects.toThrow(/injected child/u);
     expect(failed.calls.at(-1)?.args.slice(-2)).toEqual(['-v', '--remove-orphans']);
+  });
+
+  it.each([
+    [[]],
+    [['unknown']],
+    [['test', 'extra']],
+  ])('rejects invalid full argv %j before discovery or Compose', async (argv) => {
+    let discoveries = 0;
+    const invalid = harness({ async discover() { discoveries += 1; return ['owned.test.ts']; } });
+    await expect(runTestPostgresHarnessFromArgv(argv, invalid.dependencies)).rejects.toThrow(/exactly one mode/u);
+    expect(discoveries).toBe(0);
+    expect(invalid.calls).toEqual([]);
   });
 });

@@ -29,6 +29,32 @@ export interface VerifiedActivePublicAnswerReleaseAuthority {
 }
 type VerifiedAnswerReleaseValue = Omit<VerifiedActivePublicAnswerReleaseAuthority, typeof serverVerifiedAnswerRelease>;
 
+function detachedFrozen<T>(value: T): T {
+  if (Array.isArray(value)) return Object.freeze(value.map((item) => detachedFrozen(item))) as T;
+  if (value && typeof value === 'object') {
+    return Object.freeze(Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .map(([key, child]) => [key, detachedFrozen(child)]))) as T;
+  }
+  return value;
+}
+
+function sealVerifiedAnswerRelease(release: VerifiedAnswerReleaseValue): VerifiedActivePublicAnswerReleaseAuthority {
+  const projection = {
+    releasePath: release.releasePath,
+    contentReleaseId: release.contentReleaseId,
+    answerReleaseId: release.answerReleaseId,
+    manifestHash: release.manifestHash,
+    artifactHash: release.artifactHash,
+    corpusApprovalHash: release.corpusApprovalHash,
+    manifest: detachedFrozen({ identity: release.manifest.identity }),
+    chunks: detachedFrozen(release.chunks),
+    evidence: detachedFrozen(release.evidence),
+    indexInputs: detachedFrozen(release.indexInputs),
+  };
+  Object.defineProperty(projection, serverVerifiedAnswerRelease, { value: true, enumerable: false });
+  return Object.freeze(projection) as VerifiedActivePublicAnswerReleaseAuthority;
+}
+
 interface CatalogReaders {
   readApproval(path: string): Promise<PublicAnswerCorpusApproval>;
   readContent(root: string): Promise<VerifiedActivePublicRelease>;
@@ -57,8 +83,7 @@ const defaultReaders: CatalogReaders = {
       ): Promise<VerifiedAnswerReleaseValue>;
     };
     const release = await module.readActiveAnswerRelease(root, content, approval);
-    Object.defineProperty(release, serverVerifiedAnswerRelease, { value: true, enumerable: false });
-    return release as VerifiedActivePublicAnswerReleaseAuthority;
+    return sealVerifiedAnswerRelease(release);
   },
   async verifyAnswer(path, content, approval) {
     const specifier = '@beyondwin/content/answer-release';

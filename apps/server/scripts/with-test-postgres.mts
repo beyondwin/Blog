@@ -84,7 +84,18 @@ export async function runTestPostgresHarness(
   }
 }
 
+export async function runTestPostgresHarnessFromArgv(
+  argv: readonly string[],
+  dependencies?: TestPostgresHarnessDependencies,
+): Promise<void> {
+  const allowed = new Set(['test', 'eval', 'eval-hidden', 'eval-hidden-provider-live']);
+  if (argv.length !== 1 || !allowed.has(argv[0]!)) {
+    throw new Error('expected exactly one mode: test, eval, eval-hidden, or eval-hidden-provider-live');
+  }
+  await runTestPostgresHarness(argv[0], dependencies);
+}
+
 const entrypoint = process.argv[1];
 if (entrypoint && import.meta.url === pathToFileURL(entrypoint).href) {
-  await runTestPostgresHarness(process.argv[2]);
+  await runTestPostgresHarnessFromArgv(process.argv.slice(2));
 }

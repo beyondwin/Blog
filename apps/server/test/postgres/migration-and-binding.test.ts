@@ -68,15 +68,31 @@ describe('public answer Postgres migration', () => {
       'active_index_absent_at', 'artifact_purge_evidence_checksum', 'backup_evidence_checksum',
       'backup_expires_at', 'verified_at',
     ]);
-    const indexes = (await pool.query<{ indexname: string }>(
-      "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename LIKE 'public_answer_%' ORDER BY indexname",
-    )).rows.map((row) => row.indexname);
+    const indexRows = (await pool.query<{ indexname: string; indexdef: string }>(
+      "SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' AND tablename LIKE 'public_answer_%' ORDER BY indexname",
+    )).rows;
+    const indexes = indexRows.map((row) => row.indexname);
     expect(indexes).toEqual([
       'public_answer_chunks_exact_vector_scan', 'public_answer_chunks_pkey', 'public_answer_chunks_search_trigram',
       'public_answer_chunks_search_vector', 'public_answer_deletion_receip_entity_kind_entity_id_tombsto_key',
       'public_answer_deletion_receipts_pkey', 'public_answer_embedding_cache_pkey', 'public_answer_one_active_binding',
       'public_answer_release_bindings_pkey', 'public_answer_tombstones_pkey',
     ]);
+    const normalizedIndexDefinitions = Object.fromEntries(indexRows.map((row) => [
+      row.indexname, row.indexdef.replace(/\s+/gu, ' ').trim(),
+    ]));
+    expect(normalizedIndexDefinitions.public_answer_one_active_binding).toBe(
+      "CREATE UNIQUE INDEX public_answer_one_active_binding ON public.public_answer_release_bindings USING btree (state) WHERE (state = 'active'::text)",
+    );
+    expect(normalizedIndexDefinitions.public_answer_chunks_search_vector).toBe(
+      'CREATE INDEX public_answer_chunks_search_vector ON public.public_answer_chunks USING gin (search_vector)',
+    );
+    expect(normalizedIndexDefinitions.public_answer_chunks_search_trigram).toBe(
+      'CREATE INDEX public_answer_chunks_search_trigram ON public.public_answer_chunks USING gin (search_text gin_trgm_ops)',
+    );
+    expect(normalizedIndexDefinitions.public_answer_chunks_exact_vector_scan).toBe(
+      'CREATE INDEX public_answer_chunks_exact_vector_scan ON public.public_answer_chunks USING btree (binding_id, chunk_id)',
+    );
     const constraints = (await pool.query<{ definition: string }>(`SELECT pg_get_constraintdef(oid) AS definition
       FROM pg_constraint WHERE connamespace='public'::regnamespace ORDER BY conname`)).rows.map((row) => row.definition).join('\n');
     expect(constraints).toContain("CHECK ((embedding_model = 'text-embedding-3-large'::text))");
@@ -135,6 +151,23 @@ describe('public answer Postgres migration', () => {
     const result = await new PostgresAnswerReleaseIndexer('test').activate(value, prepared, receipt, pool, new AbortController().signal);
     return { prepared, receipt, result };
   }
+
+  it('keeps the receipt and written payload detached from mutable verifier inputs and freezes prepared rows', async () => {
+    const value = release('c');
+    const prepared = await prepareEmbeddingSet(value, new DeterministicEmbeddingClient('test'), new AbortController().signal);
+    const receipt = createFixtureEmbeddingReceipt(prepared);
+    expect(() => ((prepared.indexRows[0] as { title: string }).title = 'forged')).toThrow(TypeError);
+    expect(() => ((prepared.indexRows[0]!.headingPath as string[])[0] = 'forged')).toThrow(TypeError);
+    value.indexInputs[0].title = 'mutated original';
+    value.indexInputs[0].headingPath[0] = 'mutated original';
+    expect(createFixtureEmbeddingReceipt(prepared)).toEqual(receipt);
+    await new PostgresAnswerReleaseIndexer('test').activate(
+      value, prepared, receipt, pool, new AbortController().signal,
+    );
+    expect((await pool.query<{ title: string; heading_path: string[] }>(
+      'SELECT title,heading_path FROM public_answer_chunks WHERE binding_id=$1', [receipt.bindingId],
+    )).rows).toEqual([{ title: 'Example', heading_path: ['Heading'] }]);
+  });
 
   it('atomically activates, idempotently reuses, and keeps test-only provider evidence byte-distinct and rollback-selectable', async () => {
     const value = release('1');

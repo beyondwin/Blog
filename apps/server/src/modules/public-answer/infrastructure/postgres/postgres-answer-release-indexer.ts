@@ -33,6 +33,15 @@ function checksum(value: unknown): string {
   return `sha256:${createHash('sha256').update(typeof value === 'string' ? value : canonical(value)).digest('hex')}`;
 }
 
+function detachedFrozen<T>(value: T): T {
+  if (Array.isArray(value)) return Object.freeze(value.map((item) => detachedFrozen(item))) as T;
+  if (value && typeof value === 'object') {
+    return Object.freeze(Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .map(([key, child]) => [key, detachedFrozen(child)]))) as T;
+  }
+  return value;
+}
+
 function vectorChecksum(values: readonly number[]): string {
   const bytes = Buffer.allocUnsafe(values.length * 4);
   values.forEach((value, index) => bytes.writeFloatBE(Math.fround(value), index * 4));
@@ -46,6 +55,13 @@ export interface PreparedEmbeddingVector {
   readonly vectorChecksum: string;
 }
 
+export interface PreparedIndexRow {
+  readonly chunkId: string; readonly chunkChecksum: string; readonly recordId: string;
+  readonly canonicalPath: string; readonly title: string; readonly headingPath: readonly string[];
+  readonly body: string; readonly searchText: string; readonly vectorChecksum: string;
+  readonly model: typeof MODEL; readonly dimensions: typeof DIMENSIONS; readonly source: string;
+}
+
 export interface PreparedEmbeddingSet {
   readonly contentReleaseId: string;
   readonly answerReleaseId: string;
@@ -56,7 +72,7 @@ export interface PreparedEmbeddingSet {
   readonly model: typeof MODEL;
   readonly dimensions: typeof DIMENSIONS;
   readonly vectors: readonly PreparedEmbeddingVector[];
-  readonly indexRows: readonly Readonly<Record<string, unknown>>[];
+  readonly indexRows: readonly PreparedIndexRow[];
   readonly vectorSetChecksum: string;
   readonly indexChecksum: string;
   readonly usage: Readonly<{ calls: number; inputTokens: number; outputTokens: number; estimatedCostUsdMicros: number }>;
@@ -100,7 +116,7 @@ function indexPayload(release: VerifiedActivePublicAnswerReleaseAuthority, vecto
     if (!vector) throw new Error('prepared vector is missing for an approved chunk');
     return {
       chunkId: input.chunkId, chunkChecksum: input.chunkChecksum, recordId: input.recordId,
-      canonicalPath: input.canonicalPath, title: input.title, headingPath: input.headingPath,
+      canonicalPath: input.canonicalPath, title: input.title, headingPath: [...input.headingPath],
       body: input.text, searchText: input.searchText, vectorChecksum: vector.vectorChecksum,
       model: MODEL, dimensions: DIMENSIONS, source,
     };
@@ -156,7 +172,7 @@ export async function prepareEmbeddingSet(
     });
   });
   const vectorSetChecksum = checksum(vectors.map(({ chunkId, chunkChecksum, vectorChecksum }) => ({ chunkId, chunkChecksum, vectorChecksum })));
-  const indexRows = Object.freeze(indexPayload(release, vectors));
+  const indexRows = detachedFrozen(indexPayload(release, vectors));
   const result: PreparedEmbeddingSet = {
     ...releaseHashes(release), model: MODEL, dimensions: DIMENSIONS, vectors: Object.freeze(vectors), vectorSetChecksum,
     indexRows, indexChecksum: checksum(indexRows),
@@ -306,7 +322,7 @@ export class PostgresAnswerReleaseIndexer {
         receipt.chunkCount, receipt.indexChecksum,
       ]);
       const vectors = new Map(prepared.vectors.map((item) => [item.chunkId, item]));
-      for (const input of release.indexInputs) {
+      for (const input of prepared.indexRows) {
         if (signal.aborted) throw signal.reason ?? new Error('index activation aborted');
         const vector = vectors.get(input.chunkId)!;
         await client.query(`INSERT INTO public_answer_chunks
@@ -314,7 +330,7 @@ export class PostgresAnswerReleaseIndexer {
            search_text,embedding_model,embedding_dimensions,embedding)
           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::vector)`, [
           receipt.bindingId, receipt.answerReleaseId, input.chunkId, input.chunkChecksum, input.recordId,
-          input.canonicalPath, input.title, input.headingPath, input.text, input.searchText, MODEL, DIMENSIONS,
+          input.canonicalPath, input.title, input.headingPath, input.body, input.searchText, MODEL, DIMENSIONS,
           vectorText(vector.values),
         ]);
         await client.query(`INSERT INTO public_answer_embedding_cache
