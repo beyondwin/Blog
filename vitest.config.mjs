@@ -7,6 +7,8 @@ export default {
       '**/.superpowers/**',
       'spikes/rejected/**',
       'tests/e2e/**',
+      'apps/server/test/postgres/**',
+      'apps/server/test/evaluation/**',
     ],
   },
 };

@@ -7,6 +7,7 @@ const root = process.cwd();
 const manifestPaths = [
   'package.json',
   'apps/site/package.json',
+  'apps/server/package.json',
   'packages/contracts/package.json',
   'packages/content/package.json',
 ];
@@ -18,6 +19,22 @@ const approvedToolVersions = {
   parse5: '8.0.1',
   tsx: '4.23.12',
   '@types/node': '24.13.3',
+};
+const approvedServerVersions = {
+  '@beyondwin/content': '0.0.0',
+  '@beyondwin/contracts': '0.0.0',
+  '@nestjs/common': '12.0.1',
+  '@nestjs/core': '12.0.1',
+  '@nestjs/platform-fastify': '12.0.1',
+  fastify: '5.12.1',
+  pg: '8.23.0',
+  'reflect-metadata': '0.2.2',
+  rxjs: '7.8.2',
+  '@types/node': '24.13.3',
+  '@types/pg': '8.23.1',
+  tsx: '4.23.12',
+  typescript: '6.0.3',
+  vitest: '4.1.11',
 };
 
 type PackageManifest = {
@@ -46,13 +63,17 @@ function declaredDependencies(manifest: PackageManifest): Record<string, string>
 }
 
 describe('React-only Node 24 workspace contract', () => {
-  it('declares only current workspace roots and private Node 24 manifests', async () => {
+  it('declares only current workspace roots and private manifests', async () => {
     const manifests = await Promise.all(manifestPaths.map(readManifest));
     expect(manifests[0]?.name).toBe('beyondwin-form-thought');
     expect(manifests[0]?.workspaces).toEqual(['apps/*', 'packages/*', 'spikes/*']);
     for (const manifest of manifests) {
       expect(manifest.private).toBe(true);
-      expect(manifest.engines?.node).toBe('>=24 <25');
+    }
+    for (const [index, manifest] of manifests.entries()) {
+      if (manifestPaths[index] !== 'apps/server/package.json') {
+        expect(manifest.engines?.node).toBe('>=24 <25');
+      }
     }
   });
 
@@ -68,6 +89,23 @@ describe('React-only Node 24 workspace contract', () => {
     for (const script of ['legacy:dev', 'legacy:build', 'legacy:preview', 'parity:capture:astro', 'cutover:rollback']) {
       expect(rootManifest.scripts).not.toHaveProperty(script);
     }
+  });
+
+  it('pins the server workspace and its internal workspace dependencies exactly', async () => {
+    expect(manifestPaths).toContain('apps/server/package.json');
+    const manifest = await readManifest('apps/server/package.json');
+    expect(manifest.name).toBe('@beyondwin/server');
+    expect(manifest.type).toBe('module');
+    expect(declaredDependencies(manifest)).toEqual(approvedServerVersions);
+    expect(manifest.dependencies?.['@beyondwin/content']).toBe('0.0.0');
+    expect(manifest.dependencies?.['@beyondwin/contracts']).toBe('0.0.0');
+    expect(Object.values(declaredDependencies(manifest))).not.toContain('workspace:*');
+  });
+
+  it('keeps lifecycle-owned server suites out of the root Vitest run', async () => {
+    const configuration = (await import('../vitest.config.mjs')).default;
+    expect(configuration.test.exclude).toContain('apps/server/test/postgres/**');
+    expect(configuration.test.exclude).toContain('apps/server/test/evaluation/**');
   });
 
   it('seals the final ordered validation chain', async () => {
