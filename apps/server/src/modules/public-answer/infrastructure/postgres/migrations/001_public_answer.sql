@@ -81,3 +81,27 @@ CREATE TABLE IF NOT EXISTS public_answer_deletion_receipts (
   verified_at timestamptz NOT NULL,
   UNIQUE(entity_kind, entity_id, tombstone_hash, replacement_answer_release_id)
 );
+
+CREATE TABLE IF NOT EXISTS public_answer_events (
+  event_id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  occurred_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL,
+  request_id text NOT NULL,
+  content_release_prefix varchar(12) NOT NULL,
+  answer_release_prefix varchar(12) NOT NULL,
+  result_kind text NOT NULL,
+  error_kind text,
+  latency_bucket text NOT NULL,
+  retrieved_count smallint NOT NULL,
+  provider_input_bucket text NOT NULL,
+  provider_output_bucket text NOT NULL,
+  rate_bucket text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public_answer_daily_aggregates (
+  day date NOT NULL,
+  result_kind text NOT NULL,
+  count bigint NOT NULL,
+  expires_at timestamptz NOT NULL,
+  PRIMARY KEY(day, result_kind)
+);

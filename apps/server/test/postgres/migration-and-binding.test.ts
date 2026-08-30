@@ -39,8 +39,9 @@ describe('public answer Postgres migration', () => {
       "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'public_answer_%' ORDER BY table_name",
     )).rows.map((row) => row.table_name);
     expect(tables).toEqual([
-      'public_answer_chunks', 'public_answer_deletion_receipts', 'public_answer_embedding_cache',
-      'public_answer_release_bindings', 'public_answer_tombstones',
+      'public_answer_chunks', 'public_answer_daily_aggregates', 'public_answer_deletion_receipts',
+      'public_answer_embedding_cache', 'public_answer_events', 'public_answer_release_bindings',
+      'public_answer_tombstones',
     ]);
     const columnRows = (await pool.query<{ table_name: string; column_name: string }>(
       `SELECT table_name,column_name FROM information_schema.columns
@@ -68,15 +69,24 @@ describe('public answer Postgres migration', () => {
       'active_index_absent_at', 'artifact_purge_evidence_checksum', 'backup_evidence_checksum',
       'backup_expires_at', 'verified_at',
     ]);
+    expect(columns.public_answer_events?.map((row) => row.column_name)).toEqual([
+      'event_id', 'occurred_at', 'expires_at', 'request_id', 'content_release_prefix', 'answer_release_prefix',
+      'result_kind', 'error_kind', 'latency_bucket', 'retrieved_count', 'provider_input_bucket',
+      'provider_output_bucket', 'rate_bucket',
+    ]);
+    expect(columns.public_answer_daily_aggregates?.map((row) => row.column_name)).toEqual([
+      'day', 'result_kind', 'count', 'expires_at',
+    ]);
     const indexRows = (await pool.query<{ indexname: string; indexdef: string }>(
       "SELECT indexname,indexdef FROM pg_indexes WHERE schemaname='public' AND tablename LIKE 'public_answer_%' ORDER BY indexname",
     )).rows;
     const indexes = indexRows.map((row) => row.indexname);
     expect(indexes).toEqual([
       'public_answer_chunks_exact_vector_scan', 'public_answer_chunks_pkey', 'public_answer_chunks_search_trigram',
-      'public_answer_chunks_search_vector', 'public_answer_deletion_receip_entity_kind_entity_id_tombsto_key',
-      'public_answer_deletion_receipts_pkey', 'public_answer_embedding_cache_pkey', 'public_answer_one_active_binding',
-      'public_answer_release_bindings_pkey', 'public_answer_tombstones_pkey',
+      'public_answer_chunks_search_vector', 'public_answer_daily_aggregates_pkey',
+      'public_answer_deletion_receip_entity_kind_entity_id_tombsto_key',
+      'public_answer_deletion_receipts_pkey', 'public_answer_embedding_cache_pkey', 'public_answer_events_pkey',
+      'public_answer_one_active_binding', 'public_answer_release_bindings_pkey', 'public_answer_tombstones_pkey',
     ]);
     const normalizedIndexDefinitions = Object.fromEntries(indexRows.map((row) => [
       row.indexname, row.indexdef.replace(/\s+/gu, ' ').trim(),
