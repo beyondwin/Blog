@@ -13,32 +13,51 @@ export class CancellablePgQueryRunner {
     if (signal.aborted) throw signal.reason ?? new Error('query aborted');
     const started = performance.now();
     const worker = await this.pool.connect();
-    const control: { client?: PoolClient } = {};
     let pid = 0;
-    let cancellationFailed = false;
-    const abort = async (): Promise<void> => {
-      try {
-        control.client ??= await this.pool.connect();
-        const result = await control.client.query<{ cancelled: boolean }>('SELECT pg_cancel_backend($1) AS cancelled', [pid]);
-        if (!result.rows[0]?.cancelled) cancellationFailed = true;
-      } catch { cancellationFailed = true; }
+    let cancellation: Promise<boolean> | undefined;
+    const cancelOnce = (): Promise<boolean> => {
+      cancellation ??= (async () => {
+        let control: PoolClient | undefined;
+        try {
+          control = await this.pool.connect();
+          const result = await control.query<{ cancelled: boolean }>('SELECT pg_cancel_backend($1) AS cancelled', [pid]);
+          return result.rows[0]?.cancelled === true;
+        } catch {
+          return false;
+        } finally {
+          control?.release();
+        }
+      })();
+      return cancellation;
     };
-    const listener = (): void => { void abort(); };
+    const listener = (): void => { void cancelOnce(); };
+    let destroyWorker = false;
     try {
       pid = (await worker.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
-      const remaining = Math.max(1, Math.floor(budgetMs - (performance.now() - started)));
+      const remaining = Math.floor(budgetMs - (performance.now() - started));
+      if (remaining <= 0) throw new Error('query monotonic budget was exhausted before execution');
       await worker.query(`SET statement_timeout TO ${remaining}`);
       signal.addEventListener('abort', listener, { once: true });
-      if (signal.aborted) await abort();
+      if (signal.aborted) {
+        destroyWorker = true;
+        await cancelOnce();
+        throw signal.reason ?? new Error('query aborted');
+      }
       return await worker.query<T>(text, [...values]);
     } catch (error) {
-      if (signal.aborted) throw new Error('Postgres query aborted', { cause: error });
+      if (signal.aborted) {
+        destroyWorker = true;
+        await cancelOnce();
+        throw new Error('Postgres query aborted', { cause: error });
+      }
       throw error;
     } finally {
       signal.removeEventListener('abort', listener);
-      if (signal.aborted) await abort();
-      control.client?.release();
-      worker.release(cancellationFailed);
+      if (cancellation) {
+        const cancelled = await cancellation;
+        if (!cancelled) destroyWorker = true;
+      }
+      worker.release(destroyWorker);
     }
   }
 }

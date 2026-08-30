@@ -7,7 +7,6 @@ import { runPostgresMigrations } from '../../src/modules/public-answer/infrastru
 import { DeterministicEmbeddingClient } from '../../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
 import {
   createFixtureEmbeddingReceipt,
-  createProviderEmbeddingReceipt,
   PostgresAnswerReleaseIndexer,
   prepareEmbeddingSet,
 } from '../../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
@@ -43,6 +42,47 @@ describe('public answer Postgres migration', () => {
       'public_answer_chunks', 'public_answer_deletion_receipts', 'public_answer_embedding_cache',
       'public_answer_release_bindings', 'public_answer_tombstones',
     ]);
+    const columnRows = (await pool.query<{ table_name: string; column_name: string }>(
+      `SELECT table_name,column_name FROM information_schema.columns
+       WHERE table_schema='public' AND table_name LIKE 'public_answer_%' ORDER BY table_name,ordinal_position`,
+    )).rows;
+    const columns = Object.groupBy(columnRows, (row) => row.table_name);
+    expect(columns.public_answer_release_bindings?.map((row) => row.column_name)).toEqual([
+      'binding_id', 'content_release_id', 'answer_release_id', 'content_manifest_hash', 'answer_manifest_hash',
+      'answer_artifact_hash', 'embedding_model', 'embedding_dimensions', 'embedding_source', 'embedding_receipt_hash',
+      'chunk_count', 'index_checksum', 'state', 'created_at', 'activated_at',
+    ]);
+    expect(columns.public_answer_chunks?.map((row) => row.column_name)).toEqual([
+      'binding_id', 'answer_release_id', 'chunk_id', 'chunk_checksum', 'record_id', 'canonical_path', 'title',
+      'heading_path', 'body', 'search_text', 'search_vector', 'embedding_model', 'embedding_dimensions', 'embedding',
+    ]);
+    expect(columns.public_answer_embedding_cache?.map((row) => row.column_name)).toEqual([
+      'chunk_checksum', 'embedding_model', 'embedding_dimensions', 'embedding_source', 'embedding_receipt_hash', 'embedding',
+    ]);
+    expect(columns.public_answer_tombstones?.map((row) => row.column_name)).toEqual([
+      'entity_kind', 'entity_id', 'reason_code', 'created_at',
+    ]);
+    expect(columns.public_answer_deletion_receipts?.map((row) => row.column_name)).toEqual([
+      'deletion_receipt_hash', 'entity_kind', 'entity_id', 'tombstone_hash', 'affected_answer_release_id',
+      'affected_answer_artifact_hash', 'replacement_answer_release_id', 'replacement_binding_id',
+      'active_index_absent_at', 'artifact_purge_evidence_checksum', 'backup_evidence_checksum',
+      'backup_expires_at', 'verified_at',
+    ]);
+    const indexes = (await pool.query<{ indexname: string }>(
+      "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename LIKE 'public_answer_%' ORDER BY indexname",
+    )).rows.map((row) => row.indexname);
+    expect(indexes).toEqual([
+      'public_answer_chunks_exact_vector_scan', 'public_answer_chunks_pkey', 'public_answer_chunks_search_trigram',
+      'public_answer_chunks_search_vector', 'public_answer_deletion_receip_entity_kind_entity_id_tombsto_key',
+      'public_answer_deletion_receipts_pkey', 'public_answer_embedding_cache_pkey', 'public_answer_one_active_binding',
+      'public_answer_release_bindings_pkey', 'public_answer_tombstones_pkey',
+    ]);
+    const constraints = (await pool.query<{ definition: string }>(`SELECT pg_get_constraintdef(oid) AS definition
+      FROM pg_constraint WHERE connamespace='public'::regnamespace ORDER BY conname`)).rows.map((row) => row.definition).join('\n');
+    expect(constraints).toContain("CHECK ((embedding_model = 'text-embedding-3-large'::text))");
+    expect(constraints).toContain('CHECK ((embedding_dimensions = 3072))');
+    expect(constraints).toContain("CHECK ((state = ANY (ARRAY['building'::text, 'ready'::text, 'active'::text, 'retired'::text])))");
+    expect(constraints).toContain("CHECK ((entity_kind = ANY (ARRAY['record'::text, 'evidence'::text])))");
     const migration = await readFile(resolve('apps/server/src/modules/public-answer/infrastructure/postgres/migrations/001_public_answer.sql'), 'utf8');
     expect(migration).not.toMatch(/hnsw|ivfflat/iu);
     expect(migration).toContain('vector(3072)');
@@ -96,7 +136,7 @@ describe('public answer Postgres migration', () => {
     return { prepared, receipt, result };
   }
 
-  it('atomically activates, idempotently reuses, and separates fixture/provider provenance', async () => {
+  it('atomically activates, idempotently reuses, and keeps test-only provider evidence byte-distinct and rollback-selectable', async () => {
     const value = release('1');
     const fixture = await fixtureActivation(value);
     const repeated = await new PostgresAnswerReleaseIndexer('test').activate(
@@ -105,31 +145,72 @@ describe('public answer Postgres migration', () => {
     expect(repeated.bindingId).toBe(fixture.result.bindingId);
     expect((await pool.query('SELECT count(*)::int AS count FROM public_answer_chunks')).rows[0].count).toBe(1);
 
-    const alternateClient = {
-      model: 'text-embedding-3-large' as const, dimensions: 3072 as const,
-      async embed(texts: readonly string[]) {
-        const unit = Math.fround(1 / Math.sqrt(3072));
-        return { vectors: texts.map(() => Array.from({ length: 3072 }, () => unit)), usage: { inputTokens: 2, outputTokens: 0 } };
-      },
-    };
-    const providerPrepared = await prepareEmbeddingSet(value, alternateClient, new AbortController().signal);
-    const providerReceipt = createProviderEmbeddingReceipt(providerPrepared, { calls: 1, inputTokens: 2, outputTokens: 0, costUsdMicros: 7 });
-    await new PostgresAnswerReleaseIndexer('test').activate(
-      value, providerPrepared, providerReceipt, pool, new AbortController().signal,
-    );
+    await expect(new PostgresAnswerReleaseIndexer('test').activate(
+      value, fixture.prepared, { ...fixture.receipt, source: 'provider' } as any, pool, new AbortController().signal,
+    )).rejects.toThrow(/Task 4 strict-reopened/u);
+    const fixtureBytes = (await pool.query<{ embedding: string; chunk_checksum: string }>(
+      'SELECT embedding::text,chunk_checksum FROM public_answer_chunks WHERE binding_id=$1', [fixture.receipt.bindingId])).rows[0]!;
+    const providerBindingId = '22222222-2222-4222-8222-222222222222';
+    const providerReceiptHash = `sha256:${'7'.repeat(64)}`;
+    const providerIndexChecksum = `sha256:${'8'.repeat(64)}`;
+    await pool.query('BEGIN');
+    await pool.query(`INSERT INTO public_answer_release_bindings
+      (binding_id,content_release_id,answer_release_id,content_manifest_hash,answer_manifest_hash,answer_artifact_hash,
+       embedding_model,embedding_dimensions,embedding_source,embedding_receipt_hash,chunk_count,index_checksum,state,created_at,activated_at)
+      SELECT $1,content_release_id,answer_release_id,content_manifest_hash,answer_manifest_hash,answer_artifact_hash,
+       embedding_model,embedding_dimensions,'provider',$2,chunk_count,$3,'ready',now(),now()
+      FROM public_answer_release_bindings WHERE binding_id=$4`,
+    [providerBindingId, providerReceiptHash, providerIndexChecksum, fixture.receipt.bindingId]);
+    await pool.query(`INSERT INTO public_answer_chunks
+      (binding_id,answer_release_id,chunk_id,chunk_checksum,record_id,canonical_path,title,heading_path,body,
+       search_text,embedding_model,embedding_dimensions,embedding)
+      SELECT $1,answer_release_id,chunk_id,chunk_checksum,record_id,canonical_path,title,heading_path,body,
+       search_text,embedding_model,embedding_dimensions,embedding
+      FROM public_answer_chunks WHERE binding_id=$2`, [providerBindingId, fixture.receipt.bindingId]);
+    await pool.query(`INSERT INTO public_answer_embedding_cache
+      (chunk_checksum,embedding_model,embedding_dimensions,embedding_source,embedding_receipt_hash,embedding)
+      SELECT chunk_checksum,embedding_model,embedding_dimensions,'provider',$1,embedding
+      FROM public_answer_chunks WHERE binding_id=$2`, [providerReceiptHash, fixture.receipt.bindingId]);
+    await pool.query("UPDATE public_answer_release_bindings SET state='retired' WHERE binding_id=$1", [fixture.receipt.bindingId]);
+    await pool.query("UPDATE public_answer_release_bindings SET state='active' WHERE binding_id=$1", [providerBindingId]);
+    await pool.query('COMMIT');
     const bindings = (await pool.query<{ binding_id: string; state: string; embedding_source: string; embedding_receipt_hash: string }>(
       'SELECT binding_id,state,embedding_source,embedding_receipt_hash FROM public_answer_release_bindings ORDER BY embedding_source')).rows;
     expect(bindings).toEqual([
       expect.objectContaining({ binding_id: fixture.receipt.bindingId, state: 'retired', embedding_source: 'fixture', embedding_receipt_hash: fixture.receipt.receiptHash }),
-      expect.objectContaining({ binding_id: providerReceipt.bindingId, state: 'active', embedding_source: 'provider', embedding_receipt_hash: providerReceipt.receiptHash }),
+      expect.objectContaining({ binding_id: providerBindingId, state: 'active', embedding_source: 'provider', embedding_receipt_hash: providerReceiptHash }),
     ]);
-    expect(providerPrepared.vectorSetChecksum).not.toBe(fixture.prepared.vectorSetChecksum);
+    const providerBytes = (await pool.query<{ embedding: string; chunk_checksum: string }>(
+      'SELECT embedding::text,chunk_checksum FROM public_answer_chunks WHERE binding_id=$1', [providerBindingId])).rows[0]!;
+    expect(providerBytes).toEqual(fixtureBytes);
+    expect(providerIndexChecksum).not.toBe(fixture.receipt.indexChecksum);
     const cacheSources = (await pool.query<{ embedding_source: string }>(
       'SELECT embedding_source FROM public_answer_embedding_cache ORDER BY embedding_source')).rows.map((row) => row.embedding_source);
     expect(cacheSources).toEqual(['fixture', 'provider']);
+    await pool.query('BEGIN');
+    await pool.query("UPDATE public_answer_release_bindings SET state='retired' WHERE binding_id=$1", [providerBindingId]);
+    await pool.query("UPDATE public_answer_release_bindings SET state='active' WHERE binding_id=$1", [fixture.receipt.bindingId]);
+    await pool.query('COMMIT');
+    expect((await pool.query<{ embedding: string; chunk_checksum: string }>(
+      'SELECT embedding::text,chunk_checksum FROM public_answer_chunks WHERE binding_id=$1', [fixture.receipt.bindingId])).rows[0]).toEqual(fixtureBytes);
     await expect(new PostgresAnswerReleaseIndexer('production').activate(
       value, fixture.prepared, fixture.receipt, pool, new AbortController().signal,
     )).rejects.toThrow(/fixture provenance/u);
+  });
+
+  it('rejects same-ID database drift and same-vector substituted receipt provenance', async () => {
+    const value = release('b');
+    const active = await fixtureActivation(value);
+    await expect(new PostgresAnswerReleaseIndexer('test').activate(
+      value, active.prepared, { ...active.receipt, inputTokens: active.receipt.inputTokens + 1 } as any,
+      pool, new AbortController().signal,
+    )).rejects.toThrow(/checksum|hash/u);
+    await pool.query('UPDATE public_answer_release_bindings SET answer_manifest_hash=$1 WHERE binding_id=$2', [
+      `sha256:${'0'.repeat(64)}`, active.receipt.bindingId,
+    ]);
+    await expect(new PostgresAnswerReleaseIndexer('test').activate(
+      value, active.prepared, active.receipt, pool, new AbortController().signal,
+    )).rejects.toThrow(/identity or provenance drift/u);
   });
 
   it('rolls back a failed second release without mutating the active binding', async () => {
@@ -189,7 +270,7 @@ describe('public answer Postgres migration', () => {
         expect(suppliedContent).toBe(content); expect(suppliedApproval).toBe(approval); return value;
       },
     };
-    const source = new VerifiedAnswerReleaseCatalogSource(config, pool, readers);
+    const source = new VerifiedAnswerReleaseCatalogSource(config, pool, readers as any);
     await source.verifyDirectory('/answer/release');
     const snapshot = await source.snapshot(new AbortController().signal);
     expect(snapshot.bindingId).toBe(active.receipt.bindingId);

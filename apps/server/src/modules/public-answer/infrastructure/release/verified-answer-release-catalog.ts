@@ -4,53 +4,68 @@ import type { ServerConfig } from '../../../../config/server-config.js';
 import type { AnswerReleaseCatalogSource } from '../../application/ports/answer-release-catalog.js';
 import type { AnswerReleaseCatalogSnapshot, AuthorizedEvidence } from '../../domain/public-answer.js';
 
+const serverVerifiedAnswerRelease = Symbol('ServerVerifiedActivePublicAnswerRelease');
 interface PublicAnswerCorpusApproval { readonly schemaVersion: 1; readonly entries: readonly unknown[] }
-interface VerifiedContentRelease {
-  readonly manifest: { readonly records: Readonly<Record<string, { readonly href: string }>> };
+interface VerifiedActivePublicRelease {
+  readonly manifest: { readonly releaseId: string; readonly records: Readonly<Record<string, { readonly href: string }>> };
+  readonly manifestHash: string; readonly artifactHash: string;
 }
-interface VerifiedAnswerRelease {
+export interface VerifiedActivePublicAnswerReleaseAuthority {
+  readonly [serverVerifiedAnswerRelease]: true;
   readonly releasePath: string; readonly contentReleaseId: string; readonly answerReleaseId: string;
   readonly manifestHash: string; readonly artifactHash: string; readonly corpusApprovalHash: string;
   readonly manifest: { readonly identity: { readonly contentManifestHash: string } };
-  readonly chunks: readonly {
-    readonly chunkId: string; readonly recordId: string; readonly canonicalPath: string;
-  }[];
+  readonly chunks: readonly { readonly chunkId: string; readonly recordId: string; readonly canonicalPath: string }[];
   readonly evidence: readonly {
     readonly evidenceId: string; readonly chunkId: string; readonly recordId: string; readonly collectionLabel: string;
     readonly recordTitle: string; readonly canonicalPath: string;
     readonly locator: { readonly kind: 'heading-paragraph' | 'evidence-page'; readonly label: string; readonly ordinal: number };
     readonly excerpt: string; readonly excerptChecksum: string;
   }[];
+  readonly indexInputs: readonly {
+    readonly chunkId: string; readonly chunkChecksum: string; readonly recordId: string; readonly canonicalPath: string;
+    readonly title: string; readonly headingPath: readonly string[]; readonly text: string; readonly searchText: string;
+  }[];
 }
+type VerifiedAnswerReleaseValue = Omit<VerifiedActivePublicAnswerReleaseAuthority, typeof serverVerifiedAnswerRelease>;
+
 interface CatalogReaders {
   readApproval(path: string): Promise<PublicAnswerCorpusApproval>;
-  readContent(root: string): Promise<VerifiedContentRelease>;
-  readAnswer(root: string, content: VerifiedContentRelease, approval: PublicAnswerCorpusApproval): Promise<VerifiedAnswerRelease>;
-  verifyAnswer(path: string, content: VerifiedContentRelease, approval: PublicAnswerCorpusApproval): Promise<unknown>;
+  readContent(root: string): Promise<VerifiedActivePublicRelease>;
+  readAnswer(root: string, content: VerifiedActivePublicRelease, approval: PublicAnswerCorpusApproval): Promise<VerifiedActivePublicAnswerReleaseAuthority>;
+  verifyAnswer(path: string, content: VerifiedActivePublicRelease, approval: PublicAnswerCorpusApproval): Promise<unknown>;
 }
 
 const defaultReaders: CatalogReaders = {
   async readApproval(path) {
     const specifier = '@beyondwin/content/answer-release';
-    const module = await import(specifier) as { readPublicAnswerCorpusApproval(path: string): Promise<PublicAnswerCorpusApproval> };
+    const module = await import(specifier) as {
+      readPublicAnswerCorpusApproval(path: string): Promise<PublicAnswerCorpusApproval>;
+    };
     return module.readPublicAnswerCorpusApproval(path);
   },
   async readContent(root) {
     const specifier = '@beyondwin/content/release';
-    const module = await import(specifier) as { readActiveRelease(root: string): Promise<VerifiedContentRelease> };
+    const module = await import(specifier) as { readActiveRelease(root: string): Promise<VerifiedActivePublicRelease> };
     return module.readActiveRelease(root);
   },
   async readAnswer(root, content, approval) {
     const specifier = '@beyondwin/content/answer-release';
     const module = await import(specifier) as {
-      readActiveAnswerRelease(root: string, content: VerifiedContentRelease, approval: PublicAnswerCorpusApproval): Promise<VerifiedAnswerRelease>;
+      readActiveAnswerRelease(
+        root: string, content: VerifiedActivePublicRelease, approval: PublicAnswerCorpusApproval,
+      ): Promise<VerifiedAnswerReleaseValue>;
     };
-    return module.readActiveAnswerRelease(root, content, approval);
+    const release = await module.readActiveAnswerRelease(root, content, approval);
+    Object.defineProperty(release, serverVerifiedAnswerRelease, { value: true, enumerable: false });
+    return release as VerifiedActivePublicAnswerReleaseAuthority;
   },
   async verifyAnswer(path, content, approval) {
     const specifier = '@beyondwin/content/answer-release';
     const module = await import(specifier) as {
-      verifyAnswerReleaseDirectory(path: string, content: VerifiedContentRelease, approval: PublicAnswerCorpusApproval): Promise<unknown>;
+      verifyAnswerReleaseDirectory(
+        path: string, content: VerifiedActivePublicRelease, approval: PublicAnswerCorpusApproval,
+      ): Promise<unknown>;
     };
     return module.verifyAnswerReleaseDirectory(path, content, approval);
   },
@@ -60,8 +75,20 @@ export interface VerifiedCatalogSnapshot extends AnswerReleaseCatalogSnapshot {
   readonly embeddingSource: 'fixture' | 'provider';
   readonly embeddingReceiptHash: string;
   readonly evidenceById: ReadonlyMap<string, AuthorizedEvidence>;
-  readonly chunkById: ReadonlyMap<string, VerifiedAnswerRelease['chunks'][number]>;
+  readonly chunkById: ReadonlyMap<string, VerifiedActivePublicAnswerReleaseAuthority['chunks'][number]>;
   readonly tombstones: ReadonlySet<string>;
+}
+
+export async function readVerifiedAnswerReleaseAuthority(config: Readonly<Pick<ServerConfig,
+  'corpusApprovalPath' | 'contentReleaseRoot' | 'answerReleaseRoot'>>): Promise<Readonly<{
+    approval: PublicAnswerCorpusApproval; content: VerifiedActivePublicRelease;
+    answer: VerifiedActivePublicAnswerReleaseAuthority;
+  }>> {
+  const approval = await defaultReaders.readApproval(config.corpusApprovalPath);
+  const content = await defaultReaders.readContent(config.contentReleaseRoot);
+  const answer = await defaultReaders.readAnswer(config.answerReleaseRoot, content, approval);
+  await defaultReaders.verifyAnswer(answer.releasePath, content, approval);
+  return Object.freeze({ approval, content, answer });
 }
 
 function immutableMap<K, V>(entries: readonly (readonly [K, V])[]): ReadonlyMap<K, V> {

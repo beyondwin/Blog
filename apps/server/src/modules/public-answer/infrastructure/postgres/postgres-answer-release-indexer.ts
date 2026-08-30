@@ -1,26 +1,13 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 import type { Pool, PoolClient } from 'pg';
 
 import type { EmbeddingClient } from '../../application/ports/embedding-client.js';
+import type { VerifiedActivePublicAnswerReleaseAuthority } from '../release/verified-answer-release-catalog.js';
 
 const MODEL = 'text-embedding-3-large' as const;
 const DIMENSIONS = 3072 as const;
 const GLOBAL_ACTIVATION_LOCK = 'form-thought:public-answer:global-activation:v1';
-
-export interface VerifiedActivePublicAnswerReleaseShape {
-  readonly contentReleaseId: string;
-  readonly answerReleaseId: string;
-  readonly manifestHash: string;
-  readonly artifactHash: string;
-  readonly corpusApprovalHash: string;
-  readonly manifest: { readonly identity: { readonly contentManifestHash: string } };
-  readonly indexInputs: readonly {
-    readonly chunkId: string; readonly chunkChecksum: string; readonly recordId: string;
-    readonly canonicalPath: string; readonly title: string; readonly headingPath: readonly string[];
-    readonly text: string; readonly searchText: string;
-  }[];
-}
 
 function codePointCompare(left: string, right: string): number {
   const a = Array.from(left); const b = Array.from(right);
@@ -69,6 +56,7 @@ export interface PreparedEmbeddingSet {
   readonly model: typeof MODEL;
   readonly dimensions: typeof DIMENSIONS;
   readonly vectors: readonly PreparedEmbeddingVector[];
+  readonly indexRows: readonly Readonly<Record<string, unknown>>[];
   readonly vectorSetChecksum: string;
   readonly indexChecksum: string;
   readonly usage: Readonly<{ calls: number; inputTokens: number; outputTokens: number; estimatedCostUsdMicros: number }>;
@@ -77,7 +65,7 @@ export interface PreparedEmbeddingSet {
 export interface EmbeddingProvenanceReceipt {
   readonly schemaVersion: 1;
   readonly bindingId: string;
-  readonly source: 'fixture' | 'provider';
+  readonly source: 'fixture';
   readonly model: typeof MODEL;
   readonly dimensions: typeof DIMENSIONS;
   readonly contentReleaseId: string;
@@ -101,11 +89,11 @@ export interface CompletedEmbeddingCache {
   reopenReceipt(receiptHash: string): Promise<EmbeddingProvenanceReceipt>;
   lookup(input: Readonly<{
     chunkChecksum: string; model: typeof MODEL; dimensions: typeof DIMENSIONS;
-    source: 'fixture' | 'provider'; receiptHash: string;
+    source: 'fixture'; receiptHash: string;
   }>): Promise<readonly number[] | null>;
 }
 
-function indexPayload(release: VerifiedActivePublicAnswerReleaseShape, vectors: readonly PreparedEmbeddingVector[], source = 'unbound') {
+function indexPayload(release: VerifiedActivePublicAnswerReleaseAuthority, vectors: readonly PreparedEmbeddingVector[], source = 'unbound') {
   const byChunk = new Map(vectors.map((item) => [item.chunkId, item]));
   return release.indexInputs.map((input) => {
     const vector = byChunk.get(input.chunkId);
@@ -119,7 +107,7 @@ function indexPayload(release: VerifiedActivePublicAnswerReleaseShape, vectors: 
   });
 }
 
-function releaseHashes(release: VerifiedActivePublicAnswerReleaseShape) {
+function releaseHashes(release: VerifiedActivePublicAnswerReleaseAuthority) {
   return {
     contentReleaseId: release.contentReleaseId,
     answerReleaseId: release.answerReleaseId,
@@ -131,7 +119,7 @@ function releaseHashes(release: VerifiedActivePublicAnswerReleaseShape) {
 }
 
 export async function prepareEmbeddingSet(
-  release: VerifiedActivePublicAnswerReleaseShape,
+  release: VerifiedActivePublicAnswerReleaseAuthority,
   client: EmbeddingClient,
   signal: AbortSignal,
   options: Readonly<{ completedCache?: CompletedEmbeddingCache; batchSize?: number }> = {},
@@ -168,9 +156,10 @@ export async function prepareEmbeddingSet(
     });
   });
   const vectorSetChecksum = checksum(vectors.map(({ chunkId, chunkChecksum, vectorChecksum }) => ({ chunkId, chunkChecksum, vectorChecksum })));
+  const indexRows = Object.freeze(indexPayload(release, vectors));
   const result: PreparedEmbeddingSet = {
     ...releaseHashes(release), model: MODEL, dimensions: DIMENSIONS, vectors: Object.freeze(vectors), vectorSetChecksum,
-    indexChecksum: checksum(indexPayload(release, vectors)),
+    indexRows, indexChecksum: checksum(indexRows),
     usage: Object.freeze({ ...response.usage, estimatedCostUsdMicros: 0 }),
   };
   if (cache && response.usage.inputTokens === 0 && release.indexInputs.length > 0) assertReceipt(release, result, cache.receipt);
@@ -178,7 +167,7 @@ export async function prepareEmbeddingSet(
 }
 
 async function embedBatches(
-  release: VerifiedActivePublicAnswerReleaseShape,
+  release: VerifiedActivePublicAnswerReleaseAuthority,
   client: EmbeddingClient,
   signal: AbortSignal,
   batchSize: number,
@@ -203,24 +192,36 @@ function deterministicUuid(hash: string): string {
 }
 
 export function createFixtureEmbeddingReceipt(prepared: PreparedEmbeddingSet): Readonly<EmbeddingProvenanceReceipt> {
-  const base = {
+  const provenance = {
     schemaVersion: 1 as const, source: 'fixture' as const, model: MODEL, dimensions: DIMENSIONS,
     contentReleaseId: prepared.contentReleaseId, answerReleaseId: prepared.answerReleaseId,
     contentManifestHash: prepared.contentManifestHash, answerManifestHash: prepared.answerManifestHash,
     answerArtifactHash: prepared.answerArtifactHash, corpusApprovalHash: prepared.corpusApprovalHash,
     vectorSetChecksum: prepared.vectorSetChecksum,
-    indexChecksum: checksum({ prepared: prepared.indexChecksum, source: 'fixture' }),
     chunkCount: prepared.vectors.length, calls: prepared.usage.calls,
     inputTokens: prepared.usage.inputTokens, outputTokens: prepared.usage.outputTokens, costUsdMicros: 0,
   };
-  const bindingId = deterministicUuid(checksum(base));
-  const receiptHash = checksum({ ...base, bindingId });
-  return Object.freeze({ ...base, bindingId, receiptHash });
+  const rows = prepared.indexRows.map((row) => ({ ...row, source: 'fixture' }));
+  const indexChecksum = checksum({ rows, provenance });
+  const bindingId = deterministicUuid(checksum({ provenance, indexChecksum }));
+  const receiptHash = checksum({ ...provenance, indexChecksum, bindingId });
+  return Object.freeze({ ...provenance, indexChecksum, bindingId, receiptHash });
 }
 
-function assertReceipt(release: VerifiedActivePublicAnswerReleaseShape, prepared: PreparedEmbeddingSet, receipt: EmbeddingProvenanceReceipt): void {
+function receiptProvenance(receipt: EmbeddingProvenanceReceipt) {
+  return {
+    schemaVersion: receipt.schemaVersion, source: receipt.source, model: receipt.model, dimensions: receipt.dimensions,
+    contentReleaseId: receipt.contentReleaseId, answerReleaseId: receipt.answerReleaseId,
+    contentManifestHash: receipt.contentManifestHash, answerManifestHash: receipt.answerManifestHash,
+    answerArtifactHash: receipt.answerArtifactHash, corpusApprovalHash: receipt.corpusApprovalHash,
+    vectorSetChecksum: receipt.vectorSetChecksum, chunkCount: receipt.chunkCount, calls: receipt.calls,
+    inputTokens: receipt.inputTokens, outputTokens: receipt.outputTokens, costUsdMicros: receipt.costUsdMicros,
+  };
+}
+
+function assertReceipt(release: VerifiedActivePublicAnswerReleaseAuthority, prepared: PreparedEmbeddingSet, receipt: EmbeddingProvenanceReceipt): void {
   if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(receipt.bindingId)
-    || !['fixture', 'provider'].includes(receipt.source)
+    || receipt.source !== 'fixture'
     || !Number.isInteger(receipt.calls) || !Number.isInteger(receipt.inputTokens) || !Number.isInteger(receipt.outputTokens)
     || !Number.isInteger(receipt.costUsdMicros)
     || receipt.calls < 0 || receipt.inputTokens < 0 || receipt.outputTokens < 0 || receipt.costUsdMicros < 0) {
@@ -236,7 +237,10 @@ function assertReceipt(release: VerifiedActivePublicAnswerReleaseShape, prepared
     || receipt.vectorSetChecksum !== prepared.vectorSetChecksum || receipt.chunkCount !== prepared.vectors.length) {
     throw new Error('embedding provenance receipt does not bind the prepared vector set');
   }
-  const expectedIndex = checksum({ prepared: prepared.indexChecksum, source: receipt.source });
+  const expectedIndex = checksum({
+    rows: prepared.indexRows.map((row) => ({ ...row, source: receipt.source })),
+    provenance: receiptProvenance(receipt),
+  });
   if (receipt.indexChecksum !== expectedIndex) throw new Error('embedding provenance index checksum mismatch');
   const { receiptHash, ...receiptBody } = receipt;
   if (receiptHash !== checksum(receiptBody)) throw new Error('embedding provenance receipt hash mismatch');
@@ -270,19 +274,22 @@ export class PostgresAnswerReleaseIndexer {
   constructor(private readonly nodeEnv: 'development' | 'test' | 'production') {}
 
   async activate(
-    release: VerifiedActivePublicAnswerReleaseShape,
+    release: VerifiedActivePublicAnswerReleaseAuthority,
     prepared: PreparedEmbeddingSet,
     receipt: EmbeddingProvenanceReceipt,
     pool: Pool,
     signal: AbortSignal,
   ): Promise<Readonly<{ bindingId: string; answerReleaseId: string; state: 'active' }>> {
     if (signal.aborted) throw signal.reason ?? new Error('index activation aborted');
-    if (this.nodeEnv === 'production' && receipt.source === 'fixture') throw new Error('fixture provenance is forbidden in production');
+    if ((receipt as { source: string }).source === 'provider') {
+      throw new Error('provider activation requires Task 4 strict-reopened authorization');
+    }
+    if (this.nodeEnv === 'production') throw new Error('fixture provenance is forbidden in production');
     assertReceipt(release, prepared, receipt);
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query("SELECT pg_advisory_xact_lock(hashtextextended('form-thought:public-answer:global-activation:v1', 0))");
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [GLOBAL_ACTIVATION_LOCK]);
       const exists = await client.query('SELECT state FROM public_answer_release_bindings WHERE binding_id=$1', [receipt.bindingId]);
       if (exists.rowCount) {
         await assertExisting(client, receipt, prepared);
@@ -335,9 +342,9 @@ export class PostgresAnswerReleaseIndexer {
         chunkId: row.chunk_id, chunkChecksum: row.chunk_checksum, recordId: row.record_id,
         canonicalPath: row.canonical_path, title: row.title, headingPath: row.heading_path,
         body: row.body, searchText: row.search_text, vectorChecksum: writtenVectors[index]!.vectorChecksum,
-        model: row.embedding_model, dimensions: row.embedding_dimensions, source: 'unbound',
+        model: row.embedding_model, dimensions: row.embedding_dimensions, source: receipt.source,
       }));
-      if (checksum(writtenPayload) !== prepared.indexChecksum) {
+      if (checksum({ rows: writtenPayload, provenance: receiptProvenance(receipt) }) !== receipt.indexChecksum) {
         throw new Error('written binding index checksum mismatch');
       }
       await client.query("UPDATE public_answer_release_bindings SET state='ready' WHERE binding_id=$1 AND state='building'", [receipt.bindingId]);
@@ -359,29 +366,4 @@ export class PostgresAnswerReleaseIndexer {
       throw error;
     } finally { client.release(); }
   }
-}
-
-export function createProviderEmbeddingReceipt(
-  prepared: PreparedEmbeddingSet,
-  measured: Readonly<{ calls: number; inputTokens: number; outputTokens: number; costUsdMicros: number }>,
-): Readonly<EmbeddingProvenanceReceipt> {
-  if (!Number.isInteger(measured.calls) || !Number.isInteger(measured.inputTokens) || !Number.isInteger(measured.outputTokens)
-    || !Number.isInteger(measured.costUsdMicros)
-    || measured.calls < 0 || measured.inputTokens < 0 || measured.outputTokens < 0 || measured.costUsdMicros < 0) {
-    throw new Error('provider usage and cost must be non-negative integers');
-  }
-  if (prepared.vectors.length === 0 && (measured.calls !== 0 || measured.inputTokens !== 0 || measured.outputTokens !== 0 || measured.costUsdMicros !== 0)) {
-    throw new Error('empty provider receipt must record zero calls, tokens, and cost');
-  }
-  const base = {
-    schemaVersion: 1 as const, source: 'provider' as const, model: MODEL, dimensions: DIMENSIONS,
-    contentReleaseId: prepared.contentReleaseId, answerReleaseId: prepared.answerReleaseId,
-    contentManifestHash: prepared.contentManifestHash, answerManifestHash: prepared.answerManifestHash,
-    answerArtifactHash: prepared.answerArtifactHash, corpusApprovalHash: prepared.corpusApprovalHash,
-    vectorSetChecksum: prepared.vectorSetChecksum, indexChecksum: checksum({ prepared: prepared.indexChecksum, source: 'provider' }),
-    chunkCount: prepared.vectors.length, ...measured,
-  };
-  const bindingId = randomUUID();
-  const receiptHash = checksum({ ...base, bindingId });
-  return Object.freeze({ ...base, bindingId, receiptHash });
 }

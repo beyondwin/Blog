@@ -78,13 +78,20 @@ async function readEdgeReachabilityReceipt(
     if (bytes.toString('utf8') !== `${JSON.stringify({ ...input, evidenceChecksum }, null, 2)}\n`) {
       throw new Error('edge reachability receipt bytes are not canonical');
     }
+    const exactInstant = (value: string, label: string): number => {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(value) || Number.isNaN(Date.parse(value))) {
+        throw new Error(`edge ${label} must be an exact UTC instant`);
+      }
+      return Date.parse(value);
+    };
+    const approvedAt = exactInstant(input.approvedAt, 'approvedAt');
+    const expiresAt = exactInstant(input.expiresAt, 'expiresAt');
     if (input.schemaVersion !== 1 || input.edgeOnly !== true || input.replicaCount !== 1
       || input.publicOrigin !== expected.publicOrigin
       || JSON.stringify(input.trustedProxyAddresses) !== JSON.stringify(expected.trustedProxyAddresses)
       || input.providerProjectSpendCapEvidenceChecksum !== expected.spendCapEvidenceChecksum
       || typeof input.verifierIdentityHash !== 'string' || !checksumPattern.test(input.verifierIdentityHash)
-      || typeof input.approvedAt !== 'string' || typeof input.expiresAt !== 'string'
-      || Date.parse(input.approvedAt) > now.getTime() || Date.parse(input.expiresAt) <= now.getTime()) {
+      || approvedAt > now.getTime() || expiresAt <= now.getTime()) {
       throw new Error('edge reachability receipt does not prove the production edge or provider-project spend cap');
     }
   } finally { await handle.close(); }

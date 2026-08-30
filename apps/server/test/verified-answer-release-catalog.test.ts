@@ -1,11 +1,32 @@
 import { describe, expect, it } from 'vitest';
+import type { VerifiedActivePublicAnswerReleaseAuthority } from '../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 
 import { DeterministicEmbeddingClient } from '../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
+import * as indexerModule from '../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
 import {
   createFixtureEmbeddingReceipt,
-  createProviderEmbeddingReceipt,
   prepareEmbeddingSet,
 } from '../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
+import { assertCompleteActivatedBinding, runIndexAnswerReleaseCli } from '../src/index-answer-release.js';
+import postgresConfig from '../vitest.postgres.config.js';
+import {
+  runTestPostgresHarness,
+  type HarnessRun,
+  type TestPostgresHarnessDependencies,
+} from '../scripts/with-test-postgres.mjs';
+
+type PlainRelease = {
+  contentReleaseId: string;
+  answerReleaseId: string;
+  manifest: { identity: { contentManifestHash: string } };
+  manifestHash: string;
+  artifactHash: string;
+  corpusApprovalHash: string;
+  indexInputs: readonly unknown[];
+};
+
+type AssertFalse<T extends false> = T;
+type _PlainReleaseCannotCrossAuthorityBoundary = AssertFalse<PlainRelease extends VerifiedActivePublicAnswerReleaseAuthority ? true : false>;
 
 describe('deterministic fixture embedding preparation', () => {
   it('creates stable finite normalized 3072-dimensional vectors and provenance-bound checksums', async () => {
@@ -53,16 +74,8 @@ describe('deterministic fixture embedding preparation', () => {
     expect(() => new DeterministicEmbeddingClient('production')).toThrow(/fixture/u);
   });
 
-  it('rejects impossible negative provider usage before creating provenance', async () => {
-    const release = {
-      answerReleaseId: 'a'.repeat(64), contentReleaseId: 'b'.repeat(64),
-      manifest: { identity: { contentManifestHash: `sha256:${'c'.repeat(64)}` } },
-      manifestHash: `sha256:${'c'.repeat(64)}`, artifactHash: `sha256:${'d'.repeat(64)}`,
-      corpusApprovalHash: `sha256:${'e'.repeat(64)}`, indexInputs: [],
-    } as any;
-    const prepared = await prepareEmbeddingSet(release, new DeterministicEmbeddingClient('test'), new AbortController().signal);
-    expect(() => createProviderEmbeddingReceipt(prepared, { calls: -1, inputTokens: 0, outputTokens: 0, costUsdMicros: 0 }))
-      .toThrow(/usage/u);
+  it('does not expose a Task 3 provider provenance factory', () => {
+    expect(indexerModule).not.toHaveProperty('createProviderEmbeddingReceipt');
   });
 
   it('reuses vectors only after strict-reopening the exact completed provenance receipt', async () => {
@@ -105,5 +118,95 @@ describe('deterministic fixture embedding preparation', () => {
         async lookup() { return original.vectors[0]!.values; },
       },
     })).rejects.toThrow(/changed on strict reopen/u);
+  });
+});
+
+describe('fixture index CLI boundary', () => {
+  it('rejects corruption in every persisted binding/provenance field', () => {
+    const authority = {
+      bindingId: '11111111-1111-4111-8111-111111111111', contentReleaseId: 'a'.repeat(64),
+      answerReleaseId: 'b'.repeat(64), contentManifestHash: `sha256:${'1'.repeat(64)}`,
+      answerManifestHash: `sha256:${'2'.repeat(64)}`, answerArtifactHash: `sha256:${'3'.repeat(64)}`,
+      corpusApprovalHash: `sha256:${'4'.repeat(64)}`, embeddingModel: 'text-embedding-3-large' as const,
+      embeddingDimensions: 3072 as const, embeddingSource: 'fixture' as const,
+      embeddingReceiptHash: `sha256:${'5'.repeat(64)}`, chunkCount: 17,
+      indexChecksum: `sha256:${'6'.repeat(64)}`,
+    };
+    const row = {
+      binding_id: authority.bindingId, content_release_id: authority.contentReleaseId,
+      answer_release_id: authority.answerReleaseId, content_manifest_hash: authority.contentManifestHash,
+      answer_manifest_hash: authority.answerManifestHash, answer_artifact_hash: authority.answerArtifactHash,
+      embedding_model: authority.embeddingModel, embedding_dimensions: authority.embeddingDimensions,
+      embedding_source: authority.embeddingSource, embedding_receipt_hash: authority.embeddingReceiptHash,
+      chunk_count: authority.chunkCount, index_checksum: authority.indexChecksum, state: 'active',
+    };
+    expect(() => assertCompleteActivatedBinding(row, authority)).not.toThrow();
+    for (const key of Object.keys(row) as Array<keyof typeof row>) {
+      expect(() => assertCompleteActivatedBinding({ ...row, [key]: key === 'chunk_count' ? 99 : 'corrupt' }, authority), key)
+        .toThrow(/complete binding reread mismatch/u);
+    }
+    expect(() => assertCompleteActivatedBinding(
+      row,
+      { ...authority, corpusApprovalHash: `sha256:${'9'.repeat(64)}` },
+      authority.corpusApprovalHash,
+    ))
+      .toThrow(/approval/u);
+  });
+
+  it('prints only an allowlisted failure kind when internals contain sensitive details', async () => {
+    let stderr = '';
+    const exitCode = await runIndexAnswerReleaseCli([], {}, {
+      stdout() { throw new Error('unexpected stdout'); },
+      stderr(value) { stderr += value; },
+    }, async () => { throw new Error('postgresql://secret@host/db /Users/example/private.json'); });
+    expect(exitCode).toBe(1);
+    expect(stderr).toBe('{"kind":"failure"}\n');
+    expect(stderr).not.toMatch(/secret|postgres|Users|private/u);
+  });
+});
+
+describe('disposable Postgres harness contract', () => {
+  function harness(overrides: Partial<TestPostgresHarnessDependencies> = {}) {
+    const calls: HarnessRun[] = [];
+    const dependencies: TestPostgresHarnessDependencies = {
+      repositoryRoot: '/repo', composeFile: '/repo/apps/server/compose.test.yml',
+      postgresConfig: '/repo/apps/server/vitest.postgres.config.ts', vitestEntrypoint: '/repo/node_modules/vitest/vitest.mjs',
+      projectName: 'task-123', env: {}, execPath: '/node24/bin/node',
+      async discover() { return ['migration-and-binding.test.ts']; },
+      async run(input) { calls.push(input); return input.args.includes('port') ? '127.0.0.1:45678\n' : ''; },
+      ...overrides,
+    };
+    return { calls, dependencies };
+  }
+
+  it('uses repository-root cwd, the dedicated serial config, and always cleans a successful child', async () => {
+    const { calls, dependencies } = harness();
+    await runTestPostgresHarness('test', dependencies);
+    expect(calls.every((call) => call.cwd === '/repo')).toBe(true);
+    const child = calls.find((call) => call.command === '/node24/bin/node')!;
+    expect(child.args).toEqual(['/repo/node_modules/vitest/vitest.mjs', 'run', '--config', '/repo/apps/server/vitest.postgres.config.ts']);
+    expect(child.env.FORM_THOUGHT_TEST_DATABASE_URL).toContain('127.0.0.1:45678');
+    expect(calls.at(-1)?.args.slice(-2)).toEqual(['-v', '--remove-orphans']);
+    expect(postgresConfig.root).toBe(process.cwd());
+    expect(postgresConfig.test?.include).toEqual(['apps/server/test/postgres/**/*.test.ts']);
+    expect(postgresConfig.test?.passWithNoTests).toBe(false);
+    expect(postgresConfig.test?.fileParallelism).toBe(false);
+  });
+
+  it('fails zero discovery before Compose and cleans after an injected child failure', async () => {
+    const zero = harness({ async discover() { return []; } });
+    await expect(runTestPostgresHarness('test', zero.dependencies)).rejects.toThrow(/zero owned tests/u);
+    expect(zero.calls).toEqual([]);
+
+    const failed = harness({
+      async run(input) {
+        failed.calls.push(input);
+        if (input.args.includes('port')) return '127.0.0.1:45678\n';
+        if (input.command === '/node24/bin/node') throw new Error('injected child failure');
+        return '';
+      },
+    });
+    await expect(runTestPostgresHarness('test', failed.dependencies)).rejects.toThrow(/injected child/u);
+    expect(failed.calls.at(-1)?.args.slice(-2)).toEqual(['-v', '--remove-orphans']);
   });
 });

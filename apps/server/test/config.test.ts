@@ -103,6 +103,36 @@ describe('server configuration', () => {
       FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: edgePath, FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
     }))).rejects.toThrow(/spend cap|checksum/u);
   });
+
+  it.each([
+    ['invalid approval', 'not-a-date', '2099-09-01T00:00:00.000Z'],
+    ['invalid expiry', '2026-08-29T00:00:00.000Z', 'not-a-date'],
+    ['future approval', '2099-08-29T00:00:00.000Z', '2099-09-01T00:00:00.000Z'],
+    ['expired', '2020-08-29T00:00:00.000Z', '2020-09-01T00:00:00.000Z'],
+  ])('rejects production edge evidence with %s', async (_label, approvedAt, expiresAt) => {
+    const root = await mkdtemp(join(tmpdir(), 'production-edge-time-')); roots.push(root);
+    const providerPath = join(root, 'provider.json');
+    const provider = canonicalProviderDataControlReceipt({
+      schemaVersion: 1, provider: 'openai', projectId: 'project-public-answer',
+      endpoints: { embeddings: '/v1/embeddings', generation: '/v1/responses', semanticVerification: '/v1/responses' },
+      verifierIdentityHash: `sha256:${'1'.repeat(64)}`, custodianIdentityHash: `sha256:${'2'.repeat(64)}`,
+      zeroDataRetentionEvidenceChecksum: `sha256:${'3'.repeat(64)}`, spendCapEvidenceChecksum: `sha256:${'4'.repeat(64)}`,
+      approvedAt: '2026-08-29T00:00:00.000Z', expiresAt: '2099-09-01T00:00:00.000Z',
+    });
+    await writeFile(providerPath, `${JSON.stringify(provider, null, 2)}\n`);
+    const edgePath = join(root, 'edge.json');
+    const edge = canonicalEdgeReachabilityReceipt({
+      schemaVersion: 1, edgeOnly: true, replicaCount: 1, publicOrigin: 'https://example.com/',
+      trustedProxyAddresses: ['127.0.0.1'], providerProjectSpendCapEvidenceChecksum: provider.spendCapEvidenceChecksum,
+      verifierIdentityHash: `sha256:${'5'.repeat(64)}`, approvedAt, expiresAt,
+    });
+    await writeFile(edgePath, `${JSON.stringify(edge, null, 2)}\n`);
+    await expect(parseServerConfig(base({
+      NODE_ENV: 'production', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
+      FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: edgePath, FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
+    }))).rejects.toThrow(/instant|current|valid|edge/u);
+  });
 });
 
 describe('provider data-control receipt', () => {
