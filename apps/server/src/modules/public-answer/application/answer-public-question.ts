@@ -246,7 +246,7 @@ export class AnswerPublicQuestion {
       usageLease.settleStage('generation', generation.usage);
       addUsage(metrics, generation.usage);
 
-      const evidenceIds = generation.claims.flatMap((claim) => claim.evidenceIds);
+      const evidenceIds = [...new Set(generation.claims.flatMap((claim) => claim.evidenceIds))];
       const authorizedEvidence = command.catalog.evidenceFor(evidenceIds);
       const deterministic = this.dependencies.deterministicVerifier.verify({
         catalog: command.catalog,

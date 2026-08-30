@@ -1,0 +1,19 @@
+{
+  "status": "completed",
+  "output": [
+    {
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"claims\":[{\"text\":\"검증된 공개 기록입니다.\",\"evidenceIds\":[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"]}]}"
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 128,
+    "output_tokens": 24
+  }
+}

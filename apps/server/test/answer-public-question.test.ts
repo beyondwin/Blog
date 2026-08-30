@@ -412,6 +412,22 @@ describe('AnswerPublicQuestion', () => {
     ]);
   });
 
+  it('rebuilds the public evidence as the unique citation union', async () => {
+    const claims = [CLAIM, Object.freeze({ ...CLAIM, claimId: 'claim-2' })];
+    const duplicateCatalog = catalog({
+      evidenceFor(ids) {
+        return ids.flatMap((id) => id === EVIDENCE.evidenceId ? [EVIDENCE] : []);
+      },
+    });
+    const h = harness({ generatedClaims: claims });
+
+    const outcome = await h.useCase.execute(command({ catalog: duplicateCatalog }));
+
+    expect(outcome).toMatchObject({ kind: 'answer', claims, evidence: [EVIDENCE] });
+    expect(h.deterministicInputs[0]?.evidence).toEqual([EVIDENCE]);
+    expect(h.semanticInputs[0]?.evidence).toEqual([EVIDENCE]);
+  });
+
   it('maps deterministic verification failure to insufficient evidence without semantic work', async () => {
     const h = harness({ deterministicResult: { ok: false, reason: 'unsupported evidence' } });
 

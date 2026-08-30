@@ -1,0 +1,19 @@
+{
+  "status": "completed",
+  "output": [
+    {
+      "type": "message",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "{\"supportedSentenceIds\":[\"claim-1-sentence-1\"],\"contradictedSentenceIds\":[]}"
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "input_tokens": 96,
+    "output_tokens": 12
+  }
+}
