@@ -15,7 +15,7 @@ export interface VerifiedActivePublicAnswerReleaseAuthority {
   readonly [serverVerifiedAnswerRelease]: true;
   readonly releasePath: string; readonly contentReleaseId: string; readonly answerReleaseId: string;
   readonly manifestHash: string; readonly artifactHash: string; readonly corpusApprovalHash: string;
-  readonly manifest: { readonly identity: { readonly contentManifestHash: string; readonly normalizerVersion?: string } };
+  readonly manifest: { readonly identity: { readonly contentManifestHash: string; readonly normalizerVersion: string } };
   readonly chunks: readonly { readonly chunkId: string; readonly recordId: string; readonly canonicalPath: string }[];
   readonly evidence: readonly {
     readonly evidenceId: string; readonly chunkId: string; readonly recordId: string; readonly collectionLabel: string;
@@ -174,6 +174,7 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
       }>("SELECT * FROM public_answer_release_bindings WHERE state='active'");
       if (bindingResult.rowCount !== 1) throw new Error('catalog requires exactly one active binding');
       const binding = bindingResult.rows[0]!;
+      if (release.manifest.identity.normalizerVersion !== 'nfkc-lower-hangul-ngram-v1') throw new Error('verified answer release normalizer authority is missing or drifted');
       if (binding.content_release_id !== release.contentReleaseId || binding.answer_release_id !== release.answerReleaseId
         || binding.content_manifest_hash !== release.manifest.identity.contentManifestHash
         || binding.answer_manifest_hash !== release.manifestHash || binding.answer_artifact_hash !== release.artifactHash
@@ -211,7 +212,7 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
         bindingId: binding.binding_id, contentReleaseId: release.contentReleaseId, answerReleaseId: release.answerReleaseId,
         corpusApprovalHash: release.corpusApprovalHash, chunkCount: chunks.length,
         embeddingSource: binding.embedding_source, embeddingReceiptHash: binding.embedding_receipt_hash,
-        normalizerVersion: release.manifest.identity.normalizerVersion ?? 'nfkc-lower-hangul-ngram-v1', evidenceById, chunkById, chunkChecksumById, tombstones,
+        normalizerVersion: release.manifest.identity.normalizerVersion, evidenceById, chunkById, chunkChecksumById, tombstones,
         isBoundTo: (contentReleaseId, answerReleaseId) => (
           contentReleaseId === release.contentReleaseId && answerReleaseId === release.answerReleaseId
         ),

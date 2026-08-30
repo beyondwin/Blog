@@ -57,6 +57,7 @@ export function providerChecksum(value: unknown): string {
 
 export async function strictOpenCanonicalJson(root: string, fileName: string, cap: number, bindFileName = true): Promise<{ value: unknown; checksum: string; bytes: Buffer }> {
   if (!isAbsolute(root) || !/^[a-f0-9]{64}\.json$/u.test(fileName)) throw new Error('canonical artifact path is invalid');
+  const rootState=await lstat(root);if(rootState.isSymbolicLink()||!rootState.isDirectory()||(typeof process.getuid==='function'&&rootState.uid!==process.getuid()))throw new Error('canonical artifact root must be one owned real directory');
   const path = resolve(root, fileName); const rel = relative(root, path);
   if (rel.startsWith('..') || isAbsolute(rel)) throw new Error('canonical artifact escaped root');
   if (await realpath(dirname(path)) !== await realpath(root)) throw new Error('canonical artifact parent escaped real root');

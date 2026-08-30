@@ -5,16 +5,18 @@ import { exactObject, readCappedJson } from './provider-json.js';
 const MODEL = 'text-embedding-3-large' as const; const DIMENSIONS = 3072 as const;
 const PRODUCTION_BASE = 'https://api.openai.com/v1';
 
-interface Options { readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly maxBatchSize?: number }
+export type EmbeddingOperationProfile = 'query' | 'index';
+interface Options { readonly profile: EmbeddingOperationProfile; readonly baseUrl?: string; readonly fetch?: typeof fetch; readonly maxBatchSize?: number }
 
 export class OpenAIEmbeddingClient implements EmbeddingClient {
   readonly model = MODEL; readonly dimensions = DIMENSIONS;
-  private readonly baseUrl: string; private readonly request: typeof fetch; private readonly maxBatchSize: number;
-  constructor(private readonly apiKey: string, options: Options = {}) {
+  private readonly baseUrl: string; private readonly request: typeof fetch; private readonly maxBatchSize: number; private readonly profile: EmbeddingOperationProfile;
+  constructor(private readonly apiKey: string, options: Options) {
     if (!apiKey) throw new Error('OpenAI API key is required');
     this.baseUrl = options.baseUrl ?? PRODUCTION_BASE;
     if (this.baseUrl !== PRODUCTION_BASE && !/^http:\/\/127\.0\.0\.1:\d+\/v1$/u.test(this.baseUrl)) throw new Error('OpenAI base URL is forbidden');
-    this.request = options.fetch ?? globalThis.fetch; this.maxBatchSize = options.maxBatchSize ?? 256;
+    this.request = options.fetch ?? globalThis.fetch; this.profile = options.profile;
+    this.maxBatchSize = options.maxBatchSize ?? (this.profile === 'query' ? 1 : 256);
   }
 
   async embed(texts: readonly string[], signal: AbortSignal) {
@@ -33,7 +35,7 @@ export class OpenAIEmbeddingClient implements EmbeddingClient {
       throw new OpenAIEmbeddingError('http', { cause: error });
     }
     if (!response.ok) { await response.body?.cancel().catch(() => undefined); throw new OpenAIEmbeddingError('http'); }
-    const parsed = exactObject(await readCappedJson(response, texts.length === 1 ? 256 * 1024 : 8 * 1024 * 1024), ['object', 'data', 'model', 'usage']);
+    const parsed = exactObject(await readCappedJson(response, this.profile === 'query' ? 256 * 1024 : 8 * 1024 * 1024), ['object', 'data', 'model', 'usage']);
     if (parsed.object !== 'list' || parsed.model !== MODEL || !Array.isArray(parsed.data)) throw new OpenAIEmbeddingError('invalid-response');
     const usage = exactObject(parsed.usage, ['prompt_tokens', 'total_tokens']);
     if (!Number.isInteger(usage.prompt_tokens) || !Number.isInteger(usage.total_tokens)

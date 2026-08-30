@@ -24,7 +24,7 @@ describe('OpenAI embedding client', () => {
         response.end(JSON.stringify({ object: 'list', data: [{ object: 'embedding', index: 0, embedding: Array(3072).fill(0.25) }], model: 'text-embedding-3-large', usage: { prompt_tokens: 2, total_tokens: 2 } }));
       });
     });
-    const result = await new OpenAIEmbeddingClient('secret', { baseUrl }).embed(['ai와 책 판단'], new AbortController().signal);
+    const result = await new OpenAIEmbeddingClient('secret', { profile: 'query', baseUrl }).embed(['ai와 책 판단'], new AbortController().signal);
     expect(request).toEqual({ input: ['ai와 책 판단'], model: 'text-embedding-3-large', dimensions: 3072, encoding_format: 'float' });
     expect(Object.keys(request as object).sort()).toEqual(['dimensions', 'encoding_format', 'input', 'model']);
     expect(transport).toEqual({ method: 'POST', url: '/v1/embeddings', authorization: 'Bearer secret', contentType: 'application/json' });
@@ -39,27 +39,28 @@ describe('OpenAI embedding client', () => {
       JSON.stringify({ object: 'list', data: [{ object: 'embedding', index: 0, embedding: vector }, { object: 'embedding', index: 0, embedding: vector }], model: 'text-embedding-3-large', usage: { prompt_tokens: 2, total_tokens: 2 } }),
       `{"object":"list","data":[{"object":"embedding","index":0,"embedding":[1e999,${Array(3071).fill(0).join(',')}]}],"model":"text-embedding-3-large","usage":{"prompt_tokens":1,"total_tokens":1}}`,
       JSON.stringify({ object: 'list', data: [{ object: 'embedding', index: 0, embedding: vector, extra: true }], model: 'text-embedding-3-large', usage: { prompt_tokens: 1, total_tokens: 1 } }),
+      JSON.stringify({ object: 'list', data: [{ object: 'embedding', index: 0, embedding: vector }], model: 'text-embedding-3-large', usage: { prompt_tokens: 1, total_tokens: 1 }, extra: true }),
     ]) {
       const baseUrl = await endpoint((_request, response) => { response.setHeader('content-type', 'application/json'); response.end(body); });
-      await expect(new OpenAIEmbeddingClient('secret', { baseUrl }).embed(body.includes('index":1') || body.includes('index":0') && body.match(/"index":0/g)?.length === 2 ? ['a','b'] : ['a'], new AbortController().signal)).rejects.toThrow(/invalid/u);
+      await expect(new OpenAIEmbeddingClient('secret', { profile: body.includes('index":1') || body.match(/"index":0/g)?.length === 2 ? 'index' : 'query', baseUrl }).embed(body.includes('index":1') || body.includes('index":0') && body.match(/"index":0/g)?.length === 2 ? ['a','b'] : ['a'], new AbortController().signal)).rejects.toThrow(/invalid/u);
       server!.close(); await once(server!, 'close'); server = undefined;
     }
   });
 
   it('caps query response bodies at 256 KiB', async () => {
     const baseUrl = await endpoint((_request, response) => { response.setHeader('content-type', 'application/json'); response.end(`{"padding":"${'x'.repeat(300_000)}"}`); });
-    await expect(new OpenAIEmbeddingClient('secret', { baseUrl }).embed(['question'], new AbortController().signal)).rejects.toThrow(/body-too-large/u);
+    await expect(new OpenAIEmbeddingClient('secret', { profile: 'query', baseUrl }).embed(['question'], new AbortController().signal)).rejects.toThrow(/body-too-large/u);
   });
 
   it('preserves ordered approved index text only and applies the 8 MiB index cap', async () => {
     let decoded: unknown; const vector = Array(3072).fill(0.5);
     let baseUrl = await endpoint((request, response) => { let body=''; request.setEncoding('utf8'); request.on('data',(chunk)=>{body+=chunk;}); request.on('end',()=>{decoded=JSON.parse(body);response.setHeader('content-type','application/json');response.end(JSON.stringify({object:'list',data:[{object:'embedding',index:0,embedding:vector},{object:'embedding',index:1,embedding:vector}],model:'text-embedding-3-large',usage:{prompt_tokens:4,total_tokens:4}}));}); });
-    await expect(new OpenAIEmbeddingClient('secret',{baseUrl}).embed(['approved chunk one','approved chunk two'],new AbortController().signal)).resolves.toMatchObject({vectors:[expect.any(Array),expect.any(Array)]});
+    await expect(new OpenAIEmbeddingClient('secret',{profile:'index',baseUrl}).embed(['approved chunk one','approved chunk two'],new AbortController().signal)).resolves.toMatchObject({vectors:[expect.any(Array),expect.any(Array)]});
     expect(decoded).toEqual({input:['approved chunk one','approved chunk two'],model:'text-embedding-3-large',dimensions:3072,encoding_format:'float'});
     expect(JSON.stringify(decoded)).not.toMatch(/chunkId|recordId|evidenceId|releaseId|bindingId|checksum|canonicalPath|title/u);
     server!.close();await once(server!,'close');server=undefined;
     baseUrl=await endpoint((_request,response)=>{response.setHeader('content-type','application/json');response.end(`{"padding":"${'x'.repeat(8*1024*1024+1)}"}`);});
-    await expect(new OpenAIEmbeddingClient('secret',{baseUrl}).embed(['one','two'],new AbortController().signal)).rejects.toThrow(/body-too-large/u);
+    await expect(new OpenAIEmbeddingClient('secret',{profile:'index',baseUrl}).embed(['one','two'],new AbortController().signal)).rejects.toThrow(/body-too-large/u);
   });
 
   it.each([
@@ -71,16 +72,26 @@ describe('OpenAI embedding client', () => {
   ])('rejects %s without retrying or exposing provider text', async (_label, status, type, body) => {
     let calls = 0;
     const baseUrl = await endpoint((_request, response) => { calls += 1; response.statusCode = status; response.setHeader('content-type', type); response.end(body); });
-    const error = await new OpenAIEmbeddingClient('secret', { baseUrl }).embed(['question'], new AbortController().signal).catch((value) => value as Error);
+    const error = await new OpenAIEmbeddingClient('secret', { profile: 'query', baseUrl }).embed(['question'], new AbortController().signal).catch((value) => value as Error);
     expect(error).toBeInstanceOf(Error); if (!(error instanceof Error)) throw new Error('expected error');
     expect(error.message).not.toContain('secret provider error'); expect(calls).toBe(1);
   });
 
   it('propagates caller abort and rejects unsafe production base URLs', async () => {
-    expect(() => new OpenAIEmbeddingClient('secret', { baseUrl: 'http://example.com/v1' })).toThrow(/base URL/u);
+    expect(() => new OpenAIEmbeddingClient('secret', { profile: 'query', baseUrl: 'http://example.com/v1' })).toThrow(/base URL/u);
     const baseUrl = await endpoint(() => undefined);
-    const controller = new AbortController(); const pending = new OpenAIEmbeddingClient('secret', { baseUrl }).embed(['question'], controller.signal);
+    const controller = new AbortController(); const pending = new OpenAIEmbeddingClient('secret', { profile: 'query', baseUrl }).embed(['question'], controller.signal);
     controller.abort(new Error('caller deadline'));
     await expect(pending).rejects.toThrow(/caller deadline|abort/u);
+  });
+
+  it('binds caps and cardinality to the explicit operation profile', async () => {
+    let calls=0;let baseUrl=await endpoint((_request,response)=>{calls+=1;response.setHeader('content-type','application/json');response.end(`{"padding":"${'x'.repeat(300_000)}"}`);});
+    const indexError:any=await new OpenAIEmbeddingClient('secret',{profile:'index',baseUrl}).embed(['one'],new AbortController().signal).catch((error)=>error);
+    expect(indexError.code).toBe('invalid-response');expect(calls).toBe(1);
+    server!.close();await once(server!,'close');server=undefined;
+    baseUrl=await endpoint((_request,response)=>{calls+=1;response.end('{}');});
+    await expect(new OpenAIEmbeddingClient('secret',{profile:'query',baseUrl}).embed(['one','two'],new AbortController().signal)).rejects.toThrow(/batch/u);
+    expect(calls).toBe(1);
   });
 });

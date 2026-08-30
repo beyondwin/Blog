@@ -133,7 +133,7 @@ describe('public answer Postgres migration', () => {
       contentReleaseId: 'c'.repeat(64), answerReleaseId,
       manifestHash: `sha256:${'d'.repeat(64)}`, artifactHash: `sha256:${'e'.repeat(64)}`,
       corpusApprovalHash: `sha256:${'f'.repeat(64)}`,
-      manifest: { identity: { contentManifestHash: `sha256:${'a'.repeat(64)}` } },
+      manifest: { identity: { contentManifestHash: `sha256:${'a'.repeat(64)}`, normalizerVersion: 'nfkc-lower-hangul-ngram-v1' } },
       indexInputs: duplicate ? [chunk, { ...chunk, text: `${chunk.text} duplicate` }] : [chunk],
       chunks: [{ chunkId: chunk.chunkId, recordId: chunk.recordId, canonicalPath: chunk.canonicalPath }],
       evidence: [{

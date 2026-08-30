@@ -98,7 +98,7 @@ export async function indexAnswerRelease(
     const dataControl = provider ? await readProviderDataControlReceipt(config.providerDataControlReceiptPath!) : null;
     const startedAt = new Date().toISOString();
     const prepared = await prepareEmbeddingSet(answer, provider
-      ? new OpenAIEmbeddingClient(config.openAiApiKey!) : new DeterministicEmbeddingClient(config.nodeEnv), new AbortController().signal);
+      ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'index' }) : new DeterministicEmbeddingClient(config.nodeEnv), new AbortController().signal);
     const providerAuthorities = provider ? createProviderEmbeddingAuthorities(answer, prepared, {
       providerDataControlReceiptHash: dataControl!.receiptHash, providerPricingReceiptHash: pricing!.receiptHash,
       createdAt: startedAt, completedAt: new Date().toISOString(),

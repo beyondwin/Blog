@@ -1,6 +1,7 @@
 import { exactObject, providerChecksum, strictOpenCanonicalJson } from '../openai/provider-json.js';
 
 const HASH = /^sha256:[a-f0-9]{64}$/u; const ID = /^[a-f0-9]{64}$/u;
+function validEntity(kind: unknown,id: unknown): boolean{return kind==='record'?typeof id==='string'&&/^(?:articles|reviews|thoughts)\/[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(id):kind==='evidence'&&typeof id==='string'&&ID.test(id);}
 export interface BackupExpiryEvidence {
   schemaVersion: 1; entityKind: 'record' | 'evidence'; entityId: string; tombstoneHash: string;
   affectedContentReleaseId: string; affectedAnswerReleaseId: string; affectedAnswerManifestHash: string; affectedAnswerArtifactHash: string;
@@ -11,7 +12,7 @@ const keys = ['schemaVersion','entityKind','entityId','tombstoneHash','affectedC
 export function parseBackupExpiryEvidence(value: unknown, now = new Date()): Readonly<BackupExpiryEvidence> {
   const item = exactObject(value, keys) as unknown as BackupExpiryEvidence;
   const times = [item.verifiedAt, item.backupExpiresAt];
-  if (item.schemaVersion !== 1 || !['record','evidence'].includes(item.entityKind) || !item.entityId || !HASH.test(item.tombstoneHash)
+  if (item.schemaVersion !== 1 || !validEntity(item.entityKind,item.entityId) || !HASH.test(item.tombstoneHash)
     || !ID.test(item.affectedContentReleaseId) || !ID.test(item.affectedAnswerReleaseId)
     || ![item.affectedAnswerManifestHash,item.affectedAnswerArtifactHash,item.custodianIdentityHash,item.verifierIdentityHash,item.externalEvidenceChecksum].every((entry) => HASH.test(entry))
     || !/^owner:[A-Za-z0-9._-]{1,128}$/u.test(item.backupOwnerId) || !/^set:[A-Za-z0-9._-]{1,128}$/u.test(item.backupSetId)

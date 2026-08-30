@@ -22,6 +22,9 @@ describe('PostgresHybridRetriever', () => {
       .retrieve({ question: '  AI와　책,  판단! ', catalog: catalog(), limit: 6, signal: new AbortController().signal });
     expect(embed).toHaveBeenCalledOnce(); expect(embed).toHaveBeenCalledWith(['ai와 책 판단'], expect.any(AbortSignal));
     expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[0]![0].replace(/\s+/gu,' ')).toContain("websearch_to_tsquery('simple',$3)");
+    expect(query.mock.calls[0]![0]).toContain('b.binding_id=$1::uuid');expect(query.mock.calls[0]![0]).toContain('c.answer_release_id=$2');expect(query.mock.calls[0]![0]).toContain('LIMIT 20');
+    expect(query.mock.calls[1]![0].replace(/\s+/gu,' ')).toContain('1-(c.embedding <=> $2::vector)');expect(query.mock.calls[1]![0]).toContain('c.answer_release_id=$3');expect(query.mock.calls[1]![0]).toContain('ORDER BY c.embedding <=> $2::vector,c.chunk_id ASC LIMIT 20');
     expect(query.mock.calls[0]![1]).toEqual(['11111111-1111-4111-8111-111111111111', 'r'.repeat(64), 'ai와 책 판단']);
     expect(query.mock.calls[1]![1]![0]).toBe('11111111-1111-4111-8111-111111111111');
     expect(query.mock.calls[1]![1]![2]).toBe('r'.repeat(64));

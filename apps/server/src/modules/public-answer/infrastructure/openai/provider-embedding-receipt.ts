@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
-import { link, mkdir, open, rm, unlink } from 'node:fs/promises';
+import { link, lstat, mkdir, open, realpath, rm, unlink } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { canonicalProviderJson, exactObject, providerChecksum, strictOpenCanonicalJson } from './provider-json.js';
 
@@ -43,24 +43,39 @@ function parse(value: unknown): ProviderEmbeddingReceipt {
   return created;
 }
 
-export async function writeProviderEmbeddingReceipt(root: string, receipt: ProviderEmbeddingReceipt): Promise<string> {
-  if (!isAbsolute(root)) throw new Error('provider receipt root must be absolute'); parse(receipt);
-  const directory = resolve(root, receipt.answerReleaseId); const rel = relative(root, directory);
-  if (rel.startsWith('..') || isAbsolute(rel)) throw new Error('provider receipt escaped root');
-  await mkdir(directory, { recursive: true, mode: 0o700 });
+async function validatedOuterRoot(root: string): Promise<string> {
+  if (!isAbsolute(root)) throw new Error('provider receipt root must be absolute');
+  const state = await lstat(root);
+  if (state.isSymbolicLink() || !state.isDirectory() || (typeof process.getuid === 'function' && state.uid !== process.getuid())) throw new Error('provider receipt outer root must be one owned real directory');
+  return realpath(root);
+}
+async function fsyncDirectory(path: string): Promise<void> { const handle=await open(path,constants.O_RDONLY);try{await handle.sync();}finally{await handle.close();} }
+async function validatedReleaseDirectory(root: string, answerReleaseId: string, create: boolean): Promise<string> {
+  const realRoot=await validatedOuterRoot(root);const directory=resolve(root,answerReleaseId);
+  if (relative(root,directory).startsWith('..')) throw new Error('provider receipt escaped root');
+  if(create){try{await mkdir(directory,{mode:0o700});await fsyncDirectory(root);}catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}}
+  const state=await lstat(directory);
+  if(state.isSymbolicLink()||!state.isDirectory()||(typeof process.getuid==='function'&&state.uid!==process.getuid()))throw new Error('provider receipt release directory must be one owned real directory');
+  const realDirectory=await realpath(directory);if(!realDirectory.startsWith(`${realRoot}${sep}`))throw new Error('provider receipt release directory escaped outer root');
+  return directory;
+}
+
+export async function writeProviderEmbeddingReceipt(root: string, receipt: ProviderEmbeddingReceipt, faults: Readonly<{ afterFinalLink?(): Promise<void> }> = {}): Promise<string> {
+  parse(receipt); const directory=await validatedReleaseDirectory(root,receipt.answerReleaseId,true);
   const path = join(directory, `${receipt.embeddingReceiptHash.slice(7)}.json`); const stage = `${path}.stage-${process.pid}-${Date.now()}`;
   const handle = await open(stage, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
   try { await handle.writeFile(`${canonicalProviderJson(receipt)}\n`); await handle.sync(); } catch (error) { await handle.close().catch(() => undefined); await rm(stage, { force: true }); throw error; }
   await handle.close();
-  try { await link(stage, path); await unlink(stage); }
-  catch (error) { await rm(stage, { force: true }); if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('provider receipt already exists'); throw error; }
-  const parent = await open(dirname(path), constants.O_RDONLY); try { await parent.sync(); } finally { await parent.close(); }
+  let createdFinal=false;
+  try { await link(stage, path);createdFinal=true;await faults.afterFinalLink?.();await unlink(stage);await fsyncDirectory(dirname(path)); }
+  catch (error) { if(createdFinal)await rm(path,{force:true});await rm(stage,{force:true});await fsyncDirectory(dirname(path));if(!createdFinal&&(error as NodeJS.ErrnoException).code==='EEXIST')throw new Error('provider receipt already exists');throw error; }
   return path;
 }
 
 export async function readProviderEmbeddingReceipt(root: string, answerReleaseId: string, hash: string): Promise<ProviderEmbeddingReceipt> {
   if (!isAbsolute(root) || !ID.test(answerReleaseId) || !HASH.test(hash)) throw new Error('provider receipt identity invalid');
-  const opened = await strictOpenCanonicalJson(resolve(root, answerReleaseId), `${hash.slice(7)}.json`, 8 * 1024 * 1024, false);
+  const directory=await validatedReleaseDirectory(root,answerReleaseId,false);
+  const opened = await strictOpenCanonicalJson(directory, `${hash.slice(7)}.json`, 8 * 1024 * 1024, false);
   if (opened.checksum === hash) throw new Error('receipt content hash must bind its body rather than self-containing bytes');
   const receipt = parse(opened.value); if (receipt.answerReleaseId !== answerReleaseId || receipt.embeddingReceiptHash !== hash) throw new Error('provider receipt path binding mismatch');
   return receipt;

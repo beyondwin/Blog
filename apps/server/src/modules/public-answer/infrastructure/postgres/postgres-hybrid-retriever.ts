@@ -50,12 +50,16 @@ export class PostgresHybridRetriever implements Retriever {
       return Object.freeze({ chunkId: row.chunk_id, recordId: row.record_id });
     };
     const selected = fuseRankedCandidates(lexicalResult.rows.map(validate), vectorResult.rows.map(validate));
-    const evidence = selected.map((candidate) => {
-      const matches = [...catalog.evidenceById.values()].filter((item) => item.chunkId === candidate.chunkId
-        && !catalog.tombstones.has(`evidence:${item.evidenceId}`));
-      if (matches.length !== 1) throw new Error('selected chunk does not resolve to exactly one authorized evidence');
-      return matches[0]!;
+    const authorized = selected.flatMap((candidate) => {
+      const evidenceIds = [...catalog.evidenceById.values()].filter((item) => item.chunkId === candidate.chunkId).map((item) => item.evidenceId);
+      const evidence = catalog.evidenceFor(evidenceIds);
+      if (evidence.some((item) => item.chunkId !== candidate.chunkId || item.recordId !== candidate.recordId)) {
+        throw new Error('snapshot evidence authority mismatches selected database chunk');
+      }
+      return evidence.length === 0 ? [] : [{ candidate, evidence }];
     });
-    return Object.freeze({ evidence: Object.freeze(evidence), sufficient: retrievalIsSufficient(selected), candidateCount: selected.length, usage: embedded.usage });
+    const evidence = authorized.flatMap((item) => item.evidence);
+    const authorizedCandidates = authorized.map((item) => item.candidate);
+    return Object.freeze({ evidence: Object.freeze(evidence), sufficient: retrievalIsSufficient(authorizedCandidates), candidateCount: authorizedCandidates.length, usage: embedded.usage });
   }
 }
