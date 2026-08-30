@@ -105,7 +105,17 @@ export interface ServerConfig {
   edgeReachabilityReceiptPath: string | null; openAiApiKey: string | null;
   providerDataControlReceiptPath: string | null; providerEmbeddingReceiptRoot: string | null;
   deletionReceiptRoot: string | null;
+  fixtureScenario: FixtureScenario | null;
 }
+
+export type FixtureScenario =
+  | 'success'
+  | 'provider-disabled'
+  | 'insufficient-evidence'
+  | 'unavailable'
+  | 'timeout'
+  | 'release-mismatch'
+  | 'slow-sql';
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name];
@@ -147,14 +157,21 @@ function databaseUrl(value: string): string {
   } catch { throw new Error('FORM_THOUGHT_DATABASE_URL is invalid'); }
 }
 
-function normalizedOrigin(value: string | undefined): string | null {
+function loopbackAddress(value: string): boolean {
+  const family = isIP(value);
+  return (family === 4 && value.startsWith('127.')) || (family === 6 && value === '::1');
+}
+
+function normalizedOrigin(value: string | undefined, nodeEnv: ServerConfig['nodeEnv']): string | null {
   if (value === undefined) return null;
   try {
     const url = new URL(value);
-    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.pathname !== '/'
+    const protocolAllowed = url.protocol === 'https:'
+      || (nodeEnv === 'test' && url.protocol === 'http:' && loopbackAddress(url.hostname.replace(/^\[|\]$/gu, '')));
+    if (!protocolAllowed || url.username || url.password || url.search || url.hash || url.pathname !== '/'
       || url.toString() !== value) throw new Error();
     return value;
-  } catch { throw new Error('production public origin must be exact normalized HTTPS'); }
+  } catch { throw new Error('public origin must be exact normalized HTTPS or test loopback HTTP'); }
 }
 
 function proxies(value: string | undefined): readonly string[] {
@@ -173,18 +190,39 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
   const replicas = integer(env.FORM_THOUGHT_SERVER_REPLICA_COUNT, 'FORM_THOUGHT_SERVER_REPLICA_COUNT', 1);
   if (replicas !== 1) throw new Error('FORM_THOUGHT_SERVER_REPLICA_COUNT must equal one');
   const host = env.HOST ?? '127.0.0.1';
+  const fixtureScenario = env.FORM_THOUGHT_TEST_FIXTURE_SCENARIO === undefined ? null : enumeration(
+    env.FORM_THOUGHT_TEST_FIXTURE_SCENARIO,
+    ['success', 'provider-disabled', 'insufficient-evidence', 'unavailable', 'timeout', 'release-mismatch', 'slow-sql'] as const,
+    'FORM_THOUGHT_TEST_FIXTURE_SCENARIO',
+  );
   const trustedProxyAddresses = proxies(env.FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES);
   const providerDataControlReceiptPath = optionalAbsolute(env.FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT,
     'FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT');
   const providerEmbeddingReceiptRoot = optionalAbsolute(env.FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT,
     'FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT');
   const openAiApiKey = env.OPENAI_API_KEY ?? null;
+  if (publicAskMode === 'fixture' && openAiApiKey) throw new Error('fixture mode forbids a provider key');
+  if (nodeEnv === 'production' && publicAskMode === 'fixture') throw new Error('fixture mode construction is forbidden in production');
   if (publicAskMode === 'provider' && (!openAiApiKey || !providerEmbeddingReceiptRoot)) {
     throw new Error('provider mode requires an API key and absolute embedding receipt root');
   }
   const corpusApprovalPath = absolute(env.FORM_THOUGHT_CORPUS_APPROVAL_PATH, 'FORM_THOUGHT_CORPUS_APPROVAL_PATH',
     nodeEnv === 'production' ? undefined : resolve('src/data/public-answer-corpus-approval.v1.json'));
-  const publicOrigin = normalizedOrigin(env.FORM_THOUGHT_PUBLIC_ORIGIN);
+  const publicOrigin = normalizedOrigin(env.FORM_THOUGHT_PUBLIC_ORIGIN, nodeEnv);
+  if (fixtureScenario !== null) {
+    let originHost = '';
+    let originPort = '';
+    try {
+      const url = new URL(publicOrigin ?? '');
+      originHost = url.hostname.replace(/^\[|\]$/gu, '');
+      originPort = url.port;
+    } catch { /* rejected by the complete fixture guard below */ }
+    if (nodeEnv !== 'test' || !loopbackAddress(host) || !loopbackAddress(originHost)
+      || originPort !== String(port) || publicAskMode === 'provider'
+      || (publicAskMode !== 'fixture' && fixtureScenario !== 'provider-disabled') || openAiApiKey) {
+      throw new Error('fixture scenario requires a test-only loopback fixture runtime without a provider key');
+    }
+  }
   const edgeReachabilityReceiptPath = optionalAbsolute(env.FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT,
     'FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT');
   if (nodeEnv === 'production') {
@@ -205,6 +243,7 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
     corpusApprovalPath, trustedProxyAddresses, networkHmacSecret: required(env, 'FORM_THOUGHT_NETWORK_HMAC_SECRET'),
     publicOrigin, edgeReachabilityReceiptPath, openAiApiKey, providerDataControlReceiptPath, providerEmbeddingReceiptRoot,
     deletionReceiptRoot: optionalAbsolute(env.FORM_THOUGHT_DELETION_RECEIPT_ROOT, 'FORM_THOUGHT_DELETION_RECEIPT_ROOT'),
+    fixtureScenario,
   };
   return Object.freeze(result);
 }

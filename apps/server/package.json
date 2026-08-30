@@ -7,6 +7,7 @@
     "start": "tsx src/main.ts",
     "test": "vitest run test --exclude \"test/postgres/**\" --exclude \"test/evaluation/**\"",
     "test:postgres": "tsx scripts/with-test-postgres.mts test",
+    "serve:fixture": "tsx scripts/with-test-postgres.mts serve-fixture",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {

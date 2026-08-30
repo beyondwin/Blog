@@ -117,6 +117,9 @@ describe('React-only Node 24 workspace contract', () => {
     expect(rootManifest.scripts?.['server:test:postgres']).toBe('npm run test:postgres --workspace @beyondwin/server');
     expect(rootManifest.scripts?.['server:index:fixture'])
       .toBe('npm exec --workspace @beyondwin/server -- tsx src/index-answer-release.ts --embedding-mode=fixture');
+    expect(serverManifest.scripts?.['serve:fixture']).toBe('tsx scripts/with-test-postgres.mts serve-fixture');
+    expect(rootManifest.scripts?.['server:serve:fixture'])
+      .toBe('npm run serve:fixture --workspace @beyondwin/server');
   });
 
   it('seals the final ordered validation chain', async () => {

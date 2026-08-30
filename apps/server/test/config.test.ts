@@ -57,9 +57,44 @@ describe('server configuration', () => {
       .rejects.toThrow(/provider mode/u);
   });
 
+  it('forbids provider keys in fixture mode and fixture construction in production', async () => {
+    await expect(parseServerConfig(base({ OPENAI_API_KEY: 'forbidden-key' }))).rejects.toThrow(/fixture|provider key/u);
+    await expect(parseServerConfig(base({ NODE_ENV: 'production' }))).rejects.toThrow(/fixture|production/u);
+  });
+
+  it.each([
+    'success',
+    'provider-disabled',
+    'insufficient-evidence',
+    'unavailable',
+    'timeout',
+    'release-mismatch',
+    'slow-sql',
+  ] as const)('accepts the internal %s fixture scenario only for a loopback test fixture runtime', async (scenario) => {
+    await expect(parseServerConfig(base({
+      HOST: '127.0.0.1', PORT: '4307',
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4307/',
+      FORM_THOUGHT_TEST_FIXTURE_SCENARIO: scenario,
+    }))).resolves.toMatchObject({ fixtureScenario: scenario, publicOrigin: 'http://127.0.0.1:4307/' });
+  });
+
+  it.each([
+    ['unknown scenario', { FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'magic' }],
+    ['non-loopback host', { HOST: '192.0.2.10', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4307/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['non-loopback origin', { FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['provider mode', {
+      FORM_THOUGHT_PUBLIC_ASK_MODE: 'provider', OPENAI_API_KEY: 'forbidden-key', PORT: '4307',
+      FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT: resolve('provider-receipts'),
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4307/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success',
+    }],
+    ['provider key', { OPENAI_API_KEY: 'forbidden-key', PORT: '4307', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4307/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+  ])('rejects fixture scenario control with %s', async (_label, overrides) => {
+    await expect(parseServerConfig(base(overrides))).rejects.toThrow(/fixture|scenario|provider key/iu);
+  });
+
   it('rejects unsafe production reachability and wildcard trust', async () => {
     await expect(parseServerConfig(base({
-      NODE_ENV: 'production', HOST: '0.0.0.0', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://example.com',
+      NODE_ENV: 'production', FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled', HOST: '0.0.0.0', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://example.com',
       FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '*', FORM_THOUGHT_CORPUS_APPROVAL_PATH: undefined,
     }))).rejects.toThrow(/production|trusted proxies/u);
   });
@@ -92,13 +127,13 @@ describe('server configuration', () => {
     expect(reorderedEdge).toEqual(edge);
     await writeFile(edgePath, `${JSON.stringify(edge, null, 2)}\n`);
     await expect(parseServerConfig(base({
-      NODE_ENV: 'production', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
+      NODE_ENV: 'production', FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
       FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
       FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: edgePath, FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
     }))).resolves.toMatchObject({ nodeEnv: 'production', edgeReachabilityReceiptPath: edgePath });
     await writeFile(edgePath, `${JSON.stringify({ ...edge, providerProjectSpendCapEvidenceChecksum: `sha256:${'6'.repeat(64)}` }, null, 2)}\n`);
     await expect(parseServerConfig(base({
-      NODE_ENV: 'production', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
+      NODE_ENV: 'production', FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
       FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
       FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: edgePath, FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
     }))).rejects.toThrow(/spend cap|checksum/u);
@@ -128,7 +163,7 @@ describe('server configuration', () => {
     });
     await writeFile(edgePath, `${JSON.stringify(edge, null, 2)}\n`);
     await expect(parseServerConfig(base({
-      NODE_ENV: 'production', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
+      NODE_ENV: 'production', FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
       FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
       FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: edgePath, FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
     }))).rejects.toThrow(/instant|current|valid|edge/u);
