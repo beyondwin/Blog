@@ -12,6 +12,7 @@ const root = process.cwd();
 const importerPath = fileURLToPath(new URL('./import-naver-reviews.mjs', import.meta.url));
 const execFileAsync = promisify(execFile);
 const temporaryRoots = [];
+const importerEnv = { ...process.env, NAVER_BLOG_ID: 'example-blog' };
 
 const importedReviews = [
   ['그들의 생각을 바꾸는 방법', '2026-06-16'],
@@ -114,7 +115,7 @@ describe('site content contract', () => {
       expect(entry.data.completedAt).toBe(date);
       expect(entry.data.createdAt).toBe(date);
       expect(entry.data.updatedAt).toBe(date);
-      expect(entry.data.sourceUrl).toMatch(/^https:\/\/blog\.naver\.com\/example\//);
+      expect(entry.data.sourceUrl).toBeUndefined();
       expect(entry.content).not.toContain('원문 보기');
     }
   });
@@ -126,7 +127,7 @@ describe('site content contract', () => {
     await expect(execFileAsync(
       process.execPath,
       ['--import', fixturePath, importerPath],
-      { cwd: directory },
+      { cwd: directory, env: importerEnv },
     )).rejects.toMatchObject({
       code: 1,
       stderr: expect.stringContaining('--output'),
@@ -142,7 +143,7 @@ describe('site content contract', () => {
     await execFileAsync(
       process.execPath,
       ['--import', fixturePath, importerPath, '--output', outputDirectory],
-      { cwd: directory },
+      { cwd: directory, env: importerEnv },
     );
 
     const files = await readdir(outputDirectory);
@@ -155,7 +156,7 @@ describe('site content contract', () => {
       completedAt: '2025-12-10',
       createdAt: '2025-12-10',
       updatedAt: '2025-12-10',
-      sourceUrl: 'https://blog.naver.com/example/224104661846',
+      sourceUrl: 'https://blog.naver.com/example-blog/224104661846',
       status: 'review',
       draft: true,
     });
@@ -167,7 +168,7 @@ describe('site content contract', () => {
     expect(report).toHaveLength(18);
     expect(report.find((entry) => entry.slug === 'doing-good-better')).toEqual({
       slug: 'doing-good-better',
-      sourceUrl: 'https://blog.naver.com/example/224104661846',
+      sourceUrl: 'https://blog.naver.com/example-blog/224104661846',
       discoveredCoverUrl: 'https://example.com/discovered-cover.jpg',
     });
   });
@@ -179,7 +180,7 @@ describe('site content contract', () => {
     await expect(execFileAsync(
       process.execPath,
       ['--import', fixturePath, importerPath, '--output', join(directory, 'src/content/reviews/intake')],
-      { cwd: directory },
+      { cwd: directory, env: importerEnv },
     )).rejects.toMatchObject({
       code: 1,
       stderr: expect.stringContaining('local intake'),
@@ -195,7 +196,7 @@ describe('site content contract', () => {
     await expect(execFileAsync(
       process.execPath,
       ['--import', fixturePath, importerPath, '--output', 'docs/_inbox/review-intake'],
-      { cwd: directory },
+      { cwd: directory, env: importerEnv },
     )).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('503') });
 
     expect(await exists(outputDirectory)).toBe(false);
@@ -215,7 +216,7 @@ describe('site content contract', () => {
     await expect(execFileAsync(
       process.execPath,
       ['--import', failingFixture, importerPath, '--output', 'docs/_inbox/review-intake'],
-      { cwd: directory },
+      { cwd: directory, env: importerEnv },
     )).rejects.toMatchObject({
       code: 1,
       stderr: expect.stringContaining('injected intake report failure'),
@@ -227,7 +228,7 @@ describe('site content contract', () => {
     await execFileAsync(
       process.execPath,
       ['--import', successfulFixture, importerPath, '--output', 'docs/_inbox/review-intake'],
-      { cwd: directory },
+      { cwd: directory, env: importerEnv },
     );
     expect((await readdir(outputDirectory)).filter((file) => file.endsWith('.mdx'))).toHaveLength(18);
   });
@@ -246,7 +247,7 @@ describe('site content contract', () => {
     await expect(execFileAsync(
       process.execPath,
       ['--import', fixturePath, importerPath, '--output', 'safe-parent/review-intake'],
-      { cwd: directory },
+      { cwd: directory, env: importerEnv },
     )).rejects.toMatchObject({
       code: 1,
       stderr: expect.stringContaining('symbolic link'),
@@ -261,11 +262,11 @@ describe('site content contract', () => {
     const outputDirectory = join(directory, 'review-intake');
     const command = ['--import', fixturePath, importerPath, '--output', outputDirectory];
 
-    await execFileAsync(process.execPath, command, { cwd: directory });
+    await execFileAsync(process.execPath, command, { cwd: directory, env: importerEnv });
     const reviewPath = join(outputDirectory, 'doing-good-better.mdx');
     const original = await readFile(reviewPath, 'utf8');
 
-    await expect(execFileAsync(process.execPath, command, { cwd: directory })).rejects.toMatchObject({
+    await expect(execFileAsync(process.execPath, command, { cwd: directory, env: importerEnv })).rejects.toMatchObject({
       code: 1,
       stderr: expect.stringContaining('already exists'),
     });

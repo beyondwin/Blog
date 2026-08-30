@@ -528,7 +528,7 @@ describe('framework-neutral corpus loading', () => {
       checksum: 'sha256:2b59925c7925d38b5460450f070be24a22ee34a69dfb7ded04d269998b7d0ebd',
     });
     expectTypeOf(lead.format).toEqualTypeOf<'jpg' | 'jpeg' | 'png' | 'webp'>();
-    expect(JSON.stringify([lead, cover])).not.toMatch(/sourcePath|privatePath|\/Users\/user/);
+    expect(JSON.stringify([lead, cover])).not.toMatch(/sourcePath|privatePath|\/Users\//);
   });
 
   it('rejects ambiguous AVIF source input before dimension resolution', async () => {

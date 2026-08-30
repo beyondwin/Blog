@@ -1,7 +1,16 @@
 import { lstat, mkdir, mkdtemp, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
-const blogId = 'example';
+function resolveBlogId() {
+  const blogId = process.env.NAVER_BLOG_ID?.trim();
+  if (!blogId) {
+    throw new Error('NAVER_BLOG_ID is required');
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(blogId)) {
+    throw new Error('NAVER_BLOG_ID must be a blog id');
+  }
+  return blogId;
+}
 
 const reviews = [
   ['224317941520', '그들의 생각을 바꾸는 방법', '2026-06-16'],
@@ -115,7 +124,7 @@ function buildDescription(body, title) {
   return firstParagraph.length > 120 ? `${firstParagraph.slice(0, 118)}...` : firstParagraph;
 }
 
-async function fetchReview(logNo) {
+async function fetchReview(blogId, logNo) {
   const url = `https://m.blog.naver.com/${blogId}/${logNo}`;
   let lastError;
 
@@ -156,7 +165,7 @@ function parseArgs(argv) {
   }
 
   if (!outputDirectory) {
-    throw new Error('Usage: node scripts/import-naver-reviews.mjs --output <new-local-intake-directory>');
+    throw new Error('Usage: NAVER_BLOG_ID=<id> node scripts/import-naver-reviews.mjs --output <new-local-intake-directory>');
   }
 
   return { outputDirectory };
@@ -257,10 +266,11 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const initialDestination = await resolveLocalDestination(args.outputDirectory);
   await assertDestinationMissing(initialDestination.finalPath);
+  const blogId = resolveBlogId();
   const records = [];
 
   for (const [logNo, title, date] of reviews) {
-    const html = await fetchReview(logNo);
+    const html = await fetchReview(blogId, logNo);
     const body = extractParagraphs(html);
     const discoveredCoverUrl = extractCoverImage(html);
     const sourceUrl = `https://blog.naver.com/${blogId}/${logNo}`;
