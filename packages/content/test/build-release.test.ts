@@ -40,6 +40,7 @@ describe('immutable public release building', () => {
       collection: 'thoughts',
       href: '/thoughts/why-i-read-in-the-ai-era/',
       featuredMedia: 'editorial-reading',
+      includeInAnswers: true,
     });
     expect(active.manifest.records['articles/why-i-read-in-the-ai-era']).toBeUndefined();
     expect(active.manifest.assets['thoughts/why-i-read-in-the-ai-era/editorial-reading']).toMatchObject({
@@ -50,6 +51,7 @@ describe('immutable public release building', () => {
     expect(active.manifest.records['articles/graphify-code-knowledge-graph-deep-dive']).toMatchObject({
       collection: 'articles',
       featuredMedia: 'editorial-hero',
+      includeInAnswers: false,
     });
     expect(active.manifest.assets['articles/graphify-code-knowledge-graph-deep-dive/editorial-hero']).toBeDefined();
     expect(active.manifest.assets['articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero']).toMatchObject({

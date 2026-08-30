@@ -41,6 +41,7 @@ const analysisSourceRecordSchema = z.object({
 
 const articleSourceRecordSchema = z.object({
   ...sharedFields('articles'),
+  includeInAnswers: z.boolean().default(false),
   recordKind: z.enum(['technical-note', 'research', 'essay']).optional(),
   evidenceState: z.enum(['personal', 'source-grounded', 'verified']).optional(),
   featuredMedia: z.string().trim().min(1).optional(),
@@ -48,6 +49,7 @@ const articleSourceRecordSchema = z.object({
 
 const thoughtSourceRecordSchema = z.object({
   ...sharedFields('thoughts'),
+  includeInAnswers: z.boolean().default(false),
   featuredMedia: z.string().trim().min(1).optional(),
 });
 
@@ -59,6 +61,7 @@ const ideaSourceRecordSchema = z.object({
 
 const reviewSourceRecordSchema = z.object({
   ...sharedFields('reviews'),
+  includeInAnswers: z.boolean().default(false),
   itemType: z.enum(['book', 'article', 'tool', 'course', 'other']),
   itemTitle: z.string().trim().min(1),
   itemAuthor: z.union([

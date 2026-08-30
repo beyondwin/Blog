@@ -142,9 +142,35 @@ describe('source record parsing', () => {
       draft: false,
       tags: [],
       relationships: [],
+      includeInAnswers: false,
     });
     expect('privatePath' in parsed).toBe(false);
     expect('jobPrompt' in parsed).toBe(false);
+  });
+
+  it('defaults answer inclusion off and preserves an authored opt-in', () => {
+    const defaults = parseSourceRecord({
+      collection: 'reviews',
+      id: 'answer-default',
+      title: 'Answer default',
+      description: 'Answer default',
+      createdAt: '2026-08-23',
+      updatedAt: '2026-08-23',
+      itemType: 'book',
+      itemTitle: 'Answer default',
+    });
+    const optedIn = parseSourceRecord({
+      collection: 'thoughts',
+      id: 'answer-opt-in',
+      title: 'Answer opt-in',
+      description: 'Answer opt-in',
+      createdAt: '2026-08-23',
+      updatedAt: '2026-08-23',
+      includeInAnswers: true,
+    });
+
+    expect(defaults).toMatchObject({ collection: 'reviews', includeInAnswers: false });
+    expect(optedIn).toMatchObject({ collection: 'thoughts', includeInAnswers: true });
   });
 
   it('accepts a thought source record with optional featured media', () => {

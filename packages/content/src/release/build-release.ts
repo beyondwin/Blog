@@ -416,17 +416,20 @@ function publicRecordInput(
   };
   if (record.collection === 'articles') return {
     ...common,
+    includeInAnswers: record.includeInAnswers,
     ...optional('recordKind', record.recordKind),
     ...optional('evidenceState', record.evidenceState),
     ...optional('featuredMedia', record.featuredMedia),
   };
   if (record.collection === 'thoughts') return {
     ...common,
+    includeInAnswers: record.includeInAnswers,
     ...optional('featuredMedia', record.featuredMedia),
   };
   if (record.collection === 'ideas') return { ...common, maturity: record.maturity };
   if (record.collection === 'reviews') return {
     ...common,
+    includeInAnswers: record.includeInAnswers,
     itemType: record.itemType,
     itemTitle: record.itemTitle,
     authors: record.itemAuthor

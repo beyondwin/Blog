@@ -57,6 +57,7 @@ const analysisPublicRecordSchema = z.object({
 const articlePublicRecordSchema = z.object({
   collection: z.literal('articles'),
   ...commonPublicFields,
+  includeInAnswers: z.boolean().default(false),
   recordKind: z.enum(['technical-note', 'research', 'essay']).optional(),
   evidenceState: z.enum(['personal', 'source-grounded', 'verified']).optional(),
   featuredMedia: idSchema.optional(),
@@ -65,6 +66,7 @@ const articlePublicRecordSchema = z.object({
 const thoughtPublicRecordSchema = z.object({
   collection: z.literal('thoughts'),
   ...commonPublicFields,
+  includeInAnswers: z.boolean().default(false),
   featuredMedia: idSchema.optional(),
 });
 
@@ -77,6 +79,7 @@ const ideaPublicRecordSchema = z.object({
 const reviewPublicRecordSchema = z.object({
   collection: z.literal('reviews'),
   ...commonPublicFields,
+  includeInAnswers: z.boolean().default(false),
   itemType: z.enum(['book', 'article', 'tool', 'course', 'other']),
   itemTitle: z.string().trim().min(1),
   authors: z.array(z.string().trim().min(1)).min(1),

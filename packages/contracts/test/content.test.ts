@@ -146,6 +146,17 @@ describe('public record allowlists', () => {
     expectTypeOf(parsed).toEqualTypeOf<PublicRecord>();
   });
 
+  it('defaults article public-answer inclusion off and preserves an explicit opt-in', () => {
+    const omitted = parsePublicRecord(commonFields('articles', 'answer-default'));
+    const parsed = parsePublicRecord({
+      ...commonFields('articles', 'answer-opt-in'),
+      includeInAnswers: true,
+    });
+
+    expect(omitted).toMatchObject({ collection: 'articles', includeInAnswers: false });
+    expect(parsed).toMatchObject({ collection: 'articles', includeInAnswers: true });
+  });
+
   it.each([
     '/Users/user/private/cover.png',
     '/etc/passwd',
