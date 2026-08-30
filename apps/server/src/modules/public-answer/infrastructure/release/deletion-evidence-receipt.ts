@@ -3,7 +3,7 @@ import { readArtifactPurgeEvidence, type ArtifactPurgeEvidence } from './artifac
 import { readBackupExpiryEvidence, type BackupExpiryEvidence } from './backup-expiry-evidence.js';
 
 const HASH = /^sha256:[a-f0-9]{64}$/u; const ID = /^[a-f0-9]{64}$/u; const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u;
-function validEntity(kind: unknown,id: unknown): boolean{return kind==='record'?typeof id==='string'&&/^(?:articles|reviews|thoughts)\/[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(id):kind==='evidence'&&typeof id==='string'&&ID.test(id);}
+function validEntity(kind: unknown,id: unknown): boolean{return kind==='record'?typeof id==='string'&&/^(?:(?:articles|reviews|thoughts)|answer-only)\/[a-z0-9][a-z0-9-]*$/u.test(id):kind==='evidence'&&typeof id==='string'&&ID.test(id);}
 export interface DeletionEvidenceReceipt {
   schemaVersion: 1; entityKind: 'record' | 'evidence'; entityId: string; tombstoneHash: string;
   affectedContentReleaseId: string; affectedAnswerReleaseId: string; affectedAnswerManifestHash: string; affectedAnswerArtifactHash: string;
@@ -28,9 +28,7 @@ export function assertDeletionEvidenceBindings(receipt:DeletionEvidenceReceipt,p
   for (const key of shared) if (purge[key] !== receipt[key] || backup[key] !== receipt[key]) throw new Error(`deletion evidence ${key} mismatch`);
   if (purgeChecksum !== receipt.artifactPurgeEvidenceChecksum || backupChecksum !== receipt.backupEvidenceChecksum
     || purge.backupEvidenceFile !== receipt.backupEvidenceFile || purge.backupEvidenceChecksum !== receipt.backupEvidenceChecksum
-    || backup.backupExpiresAt !== receipt.backupExpiresAt || purge.backupExpiresAt!==receipt.backupExpiresAt
-    || purge.backupOwnerId!==backup.backupOwnerId||purge.backupSetId!==backup.backupSetId
-    || purge.backupDisposition!==backup.backupDisposition
+    || backup.backupExpiresAt !== receipt.backupExpiresAt
     || purge.verifiedAt!==receipt.verifiedAt||backup.verifiedAt!==receipt.verifiedAt
     || purge.verifierIdentityHash !== receipt.verifierIdentityHash
     || backup.verifierIdentityHash !== receipt.verifierIdentityHash || purge.custodianIdentityHash !== backup.custodianIdentityHash) {

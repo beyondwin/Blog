@@ -8,7 +8,7 @@ import { DeterministicEmbeddingClient } from '../src/modules/public-answer/infra
 import { createProviderEmbeddingAuthorities, PostgresAnswerReleaseIndexer, prepareEmbeddingSet } from '../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
 import { parseIndexEmbeddingMode, providerIndexBudget } from '../src/index-answer-release.js';
 import { VerifiedAnswerReleaseCatalogSource } from '../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
-import { parseTombstoneCommand, runTombstoneCliWithExit, tombstoneSuccessAudit } from '../src/tombstone-public-answer.js';
+import { parseTombstoneCommand, providerPurgeCostWarning, runTombstoneCliWithExit, tombstoneSuccessAudit } from '../src/tombstone-public-answer.js';
 
 const roots: string[] = []; afterEach(async () => { const { rm } = await import('node:fs/promises'); await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
 function input() { return { schemaVersion: 1 as const, contentReleaseId: 'a'.repeat(64), answerReleaseId: 'b'.repeat(64), contentManifestHash: `sha256:${'1'.repeat(64)}`, answerManifestHash: `sha256:${'2'.repeat(64)}`, answerArtifactHash: `sha256:${'3'.repeat(64)}`, corpusApprovalHash: `sha256:${'4'.repeat(64)}`, providerDataControlReceiptHash: `sha256:${'5'.repeat(64)}`, providerPricingReceiptHash: `sha256:${'6'.repeat(64)}`, embeddingModel: 'text-embedding-3-large' as const, embeddingDimensions: 3072 as const, embeddingSource: 'provider' as const, entries: [{ chunkChecksum: `sha256:${'7'.repeat(64)}`, vectorChecksum: `sha256:${'8'.repeat(64)}` }], inputTokens: 1, costMicroUsd: 1, providerVectorSetChecksum: `sha256:${'9'.repeat(64)}`, indexChecksum: `sha256:${'a'.repeat(64)}`, createdAt: '2026-08-30T00:00:00.000Z', completedAt: '2026-08-30T00:00:01.000Z' }; }
@@ -81,8 +81,14 @@ describe('provider embedding receipt', () => {
   it('parses exact tombstone args and emits deterministic allowlisted audits',async()=>{
     const add=parseTombstoneCommand(['add','--entity-kind=record','--entity-id=articles/example','--reason=legal-removal','--confirm-tombstone']);
     expect(tombstoneSuccessAudit(add,{tombstoneHash:`sha256:${'1'.repeat(64)}`,createdAt:'2026-08-30T00:00:00.000Z'})).toBe(`{"kind":"success","operation":"add","entityKind":"record","entityId":"articles/example","tombstoneHash":"sha256:${'1'.repeat(64)}","createdAt":"2026-08-30T00:00:00.000Z"}\n`);
-    const verify=parseTombstoneCommand(['verify-purge','--receipt=/var/lib/beyondwin/deletion/receipt.json']);
+    expect(parseTombstoneCommand(['add','--entity-kind=record','--entity-id=answer-only/example','--reason=legal-removal','--confirm-tombstone'])).toMatchObject({entityId:'answer-only/example'});
+    const verify=parseTombstoneCommand(['verify-purge','--receipt=/var/lib/beyondwin/deletion/receipt.json']);expect(verify).toMatchObject({confirmLiveProvider:false});
     expect(tombstoneSuccessAudit(verify,{deletionReceiptHash:`sha256:${'2'.repeat(64)}`,activeIndexAbsentAt:'2026-08-30T00:00:01.000Z'})).toBe(`{"kind":"success","operation":"verify-purge","deletionReceiptHash":"sha256:${'2'.repeat(64)}","activeIndexAbsentAt":"2026-08-30T00:00:01.000Z"}\n`);
+    expect(parseTombstoneCommand(['verify-purge','--receipt=/var/lib/beyondwin/deletion/receipt.json','--confirm-live-provider'])).toMatchObject({confirmLiveProvider:true});
+    expect(()=>parseTombstoneCommand(['verify-purge','--receipt=/var/lib/beyondwin/deletion/receipt.json','--confirm-live-provider=true'])).toThrow(/confirmation|invalid/u);
+    expect(providerPurgeCostWarning(verify,0,'')).toBeNull();
+    expect(()=>providerPurgeCostWarning(verify,1,'articles/example')).toThrow(/confirmation/u);
+    expect(providerPurgeCostWarning(parseTombstoneCommand(['verify-purge','--receipt=/var/lib/beyondwin/deletion/receipt.json','--confirm-live-provider']),1,'articles/example')).toBe('{"kind":"cost-warning","maxEmbeddingCalls":1,"maxInputTokens":16,"maxMicroUsd":3}\n');
     expect(()=>parseTombstoneCommand(['add','--entity-kind=record','--entity-id=articles/example','--reason=legal-removal'])).toThrow(/confirmation/u);
     expect(()=>parseTombstoneCommand(['add','--entity-kind=record','--entity-id=articles/example','--reason=legal-removal','--confirm-tombstone','--confirm-live-provider=true'])).toThrow(/confirmation/u);
     expect(()=>parseTombstoneCommand(['add','--entity-kind=record','--entity-id=articles/example','--reason=INVALID REASON','--confirm-tombstone'])).toThrow(/identity/u);

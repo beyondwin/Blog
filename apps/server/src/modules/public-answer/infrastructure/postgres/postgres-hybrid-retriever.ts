@@ -10,7 +10,7 @@ const LEXICAL_SQL = `WITH scored AS (
          ts_rank_cd(c.search_vector,websearch_to_tsquery('simple',$3)) AS fts,
          similarity(c.search_text,$3) AS trigram
   FROM public_answer_chunks c JOIN public_answer_release_bindings b
-    ON b.binding_id=c.binding_id AND b.binding_id=$1::uuid
+    ON b.binding_id=c.binding_id AND b.binding_id=$1::uuid AND b.state='active'
   WHERE c.answer_release_id=$2 AND NOT EXISTS (
     SELECT 1 FROM public_answer_tombstones t WHERE t.entity_kind='record' AND t.entity_id=c.record_id)
 ), normalized AS (
@@ -22,7 +22,7 @@ SELECT chunk_id,chunk_checksum,record_id,score FROM normalized WHERE score>0 ORD
 
 const VECTOR_SQL = `SELECT c.chunk_id,c.chunk_checksum,c.record_id,1-(c.embedding <=> $2::vector) AS score
 FROM public_answer_chunks c JOIN public_answer_release_bindings b
- ON b.binding_id=c.binding_id AND b.binding_id=$1::uuid
+ ON b.binding_id=c.binding_id AND b.binding_id=$1::uuid AND b.state='active'
 WHERE c.answer_release_id=$3 AND NOT EXISTS (
   SELECT 1 FROM public_answer_tombstones t WHERE t.entity_kind='record' AND t.entity_id=c.record_id)
 ORDER BY c.embedding <=> $2::vector,c.chunk_id ASC LIMIT 20`;
@@ -36,6 +36,10 @@ export class PostgresHybridRetriever implements Retriever {
   async retrieve(input: Parameters<Retriever['retrieve']>[0]): ReturnType<Retriever['retrieve']> {
     const catalog = input.catalog as VerifiedCatalogSnapshot;
     if (input.limit !== 6 || catalog.normalizerVersion !== ANSWER_QUERY_NORMALIZER_VERSION) throw new Error('answer query normalizer version drift');
+    if (catalog.chunkCount === 0) {
+      if (catalog.chunkById.size !== 0 || catalog.chunkChecksumById.size !== 0 || catalog.evidenceById.size !== 0) throw new Error('empty binding catalog authority is inconsistent');
+      return Object.freeze({evidence:Object.freeze([]),sufficient:false,candidateCount:0,usage:Object.freeze({calls:0,inputTokens:0,outputTokens:0})});
+    }
     const normalized = normalizeAnswerQuery(input.question); if (!normalized) throw new Error('normalized question is empty');
     const embedded = await this.embedder.embed([normalized], input.signal);
     if (embedded.vectors.length !== 1 || embedded.vectors[0]!.length !== 3072) throw new Error('query embedding contract mismatch');

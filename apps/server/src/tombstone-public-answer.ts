@@ -7,6 +7,7 @@ import { parseServerConfig, type ServerConfig } from './config/server-config.js'
 import type { Retriever } from './modules/public-answer/application/ports/retriever.js';
 import { DeterministicEmbeddingClient } from './modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
 import { OpenAIEmbeddingClient } from './modules/public-answer/infrastructure/openai/openai-embedding-client.js';
+import { estimateEmbeddingCostMicroUsd } from './modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
 import { providerChecksum } from './modules/public-answer/infrastructure/openai/provider-json.js';
 import { CancellablePgQueryRunner } from './modules/public-answer/infrastructure/postgres/cancellable-pg-query-runner.js';
 import { PostgresHybridRetriever } from './modules/public-answer/infrastructure/postgres/postgres-hybrid-retriever.js';
@@ -20,7 +21,7 @@ export type TombstoneKind = 'record' | 'evidence';
 function tombstoneHash(kind: TombstoneKind, id: string, reasonCode: string, createdAt: string): string {
   return providerChecksum({ schemaVersion: 1, entityKind: kind, entityId: id, reasonCode, createdAt });
 }
-function validEntity(kind:TombstoneKind,id:string):boolean{return kind==='record'?/^(?:articles|reviews|thoughts)\/[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(id):/^[a-f0-9]{64}$/u.test(id);}
+function validEntity(kind:TombstoneKind,id:string):boolean{return kind==='record'?/^(?:(?:articles|reviews|thoughts)|answer-only)\/[a-z0-9][a-z0-9-]*$/u.test(id):/^[a-f0-9]{64}$/u.test(id);}
 
 export async function addPublicAnswerTombstone(input: Readonly<{
   pool: Pool; catalog: Pick<VerifiedAnswerReleaseCatalogSource, 'snapshot'>; retriever: Retriever;
@@ -50,16 +51,20 @@ export async function verifyPublicAnswerPurge(input: Readonly<{
   if (!input.config.deletionReceiptRoot || !isAbsolute(input.receiptPath) || resolve(dirname(input.receiptPath)) !== resolve(input.config.deletionReceiptRoot)) throw new Error('deletion receipt must be directly contained by configured root');
   const bundle = await readDeletionEvidenceBundle(input.config.deletionReceiptRoot!, basename(input.receiptPath));
   const affectedPath = resolve(input.config.answerReleaseRoot, bundle.receipt.affectedContentReleaseId, bundle.receipt.affectedAnswerReleaseId);
-  try { await lstat(affectedPath); throw new Error('affected answer release bytes remain'); }
-  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-  const authority = await (input.authorityReader ?? readVerifiedAnswerReleaseAuthority)(input.config);
-  if (authority.answer.contentReleaseId !== bundle.receipt.replacementContentReleaseId
-    || authority.answer.answerReleaseId !== bundle.receipt.replacementAnswerReleaseId
-    || authority.answer.manifestHash !== bundle.receipt.replacementAnswerManifestHash
-    || authority.answer.artifactHash !== bundle.receipt.replacementAnswerArtifactHash) throw new Error('replacement filesystem authority mismatch');
+  const assertFilesystemAuthority=async()=>{
+    try { await lstat(affectedPath); throw new Error('affected answer release bytes remain'); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    const authority = await (input.authorityReader ?? readVerifiedAnswerReleaseAuthority)(input.config);
+    if (authority.answer.contentReleaseId !== bundle.receipt.replacementContentReleaseId
+      || authority.answer.answerReleaseId !== bundle.receipt.replacementAnswerReleaseId
+      || authority.answer.manifestHash !== bundle.receipt.replacementAnswerManifestHash
+      || authority.answer.artifactHash !== bundle.receipt.replacementAnswerArtifactHash) throw new Error('replacement filesystem authority mismatch');
+  };
+  await assertFilesystemAuthority();
   const client = await input.pool.connect();
   try {
     await client.query('BEGIN'); await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [GLOBAL_ACTIVATION_LOCK]);
+    await assertFilesystemAuthority();
     const tombstone = (await client.query<{ reason_code: string; created_at: string }>(`SELECT reason_code,
       to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at
       FROM public_answer_tombstones WHERE entity_kind=$1 AND entity_id=$2`, [bundle.receipt.entityKind, bundle.receipt.entityId])).rows[0];
@@ -101,9 +106,12 @@ export async function verifyPublicAnswerPurge(input: Readonly<{
   } catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
 }
 
-export type TombstoneCommand={operation:'add';entityKind:TombstoneKind;entityId:string;reasonCode:string;confirmLiveProvider:boolean}|{operation:'verify-purge';receiptPath:string};
+export type TombstoneCommand={operation:'add';entityKind:TombstoneKind;entityId:string;reasonCode:string;confirmLiveProvider:boolean}|{operation:'verify-purge';receiptPath:string;confirmLiveProvider:boolean};
 export function parseTombstoneCommand(argv:readonly string[]):TombstoneCommand{
-  if(argv[0]==='verify-purge'&&argv.length===2&&argv[1]!.startsWith('--receipt=')&&argv[1]!.length>'--receipt='.length)return{operation:'verify-purge',receiptPath:argv[1]!.slice('--receipt='.length)};
+  if(argv[0]==='verify-purge'){
+    if((argv.length!==2&&argv.length!==3)||!argv[1]!.startsWith('--receipt=')||argv[1]!.length<='--receipt='.length||(argv.length===3&&argv[2]!=='--confirm-live-provider'))throw new Error('verify-purge confirmation or arguments are invalid');
+    return{operation:'verify-purge',receiptPath:argv[1]!.slice('--receipt='.length),confirmLiveProvider:argv.length===3};
+  }
   if(argv[0]!=='add')throw new Error('tombstone command is invalid');
   const allowed=new Set(['--entity-kind','--entity-id','--reason','--confirm-tombstone','--confirm-live-provider']);const values=new Map<string,string|true>();
   for(const arg of argv.slice(1)){const [key,...rest]=arg.split('=');if(!allowed.has(key!)||values.has(key!))throw new Error('tombstone command has unknown or duplicate arguments');const value=rest.length?rest.join('='):true;values.set(key!,value);}
@@ -111,6 +119,13 @@ export function parseTombstoneCommand(argv:readonly string[]):TombstoneCommand{
   const entityKind=values.get('--entity-kind');const entityId=values.get('--entity-id');const reasonCode=values.get('--reason');
   if((entityKind!=='record'&&entityKind!=='evidence')||typeof entityId!=='string'||typeof reasonCode!=='string'||!validEntity(entityKind,entityId)||!/^[a-z0-9][a-z0-9-]{0,63}$/u.test(reasonCode))throw new Error('tombstone command identity is invalid');
   return{operation:'add',entityKind,entityId,reasonCode,confirmLiveProvider:values.get('--confirm-live-provider')===true};
+}
+export function providerPurgeCostWarning(command:TombstoneCommand,chunkCount:number,query:string):string|null{
+  if(command.operation!=='verify-purge'||!Number.isInteger(chunkCount)||chunkCount<0)throw new Error('provider purge preflight is invalid');
+  if(chunkCount===0)return null;
+  if(!command.confirmLiveProvider)throw new Error('nonempty provider purge requires explicit live-provider confirmation');
+  if(!query)throw new Error('provider purge query identity is invalid');const maxInputTokens=Buffer.byteLength(query,'utf8');const maxMicroUsd=estimateEmbeddingCostMicroUsd(maxInputTokens);
+  return `${JSON.stringify({kind:'cost-warning',maxEmbeddingCalls:1,maxInputTokens,maxMicroUsd})}\n`;
 }
 export function tombstoneSuccessAudit(command:TombstoneCommand,result:Readonly<{tombstoneHash?:string;createdAt?:string;deletionReceiptHash?:string;activeIndexAbsentAt?:string}>):string{
   const hash=/^sha256:[a-f0-9]{64}$/u;const instant=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
@@ -132,6 +147,11 @@ export async function runTombstoneCli(argv: readonly string[], env: NodeJS.Proce
       const result=await addPublicAnswerTombstone({ pool, catalog, retriever: new PostgresHybridRetriever(embedder, new CancellablePgQueryRunner(pool)),
         entityKind:command.entityKind,entityId:command.entityId,reasonCode:command.reasonCode,signal:new AbortController().signal});stdout(tombstoneSuccessAudit(command,result));
     } else {
+      if(config.publicAskMode==='provider'){
+        if(!isAbsolute(command.receiptPath)||resolve(dirname(command.receiptPath))!==resolve(config.deletionReceiptRoot))throw new Error('deletion receipt must be directly contained by configured root');
+        const preflightBundle=await readDeletionEvidenceBundle(config.deletionReceiptRoot,basename(command.receiptPath));
+        const warning=providerPurgeCostWarning(command,(await catalog.snapshot(new AbortController().signal)).chunkCount,preflightBundle.receipt.entityId);if(warning)stdout(warning);
+      }
       const embedder=config.publicAskMode==='provider'?new OpenAIEmbeddingClient(config.openAiApiKey!,{profile:'query'}):new DeterministicEmbeddingClient(config.nodeEnv);
       const result=await verifyPublicAnswerPurge({pool,catalog,retriever:new PostgresHybridRetriever(embedder,new CancellablePgQueryRunner(pool)),config,receiptPath:command.receiptPath,signal:new AbortController().signal});stdout(tombstoneSuccessAudit(command,result));
     }

@@ -15,6 +15,12 @@ function catalog() {
 }
 
 describe('PostgresHybridRetriever', () => {
+  it('returns deterministic zero-usage empty retrieval without embedding or database queries',async()=>{
+    const embed=vi.fn(async()=>{throw new Error('provider call forbidden for empty binding');});const query=vi.fn(async()=>{throw new Error('database query forbidden for empty binding');});
+    const empty={...catalog(),chunkCount:0,evidenceById:new Map(),chunkById:new Map(),chunkChecksumById:new Map(),evidenceFor:()=>[]} as any;
+    await expect(new PostgresHybridRetriever({model:'text-embedding-3-large',dimensions:3072,embed},{query} as any).retrieve({question:'question',catalog:empty,limit:6,signal:new AbortController().signal})).resolves.toEqual({evidence:[],sufficient:false,candidateCount:0,usage:{calls:0,inputTokens:0,outputTokens:0}});
+    expect(embed).not.toHaveBeenCalled();expect(query).not.toHaveBeenCalled();
+  });
   it('embeds normalized query once, scopes both branches to immutable binding/release, and resolves catalog evidence', async () => {
     const embed = vi.fn(async () => ({ vectors: [Array(3072).fill(0.1)], usage: { calls: 1, inputTokens: 3, outputTokens: 0 } }));
     const query = vi.fn(async (_sql: string, _values: readonly unknown[], _signal: AbortSignal, _budget: number) => ({ rows: [{ chunk_id: 'a', chunk_checksum: `sha256:${'4'.repeat(64)}`, record_id: 'record-a', score: 1 }] }));
@@ -23,8 +29,8 @@ describe('PostgresHybridRetriever', () => {
     expect(embed).toHaveBeenCalledOnce(); expect(embed).toHaveBeenCalledWith(['ai와 책 판단'], expect.any(AbortSignal));
     expect(query).toHaveBeenCalledTimes(2);
     expect(query.mock.calls[0]![0].replace(/\s+/gu,' ')).toContain("websearch_to_tsquery('simple',$3)");
-    expect(query.mock.calls[0]![0]).toContain('b.binding_id=$1::uuid');expect(query.mock.calls[0]![0]).toContain('c.answer_release_id=$2');expect(query.mock.calls[0]![0]).toContain('LIMIT 20');
-    expect(query.mock.calls[1]![0].replace(/\s+/gu,' ')).toContain('1-(c.embedding <=> $2::vector)');expect(query.mock.calls[1]![0]).toContain('c.answer_release_id=$3');expect(query.mock.calls[1]![0]).toContain('ORDER BY c.embedding <=> $2::vector,c.chunk_id ASC LIMIT 20');
+    expect(query.mock.calls[0]![0]).toContain('b.binding_id=$1::uuid');expect(query.mock.calls[0]![0]).toContain("b.state='active'");expect(query.mock.calls[0]![0]).toContain('c.answer_release_id=$2');expect(query.mock.calls[0]![0]).toContain('LIMIT 20');
+    expect(query.mock.calls[1]![0].replace(/\s+/gu,' ')).toContain('1-(c.embedding <=> $2::vector)');expect(query.mock.calls[1]![0]).toContain("b.state='active'");expect(query.mock.calls[1]![0]).toContain('c.answer_release_id=$3');expect(query.mock.calls[1]![0]).toContain('ORDER BY c.embedding <=> $2::vector,c.chunk_id ASC LIMIT 20');
     expect(query.mock.calls[0]![1]).toEqual(['11111111-1111-4111-8111-111111111111', 'r'.repeat(64), 'ai와 책 판단']);
     expect(query.mock.calls[1]![1]![0]).toBe('11111111-1111-4111-8111-111111111111');
     expect(query.mock.calls[1]![1]![2]).toBe('r'.repeat(64));

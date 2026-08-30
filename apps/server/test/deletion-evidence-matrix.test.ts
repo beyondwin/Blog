@@ -13,10 +13,15 @@ import { assertDeletionEvidenceBindings, parseDeletionEvidenceReceipt } from '..
 const roots:string[]=[];afterEach(async()=>{const{rm}=await import('node:fs/promises');await Promise.all(roots.splice(0).map((root)=>rm(root,{recursive:true,force:true})));});
 const now=new Date('2026-08-30T01:00:00.000Z');
 function backup(){return{schemaVersion:1,entityKind:'record',entityId:'articles/example',tombstoneHash:`sha256:${'1'.repeat(64)}`,affectedContentReleaseId:'a'.repeat(64),affectedAnswerReleaseId:'b'.repeat(64),affectedAnswerManifestHash:`sha256:${'2'.repeat(64)}`,affectedAnswerArtifactHash:`sha256:${'3'.repeat(64)}`,backupOwnerId:'owner:archive',backupSetId:'set:2026-08',backupDisposition:'expires',backupExpiresAt:'2026-09-30T00:00:00.000Z',verifiedAt:'2026-08-30T00:00:00.000Z',custodianIdentityHash:`sha256:${'4'.repeat(64)}`,verifierIdentityHash:`sha256:${'5'.repeat(64)}`,externalEvidenceChecksum:`sha256:${'6'.repeat(64)}`};}
-function purge(){const b=backup();return{schemaVersion:1,entityKind:b.entityKind,entityId:b.entityId,tombstoneHash:b.tombstoneHash,affectedContentReleaseId:b.affectedContentReleaseId,affectedAnswerReleaseId:b.affectedAnswerReleaseId,affectedAnswerManifestHash:b.affectedAnswerManifestHash,affectedAnswerArtifactHash:b.affectedAnswerArtifactHash,releaseDirectoryDisposition:'removed',removedArtifactFileChecksums:[],backupEvidenceFile:`${'7'.repeat(64)}.json`,backupEvidenceChecksum:`sha256:${'7'.repeat(64)}`,backupOwnerId:b.backupOwnerId,backupSetId:b.backupSetId,backupDisposition:b.backupDisposition,backupExpiresAt:b.backupExpiresAt,verifiedAt:b.verifiedAt,custodianIdentityHash:b.custodianIdentityHash,verifierIdentityHash:b.verifierIdentityHash,externalEvidenceChecksum:`sha256:${'8'.repeat(64)}`};}
+function purge(){const b=backup();return{schemaVersion:1,entityKind:b.entityKind,entityId:b.entityId,tombstoneHash:b.tombstoneHash,affectedContentReleaseId:b.affectedContentReleaseId,affectedAnswerReleaseId:b.affectedAnswerReleaseId,affectedAnswerManifestHash:b.affectedAnswerManifestHash,affectedAnswerArtifactHash:b.affectedAnswerArtifactHash,releaseDirectoryDisposition:'removed',removedArtifactFileChecksums:[],backupEvidenceFile:`${'7'.repeat(64)}.json`,backupEvidenceChecksum:`sha256:${'7'.repeat(64)}`,verifiedAt:b.verifiedAt,custodianIdentityHash:b.custodianIdentityHash,verifierIdentityHash:b.verifierIdentityHash,externalEvidenceChecksum:`sha256:${'8'.repeat(64)}`};}
 function deletion(){const b=backup();return{schemaVersion:1,entityKind:b.entityKind,entityId:b.entityId,tombstoneHash:b.tombstoneHash,affectedContentReleaseId:b.affectedContentReleaseId,affectedAnswerReleaseId:b.affectedAnswerReleaseId,affectedAnswerManifestHash:b.affectedAnswerManifestHash,affectedAnswerArtifactHash:b.affectedAnswerArtifactHash,replacementContentReleaseId:'c'.repeat(64),replacementAnswerReleaseId:'d'.repeat(64),replacementAnswerManifestHash:`sha256:${'8'.repeat(64)}`,replacementAnswerArtifactHash:`sha256:${'9'.repeat(64)}`,replacementBindingId:'11111111-1111-4111-8111-111111111111',purgeEvidenceFile:`${'6'.repeat(64)}.json`,backupEvidenceFile:`${'7'.repeat(64)}.json`,artifactPurgeEvidenceChecksum:`sha256:${'6'.repeat(64)}`,backupEvidenceChecksum:`sha256:${'7'.repeat(64)}`,backupExpiresAt:b.backupExpiresAt,verifiedAt:b.verifiedAt,verifierIdentityHash:b.verifierIdentityHash};}
 
 describe('deletion evidence negative matrix',()=>{
+  it('accepts the complete strict public-answer record ID contract',()=>{
+    expect(parseDeletionEvidenceReceipt({...deletion(),entityId:'answer-only/example'},now).entityId).toBe('answer-only/example');
+    expect(parseArtifactPurgeEvidence({...purge(),entityId:'answer-only/example'},now).entityId).toBe('answer-only/example');
+    expect(parseBackupExpiryEvidence({...backup(),entityId:'answer-only/example'},now).entityId).toBe('answer-only/example');
+  });
   it.each([
     ['record id',()=>parseDeletionEvidenceReceipt({...deletion(),entityId:'not/a/record'},now)],
     ['evidence id',()=>parseDeletionEvidenceReceipt({...deletion(),entityKind:'evidence',entityId:'not-a-hash'},now)],
@@ -25,7 +30,8 @@ describe('deletion evidence negative matrix',()=>{
     ['set',()=>parseBackupExpiryEvidence({...backup(),backupSetId:'raw set'},now)],
     ['disposition',()=>parseBackupExpiryEvidence({...backup(),backupDisposition:'deleted'},now)],
     ['expiry',()=>parseBackupExpiryEvidence({...backup(),backupExpiresAt:'2026-08-29T00:00:00.000Z'},now)],
-    ['purge owner',()=>parseArtifactPurgeEvidence({...purge(),backupOwnerId:'owner:../escape'},now)],
+    ['expired backup',()=>parseBackupExpiryEvidence({...backup(),backupExpiresAt:'2026-08-30T00:30:00.000Z'},now)],
+    ['purge backup-only field',()=>parseArtifactPurgeEvidence({...purge(),backupOwnerId:'owner:archive'},now)],
     ['purge disposition',()=>parseArtifactPurgeEvidence({...purge(),releaseDirectoryDisposition:'retained'},now)],
   ])('rejects %s mismatch',(_label,run)=>{expect(run).toThrow();});
 
@@ -41,9 +47,6 @@ describe('deletion evidence negative matrix',()=>{
     ['backup checksum',{backupChecksum:`sha256:${'0'.repeat(64)}`}],
     ['backup file',{purge:{backupEvidenceFile:`${'0'.repeat(64)}.json`}}],
     ['verifiedAt',{purge:{verifiedAt:'2026-08-30T00:00:01.000Z'}}],
-    ['owner',{purge:{backupOwnerId:'owner:other'}}],
-    ['set',{purge:{backupSetId:'set:other'}}],
-    ['disposition',{purge:{backupDisposition:'removed'}}],
     ['expiry',{backup:{backupExpiresAt:'2026-10-01T00:00:00.000Z'}}],
     ['custodian',{backup:{custodianIdentityHash:`sha256:${'0'.repeat(64)}`}}],
     ['verifier',{purge:{verifierIdentityHash:`sha256:${'0'.repeat(64)}`}}],
