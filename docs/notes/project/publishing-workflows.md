@@ -98,20 +98,65 @@ local clone으로 주장마다 확인한다. 접근할 수 없는 자료는 gap�
 npm run content:new -- review --slug factfulness --title "Factfulness" --isbn 9788934985068
 ```
 
-published review는 author, valid ISBN-13, publisher, verdict와 `coverState`가 필요하다.
+published review는 `itemTitle`, author, valid ISBN-13, publisher, edition, verdict와 `coverState`가
+필요하다. public bibliographic identity는 아래 한 object로만 비교한다. `authors`는 source
+`itemAuthor`를 원래 순서대로 normalize한 배열이고 `publicationYear`는 authoritative edition
+source에 실제 값이 있을 때만 네 자리 정수로 넣는다. `editionLabel`의 자유 문장에서 연도를
+추론하지 않는다.
+
+```yaml
+bibliographicIdentity:
+  title: string
+  authors: string[]
+  publisher: string
+  isbn13: string
+  editionLabel: string
+  publicationYear: number? # 1000..9999
+```
 
 - `coverState: hold`: `coverMedia`를 두지 않는다. text-led로 공개한다.
 - `coverState: verified`: source bundle에 동일 판본 cover item이 있어야 한다. 그러나 이것만으로
   public cover byte를 허용하지 않는다.
 
-review cover가 release에 들어가려면 `media.yml` source URL/credit/rights note, exact ISBN/edition,
-source-identical bytes와 checksum, production approval registry의 controller +
-independent-rights-reviewer receipt가 모두 일치해야 한다. 하나라도 없으면 strict validator는
-warning을 남기고 release는 cover bytes를 제외한다.
+cover source는 (1) publisher/rightsholder press·media asset과 명시적 재배포 허용, (2) compatible
+reuse terms가 있는 official distributor/API, (3) exact edition과 권리 증거를 함께 제공하는
+licensed/open repository 순서로 조사한다. search thumbnail, 권리가 모호한 상품 페이지, hotlink,
+wrong edition, 생성·recolor·crop cover는 승인 근거가 아니다.
 
-현재 18 review 중 production-approved cover는 0건이다. 17건의 rights warning은 의도적으로
-보존하며 `devotion-of-suspect-x`는 `coverState: hold`다. warning을 없애기 위해 approval을
-만들거나 cover를 재생성하지 않는다.
+review cover가 release에 들어가려면 `media.yml`의 exact source bytes/checksum/dimensions와 위
+identity가 canonical decision, production registry와 모두 같아야 한다. decision의 private
+`rightsEvidence`는 정확히 한 branch다. `redistribution-license`는 external `evidenceUrl`을 추가로
+요구하고, `written-permission`은 URL을 만들지 않는다. 두 branch 모두 record-local non-Markdown
+`evidencePath`, evidence byte SHA-256, 실제 `retrievedAt` 날짜와 exact scope
+`public website redistribution of the exact cover asset`을 요구한다. 마지막으로 같은 tuple에 대한
+controller와 `independent-rights-reviewer` 승인이 모두 있어야 한다.
+
+state flow는 `researching -> ready-for-independent-review -> approved | hold`이고, 적용 가능한 grant나
+exact candidate를 찾지 못한 record는 `researching -> hold`로 바로 닫는다. HOLD에는 canonical
+decision, registry tuple, redistribution receipt, public cover byte를 만들지 않는다. public
+`ReviewCoverRedistributionEvidence`에는 approval receipt, public source asset/checksum/dimensions와
+`bibliographicIdentity`만 남긴다. private `rightsEvidence`, `evidencePath`, `evidenceUrl`,
+`evidenceChecksum`, `retrievedAt`, `scope`, 조사 문서와 local locator는 source/build-time 경계 밖으로
+내보내지 않는다.
+
+2026-08-30의 [18-review inventory](assets/review-cover-rights/inventory.yml) 결과는 approved 0건,
+HOLD 18건이다. HOLD ID는 `changing-their-minds`, `lord-of-the-flies`, `black-swan`, `nevertheless`,
+`goethe-said-everything`, `devotion-of-suspect-x`, `poor-charlies-almanack`, `art-thief`, `siddhartha`,
+`habitus`, `how-adam-smith-can-change-your-life`, `lolita`, `future-arrived-first`,
+`how-we-crossed-winter`, `convenience-store-woman`, `miracles-of-namiya-general-store`,
+`doing-good-better`, `factfulness`다. production registry도 승인 0건이다. identification-only source
+cover가 있는 17건의 strict rights warning은 의도적으로 유지하고, source cover 자체가 없는
+`devotion-of-suspect-x`도 text-led다. 실제 approval/promotion path, approved-cover presentation과
+실제 approved cover request failure는 모두 `not_measured`다. synthetic review fallback test는
+automated dependency evidence일 뿐 real-data 동작을 측정했다는 뜻이 아니다.
+
+같은 시점의 immutable release
+`3aa8781fd5e923858c50cadccb45782f1657d19f4732017d8789041e610784f1`은 review 18건, review asset
+0건, review media reference 0건과 `privateBoundaryHits: 0`을 검증했다. `/reviews/`,
+`/reviews/black-swan/`, `/reviews/devotion-of-suspect-x/`의 15-cell browser matrix에서도 cover URL,
+image request/preload, `<picture>`/`<img>`, cover stage와 document overflow가 0이었다. 블랙스완은
+`동녘사이언스 2018 개정증보판, 차익종·김현구 옮김`과 `판본 확인 · 표지 공개 권리 미확인`,
+용의자 X의 헌신은 `현대문학 2006 양장, 양억관 옮김`과 `표지 공개 보류`를 정확히 표시한다.
 
 ### Naver review intake
 

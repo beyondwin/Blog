@@ -139,8 +139,20 @@ asset을 보존한 채 연결했다. exact family와 순서는
 반복되지 않는다. 과거 missing 네 건도 승인 asset으로 해소됐고, HOLD/rejected candidate는
 public source와 release에 들어가지 않았다.
 
-서평 cover는 판본 identity와 redistribution receipt가 모두 승인돼야 byte를 공개한다. 현재
-생산 registry는 승인 0건이며 strict validation은 17건의 rights warning을 의도적으로 남긴다.
+서평 cover는 normalized title, source-order authors, publisher, ISBN-13, edition label과 authoritative
+source가 실제 제공한 optional publication year로 exact identity를 만든다. publisher/rightsholder,
+compatible official distributor/API, exact-edition licensed/open repository 순서로 source를 고르고,
+exact candidate bytes와 applicable redistribution license 또는 written permission evidence를
+checksum으로 묶는다. controller와 independent-rights-reviewer가 같은 tuple을 승인한 경우에만
+public byte와 `contain` stage를 만든다. private evidence URL/path/checksum/date/scope, 조사 locator와
+evidence bytes는 public record, manifest, loader와 emitted file에 들어가지 않는다.
+
+2026-08-30의 [exhaustive inventory](docs/notes/project/assets/review-cover-rights/inventory.yml)는
+approved 0건 / HOLD 18건이며 [production registry](packages/content/review-cover-redistribution-approvals.json)도
+승인 0건이다. source identification cover가 있는 17건의 strict rights warning은 의도적으로
+남고, `devotion-of-suspect-x`를 포함한 18건 모두 text-led다. immutable release
+`3aa8781fd5e923858c50cadccb45782f1657d19f4732017d8789041e610784f1`은 review asset과 media
+reference 0건, `privateBoundaryHits: 0`을 확인했다.
 
 `ResponsivePicture`는 성공한 server markup의 local `<picture>` source를 그대로 유지한다.
 최종 `<img>`의 `error` 또는 hydration 때 확인한 `complete && naturalWidth === 0`는 mount당 한 번만
@@ -148,7 +160,17 @@ public source와 release에 들어가지 않았다.
 owner CSS는 marker를 가진 home, ledger, article detail과 review cover stage를 숨기고 기존
 text-led/full-width 구성으로 접는다. review owner는 같은 실패 상태에서 preload, inverse header,
 cover stage와 image-led class를 함께 제거한다. 실제 article request의 hydration 전후 실패는
-검증됐지만, 실제 승인 review cover request 실패는 승인 cover가 0건이므로 `not_measured`다.
+검증됐지만, 실제 approved-cover presentation과 실제 승인 review cover request 실패는 승인 cover가
+0건이므로 모두 `not_measured`다. synthetic density fallback test는 automated evidence일 뿐
+real-data browser 동작을 대신하지 않는다.
+
+review rights browser matrix는 `/reviews/`, `/reviews/black-swan/`,
+`/reviews/devotion-of-suspect-x/`를 1440×900, 768×900, 390×844, 320×844와 720×450/DPR 2에서
+검사했다. 15셀 모두 compact text-led, cover URL/request/preload/stage 0건, document overflow 0,
+clean console/network와 순차 keyboard focus를 통과했고 CLS는 `0–0.003005`였다. exact edition/year
+label과 rights label은 블랙스완의 `동녘사이언스 2018 개정증보판, 차익종·김현구 옮김` /
+`판본 확인 · 표지 공개 권리 미확인`, 용의자 X의 헌신의 `현대문학 2006 양장, 양억관 옮김` /
+`표지 공개 보류`다.
 
 article media refresh는 release `dde592cdfd307ba664738de00f50077181ff947066a89192acd1d82241150aef`와
 17-cell browser matrix에서 완료됐다. `/articles/`은 1440×900, 768×900, 390×844, 320×844와
