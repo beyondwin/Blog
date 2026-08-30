@@ -1,3 +1,6 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it, vi } from 'vitest';
 import type { VerifiedActivePublicAnswerReleaseAuthority } from '../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 
@@ -20,6 +23,7 @@ import {
 } from '../scripts/with-test-postgres.mjs';
 
 const authorityFixture = vi.hoisted(() => ({ release: null as any }));
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 vi.mock('@beyondwin/content/answer-release', () => ({
   async readPublicAnswerCorpusApproval() { return { schemaVersion: 1, entries: [] }; },
   async readActiveAnswerRelease() { return authorityFixture.release; },
@@ -240,7 +244,7 @@ describe('disposable Postgres harness contract', () => {
     expect(child.args).toEqual(['/repo/node_modules/vitest/vitest.mjs', 'run', '--config', '/repo/apps/server/vitest.postgres.config.ts']);
     expect(child.env.FORM_THOUGHT_TEST_DATABASE_URL).toContain('127.0.0.1:45678');
     expect(calls.at(-1)?.args.slice(-2)).toEqual(['-v', '--remove-orphans']);
-    expect(postgresConfig.root).toBe(process.cwd());
+    expect(postgresConfig.root).toBe(repositoryRoot);
     expect(postgresConfig.test?.include).toEqual(['apps/server/test/postgres/**/*.test.ts']);
     expect(postgresConfig.test?.passWithNoTests).toBe(false);
     expect(postgresConfig.test?.fileParallelism).toBe(false);

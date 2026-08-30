@@ -97,6 +97,8 @@ describe('React-only Node 24 workspace contract', () => {
     expect(manifest.name).toBe('@beyondwin/server');
     expect(manifest.type).toBe('module');
     expect(declaredDependencies(manifest)).toEqual(approvedServerVersions);
+    expect(manifest.scripts?.test)
+      .toBe('vitest run test --exclude "test/postgres/**" --exclude "test/evaluation/**"');
     expect(manifest.dependencies?.['@beyondwin/content']).toBe('0.0.0');
     expect(manifest.dependencies?.['@beyondwin/contracts']).toBe('0.0.0');
     expect(Object.values(declaredDependencies(manifest))).not.toContain('workspace:*');
