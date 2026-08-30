@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { ORIGIN_QUERY_MAX_LENGTH } from '../navigation/origin';
 import { SearchResults } from './SearchResults';
 import {
@@ -145,7 +146,7 @@ function AnswerStage({ evidenceOpen, fixture, onOpenEvidence, onSubmit, question
             type="button"
             aria-label={`${fixture.evidence[0]?.label ?? '첫 번째'} 근거 보기`}
             onClick={(event) => onOpenEvidence(0, event.currentTarget)}
-          >1</button>{fixture.answerConclusionSuffix}
+          ><span aria-hidden="true">1</span></button>{fixture.answerConclusionSuffix}
         </p>
       </div>
       <div className="answer-stage__meta">
@@ -179,8 +180,9 @@ function EvidencePanel({ closeRef, fixture, onClose, onSelect, panelRef, selecte
 }) {
   const selected = fixture.evidence[selectedIndex] ?? fixture.evidence[0];
   if (!selected) return null;
-  return (
-    <>
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="evidence-modal-layer">
       <button className="evidence-backdrop" type="button" tabIndex={-1} aria-hidden="true" onClick={onClose} />
       <aside ref={panelRef} className="evidence-panel" role="dialog" aria-modal="true" aria-labelledby="evidence-panel-title">
         <header className="evidence-panel__head">
@@ -208,7 +210,8 @@ function EvidencePanel({ closeRef, fixture, onClose, onSelect, panelRef, selecte
           </article>
         </div>
       </aside>
-    </>
+    </div>,
+    document.body,
   );
 }
 
@@ -278,16 +281,19 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
     }
   }, [clearTimers, fixture.question, startAnswer, updateUrl]);
 
-  useEffect(() => {
-    const onPopState = () => {
-      clearTimers();
-      const query = boundedSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '');
-      setInputValue(query || fixture.question);
-      dispatch(query ? { type: 'show-results', query } : { type: 'reset' });
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+  const restoreQueryFromLocation = useCallback(() => {
+    clearTimers();
+    const query = boundedSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '');
+    setInputValue(query || fixture.question);
+    setComposerNote('질문을 기다리고 있습니다.');
+    dispatch(query ? { type: 'show-results', query } : { type: 'reset' });
   }, [clearTimers, fixture.question]);
+
+  useEffect(() => {
+    restoreQueryFromLocation();
+    window.addEventListener('popstate', restoreQueryFromLocation);
+    return () => window.removeEventListener('popstate', restoreQueryFromLocation);
+  }, [restoreQueryFromLocation]);
 
   const closeEvidence = useCallback(() => {
     shouldReturnFocusRef.current = true;
@@ -303,12 +309,16 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
       }
       return;
     }
-    const background = backgroundRef.current;
+    const shell = backgroundRef.current?.closest<HTMLElement>('.site-shell') ?? null;
     const panel = panelRef.current;
-    const hadInert = background?.hasAttribute('inert') ?? false;
-    const previousOverflow = document.documentElement.style.overflow;
-    background?.setAttribute('inert', '');
+    const hadInert = shell?.hasAttribute('inert') ?? false;
+    const previousAriaHidden = shell?.getAttribute('aria-hidden') ?? null;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    shell?.setAttribute('inert', '');
+    shell?.setAttribute('aria-hidden', 'true');
     document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
     const focusFrame = window.requestAnimationFrame(() => closeRef.current?.focus({ preventScroll: true }));
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -333,8 +343,11 @@ export function SecondBrainExperience({ fixture, initialQuery, inventory }: {
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       window.cancelAnimationFrame(focusFrame);
-      if (!hadInert) background?.removeAttribute('inert');
-      document.documentElement.style.overflow = previousOverflow;
+      if (!hadInert) shell?.removeAttribute('inert');
+      if (previousAriaHidden === null) shell?.removeAttribute('aria-hidden');
+      else shell?.setAttribute('aria-hidden', previousAriaHidden);
+      document.documentElement.style.overflow = previousDocumentOverflow;
+      document.body.style.overflow = previousBodyOverflow;
     };
   }, [closeEvidence, state.view]);
 

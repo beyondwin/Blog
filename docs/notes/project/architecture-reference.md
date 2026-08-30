@@ -100,7 +100,7 @@ public record로 변환하며 top-level `memory/**`를 읽지 않는다.
 - 승인되지 않은 candidate/batch는 public release를 fail closed한다.
 - review cover는 source/edition tuple과 정확히 controller + independent-rights-reviewer receipt가
   있어야 byte가 public artifact에 들어간다.
-- 현재 release는 18 public assets, review cover asset/approval label 0건이다. strict validation의
+- 현재 release는 29 public assets, review cover asset/approval label 0건이다. strict validation의
   17 review-cover warning은 안전한 text-led 결과와 별개로 unresolved rights evidence를 알린다.
 
 ## immutable release flow
