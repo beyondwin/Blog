@@ -108,6 +108,15 @@ describe('React-only Node 24 workspace contract', () => {
     expect(configuration.test.exclude).toContain('apps/server/test/evaluation/**');
   });
 
+  it('exposes only the approved Postgres harness and fixture indexing commands', async () => {
+    const rootManifest = await readManifest('package.json');
+    const serverManifest = await readManifest('apps/server/package.json');
+    expect(serverManifest.scripts?.['test:postgres']).toBe('tsx scripts/with-test-postgres.mts test');
+    expect(rootManifest.scripts?.['server:test:postgres']).toBe('npm run test:postgres --workspace @beyondwin/server');
+    expect(rootManifest.scripts?.['server:index:fixture'])
+      .toBe('npm exec --workspace @beyondwin/server -- tsx src/index-answer-release.ts --embedding-mode=fixture');
+  });
+
   it('seals the final ordered validation chain', async () => {
     const manifest = await readManifest('package.json');
     expect(manifest.scripts?.['public-answer-release:build'])

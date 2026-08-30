@@ -20,6 +20,8 @@
     "server:dev": "npm run dev --workspace @beyondwin/server",
     "server:start": "npm run start --workspace @beyondwin/server",
     "server:test": "npm run test --workspace @beyondwin/server",
+    "server:test:postgres": "npm run test:postgres --workspace @beyondwin/server",
+    "server:index:fixture": "npm exec --workspace @beyondwin/server -- tsx src/index-answer-release.ts --embedding-mode=fixture",
     "public-release:build": "tsx packages/content/src/cli.ts build",
     "public-release:verify": "tsx packages/content/src/cli.ts verify",
     "public-release:clean-test": "tsx packages/content/src/cli.ts clean-test",
