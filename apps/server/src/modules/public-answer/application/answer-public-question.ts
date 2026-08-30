@@ -50,8 +50,8 @@ function unsupportedQuestion(question: string): boolean {
   return !/[\p{L}\p{N}]/u.test(question);
 }
 
-function characterCount(value: string): number {
-  return [...value].filter((character) => !/\s/u.test(character)).length;
+function codePointCount(value: string): number {
+  return [...value].length;
 }
 
 function hasDuplicates(values: readonly string[]): boolean {
@@ -75,9 +75,9 @@ function semanticVerificationPasses(
   }
 
   const supportedIds = new Set(supportedSentenceIds);
-  const totalCharacters = sentenceUnits.reduce((sum, unit) => sum + characterCount(unit.text), 0);
+  const totalCharacters = sentenceUnits.reduce((sum, unit) => sum + codePointCount(unit.text), 0);
   const supportedCharacters = sentenceUnits.reduce(
-    (sum, unit) => sum + (supportedIds.has(unit.id) ? characterCount(unit.text) : 0),
+    (sum, unit) => sum + (supportedIds.has(unit.id) ? codePointCount(unit.text) : 0),
     0,
   );
   const coverage = totalCharacters === 0 ? 0 : supportedCharacters / totalCharacters;

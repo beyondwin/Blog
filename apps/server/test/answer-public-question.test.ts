@@ -114,7 +114,9 @@ interface HarnessOptions {
 function harness(options: HarnessOptions = {}) {
   const calls: string[] = [];
   const retrievalInputs: Parameters<Retriever['retrieve']>[0][] = [];
+  const generatorInputs: Parameters<AnswerGenerator['generate']>[0][] = [];
   const deterministicInputs: Parameters<DeterministicAnswerVerifier['verify']>[0][] = [];
+  const semanticInputs: Parameters<SemanticAnswerVerifier['verify']>[0][] = [];
   const stages = {
     begun: [] as ProviderStage[],
     settled: [] as Array<{ stage: ProviderStage; usage: ProviderTokenUsage }>,
@@ -165,8 +167,9 @@ function harness(options: HarnessOptions = {}) {
     },
   };
   const generator: AnswerGenerator = {
-    async generate() {
+    async generate(input) {
       calls.push('generate');
+      generatorInputs.push(input);
       if (options.generationError) throw options.generationError;
       return { claims: options.generatedClaims ?? [CLAIM], usage: GENERATION_USAGE };
     },
@@ -186,8 +189,9 @@ function harness(options: HarnessOptions = {}) {
     },
   };
   const semanticVerifier: SemanticAnswerVerifier = {
-    async verify() {
+    async verify(input) {
       calls.push('semantic.verify');
+      semanticInputs.push(input);
       if (options.semanticError) throw options.semanticError;
       return options.semanticResult ?? {
         supportedSentenceIds: ['sentence-1'],
@@ -219,7 +223,16 @@ function harness(options: HarnessOptions = {}) {
     },
   });
 
-  return { calls, deterministicInputs, events, retrievalInputs, stages, useCase };
+  return {
+    calls,
+    deterministicInputs,
+    events,
+    generatorInputs,
+    retrievalInputs,
+    semanticInputs,
+    stages,
+    useCase,
+  };
 }
 
 async function expectSearch(
@@ -308,6 +321,53 @@ describe('AnswerPublicQuestion', () => {
     expect(h.calls.at(-1)).toBe('usage.release');
   });
 
+  it('rebuilds a valid retriever ID from canonical catalog evidence across every downstream boundary', async () => {
+    const canonicalEvidence: AuthorizedEvidence = Object.freeze({
+      ...EVIDENCE,
+      canonicalPath: '/articles/canonical-record/',
+      locator: Object.freeze({ kind: 'evidence-page', label: '정본 근거', ordinal: 7 }),
+      excerpt: '카탈로그가 승인한 정본 발췌입니다.',
+      excerptChecksum: 'sha256:canonical',
+    });
+    const forgedEvidence: AuthorizedEvidence = Object.freeze({
+      ...canonicalEvidence,
+      canonicalPath: '/forged-retriever-path/',
+      locator: Object.freeze({ kind: 'heading-paragraph', label: 'FORGED', ordinal: 999 }),
+      excerpt: 'FORGED RETRIEVER EXCERPT',
+      excerptChecksum: 'sha256:forged',
+    });
+    const snapshot = catalog({
+      evidenceFor(ids) {
+        return ids.includes(canonicalEvidence.evidenceId) ? [canonicalEvidence] : [];
+      },
+    });
+    const h = harness({
+      retrieval: {
+        evidence: [forgedEvidence],
+        sufficient: true,
+        candidateCount: 1,
+        usage: EMBEDDING_USAGE,
+      },
+    });
+
+    const outcome = await h.useCase.execute(command({ catalog: snapshot }));
+
+    expect(outcome.kind).toBe('answer');
+    if (outcome.kind !== 'answer') throw new Error('expected answer outcome');
+    expect(h.generatorInputs[0]?.evidence[0]).toBe(canonicalEvidence);
+    expect(h.deterministicInputs[0]?.evidence[0]).toBe(canonicalEvidence);
+    expect(h.semanticInputs[0]?.evidence[0]).toBe(canonicalEvidence);
+    expect(outcome.evidence[0]).toBe(canonicalEvidence);
+    expect(JSON.stringify({
+      generator: h.generatorInputs,
+      deterministic: h.deterministicInputs,
+      semantic: h.semanticInputs,
+      outcome,
+    })).not.toContain('FORGED');
+    expect(JSON.stringify(outcome)).not.toContain('/forged-retriever-path/');
+    expect(JSON.stringify(outcome)).not.toContain('sha256:forged');
+  });
+
   it('uses the identical request catalog through retrieval and returns an answer after all stages settle', async () => {
     const h = harness();
     const snapshot = catalog();
@@ -391,8 +451,8 @@ describe('AnswerPublicQuestion', () => {
   });
 
   it.each([
-    ['0.949', 'x'.repeat(949), 'x'.repeat(51), 0],
-    ['0.95', 'x'.repeat(950), 'x'.repeat(50), 1],
+    ['0.949', 'x'.repeat(949), `y${' '.repeat(50)}`, 0],
+    ['0.95', `${'x'.repeat(900)}${' '.repeat(50)}`, 'y'.repeat(50), 1],
   ])('applies the %s character boundary before the critical-unit 1.00 rule', async (
     _ratio,
     supportedText,
