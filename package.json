@@ -20,6 +20,10 @@
     "public-release:build": "tsx packages/content/src/cli.ts build",
     "public-release:verify": "tsx packages/content/src/cli.ts verify",
     "public-release:clean-test": "tsx packages/content/src/cli.ts clean-test",
+    "public-answer-release:build": "tsx packages/content/src/answer-release/cli.ts build",
+    "public-answer-release:approval-candidate": "tsx packages/content/src/answer-release/cli.ts approval-candidate",
+    "public-answer-release:verify": "tsx packages/content/src/answer-release/cli.ts verify",
+    "public-answer-release:clean-test": "tsx packages/content/src/answer-release/cli.ts clean-test",
     "cutover:proxy": "tsx scripts/cutover/local-proxy.mts",
     "cutover:clean-host": "tsx scripts/cutover/verify-clean-host.mts",
     "cutover:seal-performance": "tsx scripts/cutover/seal-performance-receipt.mts",
@@ -37,7 +41,7 @@
     "memory:validate": "node scripts/memory/project.mjs --validate",
     "media:validate": "node scripts/validate-media.mjs",
     "agent:check": "node scripts/agent-check.mjs",
-    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm test && npm run typecheck:workspaces && npm run public-release:build && npm run public-release:verify && npm run public-release:clean-test && npm run site:build"
+    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm test && npm run typecheck:workspaces && npm run public-release:build && npm run public-release:verify && npm run public-answer-release:build && npm run public-answer-release:verify && npm run public-release:clean-test && npm run public-answer-release:clean-test && npm run site:build"
   },
   "dependencies": {
     "yaml": "^2.9.0"

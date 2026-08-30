@@ -72,6 +72,14 @@ describe('React-only Node 24 workspace contract', () => {
 
   it('seals the final ordered validation chain', async () => {
     const manifest = await readManifest('package.json');
+    expect(manifest.scripts?.['public-answer-release:build'])
+      .toBe('tsx packages/content/src/answer-release/cli.ts build');
+    expect(manifest.scripts?.['public-answer-release:approval-candidate'])
+      .toBe('tsx packages/content/src/answer-release/cli.ts approval-candidate');
+    expect(manifest.scripts?.['public-answer-release:verify'])
+      .toBe('tsx packages/content/src/answer-release/cli.ts verify');
+    expect(manifest.scripts?.['public-answer-release:clean-test'])
+      .toBe('tsx packages/content/src/answer-release/cli.ts clean-test');
     expect(manifest.scripts?.validate).toBe([
       'npm run agent:check',
       'node scripts/validate-content.mjs',
@@ -82,7 +90,10 @@ describe('React-only Node 24 workspace contract', () => {
       'npm run typecheck:workspaces',
       'npm run public-release:build',
       'npm run public-release:verify',
+      'npm run public-answer-release:build',
+      'npm run public-answer-release:verify',
       'npm run public-release:clean-test',
+      'npm run public-answer-release:clean-test',
       'npm run site:build',
     ].join(' && '));
     expect(manifest.scripts?.test).toBe('vitest run');
@@ -117,5 +128,12 @@ describe('React-only Node 24 workspace contract', () => {
   it('owns the native release verifier at the React Router runtime boundary', async () => {
     const siteManifest = await readManifest('apps/site/package.json');
     expect(siteManifest.dependencies?.sharp).toBe('0.35.3');
+  });
+
+  it('exports the answer-release API with a directly pinned HTML parser', async () => {
+    const contentManifest = await readManifest('packages/content/package.json');
+    const exports = (contentManifest as PackageManifest & { exports?: Record<string, string> }).exports;
+    expect(exports?.['./answer-release']).toBe('./src/answer-release/index.ts');
+    expect(contentManifest.dependencies?.parse5).toBe('8.0.1');
   });
 });
