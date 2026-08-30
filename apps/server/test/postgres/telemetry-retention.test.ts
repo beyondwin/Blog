@@ -5,6 +5,8 @@ import { PostgresRedactedEventSink } from '../../src/modules/public-answer/infra
 import { purgeExpiredTelemetry } from '../../src/modules/public-answer/infrastructure/postgres/telemetry-retention.js';
 import { runPostgresMigrations } from '../../src/modules/public-answer/infrastructure/postgres/postgres-migrations.js';
 import { redactPublicAnswerEvent } from '../../src/modules/public-answer/infrastructure/telemetry/redacted-events.js';
+import { AnswerPublicQuestion } from '../../src/modules/public-answer/application/answer-public-question.js';
+import type { PublicAnswerEventSink } from '../../src/modules/public-answer/application/ports/event-sink.js';
 
 const databaseUrl = process.env.FORM_THOUGHT_TEST_DATABASE_URL;
 if (!databaseUrl) throw new Error('FORM_THOUGHT_TEST_DATABASE_URL is required');
@@ -49,7 +51,9 @@ describe('redacted telemetry schema and retention', () => {
     const logged: string[] = [];
     const sink = new PostgresRedactedEventSink(pool, { logger: (code) => logged.push(code), clock: () => Date.parse('2026-08-30T00:00:00.000Z') });
     await sink.start();
-    await sink.record(redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'request-1', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1_234, retrievedCount: 4, providerInputTokens: 1_001, providerOutputTokens: 42, rateBucket: 'admitted' }));
+    const asPort: PublicAnswerEventSink = sink;
+    asPort.record(redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'request-1', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1_234, retrievedCount: 4, providerInputTokens: 1_001, providerOutputTokens: 42, rateBucket: 'admitted' }));
+    await sink.waitForIdle();
     expect((await pool.query('SELECT request_id,latency_bucket,provider_input_bucket,provider_output_bucket,expires_at FROM public_answer_events')).rows)
       .toEqual([{ request_id: 'request-1', latency_bucket: '1-2.999s', provider_input_bucket: '1000-1999', provider_output_bucket: '1-999', expires_at: new Date('2026-09-06T00:00:00.000Z') }]);
     expect((await pool.query('SELECT day::text,result_kind,count::int,expires_at FROM public_answer_daily_aggregates')).rows)
@@ -71,11 +75,13 @@ describe('redacted telemetry schema and retention', () => {
     const logged: string[] = [];
     const sink = new PostgresRedactedEventSink({ query: async () => { throw new Error('database-secret'); } } as unknown as Pool, { logger: (code) => logged.push(code) });
     await expect(sink.start()).resolves.toBeUndefined();
-    await expect(sink.record(redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'r', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' }))).resolves.toBeUndefined();
+    sink.record(redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'r', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' }));
+    await sink.waitForIdle();
     expect(logged).toEqual(['telemetry-write-failed', 'telemetry-write-failed']);
     const throwingLogger = new PostgresRedactedEventSink({ query: async () => { throw new Error('database-secret'); } } as unknown as Pool, { logger: () => { throw new Error('logger-secret'); } });
     await expect(throwingLogger.start()).resolves.toBeUndefined();
-    await expect(throwingLogger.record(redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'r', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' }))).resolves.toBeUndefined();
+    throwingLogger.record(redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'r', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' }));
+    await throwingLogger.waitForIdle();
   });
 
   it('purges at startup, every 100 successful writes, and after one elapsed hour', async () => {
@@ -88,14 +94,86 @@ describe('redacted telemetry schema and retention', () => {
     await pool.query(`INSERT INTO public_answer_events(occurred_at,expires_at,request_id,content_release_prefix,answer_release_prefix,result_kind,error_kind,latency_bucket,retrieved_count,provider_input_bucket,provider_output_bucket,rate_bucket)
       VALUES('2026-08-01','2026-08-29','hundred','cccccccccccc','aaaaaaaaaaaa','answer',NULL,'<250ms',0,'0','0','admitted')`);
     const event = redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'write', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' });
-    for (let index = 0; index < 99; index += 1) await sink.record({ ...event, requestId: `write-${index}` });
+    for (let index = 0; index < 99; index += 1) sink.record({ ...event, requestId: `write-${index}` });
+    await sink.waitForIdle();
     expect((await pool.query("SELECT count(*)::int AS count FROM public_answer_events WHERE request_id='hundred'")).rows[0].count).toBe(1);
-    await sink.record({ ...event, requestId: 'write-99' });
+    sink.record({ ...event, requestId: 'write-99' }); await sink.waitForIdle();
     expect((await pool.query("SELECT count(*)::int AS count FROM public_answer_events WHERE request_id='hundred'")).rows[0].count).toBe(0);
     await pool.query(`INSERT INTO public_answer_events(occurred_at,expires_at,request_id,content_release_prefix,answer_release_prefix,result_kind,error_kind,latency_bucket,retrieved_count,provider_input_bucket,provider_output_bucket,rate_bucket)
       VALUES('2026-08-01','2026-08-29','hour','cccccccccccc','aaaaaaaaaaaa','answer',NULL,'<250ms',0,'0','0','admitted')`);
     now += 3_600_000;
-    await sink.record({ ...event, requestId: 'after-hour' });
+    sink.record({ ...event, requestId: 'after-hour' }); await sink.waitForIdle();
     expect((await pool.query("SELECT count(*)::int AS count FROM public_answer_events WHERE request_id='hour'")).rows[0].count).toBe(0);
+  });
+
+  it('persists the exact event emitted by AnswerPublicQuestion without an adapter', async () => {
+    const sink: PublicAnswerEventSink & PostgresRedactedEventSink = new PostgresRedactedEventSink(pool, { clock: () => Date.parse('2026-08-30T00:00:00.175Z') });
+    await sink.start();
+    const useCase = new AnswerPublicQuestion({
+      policy: { mode: 'fixture' }, eventSink: sink,
+      retriever: { retrieve: async () => { throw new Error('must not retrieve'); } },
+      generator: { generate: async () => { throw new Error('must not generate'); } },
+      deterministicVerifier: { verify: () => { throw new Error('must not verify'); } },
+      semanticVerifier: { verify: async () => { throw new Error('must not verify'); } },
+      usageGuard: { acquire: async () => { throw new Error('must not acquire'); } },
+      clock: (() => { let now = Date.parse('2026-08-30T00:00:00.000Z'); return () => { const value=now; now+=175; return value; }; })(),
+    });
+    const catalog = { bindingId: 'binding', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64),
+      corpusApprovalHash: 'sha256:approval', chunkCount: 1, isBoundTo: () => false, evidenceFor: () => [],
+      hasAuthorizedEvidenceLocation: () => false } as const;
+    await expect(useCase.execute({ requestId: 'composed', question: '질문', contentReleaseId: catalog.contentReleaseId,
+      answerReleaseId: 'b'.repeat(64), networkKey: 'network', signal: new AbortController().signal, catalog })).resolves.toMatchObject({ kind: 'search', reason: 'release-mismatch' });
+    await sink.waitForIdle();
+    expect((await pool.query('SELECT result_kind,latency_bucket,rate_bucket FROM public_answer_events WHERE request_id=$1',['composed'])).rows)
+      .toEqual([{ result_kind: 'release-mismatch', latency_bucket: '<250ms', rate_bucket: 'admitted' }]);
+  });
+
+  it('never lets a stalled telemetry query block an answer and safely resumes lifecycle bookkeeping after late rejection', async () => {
+    let rejectStalled!: (error: unknown) => void;
+    let mode: 'stall' | 'ready' = 'stall';
+    let purgeCalls = 0;
+    const fakePool = { query: async (sql: string) => {
+      if (mode === 'stall') return new Promise((_accept, reject) => { rejectStalled = reject; });
+      if (sql.includes('expired_events')) { purgeCalls += 1; return { rows: [{ events_deleted: 0, aggregates_deleted: 0 }] }; }
+      return { rows: [] };
+    } };
+    let now = Date.parse('2026-08-30T00:00:00.000Z');
+    const sink = new PostgresRedactedEventSink(fakePool as never, { clock: () => now });
+    const event = redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'stalled', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' });
+    const unhandled: unknown[] = []; const listener = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', listener);
+    try {
+      const useCase = new AnswerPublicQuestion({ policy: { mode: 'fixture' }, eventSink: sink,
+        retriever: { retrieve: async () => { throw new Error('unused'); } }, generator: { generate: async () => { throw new Error('unused'); } },
+        deterministicVerifier: { verify: () => { throw new Error('unused'); } }, semanticVerifier: { verify: async () => { throw new Error('unused'); } },
+        usageGuard: { acquire: async () => { throw new Error('unused'); } }, clock: () => now });
+      const catalog = { bindingId: 'binding', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), corpusApprovalHash: 'sha256:approval', chunkCount: 1,
+        isBoundTo: () => false, evidenceFor: () => [], hasAuthorizedEvidenceLocation: () => false } as const;
+      const answer = useCase.execute({ requestId: 'stalled', question: '질문', contentReleaseId: catalog.contentReleaseId,
+        answerReleaseId: 'b'.repeat(64), networkKey: 'network', signal: new AbortController().signal, catalog });
+      await expect(Promise.race([answer, new Promise((accept) => setTimeout(() => accept('timeout'), 50))])).resolves.toMatchObject({ kind: 'search', reason: 'release-mismatch' });
+      rejectStalled(new Error('late-database-secret'));
+      await new Promise((accept) => setImmediate(accept));
+      expect(unhandled).toEqual([]);
+      mode = 'ready'; await sink.start();
+      for (let index = 0; index < 100; index += 1) sink.record({ ...event, requestId: `resume-${index}` });
+      await sink.waitForIdle(); expect(purgeCalls).toBe(2);
+      now += 3_600_000; sink.record({ ...event, requestId: 'resume-hour' }); await sink.waitForIdle();
+      expect(purgeCalls).toBe(3);
+    } finally { process.off('unhandledRejection', listener); }
+  });
+
+  it('rejects raw extra fields before Postgres bind values and exposes only a constant logger code', async () => {
+    const sentinels = ['question-secret','claim-secret','excerpt-secret','https://url.invalid/','/Users/example/private','192.0.2.1','network-key-secret'];
+    const binds: unknown[][] = []; const logs: string[] = [];
+    const fakePool = { query: async (_sql: string, values?: unknown[]) => { binds.push(values ?? []); return { rows: [] }; } };
+    const sink = new PostgresRedactedEventSink(fakePool as never, { logger: (code) => logs.push(code), clock: () => 0 });
+    const event = redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'safe', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs: 1, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' });
+    for (const [index, sentinel] of sentinels.entries()) sink.record({ ...event, [`raw${index}`]: sentinel } as never);
+    sink.record(event); await sink.waitForIdle();
+    expect(logs).toEqual(Array(7).fill('telemetry-write-failed'));
+    expect(binds).toHaveLength(1);
+    const serialized = JSON.stringify({ binds, logs });
+    for (const sentinel of sentinels) expect(serialized).not.toContain(sentinel);
   });
 });

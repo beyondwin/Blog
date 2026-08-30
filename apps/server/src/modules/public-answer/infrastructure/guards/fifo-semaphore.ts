@@ -58,6 +58,10 @@ export class FifoSemaphore {
     });
   }
 
+  operationalSnapshot(): Readonly<{ running: number; queued: number }> {
+    return Object.freeze({ running: this.#running, queued: this.#queue.length });
+  }
+
   #lease(): GenerationLease {
     let released = false;
     return Object.freeze({

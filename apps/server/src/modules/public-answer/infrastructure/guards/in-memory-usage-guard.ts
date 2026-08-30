@@ -131,10 +131,10 @@ export class InMemoryUsageGuard implements UsageGuard {
     const burstTokens = Math.min(NETWORK_BURST_CAPACITY, network.burstTokens + elapsed / NETWORK_BURST_REFILL_MS);
     const hourly = network.hourly.filter((timestamp) => timestamp > now - 3_600_000);
     const dailyCount = network.day === day ? network.dailyCount : 0;
-    if (burstTokens < 1) throw new PublicAnswerRateLimitError('public answer network burst exceeded');
-    if (hourly.length >= NETWORK_HOURLY) throw new PublicAnswerRateLimitError('public answer network hour exceeded');
-    if (dailyCount >= NETWORK_DAILY) throw new PublicAnswerRateLimitError('public answer network day exceeded');
-    if (this.#budget.requests >= GLOBAL_DAILY) throw new PublicAnswerRateLimitError('public answer global day exceeded');
+    if (burstTokens < 1) throw new PublicAnswerRateLimitError('public answer network burst exceeded', 'network-burst');
+    if (hourly.length >= NETWORK_HOURLY) throw new PublicAnswerRateLimitError('public answer network hour exceeded', 'network-hour');
+    if (dailyCount >= NETWORK_DAILY) throw new PublicAnswerRateLimitError('public answer network day exceeded', 'network-day');
+    if (this.#budget.requests >= GLOBAL_DAILY) throw new PublicAnswerRateLimitError('public answer global day exceeded', 'global-day');
     if (this.#budget.providerTokens + WORST_CASE_PROVIDER_TOKENS > DAILY_PROVIDER_TOKENS
       || this.#budget.providerCostMicroUsd + WORST_CASE_COST_MICROUSD > DAILY_PROVIDER_COST_MICROUSD) {
       throw new PublicAnswerCostLimitError('public answer provider budget exceeded');
@@ -156,6 +156,12 @@ export class InMemoryUsageGuard implements UsageGuard {
     return Object.freeze({ providerTokens: this.#budget.providerTokens, providerCostMicroUsd: this.#budget.providerCostMicroUsd });
   }
 
+  operationalSnapshot(): Readonly<{ day: string; requests: number; providerTokens: number; providerCostMicroUsd: number; networkEntries: number }> {
+    return Object.freeze({ day: this.#budget.day, requests: this.#budget.requests,
+      providerTokens: this.#budget.providerTokens, providerCostMicroUsd: this.#budget.providerCostMicroUsd,
+      networkEntries: this.#networks.size });
+  }
+
   #cleanup(now: number): void {
     let examined = 0;
     for (const [key, value] of this.#networks) {
@@ -173,15 +179,14 @@ export class InMemoryUsageGuard implements UsageGuard {
       semantic: { state: 'unused', reservedTokens: 6_500, reservedCost: 6_750 },
     };
     let released = false;
-    let generationAcquired = false;
+    let generationAttempted = false;
     const ensureActive = () => { if (released) throw new Error('usage lease is released'); };
     return Object.freeze({
       acquireGeneration: async (signal: AbortSignal) => {
         ensureActive();
-        if (generationAcquired) throw new Error('generation lease already acquired');
-        generationAcquired = true;
-        try { return await this.#semaphore.acquire(signal); }
-        catch (error) { generationAcquired = false; throw error; }
+        if (generationAttempted) throw new Error('generation lease already attempted');
+        generationAttempted = true;
+        return this.#semaphore.acquire(signal);
       },
       beginStage: (stage: ProviderStage) => {
         ensureActive();

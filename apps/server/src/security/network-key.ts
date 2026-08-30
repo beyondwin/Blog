@@ -66,6 +66,10 @@ export class TrustedProxyNetworkKey {
     return createHmac('sha256', dayKey).update(address).digest('hex');
   }
 
+  operationalSnapshot(): Readonly<{ trustedProxyCount: number }> {
+    return Object.freeze({ trustedProxyCount: this.#trustedProxyAddresses.size });
+  }
+
   #forwardedAddress(header: string): string {
     const entries = header.split(',');
     if (entries.length === 0 || entries.some((entry) => entry.trim().length === 0)) throw new Error('network address is invalid');

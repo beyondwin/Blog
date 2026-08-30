@@ -36,6 +36,7 @@ import type {
   PublicAnswerOutcome,
 } from '../src/modules/public-answer/domain/public-answer.js';
 import { PUBLIC_ANSWER_TOKENS } from '../src/modules/public-answer/public-answer.tokens.js';
+import { InMemoryRedactedEventSink } from '../src/modules/public-answer/infrastructure/fixture/in-memory-redacted-event-sink.js';
 
 const ZERO_USAGE = { inputTokens: 0, outputTokens: 0 } as const;
 const EMBEDDING_USAGE = { inputTokens: 13, outputTokens: 0 } as const;
@@ -110,6 +111,7 @@ interface HarnessOptions {
   semanticError?: Error;
   guardError?: Error;
   generationLeaseError?: Error;
+  eventSink?: PublicAnswerEventSink;
 }
 
 function harness(options: HarnessOptions = {}) {
@@ -201,8 +203,8 @@ function harness(options: HarnessOptions = {}) {
       };
     },
   };
-  const eventSink: PublicAnswerEventSink = {
-    async record(event) {
+  const eventSink: PublicAnswerEventSink = options.eventSink ?? {
+    record(event) {
       calls.push('event.record');
       events.push(event);
     },
@@ -568,18 +570,19 @@ describe('AnswerPublicQuestion', () => {
   });
 
   it.each([
-    ['rate', new PublicAnswerRateLimitError('rate'), 'rate-limited', true],
-    ['concurrency', new PublicAnswerConcurrencyError('concurrency'), 'rate-limited', true],
-    ['cost', new PublicAnswerCostLimitError('cost'), 'rate-limited', true],
-    ['deadline', new PublicAnswerDeadlineError('deadline'), 'timeout', true],
-    ['transport', new PublicAnswerTransportError('transport'), 'unavailable', true],
-    ['malformed', new PublicAnswerInvalidResponseError('malformed'), 'invalid-response', false],
-  ] as const)('maps typed %s error without leaking its message', async (_kind, error, code, retryable) => {
+    ['rate', new PublicAnswerRateLimitError('rate', 'network-hour'), 'rate-limited', true, 'rate-limit', 'network-hour'],
+    ['concurrency', new PublicAnswerConcurrencyError('concurrency'), 'rate-limited', true, 'concurrency', 'concurrency'],
+    ['cost', new PublicAnswerCostLimitError('cost'), 'rate-limited', true, 'cost-limit', 'global-day'],
+    ['deadline', new PublicAnswerDeadlineError('deadline'), 'timeout', true, 'deadline', 'admitted'],
+    ['transport', new PublicAnswerTransportError('transport'), 'unavailable', true, 'transport', 'admitted'],
+    ['malformed', new PublicAnswerInvalidResponseError('malformed'), 'invalid-response', false, 'invalid-response', 'admitted'],
+  ] as const)('maps typed %s error without leaking its message', async (_kind, error, code, retryable, errorKind, rateBucket) => {
     const h = harness({ guardError: error });
 
     expect(await h.useCase.execute(command())).toEqual({ kind: 'error', code, retryable });
 
     expect(h.calls).toEqual(['usage.acquire', 'event.record']);
+    expect(h.events).toEqual([expect.objectContaining({ errorKind, rateBucket })]);
   });
 
   it('records one strictly allowlisted event without question, address, claims, evidence, URL, or path', async () => {
@@ -589,27 +592,42 @@ describe('AnswerPublicQuestion', () => {
 
     expect(h.events).toHaveLength(1);
     expect(Object.keys(h.events[0] ?? {}).sort()).toEqual([
-      'answerReleaseIdPrefix',
-      'contentReleaseIdPrefix',
+      'answerReleasePrefix',
+      'contentReleasePrefix',
+      'errorKind',
+      'expiresAt',
       'latencyBucket',
-      'providerInputTokenBucket',
-      'providerOutputTokenBucket',
+      'occurredAt',
+      'providerInputBucket',
+      'providerOutputBucket',
       'rateBucket',
       'requestId',
       'resultKind',
       'retrievedCount',
-      'timestamp',
     ]);
     expect(h.events[0]).toMatchObject({
       requestId: 'request-secret-123',
-      contentReleaseIdPrefix: 'content-rele',
-      answerReleaseIdPrefix: 'answer-relea',
+      contentReleasePrefix: 'content-rele',
+      answerReleasePrefix: 'answer-relea',
       resultKind: 'answer',
+      errorKind: null,
+      latencyBucket: '<250ms',
+      providerInputBucket: '1-999',
+      providerOutputBucket: '1-999',
+      rateBucket: 'admitted',
       retrievedCount: 1,
     });
     expect(JSON.stringify(h.events[0])).not.toContain('이 기록의 핵심');
     expect(JSON.stringify(h.events[0])).not.toContain('network-secret');
     expect(JSON.stringify(h.events[0])).not.toContain('/articles/');
+  });
+
+  it('composes directly with the in-memory redacted sink through the application port', async () => {
+    const sink: PublicAnswerEventSink & InMemoryRedactedEventSink = new InMemoryRedactedEventSink();
+    const h = harness({ eventSink: sink });
+    await h.useCase.execute(command());
+    expect(sink.events()).toEqual([expect.objectContaining({ resultKind: 'answer', errorKind: null,
+      latencyBucket: '<250ms', providerInputBucket: '1-999', providerOutputBucket: '1-999', rateBucket: 'admitted' })]);
   });
 
   it('always releases the usage lease when an unexpected verifier exception escapes mapping', async () => {

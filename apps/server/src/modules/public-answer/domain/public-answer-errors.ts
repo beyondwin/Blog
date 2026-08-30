@@ -6,6 +6,12 @@ export type PublicAnswerPortErrorKind =
   | 'transport'
   | 'invalid-response';
 
+export type PublicAnswerRateLimitBucket =
+  | 'network-burst'
+  | 'network-hour'
+  | 'network-day'
+  | 'global-day';
+
 export class PublicAnswerPortError extends Error {
   constructor(
     readonly kind: PublicAnswerPortErrorKind,
@@ -18,7 +24,7 @@ export class PublicAnswerPortError extends Error {
 }
 
 export class PublicAnswerRateLimitError extends PublicAnswerPortError {
-  constructor(message: string, options?: ErrorOptions) {
+  constructor(message: string, readonly rateBucket: PublicAnswerRateLimitBucket = 'global-day', options?: ErrorOptions) {
     super('rate-limit', message, options);
   }
 }

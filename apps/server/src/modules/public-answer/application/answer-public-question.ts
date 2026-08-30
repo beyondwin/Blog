@@ -1,5 +1,6 @@
 import {
   PublicAnswerPortError,
+  PublicAnswerRateLimitError,
 } from '../domain/public-answer-errors.js';
 import type {
   AnswerPublicQuestionCommand,
@@ -16,7 +17,9 @@ import type {
   PublicAnswerEvent,
   PublicAnswerEventSink,
   PublicAnswerResultKind,
+  PublicAnswerRateBucket,
 } from './ports/event-sink.js';
+import { redactPublicAnswerEvent } from './ports/event-sink.js';
 import type { Retriever } from './ports/retriever.js';
 import type {
   ProviderTokenUsage,
@@ -40,10 +43,11 @@ export interface AnswerPublicQuestionDependencies {
 }
 
 interface ExecutionMetrics {
-  acquiredUsage: boolean;
   retrievedCount: number;
   inputTokens: number;
   outputTokens: number;
+  errorKind: PublicAnswerPortError['kind'] | null;
+  rateBucket: PublicAnswerRateBucket;
 }
 
 function unsupportedQuestion(question: string): boolean {
@@ -108,21 +112,6 @@ function resultKind(outcome: PublicAnswerOutcome): PublicAnswerResultKind {
   return outcome.code;
 }
 
-function latencyBucket(milliseconds: number): PublicAnswerEvent['latencyBucket'] {
-  if (milliseconds < 250) return 'lt-250ms';
-  if (milliseconds < 1_000) return 'lt-1s';
-  if (milliseconds < 8_000) return 'lt-8s';
-  return 'gte-8s';
-}
-
-function tokenBucket(tokens: number): PublicAnswerEvent['providerInputTokenBucket'] {
-  if (tokens <= 0) return '0';
-  if (tokens <= 128) return '1-128';
-  if (tokens <= 512) return '129-512';
-  if (tokens <= 2_048) return '513-2048';
-  return '2049-plus';
-}
-
 function addUsage(metrics: ExecutionMetrics, usage: ProviderTokenUsage): void {
   metrics.inputTokens += usage.inputTokens;
   metrics.outputTokens += usage.outputTokens;
@@ -138,10 +127,11 @@ export class AnswerPublicQuestion {
   async execute(command: AnswerPublicQuestionCommand): Promise<PublicAnswerOutcome> {
     const startedAt = this.clock();
     const metrics: ExecutionMetrics = {
-      acquiredUsage: false,
       retrievedCount: 0,
       inputTokens: 0,
       outputTokens: 0,
+      errorKind: null,
+      rateBucket: 'admitted',
     };
 
     if (!command.catalog.isBoundTo(command.contentReleaseId, command.answerReleaseId)) {
@@ -164,7 +154,6 @@ export class AnswerPublicQuestion {
         requestId: command.requestId,
         signal: command.signal,
       });
-      metrics.acquiredUsage = true;
     } catch (error) {
       return this.recordMappedOrThrow(command, startedAt, metrics, error);
     }
@@ -300,6 +289,12 @@ export class AnswerPublicQuestion {
   ): Promise<PublicAnswerOutcome> {
     const outcome = mappedOutcome(error);
     if (!outcome) throw error;
+    if (error instanceof PublicAnswerPortError) {
+      metrics.errorKind = error.kind;
+      metrics.rateBucket = error instanceof PublicAnswerRateLimitError
+        ? error.rateBucket
+        : error.kind === 'concurrency' ? 'concurrency' : error.kind === 'cost-limit' ? 'global-day' : 'admitted';
+    }
     return this.record(command, startedAt, metrics, outcome);
   }
 
@@ -309,19 +304,20 @@ export class AnswerPublicQuestion {
     metrics: ExecutionMetrics,
     outcome: PublicAnswerOutcome,
   ): Promise<PublicAnswerOutcome> {
-    const event: PublicAnswerEvent = {
-      timestamp: new Date(startedAt).toISOString(),
+    const event: PublicAnswerEvent = redactPublicAnswerEvent({
+      occurredAt: new Date(startedAt).toISOString(),
       requestId: command.requestId,
-      contentReleaseIdPrefix: command.catalog.contentReleaseId.slice(0, 12),
-      answerReleaseIdPrefix: command.catalog.answerReleaseId.slice(0, 12),
+      contentReleaseId: command.catalog.contentReleaseId,
+      answerReleaseId: command.catalog.answerReleaseId,
       resultKind: resultKind(outcome),
-      latencyBucket: latencyBucket(this.clock() - startedAt),
+      errorKind: metrics.errorKind,
+      latencyMs: this.clock() - startedAt,
       retrievedCount: metrics.retrievedCount,
-      providerInputTokenBucket: tokenBucket(metrics.inputTokens),
-      providerOutputTokenBucket: tokenBucket(metrics.outputTokens),
-      rateBucket: metrics.acquiredUsage ? 'accepted' : 'not-acquired',
-    };
-    await this.dependencies.eventSink.record(event);
+      providerInputTokens: metrics.inputTokens,
+      providerOutputTokens: metrics.outputTokens,
+      rateBucket: metrics.rateBucket,
+    });
+    this.dependencies.eventSink.record(event);
     return outcome;
   }
 }

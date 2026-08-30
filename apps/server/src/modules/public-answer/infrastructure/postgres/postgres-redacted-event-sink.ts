@@ -1,6 +1,10 @@
 import type { Pool } from 'pg';
 
-import { copyRedactedPublicAnswerEvent, type RedactedPublicAnswerEvent } from '../telemetry/redacted-events.js';
+import {
+  copyPublicAnswerEvent,
+  type PublicAnswerEvent,
+  type PublicAnswerEventSink,
+} from '../../application/ports/event-sink.js';
 import { purgeExpiredTelemetry } from './telemetry-retention.js';
 
 export interface PostgresRedactedEventSinkOptions {
@@ -8,11 +12,13 @@ export interface PostgresRedactedEventSinkOptions {
   readonly clock?: () => number;
 }
 
-export class PostgresRedactedEventSink {
+export class PostgresRedactedEventSink implements PublicAnswerEventSink {
   readonly #logger: (code: 'telemetry-write-failed') => void;
   readonly #clock: () => number;
   #writesSincePurge = 0;
   #lastPurgeAt = 0;
+  readonly #active = new Set<Promise<void>>();
+  #purgeInFlight: Promise<void> | undefined;
 
   constructor(private readonly pool: Pick<Pool, 'query'>, options: PostgresRedactedEventSinkOptions = {}) {
     this.#logger = options.logger ?? (() => undefined);
@@ -26,9 +32,18 @@ export class PostgresRedactedEventSink {
     } catch { this.#reportFailure(); }
   }
 
-  async record(event: RedactedPublicAnswerEvent): Promise<void> {
+  record(event: PublicAnswerEvent): void {
+    let safeEvent: Readonly<PublicAnswerEvent>;
+    try { safeEvent = copyPublicAnswerEvent(event); } catch { this.#reportFailure(); return; }
+    this.#track(this.#write(safeEvent));
+  }
+
+  async waitForIdle(): Promise<void> {
+    while (this.#active.size > 0) await Promise.all([...this.#active]);
+  }
+
+  async #write(safeEvent: Readonly<PublicAnswerEvent>): Promise<void> {
     try {
-      const safeEvent = copyRedactedPublicAnswerEvent(event);
       const aggregateExpiresAt = new Date(Date.parse(safeEvent.occurredAt) + 90 * 86_400_000);
       await this.pool.query(`
         WITH inserted AS (
@@ -47,11 +62,34 @@ export class PostgresRedactedEventSink {
       this.#writesSincePurge += 1;
       const now = this.#clock();
       if (this.#writesSincePurge >= 100 || now - this.#lastPurgeAt >= 3_600_000) {
-        await purgeExpiredTelemetry(this.pool, new Date(now));
-        this.#writesSincePurge = 0;
-        this.#lastPurgeAt = now;
+        this.#launchPurge(now);
       }
     } catch { this.#reportFailure(); }
+  }
+
+  #launchPurge(now: number): void {
+    if (this.#purgeInFlight) return;
+    const writesAtStart = this.#writesSincePurge;
+    const purge = purgeExpiredTelemetry(this.pool, new Date(now)).then(() => {
+      this.#writesSincePurge = Math.max(0, this.#writesSincePurge - writesAtStart);
+      this.#lastPurgeAt = now;
+    }).catch(() => {
+      this.#writesSincePurge = Math.max(0, this.#writesSincePurge - writesAtStart);
+      this.#lastPurgeAt = now;
+      this.#reportFailure();
+    }).finally(() => {
+      this.#purgeInFlight = undefined;
+      const current = this.#clock();
+      if (this.#writesSincePurge >= 100 || current - this.#lastPurgeAt >= 3_600_000) this.#launchPurge(current);
+    });
+    this.#purgeInFlight = purge;
+    this.#track(purge);
+  }
+
+  #track(operation: Promise<void>): void {
+    const handled = operation.catch(() => { this.#reportFailure(); });
+    this.#active.add(handled);
+    void handled.then(() => { this.#active.delete(handled); });
   }
 
   #reportFailure(): void {
