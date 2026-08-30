@@ -15,17 +15,30 @@ function codePointCompare(left: string, right: string): number {
   return leftPoints.length - rightPoints.length;
 }
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => codePointCompare(left, right))
-      .map(([key, child]) => [key, canonicalize(child)]));
+function canonicalJsonValue(value: unknown): string | undefined {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number') {
+    return JSON.stringify(value);
   }
-  return value;
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalJsonValue(item) ?? 'null').join(',')}]`;
+  }
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => codePointCompare(left, right))
+      .flatMap(([key, child]) => {
+        const serialized = canonicalJsonValue(child);
+        return serialized === undefined ? [] : [`${JSON.stringify(key)}:${serialized}`];
+      })
+      .join(',')}}`;
+  }
+  return undefined;
 }
 
-export const canonicalJsonLine = (value: unknown): string => JSON.stringify(canonicalize(value));
+export const canonicalJsonLine = (value: unknown): string => {
+  const serialized = canonicalJsonValue(value);
+  if (serialized === undefined) throw new TypeError('canonical JSON value must be serializable');
+  return serialized;
+};
 export const sha256Hex = (value: string | Buffer): string => createHash('sha256').update(value).digest('hex');
 export const sha256Checksum = (value: string | Buffer): string => `sha256:${sha256Hex(value)}`;
 export const canonicalPublicRecordChecksum = (record: PublicRecord): string => (

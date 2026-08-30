@@ -139,6 +139,18 @@ describe('public answer chunks', () => {
     expect(second.chunks[0]).toMatchObject({ chunkId: first.chunks[0]!.chunkId, checksum: first.chunks[0]!.checksum });
     expect(second.chunks[1]).not.toMatchObject({ chunkId: first.chunks[1]!.chunkId, checksum: first.chunks[1]!.checksum });
     expect(second.chunks[2]).toMatchObject({ chunkId: first.chunks[2]!.chunkId, checksum: first.chunks[2]!.checksum });
+    expect(second.evidence[0]).toMatchObject({
+      evidenceId: first.evidence[0]!.evidenceId,
+      excerptChecksum: first.evidence[0]!.excerptChecksum,
+    });
+    expect(second.evidence[1]).not.toMatchObject({
+      evidenceId: first.evidence[1]!.evidenceId,
+      excerptChecksum: first.evidence[1]!.excerptChecksum,
+    });
+    expect(second.evidence[2]).toMatchObject({
+      evidenceId: first.evidence[2]!.evidenceId,
+      excerptChecksum: first.evidence[2]!.excerptChecksum,
+    });
     expect(ignoredAttribute).toEqual(first);
     expect(canonicalJsonLine({ z: { b: 1, a: 2 }, a: 3 })).toBe('{"a":3,"z":{"a":2,"b":1}}');
     const { bodyHtml: reorderedBodyHtml, ...reorderedRest } = publicRecord;

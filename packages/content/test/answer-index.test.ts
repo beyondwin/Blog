@@ -22,6 +22,15 @@ function chunk(id: string, text: string, ordinal: number): PublicAnswerChunk {
 }
 
 describe('public answer lexical inputs', () => {
+  it('serializes integer-like object keys and lexical postings in code-point order', () => {
+    expect(canonicalJsonLine({ 2: 'two', 10: 'ten' })).toBe('{"10":"ten","2":"two"}');
+
+    const numeric = buildAnswerIndexes([{ ...chunk('a', '2 10', 1), title: 'public', headingPath: [] }]);
+    expect(canonicalJsonLine(numeric.lexicalIndex.postings)).toBe(
+      '{"10":[{"document":0,"frequency":1}],"2":[{"document":0,"frequency":1}],"public":[{"document":0,"frequency":1}]}',
+    );
+  });
+
   it('normalizes and tokenizes Korean terms without deduplicating repeated source words', () => {
     expect(normalizeAnswerText('  AI와\u3000책,  판단! ')).toBe('ai와 책 판단');
     expect(tokenizeAnswerText('판단')).toEqual(['판단']);
