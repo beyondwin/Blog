@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { lstat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { parse as parseYaml } from 'yaml';
+import sharp from 'sharp';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   loadSourceRecords,
@@ -44,7 +46,7 @@ const expected = {
     media: { sourceUrl: 'https://image.yes24.com/goods/133133202/XL', checksum: 'sha256:2d3a8e4d6cb4828a56dfae42edbb22e6b8c85141df46289ea5fabe978d491671', width: 771, height: 1200 },
   },
   'black-swan': {
-    identity: { title: '블랙스완', authors: ['나심 니콜라스 탈레브'], publisher: '동녘사이언스', isbn13: '9788990247674', editionLabel: '동녘사이언스 2018 개정증보판, 차익종·김현구 옮김' },
+    identity: { title: '블랙스완', authors: ['나심 니콜라스 탈레브'], publisher: '동녘사이언스', isbn13: '9788990247674', editionLabel: '동녘사이언스 2018 개정증보판, 차익종·김현구 옮김', publicationYear: 2018 },
     media: { sourceUrl: 'https://bnk.kpipa.or.kr/files/onix/book/trd/2018/04/30/s_o_9788990247674.jpg', checksum: 'sha256:2b59925c7925d38b5460450f070be24a22ee34a69dfb7ded04d269998b7d0ebd', width: 458, height: 671 },
   },
   'changing-their-minds': {
@@ -113,6 +115,96 @@ const expected = {
   },
 };
 
+const publicationYears = {
+  'art-thief': 2024,
+  'black-swan': 2018,
+  'changing-their-minds': 2023,
+  'convenience-store-woman': 2016,
+  'devotion-of-suspect-x': 2006,
+  'doing-good-better': 2017,
+  factfulness: 2019,
+  'future-arrived-first': 2025,
+  'goethe-said-everything': 2025,
+  habitus: 2023,
+  'how-adam-smith-can-change-your-life': 2015,
+  'how-we-crossed-winter': 2023,
+  lolita: 2013,
+  'lord-of-the-flies': 1999,
+  'miracles-of-namiya-general-store': 2012,
+  nevertheless: 2020,
+  'poor-charlies-almanack': 2024,
+  siddhartha: 2018,
+};
+
+for (const [recordId, publicationYear] of Object.entries(publicationYears)) {
+  expected[recordId].identity.publicationYear = publicationYear;
+}
+
+function task3Literal(recordId, {
+  identityUrl,
+  candidateUrl,
+  checksum,
+  width,
+  height,
+  authority,
+  authorityRole,
+  termsUrl,
+  holdBasis = 'absent-grant',
+}) {
+  const publicationYear = publicationYears[recordId];
+  return {
+    identitySource: {
+      kind: 'authoritative-edition-catalog',
+      url: identityUrl,
+      retrievedAt: '2026-08-30',
+      finding: `The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and ${publicationYear} publication year.`,
+    },
+    candidate: {
+      path: `.superpowers/review-cover-intake/${recordId}/cover.jpg`,
+      sourceUrl: candidateUrl,
+      checksum,
+      width,
+      height,
+      kind: 'book-cover',
+      extension: 'jpg',
+      retrievedAt: '2026-08-30',
+    },
+    rightsResearch: {
+      authority,
+      authorityRole,
+      termsUrl,
+      retrievedAt: '2026-08-30',
+      outcome: 'absent',
+      finding: 'The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.',
+    },
+    holdBasis,
+  };
+}
+
+const yes24Terms = 'https://www.yes24.com/notice/service.aspx';
+const yes24Host = { authority: '예스이십사', authorityRole: 'official-distributor-candidate-host', termsUrl: yes24Terms };
+
+const expectedTask3Research = {
+  'changing-their-minds': task3Literal('changing-their-minds', { identityUrl: 'https://www.yes24.com/product/goods/117664857', candidateUrl: 'https://image.yes24.com/goods/117664857/XL', checksum: 'sha256:394821abfdccd4283ae779e148c0c521a5baa4c48e9b7518e5f29ebafeb3e4d4', width: 802, height: 1200, ...yes24Host }),
+  'lord-of-the-flies': task3Literal('lord-of-the-flies', { identityUrl: 'https://minumsa.minumsa.com/book/1689/', candidateUrl: 'https://minumsa.minumsa.com/wp-content/uploads/bookcover/019_%ED%8C%8C%EB%A6%AC%EB%8C%80%EC%99%95-500x842.jpg', checksum: 'sha256:d52e4c5aa9fac202335b4a3a2b324891bfa8ee7aecc79f550df6d205af187308', width: 500, height: 842, authority: '민음사', authorityRole: 'publisher-and-candidate-host', termsUrl: 'https://minumsa.com/terms' }),
+  'black-swan': task3Literal('black-swan', { identityUrl: 'https://dl.nanet.go.kr/detail/MONO12024000082438', candidateUrl: 'https://bnk.kpipa.or.kr/files/onix/book/trd/2018/04/30/s_o_9788990247674.jpg', checksum: 'sha256:2b59925c7925d38b5460450f070be24a22ee34a69dfb7ded04d269998b7d0ebd', width: 458, height: 671, authority: '한국출판문화산업진흥원 출판유통통합전산망', authorityRole: 'official-candidate-host', termsUrl: 'https://bnk.kpipa.or.kr/home/v3/center/centerGuideUseTerms' }),
+  nevertheless: task3Literal('nevertheless', { identityUrl: 'https://www.yes24.com/product/goods/93760424', candidateUrl: 'https://image.yes24.com/goods/93760424/XL', checksum: 'sha256:37212146a870cfb5f71366c924995340c08a2facf819f718e330f79d6e869bb2', width: 808, height: 1200, ...yes24Host }),
+  'goethe-said-everything': task3Literal('goethe-said-everything', { identityUrl: 'https://lib.ftc.go.kr/search/DetailView.ax?cid=159846', candidateUrl: 'https://image.yes24.com/goods/164510819/XL', checksum: 'sha256:dfa171a06be873225b70434dbfae6e829bf41aff7e2791eea2564248bb42416c', width: 850, height: 1200, ...yes24Host, holdBasis: 'ambiguous-candidate' }),
+  'devotion-of-suspect-x': task3Literal('devotion-of-suspect-x', { identityUrl: 'https://www.yes24.com/product/goods/2131596', candidateUrl: 'https://image.yes24.com/goods/2131596/XL', checksum: 'sha256:23188229a93c29714b09a74dce682277ed053cf81755dc652bfcd3679412f8be', width: 270, height: 400, ...yes24Host }),
+  'poor-charlies-almanack': task3Literal('poor-charlies-almanack', { identityUrl: 'https://www.yes24.com/Product/Goods/135966968', candidateUrl: 'https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg', checksum: 'sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a', width: 600, height: 866, authority: '김영사', authorityRole: 'publisher-rightsholder', termsUrl: 'https://m.gimmyoungbs.com/p_base.php?action=rule' }),
+  'art-thief': task3Literal('art-thief', { identityUrl: 'https://www.yes24.com/Product/Goods/133133202', candidateUrl: 'https://image.yes24.com/goods/133133202/XL', checksum: 'sha256:b147a958a1a6714f2c57e1ea64e8798918c2714834af3c4b82ea082d4e603412', width: 771, height: 1200, ...yes24Host }),
+  siddhartha: task3Literal('siddhartha', { identityUrl: 'https://www.yes24.com/Product/Goods/67723866', candidateUrl: 'https://image.yes24.com/goods/67723866/XL', checksum: 'sha256:e10928fb67f013780eb4c3c3c4da0e0963837cdb51224d4b1e1ad5a291a6e988', width: 801, height: 1200, authority: '문학동네', authorityRole: 'publisher-rightsholder', termsUrl: 'https://munhak.com/customerCenter/guide/secondCopyright' }),
+  habitus: task3Literal('habitus', { identityUrl: 'https://www.yes24.com/Product/Goods/118146744', candidateUrl: 'https://image.yes24.com/goods/118146744/XL', checksum: 'sha256:8f9e221a1ae7fcd14abd42a4b14ed2f895b3274bb7fb171f164bb777f41810fc', width: 857, height: 1200, ...yes24Host }),
+  'how-adam-smith-can-change-your-life': task3Literal('how-adam-smith-can-change-your-life', { identityUrl: 'https://www.yes24.com/product/goods/22659314', candidateUrl: 'https://image.yes24.com/goods/22659314/XL', checksum: 'sha256:eea49839231272b1f03fccb2eb88f4dd1467cccaad89085852adeabd23668642', width: 848, height: 1200, ...yes24Host }),
+  lolita: task3Literal('lolita', { identityUrl: 'https://www.yes24.com/Product/Goods/8297953', candidateUrl: 'https://image.aladin.co.kr/product/2264/95/cover500/8954620434_3.jpg', checksum: 'sha256:0ac7527f245e52005c2278f818e2b2b06cec07c225c7a7dcbb5d8056057ad51d', width: 500, height: 750, authority: '문학동네', authorityRole: 'publisher-rightsholder', termsUrl: 'https://munhak.com/customerCenter/guide/secondCopyright' }),
+  'future-arrived-first': task3Literal('future-arrived-first', { identityUrl: 'https://www.kobic.net/book/bookInfo/view.do?isbn=9788962626605', candidateUrl: 'https://www.kobic.net/bookImage/book/coverImg/202507/9788962626605C001.jpg', checksum: 'sha256:ec4fc247f075c2afeb2c3777b4897ff2166f7e34685bd4940b298de75a12901b', width: 458, height: 703, authority: '대한출판문화협회 KOBIC', authorityRole: 'official-edition-and-candidate-host', termsUrl: 'https://www.kobic.net/book/bookInfo/view.do?isbn=9788962626605' }),
+  'how-we-crossed-winter': task3Literal('how-we-crossed-winter', { identityUrl: 'https://m.yes24.com/goods/detail/118785110', candidateUrl: 'https://image.yes24.com/goods/118785110/XL', checksum: 'sha256:0c9bde799513334708e2ee24ea708531bb0264e8bbf663cbb441626be3a1adef', width: 809, height: 1200, ...yes24Host }),
+  'convenience-store-woman': task3Literal('convenience-store-woman', { identityUrl: 'https://www.yes24.com/product/goods/33129949', candidateUrl: 'https://image.yes24.com/goods/33129949/XL', checksum: 'sha256:e83f6cdfccad71c472146804349d107a9c41a48fae8b692c7434c21fd46bf0bd', width: 826, height: 1200, ...yes24Host }),
+  'miracles-of-namiya-general-store': task3Literal('miracles-of-namiya-general-store', { identityUrl: 'https://www.yes24.com/product/goods/8157957', candidateUrl: 'https://www.hdmh.co.kr/upload/cover/hdmhbooks/%EB%82%98%EB%AF%B8%EC%95%BC%ED%91%9C1.jpg', checksum: 'sha256:13f4e5fa971c971147adcfb7ab6a8f5c734a55569a56e25a13dd19533ab0473b', width: 311, height: 456, authority: '현대문학', authorityRole: 'publisher-and-candidate-host', termsUrl: 'https://www.hdmh.co.kr/' }),
+  'doing-good-better': task3Literal('doing-good-better', { identityUrl: 'https://www.bookie.co.kr/book/9788960515833', candidateUrl: 'https://www.bookie.co.kr/bookimg/97889605158335.jpg', checksum: 'sha256:83c15615cc72eff0d32a02a677d8c6215eb6beb9bacc55cfdf074c2d0f386bf1', width: 1000, height: 1417, authority: '도서출판 부키', authorityRole: 'publisher-and-candidate-host', termsUrl: 'https://www.bookie.co.kr/book/9788960515833' }),
+  factfulness: task3Literal('factfulness', { identityUrl: 'https://www.yes24.com/product/goods/69724044', candidateUrl: 'https://image.yes24.com/goods/69724044/XL', checksum: 'sha256:28b459f58cc5d585a64297f828d365ddc66473f981d6504cb17c1a7f4672fb71', width: 787, height: 1200, authority: '김영사', authorityRole: 'publisher-rightsholder', termsUrl: 'https://www.gimmyoung.com/book/guide/copyright' }),
+};
+
 const expectedIds = [
   'changing-their-minds',
   'lord-of-the-flies',
@@ -178,6 +270,13 @@ function directHoldFinding(record, holdBasis) {
 
 function transitionToDirectHold(candidate, holdBasis) {
   const record = candidate.records[0];
+  record.state = 'researching';
+  record.stateHistory = [record.stateHistory[0]];
+  delete record.task3Research;
+  delete record.holdBasis;
+  delete record.holdReason;
+  delete record.researchFindings;
+  delete record.recordedResearchFinding;
   const finding = directHoldFinding(record, holdBasis);
   record.state = 'hold';
   record.stateHistory.push({ state: 'hold', recordedAt: '2026-08-30' });
@@ -197,6 +296,46 @@ function sourceIdentity(record) {
     editionLabel: record.editionLabel,
     ...(record.publicationYear === undefined ? {} : { publicationYear: record.publicationYear }),
   };
+}
+
+async function decodedCandidateFacts(candidate) {
+  const absolutePath = join(root, candidate.path);
+  const stat = await lstat(absolutePath);
+  expect(stat.isFile(), `${candidate.path}: candidate is a regular file`).toBe(true);
+  expect(stat.isSymbolicLink(), `${candidate.path}: candidate is not a symlink`).toBe(false);
+  const bytes = await readFile(absolutePath);
+  const metadata = await sharp(bytes).metadata();
+  return {
+    checksum: `sha256:${createHash('sha256').update(bytes).digest('hex')}`,
+    width: metadata.width,
+    height: metadata.height,
+    format: metadata.format,
+  };
+}
+
+async function assertTask3ResearchRecord(record, { verifyCandidateBytes = true } = {}) {
+  const expectedResearch = expectedTask3Research[record.recordId];
+  expect(expectedResearch, `${record.recordId}: independently frozen Task 3 research literal`).toBeDefined();
+  expect(record.task3Research, `${record.recordId}: exact Task 3 research tuple`).toEqual({
+    identitySource: expectedResearch.identitySource,
+    candidate: expectedResearch.candidate,
+    rightsResearch: expectedResearch.rightsResearch,
+  });
+  expect(record.state, `${record.recordId}: fail-closed Task 3 outcome`).toBe('hold');
+  expect(record.holdBasis, `${record.recordId}: exact direct-hold basis`).toBe(expectedResearch.holdBasis);
+  expect(record.stateHistory.at(-1), `${record.recordId}: frozen Task 3 transition`).toEqual({
+    state: 'hold',
+    recordedAt: '2026-08-30',
+  });
+  if (verifyCandidateBytes) {
+    const decoded = await decodedCandidateFacts(record.task3Research.candidate);
+    expect(decoded, `${record.recordId}: exact retrieved candidate bytes`).toEqual({
+      checksum: expectedResearch.candidate.checksum,
+      width: expectedResearch.candidate.width,
+      height: expectedResearch.candidate.height,
+      format: expectedResearch.candidate.extension === 'jpg' ? 'jpeg' : expectedResearch.candidate.extension,
+    });
+  }
 }
 
 function expectedSeedEvidence(recordId, literal) {
@@ -416,11 +555,34 @@ describe('review cover rights research inventory', () => {
     expect(ledger.records.filter((record) => record.currentMedia.state === 'absent').map((record) => record.recordId)).toEqual(['devotion-of-suspect-x']);
   });
 
-  it('seeds every record in researching without a canonical approval artifact', () => {
-    expect(ledger.records.map((record) => record.state)).toEqual(Array(18).fill('researching'));
+  it('preserves the Task 2 research seed while recording only completed Task 3 transitions', () => {
+    expect(ledger.records.map((record) => record.state)).toEqual(Array(18).fill('hold'));
     expect(Object.values(snapshot.approvalArtifacts.decisions)).not.toContain(true);
     expect(snapshot.approvalArtifacts.registryIds).toEqual([]);
     expect(snapshot.approvalArtifacts.receiptIds).toEqual([]);
+  });
+
+  it('binds all Task 3 outcomes to exact editions, retrieved candidate bytes, and current rights research', async () => {
+    const availableCandidates = ledger.records.filter((record) => existsSync(join(root, record.task3Research.candidate.path)));
+    expect([0, expectedIds.length], 'ignored quarantine is either absent or complete').toContain(availableCandidates.length);
+    for (const recordId of expectedIds) {
+      const record = ledger.records.find((entry) => entry.recordId === recordId);
+      await assertTask3ResearchRecord(record, { verifyCandidateBytes: availableCandidates.length === expectedIds.length });
+    }
+  });
+
+  it.each([
+    ['candidate checksum', (record) => { record.task3Research.candidate.checksum = `sha256:${'0'.repeat(64)}`; }],
+    ['candidate source URL', (record) => { record.task3Research.candidate.sourceUrl = 'https://example.com/cover.jpg'; }],
+    ['candidate dimensions', (record) => { record.task3Research.candidate.width += 1; }],
+    ['authoritative identity URL', (record) => { record.task3Research.identitySource.url = 'https://example.com/edition'; }],
+    ['rights authority', (record) => { record.task3Research.rightsResearch.authority = 'unknown'; }],
+    ['rights source URL', (record) => { record.task3Research.rightsResearch.termsUrl = 'https://example.com/terms'; }],
+    ['hold basis', (record) => { record.holdBasis = 'ambiguous-grant'; }],
+  ])('rejects Task 3 drift in %s', async (_label, mutate) => {
+    const changed = clone(ledger.records.find((record) => record.recordId === 'changing-their-minds'));
+    mutate(changed);
+    await expect(assertTask3ResearchRecord(changed)).rejects.toThrow();
   });
 
   it.each([

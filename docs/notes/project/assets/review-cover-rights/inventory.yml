@@ -23,15 +23,18 @@ records:
       publisher: 웅진지식하우스
       isbn13: "9788901269405"
       editionLabel: 웅진지식하우스 2023 종이책, 이수경 옮김
+      publicationYear: 2023
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/117664857/XL
       checksum: sha256:394821abfdccd4283ae779e148c0c521a5baa4c48e9b7518e5f29ebafeb3e4d4
       width: 802
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -41,6 +44,40 @@ records:
         locator: src/assets/content/reviews/changing-their-minds/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/product/goods/117664857
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2023 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/changing-their-minds/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/117664857/XL
+        checksum: sha256:394821abfdccd4283ae779e148c0c521a5baa4c48e9b7518e5f29ebafeb3e4d4
+        width: 802
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &changing-their-minds-hold-finding
+        recordId: changing-their-minds
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.yes24.com/notice/service.aspx
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *changing-their-minds-hold-finding
 
   - recordId: lord-of-the-flies
     bibliographicIdentity:
@@ -50,15 +87,18 @@ records:
       publisher: 민음사
       isbn13: "9788937460197"
       editionLabel: 민음사 세계문학전집 19, 1999 반양장, 유종호 옮김
+      publicationYear: 1999
     currentMedia:
       state: existing
       sourceUrl: https://minumsa.minumsa.com/wp-content/uploads/bookcover/019_%ED%8C%8C%EB%A6%AC%EB%8C%80%EC%99%95-500x842.jpg
       checksum: sha256:d52e4c5aa9fac202335b4a3a2b324891bfa8ee7aecc79f550df6d205af187308
       width: 500
       height: 842
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -68,6 +108,40 @@ records:
         locator: src/assets/content/reviews/lord-of-the-flies/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://minumsa.minumsa.com/book/1689/
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 1999 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/lord-of-the-flies/cover.jpg
+        sourceUrl: https://minumsa.minumsa.com/wp-content/uploads/bookcover/019_%ED%8C%8C%EB%A6%AC%EB%8C%80%EC%99%95-500x842.jpg
+        checksum: sha256:d52e4c5aa9fac202335b4a3a2b324891bfa8ee7aecc79f550df6d205af187308
+        width: 500
+        height: 842
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 민음사
+        authorityRole: publisher-and-candidate-host
+        termsUrl: https://minumsa.com/terms
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &lord-of-the-flies-hold-finding
+        recordId: lord-of-the-flies
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://minumsa.com/terms
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *lord-of-the-flies-hold-finding
 
   - recordId: black-swan
     bibliographicIdentity:
@@ -77,15 +151,18 @@ records:
       publisher: 동녘사이언스
       isbn13: "9788990247674"
       editionLabel: 동녘사이언스 2018 개정증보판, 차익종·김현구 옮김
+      publicationYear: 2018
     currentMedia:
       state: existing
       sourceUrl: https://bnk.kpipa.or.kr/files/onix/book/trd/2018/04/30/s_o_9788990247674.jpg
       checksum: sha256:2b59925c7925d38b5460450f070be24a22ee34a69dfb7ded04d269998b7d0ebd
       width: 458
       height: 671
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -95,6 +172,40 @@ records:
         locator: src/assets/content/reviews/black-swan/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://dl.nanet.go.kr/detail/MONO12024000082438
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2018 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/black-swan/cover.jpg
+        sourceUrl: https://bnk.kpipa.or.kr/files/onix/book/trd/2018/04/30/s_o_9788990247674.jpg
+        checksum: sha256:2b59925c7925d38b5460450f070be24a22ee34a69dfb7ded04d269998b7d0ebd
+        width: 458
+        height: 671
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 한국출판문화산업진흥원 출판유통통합전산망
+        authorityRole: official-candidate-host
+        termsUrl: https://bnk.kpipa.or.kr/home/v3/center/centerGuideUseTerms
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &black-swan-hold-finding
+        recordId: black-swan
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://bnk.kpipa.or.kr/home/v3/center/centerGuideUseTerms
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *black-swan-hold-finding
 
   - recordId: nevertheless
     bibliographicIdentity:
@@ -104,15 +215,18 @@ records:
       publisher: 위즈덤하우스
       isbn13: "9791191119305"
       editionLabel: 위즈덤하우스 2020 일반판
+      publicationYear: 2020
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/93760424/XL
       checksum: sha256:85212b4b57d272697a81d63646f08217acd331b8177a4fea9fd1a45e60b91259
       width: 808
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -122,6 +236,40 @@ records:
         locator: src/assets/content/reviews/nevertheless/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/product/goods/93760424
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2020 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/nevertheless/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/93760424/XL
+        checksum: sha256:37212146a870cfb5f71366c924995340c08a2facf819f718e330f79d6e869bb2
+        width: 808
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &nevertheless-hold-finding
+        recordId: nevertheless
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.yes24.com/notice/service.aspx
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *nevertheless-hold-finding
 
   - recordId: goethe-said-everything
     bibliographicIdentity:
@@ -131,15 +279,18 @@ records:
       publisher: 리프
       isbn13: "9791194530701"
       editionLabel: 리프 2025 한국어 초판, 이지수 옮김
+      publicationYear: 2025
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/164510819/XL
       checksum: sha256:dfa171a06be873225b70434dbfae6e829bf41aff7e2791eea2564248bb42416c
       width: 850
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -149,6 +300,40 @@ records:
         locator: src/assets/content/reviews/goethe-said-everything/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://lib.ftc.go.kr/search/DetailView.ax?cid=159846
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2025 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/goethe-said-everything/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/164510819/XL
+        checksum: sha256:dfa171a06be873225b70434dbfae6e829bf41aff7e2791eea2564248bb42416c
+        width: 850
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: ambiguous-candidate
+    holdReason: The currently offered candidate URL resolves to a changed edition and cannot be bound to the recorded edition.
+    researchFindings:
+      - &goethe-said-everything-hold-finding
+        recordId: goethe-said-everything
+        subject: candidate
+        outcome: ambiguous
+        locator:
+          kind: source
+          value: https://image.yes24.com/goods/164510819/XL
+        finding: The checked candidate cannot be tied to the exact bibliographic identity.
+    recordedResearchFinding: *goethe-said-everything-hold-finding
 
   - recordId: devotion-of-suspect-x
     bibliographicIdentity:
@@ -158,12 +343,15 @@ records:
       publisher: 현대문학
       isbn13: "9788972753698"
       editionLabel: 현대문학 2006 양장, 양억관 옮김
+      publicationYear: 2006
     currentMedia:
       state: absent
       reason: no source media bundle exists
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -175,6 +363,40 @@ records:
     queuedChecks:
       - exact-candidate-and-redistribution-grant
     decisionReason: No repository candidate exists; live research must find exact candidate bytes and an applicable grant or move this record to hold.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/product/goods/2131596
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2006 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/devotion-of-suspect-x/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/2131596/XL
+        checksum: sha256:23188229a93c29714b09a74dce682277ed053cf81755dc652bfcd3679412f8be
+        width: 270
+        height: 400
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &devotion-of-suspect-x-hold-finding
+        recordId: devotion-of-suspect-x
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.yes24.com/notice/service.aspx
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *devotion-of-suspect-x-hold-finding
 
   - recordId: poor-charlies-almanack
     bibliographicIdentity:
@@ -184,15 +406,18 @@ records:
       publisher: 김영사
       isbn13: "9788934911388"
       editionLabel: 김영사 2024 공식 번역 양장, 피터 코프먼 엮음, 김태훈 옮김
+      publicationYear: 2024
     currentMedia:
       state: existing
       sourceUrl: https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg
       checksum: sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a
       width: 600
       height: 866
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -202,6 +427,40 @@ records:
         locator: src/assets/content/reviews/poor-charlies-almanack/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/Product/Goods/135966968
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2024 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/poor-charlies-almanack/cover.jpg
+        sourceUrl: https://bnk.kpipa.or.kr/files/onix/2024/10/25/s_20241025100452-6275338240267761844.jpg
+        checksum: sha256:3b584afb43774a35d4a9f215fef240356b42d24c127891b32d658a7b30a3569a
+        width: 600
+        height: 866
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 김영사
+        authorityRole: publisher-rightsholder
+        termsUrl: https://m.gimmyoungbs.com/p_base.php?action=rule
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &poor-charlies-almanack-hold-finding
+        recordId: poor-charlies-almanack
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://m.gimmyoungbs.com/p_base.php?action=rule
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *poor-charlies-almanack-hold-finding
 
   - recordId: art-thief
     bibliographicIdentity:
@@ -211,15 +470,18 @@ records:
       publisher: 생각의힘
       isbn13: "9791193166659"
       editionLabel: 생각의힘 2024 초판, 염지선 옮김
+      publicationYear: 2024
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/133133202/XL
       checksum: sha256:2d3a8e4d6cb4828a56dfae42edbb22e6b8c85141df46289ea5fabe978d491671
       width: 771
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -229,6 +491,40 @@ records:
         locator: src/assets/content/reviews/art-thief/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/Product/Goods/133133202
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2024 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/art-thief/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/133133202/XL
+        checksum: sha256:b147a958a1a6714f2c57e1ea64e8798918c2714834af3c4b82ea082d4e603412
+        width: 771
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &art-thief-hold-finding
+        recordId: art-thief
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.yes24.com/notice/service.aspx
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *art-thief-hold-finding
 
   - recordId: siddhartha
     bibliographicIdentity:
@@ -238,15 +534,18 @@ records:
       publisher: 문학동네
       isbn13: "9788954654418"
       editionLabel: 문학동네 세계문학전집 173, 2018 원판, 권혁준 옮김
+      publicationYear: 2018
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/67723866/XL
       checksum: sha256:4e957b1fb0ada2f2582c40cd54215fec63c9ecf2c0c222250be93eda067e8251
       width: 801
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -256,6 +555,40 @@ records:
         locator: src/assets/content/reviews/siddhartha/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/Product/Goods/67723866
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2018 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/siddhartha/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/67723866/XL
+        checksum: sha256:e10928fb67f013780eb4c3c3c4da0e0963837cdb51224d4b1e1ad5a291a6e988
+        width: 801
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 문학동네
+        authorityRole: publisher-rightsholder
+        termsUrl: https://munhak.com/customerCenter/guide/secondCopyright
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &siddhartha-hold-finding
+        recordId: siddhartha
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://munhak.com/customerCenter/guide/secondCopyright
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *siddhartha-hold-finding
   - recordId: habitus
     bibliographicIdentity:
       title: 아비투스
@@ -264,15 +597,18 @@ records:
       publisher: 다산초당
       isbn13: "9791130698366"
       editionLabel: 다산초당 2023 양장특별판, 배명자 옮김
+      publicationYear: 2023
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/118146744/XL
       checksum: sha256:8f9e221a1ae7fcd14abd42a4b14ed2f895b3274bb7fb171f164bb777f41810fc
       width: 857
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -282,6 +618,40 @@ records:
         locator: src/assets/content/reviews/habitus/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/Product/Goods/118146744
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2023 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/habitus/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/118146744/XL
+        checksum: sha256:8f9e221a1ae7fcd14abd42a4b14ed2f895b3274bb7fb171f164bb777f41810fc
+        width: 857
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &habitus-hold-finding
+        recordId: habitus
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.yes24.com/notice/service.aspx
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *habitus-hold-finding
 
   - recordId: how-adam-smith-can-change-your-life
     bibliographicIdentity:
@@ -291,15 +661,18 @@ records:
       publisher: 세계사
       isbn13: "9788933870648"
       editionLabel: 세계사 2015 초판, 이현주 옮김
+      publicationYear: 2015
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/22659314/XL
       checksum: sha256:eea49839231272b1f03fccb2eb88f4dd1467cccaad89085852adeabd23668642
       width: 848
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -309,6 +682,40 @@ records:
         locator: src/assets/content/reviews/how-adam-smith-can-change-your-life/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/product/goods/22659314
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2015 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/how-adam-smith-can-change-your-life/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/22659314/XL
+        checksum: sha256:eea49839231272b1f03fccb2eb88f4dd1467cccaad89085852adeabd23668642
+        width: 848
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &how-adam-smith-can-change-your-life-hold-finding
+        recordId: how-adam-smith-can-change-your-life
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.yes24.com/notice/service.aspx
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *how-adam-smith-can-change-your-life-hold-finding
 
   - recordId: lolita
     bibliographicIdentity:
@@ -318,15 +725,18 @@ records:
       publisher: 문학동네
       isbn13: "9788954620437"
       editionLabel: 문학동네 세계문학전집 105, 2013 무선판, 김진준 옮김
+      publicationYear: 2013
     currentMedia:
       state: existing
       sourceUrl: https://image.aladin.co.kr/product/2264/95/cover500/8954620434_3.jpg
       checksum: sha256:0ac7527f245e52005c2278f818e2b2b06cec07c225c7a7dcbb5d8056057ad51d
       width: 500
       height: 750
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -336,6 +746,40 @@ records:
         locator: src/assets/content/reviews/lolita/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/Product/Goods/8297953
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2013 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/lolita/cover.jpg
+        sourceUrl: https://image.aladin.co.kr/product/2264/95/cover500/8954620434_3.jpg
+        checksum: sha256:0ac7527f245e52005c2278f818e2b2b06cec07c225c7a7dcbb5d8056057ad51d
+        width: 500
+        height: 750
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 문학동네
+        authorityRole: publisher-rightsholder
+        termsUrl: https://munhak.com/customerCenter/guide/secondCopyright
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &lolita-hold-finding
+        recordId: lolita
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://munhak.com/customerCenter/guide/secondCopyright
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *lolita-hold-finding
 
   - recordId: future-arrived-first
     bibliographicIdentity:
@@ -345,15 +789,18 @@ records:
       publisher: 동아시아
       isbn13: "9788962626605"
       editionLabel: 동아시아 2025 초판
+      publicationYear: 2025
     currentMedia:
       state: existing
       sourceUrl: https://www.kobic.net/bookImage/book/coverImg/202507/9788962626605C001.jpg
       checksum: sha256:ec4fc247f075c2afeb2c3777b4897ff2166f7e34685bd4940b298de75a12901b
       width: 458
       height: 703
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -363,6 +810,40 @@ records:
         locator: src/assets/content/reviews/future-arrived-first/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.kobic.net/book/bookInfo/view.do?isbn=9788962626605
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2025 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/future-arrived-first/cover.jpg
+        sourceUrl: https://www.kobic.net/bookImage/book/coverImg/202507/9788962626605C001.jpg
+        checksum: sha256:ec4fc247f075c2afeb2c3777b4897ff2166f7e34685bd4940b298de75a12901b
+        width: 458
+        height: 703
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 대한출판문화협회 KOBIC
+        authorityRole: official-edition-and-candidate-host
+        termsUrl: https://www.kobic.net/book/bookInfo/view.do?isbn=9788962626605
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &future-arrived-first-hold-finding
+        recordId: future-arrived-first
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.kobic.net/book/bookInfo/view.do?isbn=9788962626605
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *future-arrived-first-hold-finding
 
   - recordId: how-we-crossed-winter
     bibliographicIdentity:
@@ -372,15 +853,18 @@ records:
       publisher: 나무옆의자
       isbn13: "9791161571492"
       editionLabel: 나무옆의자 2023 일반판
+      publicationYear: 2023
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/118785110/XL
       checksum: sha256:12461752be2a87ba403d03e214102ba53492d9cd28e559bc21352e13bba463e6
       width: 809
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -390,6 +874,40 @@ records:
         locator: src/assets/content/reviews/how-we-crossed-winter/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://m.yes24.com/goods/detail/118785110
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2023 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/how-we-crossed-winter/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/118785110/XL
+        checksum: sha256:0c9bde799513334708e2ee24ea708531bb0264e8bbf663cbb441626be3a1adef
+        width: 809
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &how-we-crossed-winter-hold-finding
+        recordId: how-we-crossed-winter
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.yes24.com/notice/service.aspx
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *how-we-crossed-winter-hold-finding
 
   - recordId: convenience-store-woman
     bibliographicIdentity:
@@ -399,15 +917,18 @@ records:
       publisher: 살림출판사
       isbn13: "9788952235268"
       editionLabel: 살림출판사 2016 양장, 김석희 옮김
+      publicationYear: 2016
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/33129949/XL
       checksum: sha256:a4264d7125c3e846cf3da624261846af82d3270fe04a8b9e0752b9389a987cb8
       width: 826
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -417,6 +938,40 @@ records:
         locator: src/assets/content/reviews/convenience-store-woman/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/product/goods/33129949
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2016 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/convenience-store-woman/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/33129949/XL
+        checksum: sha256:e83f6cdfccad71c472146804349d107a9c41a48fae8b692c7434c21fd46bf0bd
+        width: 826
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 예스이십사
+        authorityRole: official-distributor-candidate-host
+        termsUrl: https://www.yes24.com/notice/service.aspx
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &convenience-store-woman-hold-finding
+        recordId: convenience-store-woman
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.yes24.com/notice/service.aspx
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *convenience-store-woman-hold-finding
 
   - recordId: miracles-of-namiya-general-store
     bibliographicIdentity:
@@ -426,15 +981,18 @@ records:
       publisher: 현대문학
       isbn13: "9788972756194"
       editionLabel: 현대문학 2012 원판 양장, 양윤옥 옮김
+      publicationYear: 2012
     currentMedia:
       state: existing
       sourceUrl: https://www.hdmh.co.kr/upload/cover/hdmhbooks/%EB%82%98%EB%AF%B8%EC%95%BC%ED%91%9C1.jpg
       checksum: sha256:13f4e5fa971c971147adcfb7ab6a8f5c734a55569a56e25a13dd19533ab0473b
       width: 311
       height: 456
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -444,6 +1002,40 @@ records:
         locator: src/assets/content/reviews/miracles-of-namiya-general-store/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/product/goods/8157957
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2012 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/miracles-of-namiya-general-store/cover.jpg
+        sourceUrl: https://www.hdmh.co.kr/upload/cover/hdmhbooks/%EB%82%98%EB%AF%B8%EC%95%BC%ED%91%9C1.jpg
+        checksum: sha256:13f4e5fa971c971147adcfb7ab6a8f5c734a55569a56e25a13dd19533ab0473b
+        width: 311
+        height: 456
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 현대문학
+        authorityRole: publisher-and-candidate-host
+        termsUrl: https://www.hdmh.co.kr/
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &miracles-of-namiya-general-store-hold-finding
+        recordId: miracles-of-namiya-general-store
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.hdmh.co.kr/
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *miracles-of-namiya-general-store-hold-finding
 
   - recordId: doing-good-better
     bibliographicIdentity:
@@ -453,15 +1045,18 @@ records:
       publisher: 부키
       isbn13: "9788960515833"
       editionLabel: 부키 2017 한국어 초판, 전미영 옮김
+      publicationYear: 2017
     currentMedia:
       state: existing
       sourceUrl: https://www.bookie.co.kr/bookimg/97889605158335.jpg
       checksum: sha256:83c15615cc72eff0d32a02a677d8c6215eb6beb9bacc55cfdf074c2d0f386bf1
       width: 1000
       height: 1417
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -471,6 +1066,40 @@ records:
         locator: src/assets/content/reviews/doing-good-better/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.bookie.co.kr/book/9788960515833
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2017 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/doing-good-better/cover.jpg
+        sourceUrl: https://www.bookie.co.kr/bookimg/97889605158335.jpg
+        checksum: sha256:83c15615cc72eff0d32a02a677d8c6215eb6beb9bacc55cfdf074c2d0f386bf1
+        width: 1000
+        height: 1417
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 도서출판 부키
+        authorityRole: publisher-and-candidate-host
+        termsUrl: https://www.bookie.co.kr/book/9788960515833
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &doing-good-better-hold-finding
+        recordId: doing-good-better
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.bookie.co.kr/book/9788960515833
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *doing-good-better-hold-finding
 
   - recordId: factfulness
     bibliographicIdentity:
@@ -482,15 +1111,18 @@ records:
       publisher: 김영사
       isbn13: "9788934985068"
       editionLabel: 김영사 2019판, 이창신 옮김
+      publicationYear: 2019
     currentMedia:
       state: existing
       sourceUrl: https://image.yes24.com/goods/69724044/XL
       checksum: sha256:b33eafae337acb129da7309fda02ead4bbb1f950f5ccbd789806af63f4827caf
       width: 787
       height: 1200
-    state: researching
+    state: hold
     stateHistory:
       - state: researching
+        recordedAt: "2026-08-30"
+      - state: hold
         recordedAt: "2026-08-30"
     checkedSources:
       - kind: repository-source-record
@@ -500,3 +1132,37 @@ records:
         locator: src/assets/content/reviews/factfulness/media.yml
         finding: Existing local identification bytes match the recorded URL, checksum, and decoded dimensions; no redistribution grant is recorded.
     decisionReason: Repository identification media is not public-redistribution approval; exact candidate bytes and an applicable grant require live research.
+    task3Research:
+      identitySource:
+        kind: authoritative-edition-catalog
+        url: https://www.yes24.com/product/goods/69724044
+        retrievedAt: "2026-08-30"
+        finding: The authoritative ISBN-linked edition source confirms the recorded contributors, publisher, and 2019 publication year.
+      candidate:
+        path: .superpowers/review-cover-intake/factfulness/cover.jpg
+        sourceUrl: https://image.yes24.com/goods/69724044/XL
+        checksum: sha256:28b459f58cc5d585a64297f828d365ddc66473f981d6504cb17c1a7f4672fb71
+        width: 787
+        height: 1200
+        kind: book-cover
+        extension: jpg
+        retrievedAt: "2026-08-30"
+      rightsResearch:
+        authority: 김영사
+        authorityRole: publisher-rightsholder
+        termsUrl: https://www.gimmyoung.com/book/guide/copyright
+        retrievedAt: "2026-08-30"
+        outcome: absent
+        finding: The current official rights surface supplies no grant to copy and redistribute the exact candidate bytes on a public website.
+    holdBasis: absent-grant
+    holdReason: The current authoritative rights surface does not grant public website redistribution of the exact candidate bytes.
+    researchFindings:
+      - &factfulness-hold-finding
+        recordId: factfulness
+        subject: redistribution-grant
+        outcome: absent
+        locator:
+          kind: source
+          value: https://www.gimmyoung.com/book/guide/copyright
+        finding: The checked authoritative terms contain no public-website redistribution grant.
+    recordedResearchFinding: *factfulness-hold-finding
