@@ -118,20 +118,109 @@ function canonicalNdjson(values: readonly unknown[]): Buffer {
 }
 
 const forbiddenAnswerKey = /^(?:bodyHtml|markdown|status|draft|includeInAnswers|provider|providerOutput|vector)$/iu;
-const htmlMarkup = /<!--[\s\S]*?-->|<\/?[A-Za-z][^>]*>|<![A-Z][^>]*>|<\?[\s\S]*?\?>/u;
-const markdownBlock = /(?:^|\n) {0,3}(?:#{1,6}[\t ]|>[\t ]?|(?:[-*+]|\d{1,9}[.)])[\t ]+|(?:`{3,}|~{3,})|\[[^\]]+\]:[\t ]*\S)|(?:^|\n).+\n {0,3}(?:=+|-+)[\t ]*(?:\n|$)|(?:^|\n) {0,3}(?:(?:\*[\t ]*){3,}|(?:-[\t ]*){3,}|(?:_[\t ]*){3,})[\t ]*(?:\n|$)|(?:^|\n) {0,3}\|?(?:[\t ]*:?-{3,}:?[\t ]*\|)+/u;
-const markdownLinkOrCode = /!?\[[^\]]+\](?:\([^)]+\)|\[[^\]]*\])|`+[^`\n]+`+|<(?:(?:https?:\/\/|mailto:)[^>]+|[^@<>\s]+@[^@<>\s]+)>/u;
-const markdownAsteriskEmphasis = /(?:^|[^\p{L}\p{N}\\])\*(?![\s*])[^*\n]*?\S\*(?!\*)/u;
-const markdownUnderscoreEmphasis = /(?:^|[^\p{L}\p{N}_\\])_(?![\s_])[^_\n]*?\S_(?![\p{L}\p{N}_])/u;
-const markdownStrongOrStrike = /\*\*(?!\s)[^*\n]*?\S\*\*|__(?!\s)[^_\n]*?\S__|~~(?!\s)[^~\n]*?\S~~/u;
+const htmlMarkup = /<!--[\s\S]*?-->|<\/?[A-Za-z][^>]*>|<![A-Za-z][\s\S]*?>|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>/u;
+const markdownLink = /!?\[[\s\S]*?\](?:\([\s\S]*?\)|\[[\s\S]*?\])/u;
+const markdownAutolink = /<(?:(?:https?:\/\/|mailto:)[^>]+|[^@<>\s]+@[^@<>\s]+)>/u;
+const wordPoint = /[\p{L}\p{N}_]/u;
+
+function isEscaped(value: string, index: number): boolean {
+  let slashes = 0;
+  for (let cursor = index - 1; cursor >= 0 && value[cursor] === '\\'; cursor -= 1) slashes += 1;
+  return slashes % 2 === 1;
+}
+
+function hasDelimitedSpan(value: string, marker: '*' | '**' | '_' | '__' | '~~'): boolean {
+  const single = marker.length === 1;
+  for (let open = value.indexOf(marker); open !== -1; open = value.indexOf(marker, open + 1)) {
+    if (isEscaped(value, open)) continue;
+    if (single && (value[open - 1] === marker || value[open + 1] === marker)) continue;
+    const first = value[open + marker.length];
+    if (!first || /\s/u.test(first)) continue;
+    if (marker === '_' && open > 0 && wordPoint.test(value[open - 1]!)) continue;
+    for (
+      let close = value.indexOf(marker, open + marker.length + 1);
+      close !== -1;
+      close = value.indexOf(marker, close + 1)
+    ) {
+      if (isEscaped(value, close)) continue;
+      if (single && (value[close - 1] === marker || value[close + 1] === marker)) continue;
+      const last = value[close - 1];
+      if (!last || /\s/u.test(last)) continue;
+      if (marker === '_' && value[close + 1] && wordPoint.test(value[close + 1]!)) continue;
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasCodeSpan(value: string): boolean {
+  for (let open = 0; open < value.length;) {
+    if (value[open] !== '`' || isEscaped(value, open)) {
+      open += 1;
+      continue;
+    }
+    let openEnd = open;
+    while (value[openEnd] === '`') openEnd += 1;
+    const width = openEnd - open;
+    for (let close = openEnd; close < value.length;) {
+      if (value[close] !== '`' || isEscaped(value, close)) {
+        close += 1;
+        continue;
+      }
+      let closeEnd = close;
+      while (value[closeEnd] === '`') closeEnd += 1;
+      if (closeEnd - close === width && close > openEnd) return true;
+      close = closeEnd;
+    }
+    open = openEnd;
+  }
+  return false;
+}
+
+function isThematicBreak(content: string): boolean {
+  const compact = content.replace(/[\t ]/gu, '');
+  return compact.length >= 3 && (/^\*+$/u.test(compact) || /^-+$/u.test(compact) || /^_+$/u.test(compact));
+}
+
+// Forbidden plain-text grammar is the union of HTML markup and these
+// CommonMark/GFM families: indented/fenced code, ATX/setext headings,
+// blockquotes, lists/tasks, thematic breaks, references, tables, hard breaks,
+// links/autolinks, code spans, emphasis/strong emphasis, and strikethrough.
+function hasMarkdownBlock(value: string): boolean {
+  const lines = value.split(/\r\n?|\n/u);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]!;
+    if (/^(?: {4,}| {0,3}\t)[\t ]*\S/u.test(line)) return true;
+    const content = line.replace(/^ {0,3}/u, '');
+    if (/^#{1,6}(?:[\t ]+|$)/u.test(content)) return true;
+    if (/^>/u.test(content)) return true;
+    if (/^(?:[-+*]|\d{1,9}[.)])(?:[\t ]+|$)/u.test(content)) return true;
+    if (/^(?:`{3,}|~{3,})/u.test(content)) return true;
+    if (/^\[[^\]]+\]:[\t ]*\S/u.test(content)) return true;
+    if (isThematicBreak(content)) return true;
+    if (/^\|?(?:[\t ]*:?-{3,}:?[\t ]*\|)+/u.test(content)) return true;
+    const next = lines[index + 1];
+    if (next !== undefined && (/\S[\t ]{2,}$/u.test(line)
+      || (line.endsWith('\\') && !isEscaped(line, line.length - 1)))) return true;
+    if (content.trim() && next !== undefined) {
+      const nextContent = next.replace(/^ {0,3}/u, '');
+      if (/^(?:=+|-+)[\t ]*$/u.test(nextContent)) return true;
+    }
+  }
+  return false;
+}
 
 function containsAnswerMarkup(value: string): boolean {
   return htmlMarkup.test(value)
-    || markdownBlock.test(value)
-    || markdownLinkOrCode.test(value)
-    || markdownAsteriskEmphasis.test(value)
-    || markdownUnderscoreEmphasis.test(value)
-    || markdownStrongOrStrike.test(value);
+    || hasMarkdownBlock(value)
+    || markdownLink.test(value)
+    || markdownAutolink.test(value)
+    || hasCodeSpan(value)
+    || hasDelimitedSpan(value, '**')
+    || hasDelimitedSpan(value, '__')
+    || hasDelimitedSpan(value, '*')
+    || hasDelimitedSpan(value, '_')
+    || hasDelimitedSpan(value, '~~');
 }
 
 function answerBoundaryHits(value: unknown, path: string, skipObjectKeys = false): unknown[] {

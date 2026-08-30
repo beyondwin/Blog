@@ -18,7 +18,6 @@ import { buildPublicAnswerRelease } from '../../src/answer-release/build-answer-
 import { buildAnswerIndexes } from '../../src/answer-release/build-index-inputs';
 import {
   ANSWER_CHUNKER_VERSION,
-  canonicalJsonLine,
   canonicalPublicRecordChecksum,
   sha256Checksum,
   sha256Hex,
@@ -70,10 +69,15 @@ export function canonicalPrettyJson(value: unknown): string {
   return `${JSON.stringify(value, sortTestJsonObject, 2)}\n`;
 }
 
+export function canonicalCompactJson(value: unknown): string {
+  return JSON.stringify(value, sortTestJsonObject);
+}
+
 export async function createAnswerReleaseFixture(options: {
   emptyApproval?: boolean;
   secondRecord?: boolean;
   prose?: string;
+  title?: string;
 } = {}): Promise<AnswerReleaseFixture> {
   const sandbox = await mkdtemp(join(tmpdir(), 'beyondwin-answer-release-'));
   const sourceRoot = join(sandbox, 'source');
@@ -82,7 +86,7 @@ export async function createAnswerReleaseFixture(options: {
   await writeReleaseFixture(sourceRoot, { featuredMedia: false });
   await writeFile(join(sourceRoot, 'src/content/articles/public-fixture.mdx'), [
     '---',
-    'title: Public fixture',
+    `title: ${JSON.stringify(options.title ?? 'Public fixture')}`,
     'description: A public answer fixture.',
     'createdAt: "2026-08-30"',
     'updatedAt: "2026-08-30"',
@@ -135,6 +139,7 @@ export async function writeAnswerReleaseFixture(options: {
   emptyApproval?: boolean;
   secondRecord?: boolean;
   prose?: string;
+  title?: string;
 } = {}): Promise<BuiltAnswerReleaseFixture> {
   const fixture = await createAnswerReleaseFixture(options);
   const built = await buildPublicAnswerRelease({
@@ -155,7 +160,7 @@ export async function readAnswerManifest(releasePath: string): Promise<PublicAns
 }
 
 export async function writeCanonicalNdjson(path: string, rows: readonly unknown[]): Promise<void> {
-  await writeFile(path, rows.map((row) => `${canonicalJsonLine(row)}\n`).join(''));
+  await writeFile(path, rows.map((row) => `${canonicalCompactJson(row)}\n`).join(''));
 }
 
 function lineCount(bytes: Buffer): number {
@@ -202,7 +207,7 @@ export async function rehashAnswerRelease(
     manifest.files.indexInputs,
     manifest.files.lexicalIndex,
   ];
-  const answerReleaseId = sha256Hex(canonicalJsonLine({ identity: manifest.identity, files }));
+  const answerReleaseId = sha256Hex(canonicalCompactJson({ identity: manifest.identity, files }));
   manifest.answerReleaseId = answerReleaseId;
   await writeFile(join(releasePath, 'manifest.json'), canonicalPrettyJson(manifest));
 
@@ -240,7 +245,7 @@ export function evidenceForChunk(chunk: PublicAnswerChunk): PublicAnswerEvidence
     ? { kind: 'evidence-page' as const, label, ordinal: chunk.ordinal }
     : { kind: 'heading-paragraph' as const, label, ordinal: chunk.ordinal };
   return {
-    evidenceId: sha256Hex(canonicalJsonLine({
+    evidenceId: sha256Hex(canonicalCompactJson({
       version: ANSWER_CHUNKER_VERSION,
       chunkId: chunk.chunkId,
       start: 0,
@@ -260,7 +265,7 @@ export function evidenceForChunk(chunk: PublicAnswerChunk): PublicAnswerEvidence
 
 export function rechunk(overrides: Partial<PublicAnswerChunk>, base: PublicAnswerChunk): PublicAnswerChunk {
   const value = { ...base, ...overrides };
-  const chunkId = overrides.chunkId ?? sha256Hex(canonicalJsonLine({
+  const chunkId = overrides.chunkId ?? sha256Hex(canonicalCompactJson({
     version: ANSWER_CHUNKER_VERSION,
     recordId: value.recordId,
     canonicalPath: value.canonicalPath,
@@ -273,7 +278,7 @@ export function rechunk(overrides: Partial<PublicAnswerChunk>, base: PublicAnswe
   return {
     ...value,
     chunkId,
-    checksum: sha256Checksum(canonicalJsonLine(withoutChecksum)),
+    checksum: sha256Checksum(canonicalCompactJson(withoutChecksum)),
   };
 }
 

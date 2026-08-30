@@ -26,6 +26,7 @@ import {
   verifyAnswerReleaseDirectory,
 } from '../src/answer-release/read-answer-release';
 import {
+  canonicalCompactJson,
   canonicalPrettyJson,
   createAnswerReleaseFixture,
   evidenceForChunk,
@@ -293,6 +294,54 @@ describe('public answer release filesystem and canonical boundary', { timeout: 3
     })).resolves.toMatchObject({ answerReleaseId: expect.stringMatching(/^[a-f0-9]{64}$/u) });
   });
 
+  it.each([
+    ['multiline asterisk emphasis', '*multi\nline*'],
+    ['multiline underscore emphasis', '_multi\nline_'],
+    ['four-space indented code', 'Public\n    private'],
+    ['five-space indented code', 'Public\n     private'],
+    ['tab-indented code', 'Public\n\tprivate'],
+    ['space-tab indented code', 'Public\n  \tprivate'],
+    ['empty ATX heading', '#'],
+    ['CRLF empty ATX heading', '#\r\nPublic'],
+    ['multiline code span', '`multi\nline`'],
+    ['multiline strong emphasis', '**multi\nline**'],
+    ['multiline strikethrough', '~~multi\nline~~'],
+    ['setext heading', 'Heading\n==='],
+    ['ordered list', 'Public\n1. private'],
+    ['empty unordered list item', 'Public\n-'],
+    ['task list', 'Public\n- [ ] private'],
+    ['fenced code block', 'Public\n```text\nprivate\n```'],
+    ['reference definition', 'Public\n[private]: https://example.com'],
+    ['GFM table delimiter', 'Public\n| --- | --- |'],
+    ['hard line break', 'Public  \nprivate'],
+    ['HTML CDATA section', '<![CDATA[private]]>'],
+  ] as const)('rejects approved public title containing %s', async (_case, title) => {
+    const fixture = await createAnswerReleaseFixture({ title });
+
+    await expect(buildPublicAnswerRelease({
+      contentRelease: fixture.contentRelease,
+      approval: fixture.approval,
+      answerReleasesRoot: fixture.answerReleasesRoot,
+    })).rejects.toThrow(/markup|HTML|Markdown|boundary/i);
+  });
+
+  it.each([
+    'C# is a language, not an empty heading.',
+    'Public\n  continuation with two-space indentation.',
+    'An unmatched ` character is plain punctuation.',
+    'A * B and under_score remain literal prose.',
+    `Public path ends with two slashes \\\\
+next.`,
+  ])('preserves adjacent plain title punctuation: %s', async (title) => {
+    const fixture = await createAnswerReleaseFixture({ title });
+
+    await expect(buildPublicAnswerRelease({
+      contentRelease: fixture.contentRelease,
+      approval: fixture.approval,
+      answerReleasesRoot: fixture.answerReleasesRoot,
+    })).resolves.toMatchObject({ answerReleaseId: expect.stringMatching(/^[a-f0-9]{64}$/u) });
+  });
+
   it('allows private-looking vocabulary only as dynamic lexical terms produced from safe public prose', async () => {
     const fixture = await writeAnswerReleaseFixture({
       prose: 'Embedding provider vector scope are ordinary public technical terms.',
@@ -445,18 +494,29 @@ describe('authority-backed semantic re-derivation', { timeout: 30_000 }, () => {
     const evidence = chunks.map(evidenceForChunk);
     const originalEvidenceId = evidence[0]!.evidenceId;
     const excerptChecksum = `sha256:${'f'.repeat(64)}`;
-    const evidenceIdentityBytes = JSON.stringify({
+    const evidenceIdentityBytes = canonicalCompactJson({
       end: Array.from(evidence[0]!.excerpt).length,
       excerptChecksum,
       chunkId: evidence[0]!.chunkId,
       start: 0,
       version: 'public-blocks-v1',
     });
+    const independentlyDerivedEvidenceId = createHash('sha256')
+      .update(evidenceIdentityBytes)
+      .digest('hex');
     evidence[0] = publicAnswerEvidenceSchema.parse({
       ...evidence[0]!,
       excerptChecksum,
-      evidenceId: createHash('sha256').update(evidenceIdentityBytes).digest('hex'),
+      evidenceId: independentlyDerivedEvidenceId,
     });
+    expect(evidenceIdentityBytes).toBe(JSON.stringify({
+      chunkId: evidence[0]!.chunkId,
+      end: Array.from(evidence[0]!.excerpt).length,
+      excerptChecksum,
+      start: 0,
+      version: 'public-blocks-v1',
+    }));
+    expect(evidence[0]!.evidenceId).toBe(independentlyDerivedEvidenceId);
     expect(evidence[0]!.evidenceId).not.toBe(originalEvidenceId);
     await writeProjection(fixture.releasePath, chunks, evidence);
     const forgedPath = await rehashAnswerRelease(fixture.releasePath);
