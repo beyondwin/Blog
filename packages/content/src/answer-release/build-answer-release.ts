@@ -30,7 +30,11 @@ import {
   readActiveAnswerRelease,
   verifyAnswerReleaseDirectory,
 } from './read-answer-release';
-import { assertOwnedAnswerDirectory, readOwnedAnswerFile } from './verified-files';
+import {
+  assertOwnedAnswerDirectory,
+  canonicalAnswerPrettyJson,
+  readOwnedAnswerFile,
+} from './verified-files';
 
 export interface BuildPublicAnswerReleaseOptions {
   contentRelease: VerifiedActivePublicRelease;
@@ -58,20 +62,6 @@ type MaterializedFile = {
 };
 
 const ownedTemporaryRoots = new WeakMap<object, string>();
-
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => codePointCompare(left, right))
-      .map(([key, child]) => [key, canonicalize(child)]));
-  }
-  return value;
-}
-
-function canonicalPrettyJson(value: unknown): string {
-  return `${JSON.stringify(canonicalize(value), null, 2)}\n`;
-}
 
 function canonicalNdjson(values: readonly unknown[]): Buffer {
   return Buffer.from(values.map((value) => `${canonicalJsonLine(value)}\n`).join(''));
@@ -197,7 +187,7 @@ async function writeActivePointer(
     answerReleaseId,
     path: `${contentRelease.manifest.releaseId}/${answerReleaseId}`,
   };
-  const bytes = canonicalPrettyJson(pointer);
+  const bytes = canonicalAnswerPrettyJson(pointer);
   const temporaryPath = join(root, 'active.json.tmp');
   const activePath = join(root, 'active.json');
   let file: FileHandle;
@@ -253,7 +243,7 @@ export async function buildPublicAnswerRelease(
   const chunksBytes = canonicalNdjson(chunks);
   const evidenceBytes = canonicalNdjson(evidence);
   const indexInputsBytes = canonicalNdjson(indexes.indexInputs);
-  const lexicalIndexBytes = Buffer.from(canonicalPrettyJson(indexes.lexicalIndex));
+  const lexicalIndexBytes = Buffer.from(canonicalAnswerPrettyJson(indexes.lexicalIndex));
   const files = [
     descriptor('chunks.ndjson', chunksBytes, chunks.length),
     descriptor('evidence.ndjson', evidenceBytes, evidence.length),
@@ -288,7 +278,7 @@ export async function buildPublicAnswerRelease(
       answerOnly: 0,
     },
   });
-  const manifestBytes = canonicalPrettyJson(manifest);
+  const manifestBytes = canonicalAnswerPrettyJson(manifest);
   const answerReleasesRoot = resolve(options.answerReleasesRoot);
   const staging = await createOwnedAnswerTemporaryRoot(answerReleasesRoot);
   try {

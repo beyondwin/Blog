@@ -21,6 +21,20 @@ function checksum(bytes: Buffer): string {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
+function canonicalizeAnswerJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalizeAnswerJson);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => codePointCompare(left, right))
+      .map(([key, child]) => [key, canonicalizeAnswerJson(child)]));
+  }
+  return value;
+}
+
+export function canonicalAnswerPrettyJson(value: unknown): string {
+  return `${JSON.stringify(canonicalizeAnswerJson(value), null, 2)}\n`;
+}
+
 function assertRelativePath(path: string): void {
   if (
     !path

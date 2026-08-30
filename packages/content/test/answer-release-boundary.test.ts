@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   link,
   readFile,
@@ -7,10 +8,11 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { join } from 'node:path';
-import type {
-  PublicAnswerChunk,
-  PublicAnswerCorpusApproval,
-  PublicAnswerEvidence,
+import {
+  publicAnswerEvidenceSchema,
+  type PublicAnswerChunk,
+  type PublicAnswerCorpusApproval,
+  type PublicAnswerEvidence,
 } from '@beyondwin/contracts';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -25,6 +27,7 @@ import {
 } from '../src/answer-release/read-answer-release';
 import {
   canonicalPrettyJson,
+  createAnswerReleaseFixture,
   evidenceForChunk,
   readAnswerManifest,
   rechunk,
@@ -260,6 +263,36 @@ describe('public answer release filesystem and canonical boundary', { timeout: 3
     await expectBothReject(fixture, forgedPath);
   });
 
+  it.each([
+    ['asterisk emphasis', '\\*private\\*'],
+    ['underscore emphasis', '\\_private\\_'],
+    ['strikethrough', '\\~\\~private\\~\\~'],
+    ['horizontal rule', '&#45;&#45;&#45;'],
+    ['HTML comment', '&lt;!-- private --&gt;'],
+  ] as const)('rejects approved public prose that materializes literal %s markup', async (_case, prose) => {
+    const fixture = await createAnswerReleaseFixture({ prose });
+
+    await expect(buildPublicAnswerRelease({
+      contentRelease: fixture.contentRelease,
+      approval: fixture.approval,
+      answerReleasesRoot: fixture.answerReleasesRoot,
+    })).rejects.toThrow(/markup|HTML|Markdown|boundary/i);
+  });
+
+  it.each([
+    'Public prose uses version 1.2 — scope_provider safely.',
+    'Public math says 3 * 4 and snake_case remains plain.',
+    'The sequence x---y is punctuation inside a token.',
+  ])('preserves legitimate punctuation in approved public prose: %s', async (prose) => {
+    const fixture = await createAnswerReleaseFixture({ prose });
+
+    await expect(buildPublicAnswerRelease({
+      contentRelease: fixture.contentRelease,
+      approval: fixture.approval,
+      answerReleasesRoot: fixture.answerReleasesRoot,
+    })).resolves.toMatchObject({ answerReleaseId: expect.stringMatching(/^[a-f0-9]{64}$/u) });
+  });
+
   it('allows private-looking vocabulary only as dynamic lexical terms produced from safe public prose', async () => {
     const fixture = await writeAnswerReleaseFixture({
       prose: 'Embedding provider vector scope are ordinary public technical terms.',
@@ -410,10 +443,30 @@ describe('authority-backed semantic re-derivation', { timeout: 30_000 }, () => {
     const fixture = await writeAnswerReleaseFixture();
     const chunks = await rows<PublicAnswerChunk>(join(fixture.releasePath, 'chunks.ndjson'));
     const evidence = chunks.map(evidenceForChunk);
-    evidence[0] = { ...evidence[0]!, excerptChecksum: `sha256:${'f'.repeat(64)}` };
+    const originalEvidenceId = evidence[0]!.evidenceId;
+    const excerptChecksum = `sha256:${'f'.repeat(64)}`;
+    const evidenceIdentityBytes = JSON.stringify({
+      end: Array.from(evidence[0]!.excerpt).length,
+      excerptChecksum,
+      chunkId: evidence[0]!.chunkId,
+      start: 0,
+      version: 'public-blocks-v1',
+    });
+    evidence[0] = publicAnswerEvidenceSchema.parse({
+      ...evidence[0]!,
+      excerptChecksum,
+      evidenceId: createHash('sha256').update(evidenceIdentityBytes).digest('hex'),
+    });
+    expect(evidence[0]!.evidenceId).not.toBe(originalEvidenceId);
     await writeProjection(fixture.releasePath, chunks, evidence);
     const forgedPath = await rehashAnswerRelease(fixture.releasePath);
-    await expectBothReject(fixture, forgedPath);
+    await expect(verifyAnswerReleaseDirectory(forgedPath, fixture.contentRelease, fixture.approval))
+      .rejects.toThrow(/evidence\.ndjson.*authority-derived canonical artifact/i);
+    await expect(readActiveAnswerRelease(
+      fixture.answerReleasesRoot,
+      fixture.contentRelease,
+      fixture.approval,
+    )).rejects.toThrow(/evidence\.ndjson.*authority-derived canonical artifact/i);
   });
 
   it('rejects answer-only rows whether the fully rehashed manifest falsely reports zero or explicitly reports nonzero', async () => {

@@ -20,7 +20,6 @@ import {
   ANSWER_CHUNKER_VERSION,
   canonicalJsonLine,
   canonicalPublicRecordChecksum,
-  codePointCompare,
   sha256Checksum,
   sha256Hex,
 } from '../../src/answer-release/identity';
@@ -50,18 +49,25 @@ export interface BuiltAnswerReleaseFixture extends AnswerReleaseFixture {
   active: VerifiedActivePublicAnswerRelease;
 }
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => codePointCompare(left, right))
-      .map(([key, child]) => [key, canonicalize(child)]));
+function testCodePointCompare(left: string, right: string): number {
+  const leftPoints = Array.from(left, (point) => point.codePointAt(0)!);
+  const rightPoints = Array.from(right, (point) => point.codePointAt(0)!);
+  for (let index = 0; index < Math.min(leftPoints.length, rightPoints.length); index += 1) {
+    if (leftPoints[index] !== rightPoints[index]) return leftPoints[index]! - rightPoints[index]!;
   }
-  return value;
+  return leftPoints.length - rightPoints.length;
+}
+
+function sortTestJsonObject(_key: string, value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  return Object.fromEntries(Object.keys(record)
+    .sort(testCodePointCompare)
+    .map((key) => [key, record[key]]));
 }
 
 export function canonicalPrettyJson(value: unknown): string {
-  return `${JSON.stringify(canonicalize(value), null, 2)}\n`;
+  return `${JSON.stringify(value, sortTestJsonObject, 2)}\n`;
 }
 
 export async function createAnswerReleaseFixture(options: {
@@ -120,7 +126,7 @@ export async function createAnswerReleaseFixture(options: {
         recordId: `${record.collection}/${record.id}`,
         recordChecksum: canonicalPublicRecordChecksum(record),
       }))
-      .sort((left, right) => codePointCompare(left.recordId, right.recordId)),
+      .sort((left, right) => testCodePointCompare(left.recordId, right.recordId)),
   };
   return { sandbox, sourceRoot, publicReleasesRoot, answerReleasesRoot, contentRelease, approval };
 }

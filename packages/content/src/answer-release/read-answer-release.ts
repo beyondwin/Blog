@@ -29,6 +29,7 @@ import {
 } from './identity';
 import {
   assertOwnedAnswerDirectory,
+  canonicalAnswerPrettyJson,
   hashAnswerReleaseArtifact,
   listAnswerReleaseFiles,
   readOwnedAnswerFile,
@@ -77,20 +78,6 @@ const expectedInventory = new Set([
   'manifest.json',
 ]);
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => codePointCompare(left, right))
-      .map(([key, child]) => [key, canonicalize(child)]));
-  }
-  return value;
-}
-
-function canonicalPrettyJson(value: unknown): string {
-  return `${JSON.stringify(canonicalize(value), null, 2)}\n`;
-}
-
 function hash(bytes: Buffer): string {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
@@ -131,7 +118,21 @@ function canonicalNdjson(values: readonly unknown[]): Buffer {
 }
 
 const forbiddenAnswerKey = /^(?:bodyHtml|markdown|status|draft|includeInAnswers|provider|providerOutput|vector)$/iu;
-const htmlOrMarkdown = /<\/?[A-Za-z][^>]*>|!?\[[^\]]+\]\([^)]+\)|(?:^|\n)\s{0,3}(?:#{1,6}\s|[-*+]\s|>\s|```)|`[^`\n]+`|\*\*[^*\n]+\*\*|__[^_\n]+__/u;
+const htmlMarkup = /<!--[\s\S]*?-->|<\/?[A-Za-z][^>]*>|<![A-Z][^>]*>|<\?[\s\S]*?\?>/u;
+const markdownBlock = /(?:^|\n) {0,3}(?:#{1,6}[\t ]|>[\t ]?|(?:[-*+]|\d{1,9}[.)])[\t ]+|(?:`{3,}|~{3,})|\[[^\]]+\]:[\t ]*\S)|(?:^|\n).+\n {0,3}(?:=+|-+)[\t ]*(?:\n|$)|(?:^|\n) {0,3}(?:(?:\*[\t ]*){3,}|(?:-[\t ]*){3,}|(?:_[\t ]*){3,})[\t ]*(?:\n|$)|(?:^|\n) {0,3}\|?(?:[\t ]*:?-{3,}:?[\t ]*\|)+/u;
+const markdownLinkOrCode = /!?\[[^\]]+\](?:\([^)]+\)|\[[^\]]*\])|`+[^`\n]+`+|<(?:(?:https?:\/\/|mailto:)[^>]+|[^@<>\s]+@[^@<>\s]+)>/u;
+const markdownAsteriskEmphasis = /(?:^|[^\p{L}\p{N}\\])\*(?![\s*])[^*\n]*?\S\*(?!\*)/u;
+const markdownUnderscoreEmphasis = /(?:^|[^\p{L}\p{N}_\\])_(?![\s_])[^_\n]*?\S_(?![\p{L}\p{N}_])/u;
+const markdownStrongOrStrike = /\*\*(?!\s)[^*\n]*?\S\*\*|__(?!\s)[^_\n]*?\S__|~~(?!\s)[^~\n]*?\S~~/u;
+
+function containsAnswerMarkup(value: string): boolean {
+  return htmlMarkup.test(value)
+    || markdownBlock.test(value)
+    || markdownLinkOrCode.test(value)
+    || markdownAsteriskEmphasis.test(value)
+    || markdownUnderscoreEmphasis.test(value)
+    || markdownStrongOrStrike.test(value);
+}
 
 function answerBoundaryHits(value: unknown, path: string, skipObjectKeys = false): unknown[] {
   const hits: unknown[] = [...findPublicBoundaryHits(value, path)];
@@ -141,7 +142,7 @@ function answerBoundaryHits(value: unknown, path: string, skipObjectKeys = false
       return;
     }
     if (typeof child === 'string') {
-      if (htmlOrMarkdown.test(child)) hits.push({ path: childPath, kind: 'answer-markup', marker: 'HTML or Markdown' });
+      if (containsAnswerMarkup(child)) hits.push({ path: childPath, kind: 'answer-markup', marker: 'HTML or Markdown' });
       return;
     }
     if (!child || typeof child !== 'object') return;
@@ -241,7 +242,7 @@ export async function verifyAnswerReleaseDirectory(
   ]);
   const manifestInput = JSON.parse(manifestFile.bytes.toString('utf8')) as unknown;
   const manifest = publicAnswerReleaseManifestSchema.parse(manifestInput);
-  if (canonicalPrettyJson(manifest) !== manifestFile.bytes.toString('utf8')) {
+  if (canonicalAnswerPrettyJson(manifest) !== manifestFile.bytes.toString('utf8')) {
     throw new Error('manifest.json must use canonical pretty JSON with one final newline');
   }
   if (
@@ -256,7 +257,7 @@ export async function verifyAnswerReleaseDirectory(
   const indexInputs = parseCanonicalNdjson(indexInputsFile.bytes, publicAnswerIndexInputSchema, (item) => item.chunkId, 'index-inputs.ndjson');
   const lexicalInput = JSON.parse(lexicalFile.bytes.toString('utf8')) as unknown;
   const lexicalIndex = publicAnswerLexicalIndexSchema.parse(lexicalInput);
-  if (canonicalPrettyJson(lexicalIndex) !== lexicalFile.bytes.toString('utf8')) {
+  if (canonicalAnswerPrettyJson(lexicalIndex) !== lexicalFile.bytes.toString('utf8')) {
     throw new Error('lexical-index.json must use canonical pretty JSON with one final newline');
   }
 
@@ -318,7 +319,7 @@ export async function verifyAnswerReleaseDirectory(
   equalBytes(chunksFile.bytes, canonicalNdjson(expectedChunks), 'chunks.ndjson');
   equalBytes(evidenceFile.bytes, canonicalNdjson(expectedEvidence), 'evidence.ndjson');
   equalBytes(indexInputsFile.bytes, canonicalNdjson(expectedIndexes.indexInputs), 'index-inputs.ndjson');
-  equalBytes(lexicalFile.bytes, Buffer.from(canonicalPrettyJson(expectedIndexes.lexicalIndex)), 'lexical-index.json');
+  equalBytes(lexicalFile.bytes, Buffer.from(canonicalAnswerPrettyJson(expectedIndexes.lexicalIndex)), 'lexical-index.json');
 
   const expectedCounts = {
     records: new Set(expectedChunks.map((chunk) => chunk.recordId)).size,
@@ -375,7 +376,7 @@ export async function readActiveAnswerRelease(
   await assertOwnedAnswerDirectory(root);
   const before = await readOwnedAnswerFile(root, 'active.json');
   const pointer = activeAnswerReleasePointerSchema.parse(JSON.parse(before.bytes.toString('utf8')));
-  if (canonicalPrettyJson(pointer) !== before.bytes.toString('utf8')) {
+  if (canonicalAnswerPrettyJson(pointer) !== before.bytes.toString('utf8')) {
     throw new Error('active answer release pointer must be canonical JSON');
   }
   if (pointer.contentReleaseId !== contentRelease.manifest.releaseId) {
