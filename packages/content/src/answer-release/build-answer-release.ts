@@ -108,8 +108,8 @@ export async function createOwnedAnswerTemporaryRoot(parent: string): Promise<Ow
 export async function cleanupOwnedAnswerTemporaryRoot(owned: OwnedAnswerTemporaryRoot): Promise<void> {
   const path = owned && typeof owned === 'object' ? ownedTemporaryRoots.get(owned) : undefined;
   if (!path || owned.path !== path) throw new Error('cleanup target is not an owned answer temporary root');
-  ownedTemporaryRoots.delete(owned);
   await rm(path, { recursive: true, force: true });
+  ownedTemporaryRoots.delete(owned);
 }
 
 function descriptor(path: MaterializedFile['path'], bytes: Buffer, count: number): MaterializedFile {

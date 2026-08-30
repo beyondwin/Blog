@@ -112,7 +112,29 @@ describe('public answer contracts', () => {
       kind: 'answer',
       answerReleaseId: hex,
       claims: [{ id: 'claim-1', text: '🙂'.repeat(601), evidenceIds: [evidence.evidenceId] }],
-      evidence: [{ ...evidence, excerpt: '🙂'.repeat(1201) }],
+      evidence: [evidence],
+    })).toThrow();
+  });
+
+  it('accepts 1200 excerpt code points and rejects 1201 with an otherwise-valid answer', () => {
+    const response = {
+      kind: 'answer' as const,
+      answerReleaseId: hex,
+      claims: [{
+        id: 'claim-1',
+        text: '공개 근거를 짧게 요약한 주장입니다.',
+        evidenceIds: [evidence.evidenceId],
+      }],
+      evidence: [{ ...evidence, excerpt: '🙂'.repeat(1200) }],
+    };
+
+    const accepted = publicAskResponseSchema.parse(response);
+    expect(accepted.kind).toBe('answer');
+    if (accepted.kind !== 'answer') throw new Error('expected an answer response');
+    expect(Array.from(accepted.evidence[0]!.excerpt)).toHaveLength(1200);
+    expect(() => publicAskResponseSchema.parse({
+      ...response,
+      evidence: [{ ...response.evidence[0], excerpt: '🙂'.repeat(1201) }],
     })).toThrow();
   });
 

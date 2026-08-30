@@ -41,6 +41,7 @@ import {
 
 const fileRace = vi.hoisted(() => ({
   afterOpen: undefined as undefined | ((path: string) => Promise<boolean>),
+  beforeRemove: undefined as undefined | ((path: string) => Promise<void>),
 }));
 
 vi.mock('node:fs/promises', async (importOriginal) => {
@@ -52,6 +53,10 @@ vi.mock('node:fs/promises', async (importOriginal) => {
       const hook = fileRace.afterOpen;
       if (hook && await hook(String(args[0]))) fileRace.afterOpen = undefined;
       return handle;
+    },
+    rm: async (...args: Parameters<typeof actual.rm>) => {
+      await fileRace.beforeRemove?.(String(args[0]));
+      return actual.rm(...args);
     },
   };
 });
@@ -422,6 +427,31 @@ next.`,
     await cleanupOwnedAnswerTemporaryRoot(owned);
     await expect(readFile(join(owned.path, 'scratch.txt'))).rejects.toThrow();
     await expect(cleanupOwnedAnswerTemporaryRoot(owned)).rejects.toThrow(/owned|capability|temporary/i);
+  });
+
+  it('retains the same cleanup capability when a transient removal fails', async () => {
+    const fixture = await writeAnswerReleaseFixture();
+    const owned = await createOwnedAnswerTemporaryRoot(fixture.answerReleasesRoot);
+    const scratch = join(owned.path, 'scratch.txt');
+    await writeFile(scratch, 'temporary\n');
+    fileRace.beforeRemove = async (path) => {
+      if (path !== owned.path) return;
+      const error = new Error('simulated transient removal failure') as NodeJS.ErrnoException;
+      error.code = 'EBUSY';
+      throw error;
+    };
+
+    try {
+      await expect(cleanupOwnedAnswerTemporaryRoot(owned)).rejects.toThrow(/transient removal failure/i);
+      expect(await readFile(scratch, 'utf8')).toBe('temporary\n');
+      fileRace.beforeRemove = undefined;
+      await cleanupOwnedAnswerTemporaryRoot(owned);
+      await expect(readFile(scratch, 'utf8')).rejects.toThrow();
+      await expect(cleanupOwnedAnswerTemporaryRoot(owned)).rejects.toThrow(/owned|capability|temporary/i);
+    } finally {
+      fileRace.beforeRemove = undefined;
+      await rm(owned.path, { recursive: true, force: true });
+    }
   });
 
   it('checks current-user ownership for release roots and files', async () => {

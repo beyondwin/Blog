@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as answerReleaseApi from '@beyondwin/content/answer-release';
@@ -84,6 +85,32 @@ describe('immutable public answer release building', { timeout: 30_000 }, () => 
     for (const [path, bytes] of Object.entries(beforeRebuild)) {
       expect(await readFile(join(rebuilt.releasePath, path))).toEqual(bytes);
     }
+  });
+
+  it('writes lexical postings with integer-like keys in code-point order and reopens those canonical bytes', async () => {
+    const fixture = await createAnswerReleaseFixture({
+      title: 'Public numeric tokens',
+      prose: 'Public evidence includes 10 before 2.',
+    });
+    const built = await buildPublicAnswerRelease({
+      contentRelease: fixture.contentRelease,
+      approval: fixture.approval,
+      answerReleasesRoot: fixture.answerReleasesRoot,
+    });
+    const lexicalText = await readFile(join(built.releasePath, 'lexical-index.json'), 'utf8');
+    const tenOffset = lexicalText.indexOf('\n    "10": [');
+    const twoOffset = lexicalText.indexOf('\n    "2": [');
+
+    expect(tenOffset).toBeGreaterThan(-1);
+    expect(twoOffset).toBeGreaterThan(tenOffset);
+    await expect(readActiveAnswerRelease(
+      fixture.answerReleasesRoot,
+      fixture.contentRelease,
+      fixture.approval,
+    )).resolves.toMatchObject({
+      answerReleaseId: built.answerReleaseId,
+      lexicalIndex: { postings: { 10: expect.any(Array), 2: expect.any(Array) } },
+    });
   });
 
   it('never reopens raw source and rejects answer-only input before creating staging', async () => {
@@ -178,7 +205,11 @@ describe('immutable public answer release building', { timeout: 30_000 }, () => 
       lexicalIndex: { documents: [], postings: {} },
       privateBoundaryHits: [],
     });
-    expect(JSON.parse(await readFile(join(fixture.answerReleasesRoot, 'active.json'), 'utf8'))).toEqual({
+    const activeBytes = await readFile(join(fixture.answerReleasesRoot, 'active.json'));
+    const expectedPointerHash = `sha256:${createHash('sha256').update(activeBytes).digest('hex')}`;
+    expect(expectedPointerHash).toMatch(/^sha256:[a-f0-9]{64}$/u);
+    expect(active.activePointerHash).toBe(expectedPointerHash);
+    expect(JSON.parse(activeBytes.toString('utf8'))).toEqual({
       schemaVersion: 1,
       contentReleaseId: fixture.contentRelease.manifest.releaseId,
       answerReleaseId: empty.answerReleaseId,

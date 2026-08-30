@@ -21,18 +21,40 @@ function checksum(bytes: Buffer): string {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
-function canonicalizeAnswerJson(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalizeAnswerJson);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => codePointCompare(left, right))
-      .map(([key, child]) => [key, canonicalizeAnswerJson(child)]));
+function serializeCanonicalPrettyJson(value: unknown, depth: number): string | undefined {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number') {
+    return JSON.stringify(value);
   }
-  return value;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    const indentation = '  '.repeat(depth + 1);
+    const closingIndentation = '  '.repeat(depth);
+    const children = Array.from(value, (child) => (
+      serializeCanonicalPrettyJson(child, depth + 1) ?? 'null'
+    ));
+    return `[\n${children.map((child) => `${indentation}${child}`).join(',\n')}\n${closingIndentation}]`;
+  }
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => codePointCompare(left, right))
+      .flatMap(([key, child]) => {
+        const serialized = serializeCanonicalPrettyJson(child, depth + 1);
+        return serialized === undefined ? [] : [[key, serialized] as const];
+      });
+    if (entries.length === 0) return '{}';
+    const indentation = '  '.repeat(depth + 1);
+    const closingIndentation = '  '.repeat(depth);
+    return `{\n${entries.map(([key, child]) => (
+      `${indentation}${JSON.stringify(key)}: ${child}`
+    )).join(',\n')}\n${closingIndentation}}`;
+  }
+  return undefined;
 }
 
 export function canonicalAnswerPrettyJson(value: unknown): string {
-  return `${JSON.stringify(canonicalizeAnswerJson(value), null, 2)}\n`;
+  const serialized = serializeCanonicalPrettyJson(value, 0);
+  if (serialized === undefined) throw new TypeError('canonical JSON value must be serializable');
+  return `${serialized}\n`;
 }
 
 function assertRelativePath(path: string): void {
