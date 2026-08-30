@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "split": "public-development",
+  "cases": [
+    { "id": "dev-01-reading-judgment", "question": "AI 시대에도 왜 계속 책을 읽나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "thoughts/why-i-read-in-the-ai-era" }], "forbiddenRecordIds": [] },
+    { "id": "dev-02-agent-instructions", "question": "AGENTS.md와 호출형 스킬은 어떤 역할로 나눠야 하나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/agents-md-vs-agent-skills-evidence" }], "forbiddenRecordIds": [] },
+    { "id": "dev-03-agent-discipline", "question": "코딩 에이전트의 실패를 줄이는 규율은 무엇인가요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/andrej-karpathy-skills-analysis" }], "forbiddenRecordIds": [] },
+    { "id": "dev-04-static-bff", "question": "정적 프런트엔드와 서버리스 BFF는 언제 적합한가요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/aws-static-frontend-serverless-bff" }], "forbiddenRecordIds": [] },
+    { "id": "dev-05-ui-mockup", "question": "AI 이미지 목업을 실제 UI로 옮길 때 무엇부터 해야 하나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/codex-ui-mockup-workflow" }], "forbiddenRecordIds": [] },
+    { "id": "dev-06-context-refinement", "question": "거친 요청을 실행 가능한 작업으로 바꾸려면 어떤 구조가 필요한가요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/context-refinement-system-design" }], "forbiddenRecordIds": [] },
+    { "id": "dev-07-code-graph", "question": "코드 지식 그래프가 코드 이해를 실제로 빠르게 하나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/graphify-code-knowledge-graph-deep-dive" }], "forbiddenRecordIds": [] },
+    { "id": "dev-08-hermes-runtime", "question": "Hermes Agent는 개인 AI 워커를 어떻게 구성하나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/hermes-agent-persistent-worker-runtime" }], "forbiddenRecordIds": [] },
+    { "id": "dev-09-lazycodex-harness", "question": "LazyCodex는 Codex를 어떤 개발 하네스로 바꾸나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/lazycodex-agent-harness-analysis" }], "forbiddenRecordIds": [] },
+    { "id": "dev-10-oh-my-pi-risk", "question": "oh-my-pi를 도입할 때 가장 큰 운영 위험은 무엇인가요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/oh-my-pi-deep-review" }], "forbiddenRecordIds": [] },
+    { "id": "dev-11-pgvector-rrf", "question": "pgvector와 FTS 결과를 RRF로 어떻게 합치나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/pgvector-hybrid-search" }], "forbiddenRecordIds": [] },
+    { "id": "dev-12-korean-bm25", "question": "PostgreSQL에서 한글 BM25와 n-gram 검색을 어떻게 만드나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/postgresql-bm25-pg-search" }], "forbiddenRecordIds": [] },
+    { "id": "dev-13-shared-ai-evidence", "question": "공유된 AI 대화는 어디까지 검증 근거가 될 수 있나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/shared-ai-conversation-evidence-boundaries" }], "forbiddenRecordIds": [] },
+    { "id": "dev-14-ai-code-review", "question": "AI가 쓴 코드를 읽지 않아도 된다는 말에는 어떤 조건이 필요한가요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/uncle-bob-ai-code-review-evidence" }], "forbiddenRecordIds": [] },
+    { "id": "dev-15-agent-minimalism", "question": "AI 코딩 에이전트를 덜 과하게 만드는 방법은 무엇인가요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/ponytail-agent-minimalism-analysis" }], "forbiddenRecordIds": [] },
+    { "id": "dev-16-ai-design-tools", "question": "AI 디자인 도구를 고를 때 어떤 작업 흐름으로 평가해야 하나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "articles/ai-design-references" }], "forbiddenRecordIds": [] },
+    { "id": "dev-17-black-swan", "question": "우리는 현실보다 현실에 대해 만든 이야기를 보는 걸까요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "reviews/black-swan" }], "forbiddenRecordIds": [] },
+    { "id": "dev-18-factfulness", "question": "직관이 현실을 왜곡할 때 무엇으로 교정할 수 있나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "reviews/factfulness" }], "forbiddenRecordIds": [] },
+    { "id": "dev-19-care-responsibility", "question": "돌봄과 생계의 선택을 개인 책임으로만 볼 수 있나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "reviews/how-we-crossed-winter" }], "forbiddenRecordIds": [] },
+    { "id": "dev-20-social-conformity", "question": "다름을 교정하려는 사회의 시선에서 어떻게 벗어날 수 있나요?", "expectedMode": "answer", "expectedEvidence": [{ "recordId": "reviews/convenience-store-woman" }], "forbiddenRecordIds": [] }
+  ]
+}
