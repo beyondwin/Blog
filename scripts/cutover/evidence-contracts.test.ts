@@ -80,7 +80,7 @@ describe('React-only cutover evidence contracts', () => {
     failed.failures.push('budget exceeded');
     expect(() => assertReactPerformanceReceipt(failed)).toThrow(/failure/iu);
     const privateLeak = performanceReceipt() as any;
-    privateLeak.measurements[0].measurement.privateBoundaryHits.push('/Users/private');
+    privateLeak.measurements[0].measurement.privateBoundaryHits.push('/Users/user/private');
     expect(() => assertReactPerformanceReceipt(privateLeak)).toThrow(/private/iu);
   });
 

@@ -24,3 +24,5 @@ When adding, moving, or deleting a durable non-README note under `docs/notes/`:
 An ADR change also updates `docs/notes/project/adr/README.md`. Mark unresolved exploration as `proposed`; only explicit decisions become `accepted`.
 
 Do not edit generated `docs/wiki/` pages as primary documents. New files under ignored `docs/superpowers/` remain local unless the user explicitly requests staging or a commit.
+
+이 저장소는 public이다. `docs/_inbox/`, `docs/raw/**`(README 제외), `docs/superpowers/`는 로컬 전용이다. `git add -f`로 올리지 않는다. 문서에 `/Users/실제계정`, 개인 메일, 네이버 블로그 ID를 적지 않는다.

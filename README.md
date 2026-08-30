@@ -55,6 +55,8 @@ npm run site:preview -- --host 127.0.0.1 --port 4391
 
 Astro, Public Atlas, 구 renderer는 지원하지 않습니다. 결정 이력만 남깁니다.
 
+이 저장소는 public입니다. 로컬 경로, 개인 메일, 외부 계정 ID는 커밋하지 않습니다.
+
 ## Archive Docs
 
 `docs/raw/`는 원문·provenance, `docs/notes/`는 사람이 정리한 durable source,

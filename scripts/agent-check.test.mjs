@@ -663,4 +663,73 @@ module.exports = fs.promises.readFile('memory/private.json');
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  async function gitInit(root) {
+    await execFileAsync('git', ['init'], { cwd: root });
+    await execFileAsync('git', ['config', 'user.name', 'beyondwin'], { cwd: root });
+    await execFileAsync('git', ['config', 'user.email', 'beyondwin@users.noreply.github.com'], { cwd: root });
+  }
+
+  async function gitCommitPath(root, relativePath, force = false) {
+    const args = force ? ['add', '-f', relativePath] : ['add', '--', relativePath];
+    await execFileAsync('git', args, { cwd: root });
+    await execFileAsync('git', ['commit', '-m', 'test'], { cwd: root });
+  }
+
+  it('rejects a tracked gitignored local artifact', async () => {
+    const root = await makeValidRoot();
+    try {
+      await put(root, '.gitignore', '.superpowers/\n');
+      await put(root, '.superpowers/sdd/note.md', '# local\n');
+      await gitInit(root);
+      await gitCommitPath(root, '.superpowers/sdd/note.md', true);
+
+      expect(await checkAgentSetup(root)).toContain(
+        '.superpowers/sdd/note.md: tracked gitignored local artifact is not allowed',
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects personal home paths, emails, Naver blog ids, and origin handles in tracked files', async () => {
+    const root = await makeValidRoot();
+    try {
+      await put(root, 'docs/notes/project/guide.md', [
+        `path: /Users/${'kws'}/Downloads/report.html`,
+        `mail: person@${'gmail.com'}`,
+        `url: https://blog.naver.com/${'moveattack'}/1`,
+        `origin: ${'kws'}`,
+        '',
+      ].join('\n'));
+      await gitInit(root);
+      await gitCommitPath(root, 'docs/notes/project/guide.md');
+
+      expect(await checkAgentSetup(root)).toEqual(expect.arrayContaining([
+        'docs/notes/project/guide.md: personal identity leak is not allowed',
+      ]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('allows anonymized fixtures and example Naver ids in tracked files', async () => {
+    const root = await makeValidRoot();
+    try {
+      await put(root, 'docs/notes/project/guide.md', [
+        'path: /Users/user/private/source.md',
+        'also: /Users/example/cover.png',
+        'url: https://blog.naver.com/example/1',
+        "origin: author",
+        'mail: beyondwin@users.noreply.github.com',
+        '',
+      ].join('\n'));
+      await gitInit(root);
+      await gitCommitPath(root, 'docs/notes/project/guide.md');
+
+      expect(await checkAgentSetup(root)).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

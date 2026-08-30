@@ -115,3 +115,4 @@ and superseded decisions as history; 끝난 전환 기록은 `docs/notes/project
 - Inventing a production domain or treating `.invalid` as production evidence.
 - Running only unit tests for a visible route change.
 - Restoring removed renderer/comparison tools from historical notes.
+- ignore된 로컬 폴더를 `git add -f`로 추적하거나, `/Users/실제계정`, 개인 메일, 네이버 계정 ID를 커밋하는 것.

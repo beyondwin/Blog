@@ -37,3 +37,6 @@
 - Preserve existing local servers. Use a separate port instead of killing or reconfiguring another process.
 - Do not commit or push unless the user explicitly requests it.
 - Historical renderer, parity, rollback, Public Atlas, and Graphify documents are evidence only. Do not restore their removed commands or dependencies; Graphify is article subject matter, not a project tool.
+- 이 저장소는 public이다. `.gitignore`에 있는 경로(`.superpowers/`, `docs/superpowers/`, `docs/raw/**`, `docs/_inbox/`, `memory/review/*`)는 커밋하지 않는다. `git add -f`로도 올리지 않는다.
+- `/Users/실제계정`, 개인 메일, 네이버/소셜 계정 ID, 로컬 Downloads 경로를 source·docs·테스트 fixture에 넣지 않는다. 익명 경로는 `/Users/user` 또는 `/Users/example`만 쓴다.
+- git 작성자는 `beyondwin <beyondwin@users.noreply.github.com>`이다. 커밋 전에 tracked 파일이 ignore 규칙과 충돌하지 않는지 본다.

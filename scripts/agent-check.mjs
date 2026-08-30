@@ -1,8 +1,12 @@
+import { execFile } from 'node:child_process';
 import { access, readFile, readdir, realpath } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import matter from 'gray-matter';
 import YAML from 'yaml';
+
+const execFileAsync = promisify(execFile);
 
 const requiredGuidance = [
   'AGENTS.md',
@@ -44,6 +48,35 @@ const sourceExtensions = new Set([
   '.tsx',
 ]);
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const binaryExtensions = new Set([
+  '.avif',
+  '.eot',
+  '.gif',
+  '.ico',
+  '.jpeg',
+  '.jpg',
+  '.otf',
+  '.png',
+  '.ttf',
+  '.wasm',
+  '.webp',
+  '.woff',
+  '.woff2',
+]);
+const forbiddenLocalArtifactPrefixes = [
+  '.superpowers/',
+  'docs/superpowers/',
+  'docs/_inbox/',
+];
+const identityLeakPattern = new RegExp([
+  String.raw`/Users/(?!user\b|example\b)[A-Za-z0-9._-]+`,
+  String.raw`@[A-Za-z0-9.-]*(?:gmail|naver|icloud)\.com\b`,
+  String.raw`(?:m\.)?blog\.naver\.com/(?!example)[A-Za-z0-9_-]+`,
+  String.raw`origin:\s*kws\b`,
+  String.raw`origin:\s*'kws'`,
+  String.raw`"origin"\s*:\s*"kws"`,
+  String.raw`\[\s*'kws'\s*,\s*'external'`,
+].join('|'), 'i');
 
 function repoPath(root, absolutePath) {
   return relative(root, absolutePath).split('\\').join('/');
@@ -894,6 +927,66 @@ async function checkDocs(root, errors) {
   }
 }
 
+function isForbiddenLocalArtifact(path) {
+  const normalized = path.split('\\').join('/');
+  if (forbiddenLocalArtifactPrefixes.some((prefix) => (
+    normalized === prefix.slice(0, -1) || normalized.startsWith(prefix)
+  ))) {
+    return true;
+  }
+  if (normalized.startsWith('docs/raw/') && normalized !== 'docs/raw/README.md') {
+    return true;
+  }
+  if (normalized.startsWith('memory/review/') && (normalized.endsWith('.jsonl') || normalized.endsWith('.md'))) {
+    return true;
+  }
+  if (/^memory\/thoughts\/private-.+\.md$/.test(normalized)) {
+    return true;
+  }
+  if (normalized.startsWith('memory/thoughts/') && normalized.endsWith('.local.md')) {
+    return true;
+  }
+  return false;
+}
+
+async function trackedFiles(root) {
+  if (!await exists(join(root, '.git'))) {
+    return null;
+  }
+
+  try {
+    const { stdout } = await execFileAsync('git', ['-C', root, 'ls-files', '-z'], {
+      maxBuffer: 20 * 1024 * 1024,
+    });
+    return stdout.split('\0').filter(Boolean);
+  } catch {
+    return null;
+  }
+}
+
+async function checkPublicIdentity(root, errors) {
+  const files = await trackedFiles(root);
+  if (files === null) {
+    return;
+  }
+
+  for (const path of files) {
+    if (isForbiddenLocalArtifact(path)) {
+      errors.push(`${path}: tracked gitignored local artifact is not allowed`);
+      continue;
+    }
+
+    if (binaryExtensions.has(extname(path).toLowerCase())) {
+      continue;
+    }
+
+    const text = await readText(join(root, path));
+    if (text && identityLeakPattern.test(text)) {
+      errors.push(`${path}: personal identity leak is not allowed`);
+    }
+  }
+}
+
 async function checkPrivateMemoryBoundary(root, errors) {
   const publicSourceRoots = [
     'apps/site/app',
@@ -919,6 +1012,7 @@ export async function checkAgentSetup(root = process.cwd()) {
   await checkSkills(resolvedRoot, errors);
   await checkDocs(resolvedRoot, errors);
   await checkPrivateMemoryBoundary(resolvedRoot, errors);
+  await checkPublicIdentity(resolvedRoot, errors);
   return [...new Set(errors)].sort();
 }
 

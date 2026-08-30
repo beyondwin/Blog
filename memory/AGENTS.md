@@ -5,7 +5,8 @@ These rules apply to top-level `memory/` sources and review artifacts.
 ## Privacy boundary
 
 - New thoughts are private unless the user explicitly requests public promotion.
-- Keep `memory/review/*.jsonl` and `memory/review/*.md` local and uncommitted.
+- Keep `memory/review/*.jsonl` and `memory/review/*.md` local and uncommitted. `git add -f`로도 올리지 않는다.
+- origin 값은 `author`, `external`, `synthesized`만 쓴다. 개인 핸들, 메일, 홈 경로를 thought source에 넣지 않는다.
 - Public promotion requires `confidentiality: public`, the `memory-public` surface, `review.status: accepted`, and at least one safe source.
 - Public application routes read `src/data/memory.public.json`; do not make `src/` import or parse top-level `memory/**`.
 
