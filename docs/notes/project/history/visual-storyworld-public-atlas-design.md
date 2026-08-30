@@ -1,8 +1,10 @@
 # Public Atlas Visual Storyworld vertical slice 설계
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](README.md)과 ADR을 본다.
+
 - Status: implemented and browser verified
 - Date: 2026-08-22
-- Governing decisions: [ADR-0001](adr/0001-private-first-knowledge-product.md), [ADR-0002](adr/0002-consumer-grade-visual-experience.md), [ADR-0003](adr/0003-visual-storyworld-experience-model.md), [ADR-0004](adr/0004-staged-aperture-public-composition.md)
+- Governing decisions: [ADR-0001](../adr/0001-private-first-knowledge-product.md), [ADR-0002](../adr/0002-consumer-grade-visual-experience.md), [ADR-0003](../adr/0003-visual-storyworld-experience-model.md), [ADR-0004](../adr/0004-staged-aperture-public-composition.md)
 - Implementation boundary: Public Atlas의 첫 장면과 Continuity Zoom journey
 
 ## 구현 상태

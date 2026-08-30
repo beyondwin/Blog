@@ -19,8 +19,13 @@
 
 - id: project
   name: Project
-  description: beyondwin의 현재 FORM & THOUGHT React-only built truth, immutable public release와 static delivery, Node/React 목표 구조, content/media approval, publishing workflow, validation, memory projection, ADR, design reference, browser evidence와 agent routing을 다루는 프로젝트 문서.
+  description: beyondwin의 현재 FORM & THOUGHT React-only built truth, immutable public release와 static delivery, Node/React 목표 구조, content/media approval, publishing workflow, validation, memory projection, ADR, design reference와 agent routing.
   folder: docs/notes/project
+
+- id: project/history
+  name: Project History
+  description: Astro, Public Atlas, 구 renderer 전환의 결정 이력과 종료 증거. 현재 운영 지침이 아니다.
+  folder: docs/notes/project/history
 
 - id: skills/agent-workflows
   name: Agent Workflows

@@ -93,5 +93,5 @@ Private에서는 실제 source, 책, PDF, screenshot, note를 모으고 장면�
 
 ## Historical follow-up
 
-- 당시 첫 sub-project는 [Public Atlas Visual Storyworld vertical slice](../visual-storyworld-public-atlas-design.md)였고 그 결과는 역사적 evidence로 남긴다.
-- 현재 공개 UI 작업은 [ADR-0007](0007-form-and-thought-react-only-editorial-system.md)과 [FORM & THOUGHT 구현 계획](../form-and-thought-implementation-plan.md)을 따른다.
+- 당시 첫 sub-project는 [Public Atlas Visual Storyworld vertical slice](../history/visual-storyworld-public-atlas-design.md)였고 그 결과는 역사적 evidence로 남긴다.
+- 현재 공개 UI 작업은 [ADR-0007](0007-form-and-thought-react-only-editorial-system.md)과 `DESIGN.md`를 따른다.

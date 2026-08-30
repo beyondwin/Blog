@@ -10,6 +10,8 @@ Use `$archive-docs-organizer` to update these files when sorting documents from
 `docs/_inbox`.
 
 Catalog paths usually point to human-curated documents under `docs/notes/`.
+Project operating docs stay under `docs/notes/project/`. Closed migration records
+use topic `project/history` and live under `docs/notes/project/history/`.
 They may also point to `docs/_inbox/` while a document is still intentionally
 unsorted, or to `docs/raw/` when an original capture is useful as a standalone
 reference.

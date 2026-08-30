@@ -1,5 +1,7 @@
 # Public renderer comparison and promotion evidence
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](../README.md)과 ADR을 본다.
+
 - Decision date: 2026-08-25
 - Base commit: `8d81bc20946dc089cad1dd21f042426e43feb88b`
 - Result: React Router Framework Mode selected and promoted to `apps/site`

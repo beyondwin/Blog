@@ -43,7 +43,7 @@ route-specific calibration. Exact approved golden viewports are Home 1440×1080,
 `821c2d15cf4bc462876fe09690595feef39ffbde394be39f5a19b562d76bf486` and
 `a64d62c62e70d04739c1f160c7a6dc9b75083b454c654e59b0e82c166d0764db`. The first two remain
 byte-identical to the independent approval binding in the
-[Astro removal manifest](form-and-thought-astro-removal-manifest.md). The detail golden supersedes
+[Astro removal manifest](../history/evidence/form-and-thought-astro-removal-manifest.md). The detail golden supersedes
 that manifest's pre-fix byte only for the reviewed public noun change from `글 목록으로` to
 `아티클 목록으로`; the update run changed no other golden.
 The common matrix covers Home; every primary index;

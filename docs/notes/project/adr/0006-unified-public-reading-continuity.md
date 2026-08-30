@@ -99,5 +99,5 @@ Article figure, review cover, memory text object를 중심으로 lane마다 다�
 
 ## Historical follow-up
 
-- [Public reading continuity 상세 설계](../public-reading-continuity-design.md)는 당시 migration evidence로 보존한다.
-- 현재 구현은 [ADR-0007](0007-form-and-thought-react-only-editorial-system.md)과 [FORM & THOUGHT 구현 계획](../form-and-thought-implementation-plan.md)의 React-only acceptance, recovery-contract 이전, exact Astro removal 순서를 따른다.
+- [Public reading continuity 상세 설계](../history/public-reading-continuity-design.md)는 당시 migration evidence로 보존한다.
+- 현재 구현은 [ADR-0007](0007-form-and-thought-react-only-editorial-system.md)과 `DESIGN.md`를 따른다.

@@ -49,9 +49,9 @@
   type: reference
   language: ko
   status: organized
-  summary: 현재 FORM & THOUGHT React-only built truth, immutable release, local setup, publishing workflow, architecture reference와 historical evidence를 구분하는 프로젝트 문서 허브.
+  summary: 현재 FORM & THOUGHT 문서를 지금/필요할 때만/종료 기록으로 나누는 프로젝트 문서 지도.
   source: README.md
-  updated: 2026-08-29
+  updated: 2026-08-30
 
 - title: beyondwin 시작하기
   path: docs/notes/project/getting-started.md
@@ -79,9 +79,9 @@
   type: product-design
   language: ko
   status: organized
-  summary: 승인된 reference를 실제 홈, 서평, 아티클, 생각, 검색과 상세 화면, 콘텐츠 편집, React-only 전환으로 구현하는 전체 설계.
+  summary: 홈, 서평, 아티클, 생각, 검색의 정보 구조와 화면 역할을 고정한 현재 공개 사이트 설계.
   source: ADR-0007 and user approvals 2026-08-28
-  updated: 2026-08-28
+  updated: 2026-08-30
 
 - title: FORM & THOUGHT 시각 스펙
   path: docs/notes/project/form-and-thought-visual-spec.md
@@ -103,9 +103,19 @@
   source: ADR-0007, ADR-0008 and user approvals 2026-08-29
   updated: 2026-08-29
 
+- title: 레거시 종료 기록
+  path: docs/notes/project/history/README.md
+  topic: project/history
+  type: reference
+  language: ko
+  status: organized
+  summary: Astro, Public Atlas, 구 renderer와 URL compatibility를 지원하지 않음을 고정하고 결정 이력 위치를 안내한다.
+  source: ADR-0007
+  updated: 2026-08-30
+
 - title: FORM & THOUGHT React-only 공개 사이트 구현 계획
-  path: docs/notes/project/form-and-thought-implementation-plan.md
-  topic: project
+  path: docs/notes/project/history/form-and-thought-implementation-plan.md
+  topic: project/history
   type: implementation-plan
   language: ko
   status: organized
@@ -114,8 +124,8 @@
   updated: 2026-08-28
 
 - title: FORM & THOUGHT representative vertical slice evidence
-  path: docs/notes/project/evidence/form-and-thought-vertical-slice.md
-  topic: project
+  path: docs/notes/project/history/evidence/form-and-thought-vertical-slice.md
+  topic: project/history
   type: evidence
   language: en
   status: organized
@@ -124,8 +134,8 @@
   updated: 2026-08-29
 
 - title: FORM & THOUGHT editorial ledger
-  path: docs/notes/project/evidence/form-and-thought-editorial-ledger.md
-  topic: project
+  path: docs/notes/project/history/evidence/form-and-thought-editorial-ledger.md
+  topic: project/history
   type: evidence
   language: en
   status: organized
@@ -134,8 +144,8 @@
   updated: 2026-08-29
 
 - title: FORM & THOUGHT Astro removal manifest
-  path: docs/notes/project/evidence/form-and-thought-astro-removal-manifest.md
-  topic: project
+  path: docs/notes/project/history/evidence/form-and-thought-astro-removal-manifest.md
+  topic: project/history
   type: evidence
   language: en
   status: organized
@@ -144,8 +154,8 @@
   updated: 2026-08-29
 
 - title: FORM & THOUGHT Astro removal post-removal amendment
-  path: docs/notes/project/evidence/form-and-thought-astro-removal-post-removal-amendment.md
-  topic: project
+  path: docs/notes/project/history/evidence/form-and-thought-astro-removal-post-removal-amendment.md
+  topic: project/history
   type: evidence
   language: en
   status: organized
@@ -154,8 +164,8 @@
   updated: 2026-08-29
 
 - title: FORM & THOUGHT pre-removal acceptance
-  path: docs/notes/project/evidence/form-and-thought-pre-removal-acceptance.md
-  topic: project
+  path: docs/notes/project/history/evidence/form-and-thought-pre-removal-acceptance.md
+  topic: project/history
   type: evidence
   language: en
   status: organized
@@ -174,8 +184,8 @@
   updated: 2026-08-29
 
 - title: 서평 제외 아티클 전면 개선 설계
-  path: docs/notes/project/non-review-article-improvement-design.md
-  topic: project
+  path: docs/notes/project/history/non-review-article-improvement-design.md
+  topic: project/history
   type: workflow
   language: ko
   status: organized
@@ -184,13 +194,13 @@
   updated: 2026-08-28
 
 - title: 서평 제외 아티클 전면 개선 구현 계획
-  path: docs/notes/project/non-review-article-improvement-implementation-plan.md
-  topic: project
+  path: docs/notes/project/history/non-review-article-improvement-implementation-plan.md
+  topic: project/history
   type: implementation-plan
   language: ko
   status: organized
-  summary: 2026-08-26 당시 article 18편 편집의 retired execution snapshot. 체크박스는 현재 상태가 아니며 새 lane과 React-only 전환은 ADR-0007 후속 계획이 담당한다.
-  source: docs/notes/project/non-review-article-improvement-design.md
+  summary: 2026-08-26 당시 article 18편 편집의 retired execution snapshot. 체크박스는 현재 상태가 아니다.
+  source: docs/notes/project/history/non-review-article-improvement-design.md
   updated: 2026-08-28
 
 - title: Agent Runbook
@@ -324,8 +334,8 @@
   updated: 2026-08-23
 
 - title: Public reading continuity 상세 설계
-  path: docs/notes/project/public-reading-continuity-design.md
-  topic: project
+  path: docs/notes/project/history/public-reading-continuity-design.md
+  topic: project/history
   type: product-design
   language: ko
   status: organized
@@ -334,8 +344,8 @@
   updated: 2026-08-23
 
 - title: Public reading continuity React migration 구현 계획
-  path: docs/notes/project/public-reading-continuity-implementation-plan.md
-  topic: project
+  path: docs/notes/project/history/public-reading-continuity-implementation-plan.md
+  topic: project/history
   type: implementation-plan
   language: ko
   status: organized
@@ -344,8 +354,8 @@
   updated: 2026-08-23
 
 - title: Public reading continuity React migration 작업 회고
-  path: docs/notes/project/public-reading-continuity-migration-retrospective.md
-  topic: project
+  path: docs/notes/project/history/public-reading-continuity-migration-retrospective.md
+  topic: project/history
   type: retrospective
   language: ko
   status: organized
@@ -354,8 +364,8 @@
   updated: 2026-08-26
 
 - title: 공개 글·책 독서 지면 설계
-  path: docs/notes/project/reading-surface-density-design.md
-  topic: project
+  path: docs/notes/project/history/reading-surface-density-design.md
+  topic: project/history
   type: product-design
   language: ko
   status: organized
@@ -364,8 +374,8 @@
   updated: 2026-08-27
 
 - title: 공개 글·책 독서 지면 구현 계획
-  path: docs/notes/project/reading-surface-density-implementation-plan.md
-  topic: project
+  path: docs/notes/project/history/reading-surface-density-implementation-plan.md
+  topic: project/history
   type: implementation-plan
   language: ko
   status: organized
@@ -374,8 +384,8 @@
   updated: 2026-08-27
 
 - title: Public renderer comparison and promotion evidence
-  path: docs/notes/project/evidence/public-renderer-comparison.md
-  topic: project
+  path: docs/notes/project/history/evidence/public-renderer-comparison.md
+  topic: project/history
   type: evidence
   language: en
   status: organized
@@ -384,8 +394,8 @@
   updated: 2026-08-25
 
 - title: Public site cutover, rollback, and restore evidence
-  path: docs/notes/project/evidence/public-site-cutover.md
-  topic: project
+  path: docs/notes/project/history/evidence/public-site-cutover.md
+  topic: project/history
   type: evidence
   language: en
   status: organized
@@ -394,8 +404,8 @@
   updated: 2026-08-26
 
 - title: Public Atlas Visual Storyworld vertical slice 설계
-  path: docs/notes/project/visual-storyworld-public-atlas-design.md
-  topic: project
+  path: docs/notes/project/history/visual-storyworld-public-atlas-design.md
+  topic: project/history
   type: product-design
   language: ko
   status: organized
@@ -404,8 +414,8 @@
   updated: 2026-08-22
 
 - title: 리뷰 verdict 검토 패킷
-  path: docs/notes/content-migration/review-verdicts.md
-  topic: project
+  path: docs/notes/project/history/review-verdicts.md
+  topic: project/history
   type: workflow
   language: ko
   status: organized
@@ -429,9 +439,9 @@
   type: explanation
   language: ko
   status: organized
-  summary: typed content lane, private-first memory boundary, source-grounded article gate, docs layer, restrained design system을 택한 이유와 trade-off.
+  summary: typed content lane, React-only public site, private-first memory, source-grounded article gate, docs layer를 택한 이유와 trade-off.
   source: PRODUCT.md
-  updated: 2026-06-30
+  updated: 2026-08-30
 
 - title: Archive Docs Organizer
   path: docs/notes/skills/archive-docs-organizer.md

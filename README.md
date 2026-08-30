@@ -45,15 +45,15 @@ npm run site:preview -- --host 127.0.0.1 --port 4391
 
 ## 문서
 
+- [문서 지도](docs/notes/project/README.md)
 - [시작하기](docs/notes/project/getting-started.md)
 - [아키텍처 레퍼런스](docs/notes/project/architecture-reference.md)
 - [콘텐츠 운영](docs/notes/project/publishing-workflows.md)
 - [Design built truth](DESIGN.md)
 - [ADR index](docs/notes/project/adr/README.md)
-- [Final acceptance](docs/notes/project/evidence/form-and-thought-final-acceptance.md)
+- [레거시 종료 기록](docs/notes/project/history/README.md)
 
-과거 Public Atlas, renderer comparison/cutover 자료는 의사결정 history입니다. 현재 작업은
-ADR-0007, 실제 package scripts와 위 built-truth 문서를 따릅니다.
+Astro, Public Atlas, 구 renderer는 지원하지 않습니다. 결정 이력만 남깁니다.
 
 ## Archive Docs
 

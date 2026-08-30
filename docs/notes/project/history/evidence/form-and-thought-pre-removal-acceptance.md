@@ -1,5 +1,7 @@
 # FORM & THOUGHT pre-removal acceptance
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](../README.md)과 ADR을 본다.
+
 - Status: accepted pre-removal GREEN; awaiting the controller's separate deletion ruling
 - Repository pre-removal HEAD: `095b89426b34aede0ce9fb29f0254bd1ba26aa0b`
 - Verified release: `2ceb7d0aa4595a290845aae97815452a2fced4ab35f647abaf7aa63f7f372874`

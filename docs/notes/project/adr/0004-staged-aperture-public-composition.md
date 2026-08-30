@@ -105,5 +105,5 @@ Continuity Zoom을 가장 분명히 예고하지만 context 밀도가 부족하�
 
 ## Historical follow-up
 
-- [Public Atlas Visual Storyworld vertical slice 설계](../visual-storyworld-public-atlas-design.md)와 [tracked visual references](../assets/public-atlas/README.md)는 당시 구현/evidence로 보존한다.
+- [Public Atlas Visual Storyworld vertical slice 설계](../history/visual-storyworld-public-atlas-design.md)와 [tracked visual references](../history/assets/public-atlas/README.md)는 당시 구현/evidence로 보존한다.
 - 현재 composition 변경은 [ADR-0007](0007-form-and-thought-react-only-editorial-system.md)과 [FORM & THOUGHT 시각 스펙](../form-and-thought-visual-spec.md)을 따른다.

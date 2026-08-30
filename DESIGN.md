@@ -7,7 +7,7 @@
 [시각 스펙](docs/notes/project/form-and-thought-visual-spec.md), 승인된 일곱 reference와
 [최종 acceptance](docs/notes/project/evidence/form-and-thought-final-acceptance.md) 순서로 확인한다.
 Public Atlas, Staged Aperture, mineral/cobalt reading world, Continuity Zoom 문서는
-역사적 근거일 뿐 현재 UI를 수정하는 지침이 아니다.
+[레거시 종료 기록](docs/notes/project/history/README.md)이다. 현재 UI를 수정하는 지침이 아니다.
 
 ## 브랜드와 정보 구조
 

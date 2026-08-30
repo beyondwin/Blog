@@ -1,12 +1,11 @@
 # FORM & THOUGHT 시각 스펙
 
-- 상태: 2026-08-28 built baseline; ADR-0008 target refinement approved, implementation pending
+- 상태: ADR-0007/0008 built truth. 로컬 구현 완료. production origin은 `not_measured`
 - 승인일: 2026-08-28
 - 결정: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md),
   [ADR-0008](adr/0008-full-bleed-density-and-topic-media.md)
 - reference inventory: [manifest.yml](assets/form-and-thought-reference/manifest.yml)
-- 구현 증거: [최종 acceptance](evidence/form-and-thought-final-acceptance.md),
-  [checksum-bound visual evidence](evidence/form-and-thought-astro-removal-manifest.md)
+- 구현 증거: [최종 acceptance](evidence/form-and-thought-final-acceptance.md)
 
 ## 1. 권한과 해석 규칙
 

@@ -1,41 +1,39 @@
 # FORM & THOUGHT 공개 사이트 설계
 
-- 상태: built and approved locally; production origin은 `not_measured`, cutover authorization은 `false`
+- 상태: 로컬 built truth. production origin은 `not_measured`, cutover authorization은 `false`
 - 기준일: 2026-08-28
 - 승인 근거: [ADR-0007 Decision evidence](adr/0007-form-and-thought-react-only-editorial-system.md#decision-evidence)
-- 구현 증거: [최종 acceptance](evidence/form-and-thought-final-acceptance.md),
-  [checksum-bound visual evidence](evidence/form-and-thought-astro-removal-manifest.md)
+- 구현 증거: [최종 acceptance](evidence/form-and-thought-final-acceptance.md)
 - 결정: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)
 - 시각 기준: [FORM & THOUGHT 시각 스펙](form-and-thought-visual-spec.md)
 - 이미지 기준: [FORM & THOUGHT 이미지 아트 디렉션](form-and-thought-image-art-direction.md)
 
 ## 1. 목표
 
-공개 사이트를 `FORM & THOUGHT`라는 하나의 편집 브랜드로 다시 만든다. 사용자는 홈에서 서평, 아티클, 생각을 발견하고, 목록에서 빠르게 성격을 파악하며, 상세에서 긴 글을 편안하게 읽고, 검색에서 자신의 질문을 넓힐 수 있어야 한다.
+공개 사이트는 `FORM & THOUGHT`라는 하나의 편집 브랜드다. 방문자는 홈에서 서평, 아티클, 생각을 발견하고, 목록에서 성격을 파악하며, 상세에서 긴 글을 읽고, 검색에서 질문을 넓힌다.
 
-완성 기준은 기존 화면에 새 색을 입히는 것이 아니다. 승인된 reference set의 지면 비율, 타이포그래피 계층, 이미지와 여백의 관계, 화면별 정보 순서를 실제 콘텐츠로 재현하는 것이다.
+완성 기준은 색만 바꾸는 것이 아니다. 승인된 reference의 지면 비율, 타이포그래피, 이미지와 여백, 화면별 정보 순서를 실제 콘텐츠로 재현하는 것이다.
 
 ## 2. 범위와 비범위
 
-### 이번 전환에 포함한다
+### 현재 제품이 제공한다
 
-- 전역 브랜드와 navigation 교체.
-- 홈, 아티클 목록·상세, 서평 목록·상세, 생각 목록·상세, 검색의 React 구현.
-- `thoughts` collection과 canonical route 신설.
-- `why-i-read-in-the-ai-era`의 article → thought 이동.
-- 실제 아티클 17편, 실제 서평 18편, 생각 1편의 편집.
-- 대표 이미지 후보 생성, contact sheet 검토, 승인 이미지 연결.
-- 좋아요·댓글의 비활성 준비 상태와 링크 복사 구현.
-- Astro 책임 이전과 Astro 코드·의존성·검증 제거.
-- 새 design/architecture built truth 문서 동기화.
+- 전역 브랜드와 `서평 · 아티클 · 생각 · 검색` navigation.
+- 홈, 아티클·서평·생각 목록/상세, 검색.
+- `thoughts` collection과 `/thoughts/why-i-read-in-the-ai-era/`.
+- 아티클 17편, 서평 18편, 생각 1편.
+- 좋아요·댓글의 비활성 준비 상태와 링크 복사.
+- React-only renderer.
 
 ### 포함하지 않는다
 
 - 좋아요나 댓글의 저장소, 계정, 수치 집계, 작성 UI.
 - fake thought, fake article, fake date, placeholder card.
 - 승인받지 않은 생성 이미지의 public 연결.
-- 레거시 Astro renderer와 구 URL compatibility 지원.
+- Astro, Public Atlas, 구 URL compatibility.
 - private memory나 raw source의 공개 범위 확대.
+
+전환 과정과 제거 증거는 [레거시 종료 기록](history/README.md)에 있다.
 
 ## 3. 정보 구조
 

@@ -1,5 +1,7 @@
 # Public site cutover, rollback, and restore evidence
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](../README.md)과 ADR을 본다.
+
 Task 15 local proof is complete for immutable implementation commit
 `f0d0e990f1ecb2c068ea98813e20da141010d257`. The source-bound verifier derives
 local **PASS** from the preserved performance receipt, the React → Astro → React

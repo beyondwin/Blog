@@ -185,7 +185,7 @@ namespace이며 제거된 renderer 비교를 실행하지 않는다.
 
 ## 문서와 역사
 
-accepted ADR과 evidence는 삭제하지 않는다. ADR-0002/3/4/6과 ADR-0005의 renderer-retention
-절, 과거 comparison/cutover evidence는 역사적 판단을 설명한다. 현재 작업자는 그 문서의
-옛 command, path, renderer를 실행 복구하지 않고 ADR-0007, 이 reference, `DESIGN.md`와 실제
-package scripts를 따른다. Graphify는 article subject일 뿐 project operating dependency가 아니다.
+현재 문서는 [프로젝트 허브](README.md)다. accepted ADR은 결정 이력이므로 삭제하지 않는다.
+Astro, Public Atlas, renderer 비교, cutover 증거는 [레거시 종료 기록](history/README.md)에
+있다. 그 문서의 옛 command, path, renderer를 실행 복구하지 않는다. Graphify는 article
+subject일 뿐 project operating dependency가 아니다.

@@ -1,6 +1,8 @@
 # 서평 제외 아티클 전면 개선 Implementation Plan
 
-> Status: historical / retired. 이 계획의 18편 article 분류와 Astro route 검증은 2026-08-26 당시의 실행 snapshot이다. 체크박스는 원래 계획 형식을 보존한 것이며 현재 완료 상태나 실행 명령이 아니다. [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)이 `why-i-read-in-the-ai-era`를 `thoughts`로 이동하고 React-only 공개 시스템으로 전환한다.
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](README.md)과 ADR을 본다.
+
+> Status: historical / retired. 이 계획의 18편 article 분류와 Astro route 검증은 2026-08-26 당시의 실행 snapshot이다. 체크박스는 원래 계획 형식을 보존한 것이며 현재 완료 상태나 실행 명령이 아니다. [ADR-0007](../adr/0007-form-and-thought-react-only-editorial-system.md)이 `why-i-read-in-the-ai-era`를 `thoughts`로 이동하고 React-only 공개 시스템으로 전환한다.
 
 > Completion evidence: article 개선 commit 흐름 `0c841af` … `1594c98`. 현재 작업에는 이 문서를 재실행하지 말고 [FORM & THOUGHT 구현 계획](form-and-thought-implementation-plan.md)을 사용한다.
 

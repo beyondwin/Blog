@@ -1,5 +1,7 @@
 # Public reading continuity React migration implementation plan
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](README.md)과 ADR을 본다.
+
 > **Required subskill:** Execute this plan with `superpowers:subagent-driven-development`; use a fresh implementation agent per task and an independent reviewer after Tasks 4, 8, 13, and 16.
 
 **Goal:** Replace the Astro public renderer with one measured React renderer and ship one intuitive visual/navigation system from scene or collection entry through reading, continuation, and contextual return.
@@ -8,7 +10,7 @@
 
 **Tech stack:** Node 24, npm workspaces, TypeScript 6 during Astro coexistence, React 19, Vitest, Playwright, MDX 3, Zod 4, Sharp; temporary Next.js 16 and React Router 8 renderer candidates.
 
-**Specs:** [ADR-0005](adr/0005-node-react-modular-monolith.md), [ADR-0006](adr/0006-unified-public-reading-continuity.md), [Node/React design](node-react-modular-monolith-design.md), [approved reading-continuity design](public-reading-continuity-design.md).
+**Specs:** [ADR-0005](../adr/0005-node-react-modular-monolith.md), [ADR-0006](../adr/0006-unified-public-reading-continuity.md), [Node/React design](../node-react-modular-monolith-design.md), [approved reading-continuity design](public-reading-continuity-design.md).
 
 ## Global constraints
 

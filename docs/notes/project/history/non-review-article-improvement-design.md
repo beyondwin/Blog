@@ -1,13 +1,15 @@
 # 서평 제외 아티클 전면 개선 설계
 
-> Historical scope note (2026-08-28): 이 작업 당시의 18편에는 `why-i-read-in-the-ai-era`가 article로 포함됐다. [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)은 이 글을 `thoughts`로 이동하고, 이후 공개 분류를 아티클 17편·생각 1편으로 바꾼다. 아래 내용은 2026-08-26에 완료된 편집 작업의 설계 기록이며 현재 실행 지침이 아니다.
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](README.md)과 ADR을 본다.
+
+> Historical scope note (2026-08-28): 이 작업 당시의 18편에는 `why-i-read-in-the-ai-era`가 article로 포함됐다. [ADR-0007](../adr/0007-form-and-thought-react-only-editorial-system.md)은 이 글을 `thoughts`로 이동하고, 이후 공개 분류를 아티클 17편·생각 1편으로 바꾼다. 아래 내용은 2026-08-26에 완료된 편집 작업의 설계 기록이며 현재 실행 지침이 아니다.
 
 - Status: approved, implemented
 - Approved: 2026-08-26
 - Implemented: 2026-08-26
 - Scope: `src/content/articles/`의 실제 아티클 18편
 - Excluded: `src/content/reviews/` 전체와 예시·테스트 콘텐츠
-- Related guidance: [콘텐츠 운영](publishing-workflows.md), [Agent Runbook](agent-runbook.md), [아키텍처 레퍼런스](architecture-reference.md)
+- Related guidance: [콘텐츠 운영](../publishing-workflows.md), [Agent Runbook](../agent-runbook.md), [아키텍처 레퍼런스](../architecture-reference.md)
 
 ## 1. 목적
 

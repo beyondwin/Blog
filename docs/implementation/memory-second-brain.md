@@ -1,271 +1,47 @@
 # Memory Second Brain Implementation Reference
 
 Date: 2026-05-24
-Status: Ready for implementation
-Public reference for the checked-in memory projection workflow.
+Updated: 2026-08-30
+Status: implemented; this path is a stable memory source locator
+
+이 파일 경로는 public memory thought가 인용하므로 유지한다. 현재 운영 문서는
+[아키텍처 레퍼런스](../notes/project/architecture-reference.md)와
+[콘텐츠 운영](../notes/project/publishing-workflows.md)이다. Astro route는 없다.
 
 ## Goal
 
-Create a private-first second brain for Signal Notes and publish a safe
-CareerHackerAlex-style `/memory` page from reviewed public thoughts.
+private-first second brain을 유지하고, 사람이 승인한 thought만
+`src/data/memory.public.json`으로 투영해 `/memory/`에 공개한다.
 
-The implementation has two layers:
+1. `memory/**`는 thoughts, edges, sources, review candidate의 원본이다.
+2. `src/data/memory.public.json`은 공개 앱이 읽는 유일한 projection이다.
 
-1. `memory/**` is the durable source of truth for thoughts, edges, sources, and
-   review candidates.
-2. `src/data/memory.public.json` is the generated public projection consumed by
-   the Astro route.
+공개 앱은 top-level `memory/**`를 import하거나 파싱하지 않는다.
 
-The public page must not import or parse private memory files directly.
-
-## Runtime Shape
-
-```mermaid
-flowchart LR
-  Docs["docs/notes + docs/_index/catalog.yml"] --> Seed["scripts/memory/seed.mjs"]
-  Content["src/content collections"] --> Seed
-  Seed --> Candidates["memory/review/seed-candidates.jsonl"]
-  Candidates --> Review["human review"]
-  Review --> Thoughts["memory/thoughts/*.md"]
-  Thoughts --> Project["scripts/memory/project.mjs"]
-  Edges["memory/edges.jsonl"] --> Project
-  Sources["memory/sources.jsonl"] --> Project
-  Project --> PublicJson["src/data/memory.public.json"]
-  PublicJson --> Modules["src/lib/memory/"]
-  Modules --> Page["src/pages/memory.astro"]
-  Modules --> Footers["content detail memory footers"]
-  Page --> Workbench["public/scripts/memory-workbench.js"]
-```
-
-## File Responsibilities
-
-`scripts/memory/schema.mjs`
-: Owns schema constants, markdown frontmatter parsing, JSONL parsing, source
-path safety, thought validation, edge validation, and projection eligibility
-reasons.
-
-`scripts/memory/seed.mjs`
-: Reads deterministic repo metadata and writes private review candidates. It
-does not publish anything.
-
-`scripts/memory/project.mjs`
-: Reads accepted thoughts and edges, validates sources, excludes private or
-unreviewed items, and writes the public projection JSON.
-
-`memory/thoughts/*.md`
-: Human-readable atomic thoughts. These are the only durable thought source of
-truth.
-
-`memory/edges.jsonl`
-: Typed thought-to-thought relationships.
-
-`memory/sources.jsonl`
-: Optional source metadata used to enrich projection output.
-
-`memory/review/seed-candidates.jsonl`
-: Generated intake queue for human review.
-
-`src/data/memory.public.json`
-: Generated static data for the public page. This file contains no private
-thoughts.
-
-`src/lib/memory/`
-: Responsibility-based public memory modules for data normalization, lookup,
-graph derivation, filters, content links, article compatibility, and page
-payloads.
-
-`src/lib/memoryData.ts`
-: Compatibility re-export surface for older imports.
-
-`src/pages/memory.astro`
-: Public dual-surface UI shell with Map, Library, and Sources views.
-
-`public/scripts/memory-workbench.js`
-: Progressive-enhancement browser behavior for `/memory` filters, URL state,
-selected details, tabs, and graph controls.
-
-## Code Map
-
-- `src/lib/memory/publicData.ts`: generated public JSON shape and fallback.
-- `src/lib/memory/lookup.ts`: source href resolution and lookup maps.
-- `src/lib/memory/graphModel.ts`: graph nodes, edges, facets, and layout metadata.
-- `src/lib/memory/filters.ts`: graph filters and URL deep-link helpers.
-- `src/lib/memory/contentLinks.ts`: matches any public content source path and tags against the public memory projection. It returns linked and related thoughts for detail-page footers without reading `memory/**` directly.
-- `src/lib/memory/articleLinks.ts`: compatibility wrapper for existing article-memory imports. New route work should use `findContentMemoryLinks()`.
-- `src/lib/memory/pagePayload.ts`: serializable `/memory` detail payload.
-- `src/lib/memoryData.ts`: compatibility re-export for older imports.
-- `public/scripts/memory-workbench.js`: progressive-enhancement browser behavior.
-
-## Thought File Contract
-
-Each public thought must include:
-
-```yaml
-schema_version: 1
-slug: context-quality-is-routing-problem
-claim_ko: "컨텍스트 품질은 프롬프트 문장력이 아니라 라우팅과 검증 구조의 문제다."
-claim_en: "Context quality is a routing and verification problem, not just prompt wording."
-memory_type: semantic
-origin: author
-confidentiality: public
-surfaces: [memory-public, article-ready]
-topics: [ai-workflow, context-engineering]
-theses: [ai-workflow-quality]
-sources:
-  - kind: article
-    path: src/content/articles/context-refinement-system-design.mdx
-    title: "Context Refinement System 설계 요약"
-    date: 2026-05-16
-review:
-  status: accepted
-  reviewed_at: 2026-05-24
-```
-
-New thoughts should default to:
-
-```yaml
-confidentiality: private
-surfaces: []
-review:
-  status: candidate
-```
-
-## Public Export Gate
-
-A thought is exported only when all checks pass:
-
-- `schema_version` is `1`.
-- `confidentiality` is `public`.
-- `surfaces` includes `memory-public`.
-- `review.status` is `accepted`.
-- `sources` contains at least one source.
-- Local source paths are safe relative paths and resolve inside the repo.
-- External source URLs use `http` or `https`.
-
-The projection script logs excluded counts by reason:
-
-- `private`
-- `notAccepted`
-- `notPublicSurface`
-- `missingSource`
-- `invalidSource`
-- `unsupportedSchema`
-
-## Seed Workflow
-
-Run:
-
-```bash
-npm run memory:seed
-```
-
-Example output:
+## Runtime shape
 
 ```text
-Wrote <number> memory seed candidates to <repo>/memory/review/seed-candidates.jsonl
+docs/notes + docs/_index/catalog.yml  ->  scripts/memory/seed.mjs
+src/content collections               ->  scripts/memory/seed.mjs
+seed                                  ->  memory/review/seed-candidates.jsonl
+human review                          ->  memory/thoughts/*.md
+thoughts + edges + sources            ->  scripts/memory/project.mjs
+project                               ->  src/data/memory.public.json
+apps/site                             ->  `/memory/` from the verified release
 ```
 
-The seed file is review input, not public data. Promotion means manually moving
-selected candidate records into `memory/thoughts/*.md`, adding reviewed
-frontmatter, and setting public fields only when the thought is safe to publish.
+## Current owners
 
-## Review Workflow
+| path | 역할 |
+| --- | --- |
+| `scripts/memory/schema.mjs` | schema, frontmatter, JSONL, path safety |
+| `scripts/memory/seed.mjs` | review candidate 생성. 공개하지 않음 |
+| `scripts/memory/project.mjs` | accepted thought만 projection JSON으로 기록 |
+| `memory/thoughts/*.md` | durable thought source |
+| `memory/edges.jsonl` | thought-to-thought 관계 |
+| `memory/sources.jsonl` | source metadata |
+| `src/data/memory.public.json` | 공개 앱이 읽는 projection |
+| `apps/site` | `/memory/` route. private memory를 직접 읽지 않음 |
 
-Run:
-
-```bash
-npm run memory:review -- report
-```
-
-This reads `memory/review/seed-candidates.jsonl` and writes the ignored local
-report `memory/review/queue.md`.
-
-Promote one reviewed candidate:
-
-```bash
-npm run memory:review -- promote <slug> --reviewed-at YYYY-MM-DD
-```
-
-Promotion writes `memory/thoughts/<slug>.md`, validates source paths, and refuses
-duplicate slugs. The command is explicit because seed candidates remain private
-until reviewed.
-
-## Projection Workflow
-
-Run:
-
-```bash
-npm run memory:project
-```
-
-Expected output:
-
-```text
-Memory projection valid. thoughts=<number> topics=<number> edges=<number> sources=<number> excluded={...}
-```
-
-The command writes `src/data/memory.public.json`.
-
-Validation-only mode:
-
-```bash
-npm run memory:validate
-```
-
-This must validate the same inputs without rewriting the public JSON.
-
-## Public Page Behavior
-
-`/memory` renders from `src/data/memory.public.json`.
-The same public projection also feeds content detail footers through
-`findContentMemoryLinks()`.
-
-The page contains:
-
-- a public second-brain hero,
-- counts for thoughts, topics, edges, and sources,
-- `Map`, `Library`, and `Sources` tabs,
-- deterministic positioned topic and thought nodes,
-- a selected thought detail panel,
-- topic-grouped thought cards,
-- source cards linking back to published content when possible.
-
-If no public data exists, the page renders an empty state that tells the owner
-to run `npm run memory:project`.
-
-## Testing Strategy
-
-Test files:
-
-- `scripts/memory.schema.test.mjs`
-- `scripts/memory.seed.test.mjs`
-- `scripts/memory.project.test.mjs`
-- `src/lib/memory/*.test.mjs`
-- `src/lib/memoryData.test.mjs`
-
-Required test evidence:
-
-```bash
-npm test -- scripts/memory.schema.test.mjs
-npm test -- scripts/memory.seed.test.mjs
-npm test -- scripts/memory.project.test.mjs
-npm run test -- src/lib/memory
-npm test -- src/lib/memoryData.test.mjs
-npm run test
-npm run build
-npm run validate
-```
-
-## Execution Order
-
-1. Implement schema validation test-first.
-2. Implement seed candidate generation test-first.
-3. Implement public projection test-first.
-4. Add curated seed thoughts and generate public JSON.
-5. Implement memory data loader.
-6. Build `/memory` route and styles.
-7. Add navigation.
-8. Run full verification.
-
-Each implementation task should commit only files listed in the execution plan.
-Do not stage unrelated dirty worktree files.
+공개 조건은 `confidentiality: public`, `surfaces`에 `memory-public`,
+`review.status: accepted`, 안전한 source다. 승격은 명시 권한이 있을 때만 한다.

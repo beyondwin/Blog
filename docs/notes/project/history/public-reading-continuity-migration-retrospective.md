@@ -1,5 +1,7 @@
 # Public reading continuity React migration 작업 회고
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](README.md)과 ADR을 본다.
+
 이 문서는 Public reading continuity React migration 전체 과정을 돌아보고,
 다음 대형 작업에서 시간과 검증 비용을 줄이기 위한 실행 규칙을 정리한다.
 구현 결과를 설명하는 문서가 아니라 **작업 방식을 개선하기 위한 참고 문서**다.

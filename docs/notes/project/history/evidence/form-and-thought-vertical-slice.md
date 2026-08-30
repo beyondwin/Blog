@@ -1,5 +1,7 @@
 # FORM & THOUGHT representative vertical slice evidence
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](../README.md)과 ADR을 본다.
+
 - Decision date: 2026-08-29
 - Final visual review: **APPROVE**
 - Approved routes: `/`, `/articles/`, `/articles/graphify-code-knowledge-graph-deep-dive/`

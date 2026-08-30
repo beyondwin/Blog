@@ -94,7 +94,9 @@ describe('site content contract', () => {
     ];
 
     for (const [file, checksum] of references) {
-      const asset = await readFile(join(root, 'docs', 'notes', 'project', 'assets', 'public-atlas', file));
+      const asset = await readFile(
+        join(root, 'docs', 'notes', 'project', 'history', 'assets', 'public-atlas', file),
+      );
       expect(createHash('sha256').update(asset).digest('hex'), `${file} checksum`).toBe(checksum);
     }
   });

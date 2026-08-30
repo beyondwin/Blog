@@ -97,5 +97,5 @@ ADR은 회의록이나 일일 작업 로그가 아니다. 미래 구현을 제�
 
 - ADR은 `왜 이 선택을 했는가`의 source of truth다.
 - `PRODUCT.md`는 현재 제품 truth, `DESIGN.md`는 승인된 visual system을 설명한다.
-- spec과 plan은 ADR 안에서 정한 경계를 구현 가능한 단위로 구체화한다.
+- spec과 plan은 ADR 안에서 정한 경계를 구현 가능한 단위로 구체화한다. 완료된 전환 계획과 레거시 증거는 [종료 기록](../history/README.md)에 둔다.
 - 구현이 ADR과 달라졌다면 문서를 현실에 맞춰 조용히 수정하지 않는다. 결정 변경인지 구현 오류인지 먼저 판별한다.

@@ -1,5 +1,7 @@
 # 공개 글·책 독서 지면 Implementation Plan
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](README.md)과 ADR을 본다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** React 공개 사이트의 `/articles/`를 팸플릿으로, `/reviews/`를 표지 객체+연도 일기로, 조사 글 상세를 TOC/colophon/표 접힘이 있는 독서 지면으로 옮긴다.

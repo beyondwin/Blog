@@ -137,8 +137,7 @@
 
 ## Follow-up
 
-- [FORM & THOUGHT 공개 사이트 설계](../form-and-thought-public-site-design.md)를 구현 범위의 source of truth로 사용한다.
-- [FORM & THOUGHT 시각 스펙](../form-and-thought-visual-spec.md)을 screenshot parity와 CSS token의 source로 사용한다.
-- [FORM & THOUGHT 이미지 아트 디렉션](../form-and-thought-image-art-direction.md)을 생성 이미지 후보와 media 승인에 사용한다.
-- 승인된 [FORM & THOUGHT 구현 계획](../form-and-thought-implementation-plan.md)을 task별 실행 source로 사용한다.
-- 구현 완료 전까지 기존 `DESIGN.md`, architecture reference, public-site cutover evidence는 현재 또는 역사적 built truth이며, 이 ADR만으로 production cutover나 Astro 제거 완료를 주장하지 않는다.
+- 현재 built truth는 `DESIGN.md`, [공개 사이트 설계](../form-and-thought-public-site-design.md), [시각 스펙](../form-and-thought-visual-spec.md), [아키텍처 레퍼런스](../architecture-reference.md)다.
+- [이미지 아트 디렉션](../form-and-thought-image-art-direction.md)은 생성 이미지와 표지 권리에 사용한다.
+- 실행 계획은 완료됐고 [history](../history/form-and-thought-implementation-plan.md)에 보존한다.
+- 이 ADR만으로 production origin이나 production cutover를 주장하지 않는다. 레거시 지원은 [종료 기록](../history/README.md)에 닫혀 있다.

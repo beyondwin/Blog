@@ -1,5 +1,7 @@
 # FORM & THOUGHT Astro removal manifest
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](../README.md)과 ADR을 본다.
+
 - Frozen at branch commit: `095b894`
 - Status: pre-removal proposal; no deletion is authorized by this file alone
 - Scope: repository renderer/runtime and its executable verification owners only

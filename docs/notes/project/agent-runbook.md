@@ -13,8 +13,9 @@
    `archive-and-memory` skill을 사용한다.
 5. focused RED/GREEN 뒤 `npm run validate`와 필요한 browser matrix를 실행한다.
 
-과거 renderer, parity, rollback, Public Atlas와 Graphify 문서는 history다. current command와
-owner는 `package.json`, `apps/site`, `packages/content`, `packages/contracts`에서 확인한다.
+과거 renderer, parity, rollback, Public Atlas 문서는 [레거시 종료 기록](history/README.md)이다.
+Graphify는 article 주제이지 프로젝트 도구가 아니다. current command와 owner는
+`package.json`, `apps/site`, `packages/content`, `packages/contracts`에서 확인한다.
 
 ## task routing
 
@@ -102,7 +103,8 @@ long titles, HOLD cover, image failure, table/code and actual static-host 404. U
 
 Adding or moving a durable note updates `docs/_index/catalog.yml`, `docs/_index/topics.yml` when its
 stable topic changes, and `docs/INDEX.md`. An ADR change also updates the ADR index. Preserve rejected
-and superseded decisions as history; do not rewrite them into current instructions.
+and superseded decisions as history; 끝난 전환 기록은 `docs/notes/project/history/`에 두고 현재
+지침으로 다시 쓰지 않는다.
 
 ## common failures
 

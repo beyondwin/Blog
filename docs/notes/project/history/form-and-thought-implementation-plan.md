@@ -1,10 +1,12 @@
 # FORM & THOUGHT React-only Public Site Implementation Plan
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](README.md)과 ADR을 본다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-- Status: approved implementation plan, not yet executed
+- Status: completed historical plan. Do not re-execute.
 - Approved: 2026-08-28
-- Approval evidence: [ADR-0007](adr/0007-form-and-thought-react-only-editorial-system.md)
+- Approval evidence: [ADR-0007](../adr/0007-form-and-thought-react-only-editorial-system.md)
 
 **Goal:** 승인된 일곱 reference와 같은 FORM & THOUGHT 공개 사이트를 React Router에 구현하고, 콘텐츠를 서평·아티클·생각·검색으로 재분류·편집한 뒤 Astro와 legacy rollback surface를 제거한다.
 
@@ -12,7 +14,7 @@
 
 **Tech Stack:** Node 24, TypeScript 6, React 19, React Router 8 Framework Mode static prerender, Zod 4, MDX 3, Sharp, Vitest, Playwright, repository media manifest.
 
-**Spec:** [docs/notes/project/form-and-thought-public-site-design.md](form-and-thought-public-site-design.md)
+**Spec:** [docs/notes/project/form-and-thought-public-site-design.md](../form-and-thought-public-site-design.md)
 
 ## Global Constraints
 

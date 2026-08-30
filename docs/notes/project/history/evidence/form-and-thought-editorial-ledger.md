@@ -1,8 +1,10 @@
 # FORM & THOUGHT editorial ledger
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](../README.md)과 ADR을 본다.
+
 - Status: complete with inherited legacy-validation boundary recorded below
 - Inventory frozen: 2026-08-29 (Asia/Seoul), before any Task 11 MDX edit
-- Authority: [ADR-0007](../adr/0007-form-and-thought-react-only-editorial-system.md), [Task 11](../form-and-thought-implementation-plan.md#task-11-%EC%8B%A4%EC%A0%9C-%EC%BD%98%ED%85%90%EC%B8%A0-36%ED%8E%B8%EC%9D%84-%EC%83%88-%EC%9D%BD%EA%B8%B0-%EA%B5%AC%EC%A1%B0%EC%97%90-%EB%A7%9E%EA%B2%8C-%ED%8E%B8%EC%A7%91%ED%95%9C%EB%8B%A4)
+- Authority: [ADR-0007](../../adr/0007-form-and-thought-react-only-editorial-system.md), [Task 11](../form-and-thought-implementation-plan.md#task-11-%EC%8B%A4%EC%A0%9C-%EC%BD%98%ED%85%90%EC%B8%A0-36%ED%8E%B8%EC%9D%84-%EC%83%88-%EC%9D%BD%EA%B8%B0-%EA%B5%AC%EC%A1%B0%EC%97%90-%EB%A7%9E%EA%B2%8C-%ED%8E%B8%EC%A7%91%ED%95%9C%EB%8B%A4)
 - Scope assertion: articles `17`, reviews `18`, thoughts `1`; examples excluded
 - Outcome vocabulary: `edited`, `verified-no-change`; `pending` is used only while this ledger is being completed
 

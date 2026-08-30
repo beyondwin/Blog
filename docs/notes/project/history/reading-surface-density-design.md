@@ -1,9 +1,11 @@
 # 공개 글·책 독서 지면 설계
 
+> 종료 기록이다. 현재 운영 지침이 아니다. [레거시 종료 기록](README.md)과 ADR을 본다.
+
 - Status: approved, implemented
 - Approved: 2026-08-27
-- Decision: [ADR-0006](adr/0006-unified-public-reading-continuity.md)
-- Related decisions: [ADR-0002](adr/0002-consumer-grade-visual-experience.md), [ADR-0003](adr/0003-visual-storyworld-experience-model.md)
+- Decision: [ADR-0006](../adr/0006-unified-public-reading-continuity.md)
+- Related decisions: [ADR-0002](../adr/0002-consumer-grade-visual-experience.md), [ADR-0003](../adr/0003-visual-storyworld-experience-model.md)
 - Related designs: [Public reading continuity](public-reading-continuity-design.md)
 
 ## 1. Purpose
@@ -187,6 +189,6 @@ origin 파싱, clean canonical href, modified click, 장면 복귀는 [reading c
 구현 후 갱신:
 
 - `DESIGN.md` reading route 절. 회색 부스/재단선 설명이 현재 공개 사이트 built truth인 것처럼 남지 않게 한다.
-- 필요하면 [아키텍처 레퍼런스](architecture-reference.md)의 글/책 목록 표현. Astro rollback 설명과 React built truth를 섞지 않는다.
+- 필요하면 [아키텍처 레퍼런스](../architecture-reference.md)의 글/책 목록 표현. Astro rollback 설명과 React built truth를 섞지 않는다.
 
 구현 전 갱신하지 않는 것: ADR, 공개 콘텐츠, public memory, 장면 정의.

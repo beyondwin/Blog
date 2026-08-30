@@ -7,6 +7,7 @@ These rules apply under `docs/`.
 - Use `docs/_inbox/` only for unsorted local intake.
 - Use `docs/raw/` when original wording or provenance must be preserved.
 - Use `docs/notes/<topic>/` for durable human-curated source documents.
+- Current project operating docs live under `docs/notes/project/`. Closed migration records live under `docs/notes/project/history/` and are not current instructions.
 - Treat `docs/wiki/` as generated navigation, not source of truth.
 - Verify important claims against `docs/raw/` or `docs/notes/`, even when a generated page gives a quick route.
 - Store durable product, architecture, data-boundary, publishing-policy, and UX decisions under `docs/notes/project/adr/`. Keep the ADR index and status current when a later decision changes an earlier one.

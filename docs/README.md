@@ -7,6 +7,7 @@
 - `_inbox/`: 아직 분류하지 않은 local intake.
 - `raw/`: 원문 wording, transcript, exported PDF 변환본처럼 provenance가 중요한 source capture.
 - `notes/`: 사람이 다듬은 curated document. 장기 보관의 기준 layer다.
+  프로젝트 운영은 `notes/project/`, 끝난 전환 기록은 `notes/project/history/`다.
 - `wiki/`: `raw`와 `notes`를 바탕으로 만든 generated navigation.
 - `_index/`: [INDEX.md](INDEX.md)를 관리하기 위한 catalog와 topic metadata.
 
