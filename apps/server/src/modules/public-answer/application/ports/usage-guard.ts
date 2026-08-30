@@ -3,6 +3,8 @@ export interface ProviderTokenUsage {
   outputTokens: number;
 }
 
+export const PUBLIC_ANSWER_REQUEST_TIMEOUT_MS = 12_000;
+
 export type ProviderStage = 'embedding' | 'generation' | 'semantic';
 
 export interface GenerationLease {

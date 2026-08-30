@@ -6,6 +6,7 @@ import type {
   UsageGuard,
   UsageLease,
 } from '../../application/ports/usage-guard.js';
+import { PUBLIC_ANSWER_REQUEST_TIMEOUT_MS } from '../../application/ports/usage-guard.js';
 import { PublicAnswerCostLimitError, PublicAnswerRateLimitError } from '../../domain/public-answer-errors.js';
 import { canonicalProviderJson, exactObject, providerChecksum } from '../openai/provider-json.js';
 import { FifoSemaphore } from './fifo-semaphore.js';
@@ -13,7 +14,7 @@ import { FifoSemaphore } from './fifo-semaphore.js';
 export const REQUEST_BODY_BYTES = 4_096;
 export const QUESTION_CODE_POINTS_MIN = 1;
 export const QUESTION_CODE_POINTS_MAX = 500;
-export const REQUEST_TIMEOUT_MS = 12_000;
+export const REQUEST_TIMEOUT_MS = PUBLIC_ANSWER_REQUEST_TIMEOUT_MS;
 export const PROVIDER_INPUT_TOKEN_UPPER_BOUND = 6_000;
 export const EVIDENCE_TOKEN_UPPER_BOUND = 4_000;
 export const PROVIDER_OUTPUT_TOKENS = 500;

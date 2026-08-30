@@ -223,6 +223,47 @@ describe('InMemoryUsageGuard', () => {
     expect(guard.usageTotals()).toEqual(expected);
   });
 
+  it.each([
+    ['embedding', { inputTokens: 2_000, outputTokens: 0 }, { providerTokens: 2_000, providerCostMicroUsd: 260 }],
+    ['generation', { inputTokens: 6_000, outputTokens: 500 }, { providerTokens: 6_500, providerCostMicroUsd: 6_750 }],
+    ['semantic', { inputTokens: 6_000, outputTokens: 500 }, { providerTokens: 6_500, providerCostMicroUsd: 6_750 }],
+  ] as const)('accepts the exact %s settlement ceiling', async (stage, usage, expected) => {
+    const guard = await InMemoryUsageGuard.create();
+    const lease = await guard.acquire({ networkKey: stage, requestId: stage, signal: signal() });
+    lease.beginStage(stage); lease.settleStage(stage, usage); lease.release();
+    expect(guard.usageTotals()).toEqual(expected);
+  });
+
+  it.each([
+    ['embedding input over', 'embedding', { inputTokens: 2_001, outputTokens: 0 }],
+    ['embedding output nonzero', 'embedding', { inputTokens: 2_000, outputTokens: 1 }],
+    ['embedding input negative', 'embedding', { inputTokens: -1, outputTokens: 0 }],
+    ['embedding output negative', 'embedding', { inputTokens: 0, outputTokens: -1 }],
+    ['embedding input unsafe', 'embedding', { inputTokens: Number.MAX_SAFE_INTEGER + 1, outputTokens: 0 }],
+    ['embedding output fractional', 'embedding', { inputTokens: 0, outputTokens: 0.5 }],
+    ['generation input over', 'generation', { inputTokens: 6_001, outputTokens: 0 }],
+    ['generation output over', 'generation', { inputTokens: 6_000, outputTokens: 501 }],
+    ['generation input negative', 'generation', { inputTokens: -1, outputTokens: 0 }],
+    ['generation output negative', 'generation', { inputTokens: 0, outputTokens: -1 }],
+    ['generation input unsafe', 'generation', { inputTokens: Number.MAX_SAFE_INTEGER + 1, outputTokens: 0 }],
+    ['generation output fractional', 'generation', { inputTokens: 0, outputTokens: 0.5 }],
+    ['semantic input over', 'semantic', { inputTokens: 6_001, outputTokens: 0 }],
+    ['semantic output over', 'semantic', { inputTokens: 6_000, outputTokens: 501 }],
+    ['semantic input negative', 'semantic', { inputTokens: -1, outputTokens: 0 }],
+    ['semantic output negative', 'semantic', { inputTokens: 0, outputTokens: -1 }],
+    ['semantic input unsafe', 'semantic', { inputTokens: Number.MAX_SAFE_INTEGER + 1, outputTokens: 0 }],
+    ['semantic output fractional', 'semantic', { inputTokens: 0, outputTokens: 0.5 }],
+  ] as const)('rejects %s and retains the attempted worst-case reservation', async (_label, stage, usage) => {
+    const guard = await InMemoryUsageGuard.create();
+    const lease = await guard.acquire({ networkKey: stage, requestId: stage, signal: signal() });
+    lease.beginStage(stage);
+    expect(() => lease.settleStage(stage, usage)).toThrow('provider stage usage is invalid');
+    lease.release();
+    expect(guard.usageTotals()).toEqual(stage === 'embedding'
+      ? { providerTokens: 2_000, providerCostMicroUsd: 260 }
+      : { providerTokens: 6_500, providerCostMicroUsd: 6_750 });
+  });
+
   it('permits exactly one generation-acquisition attempt after success, timeout, overflow, or abort', async () => {
     const successGuard = await InMemoryUsageGuard.create();
     const success = await successGuard.acquire({ networkKey: 'success', requestId: 'success', signal: signal() });

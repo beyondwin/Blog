@@ -112,6 +112,7 @@ interface HarnessOptions {
   guardError?: Error;
   generationLeaseError?: Error;
   eventSink?: PublicAnswerEventSink;
+  clock?: () => number;
 }
 
 function harness(options: HarnessOptions = {}) {
@@ -219,11 +220,11 @@ function harness(options: HarnessOptions = {}) {
     semanticVerifier,
     usageGuard,
     eventSink,
-    clock: () => {
+    clock: options.clock ?? (() => {
       const value = now;
       now += 175;
       return value;
-    },
+    }),
   });
 
   return {
@@ -628,6 +629,22 @@ describe('AnswerPublicQuestion', () => {
     await h.useCase.execute(command());
     expect(sink.events()).toEqual([expect.objectContaining({ resultKind: 'answer', errorKind: null,
       latencyBucket: '<250ms', providerInputBucket: '1-999', providerOutputBucket: '1-999', rateBucket: 'admitted' })]);
+  });
+
+  it.each([12_000, 12_001, 120_000])('preserves the original outcome and records 8-12s at trusted elapsed %dms', async (elapsed) => {
+    const startedAt = Date.parse('2026-08-30T00:00:00.000Z'); let calls = 0;
+    const sink = new InMemoryRedactedEventSink();
+    const h = harness({ eventSink: sink, clock: () => calls++ === 0 ? startedAt : startedAt + elapsed });
+    await expectSearch(h.useCase.execute(command({ answerReleaseId: 'stale-answer-release' })), 'release-mismatch');
+    expect(sink.events()).toEqual([expect.objectContaining({ resultKind: 'release-mismatch', latencyBucket: '8-12s' })]);
+  });
+
+  it('does not let a synchronous sink failure replace an answer or deterministic fallback', async () => {
+    const sink: PublicAnswerEventSink = { record() { throw new Error('telemetry sink failed'); } };
+    const answer = harness({ eventSink: sink });
+    await expect(answer.useCase.execute(command())).resolves.toMatchObject({ kind: 'answer' });
+    const fallback = harness({ eventSink: sink });
+    await expectSearch(fallback.useCase.execute(command({ answerReleaseId: 'stale-answer-release' })), 'release-mismatch');
   });
 
   it('always releases the usage lease when an unexpected verifier exception escapes mapping', async () => {

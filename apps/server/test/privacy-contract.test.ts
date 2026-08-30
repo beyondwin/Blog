@@ -21,6 +21,10 @@ describe('public-answer privacy contract', () => {
     expect(redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'r', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'answer', errorKind: null, latencyMs, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' }).latencyBucket).toBe(expected);
   });
 
+  it('keeps direct over-ceiling external measurement input fail-closed', () => {
+    expect(() => redactPublicAnswerEvent({ occurredAt: '2026-08-30T00:00:00.000Z', requestId: 'r', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), resultKind: 'timeout', errorKind: 'deadline', latencyMs: 12_001, retrievedCount: 0, providerInputTokens: 0, providerOutputTokens: 0, rateBucket: 'admitted' })).toThrow('telemetry event is invalid');
+  });
+
   it.each([
     [0, '0'], [1, '1-999'], [999, '1-999'], [1_000, '1000-1999'], [1_999, '1000-1999'],
     [2_000, '2000-3999'], [3_999, '2000-3999'], [4_000, '4000-6000'], [6_000, '4000-6000'], [6_001, 'over-budget'],

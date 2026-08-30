@@ -26,6 +26,7 @@ import type {
   UsageGuard,
   UsageLease,
 } from './ports/usage-guard.js';
+import { PUBLIC_ANSWER_REQUEST_TIMEOUT_MS } from './ports/usage-guard.js';
 
 export interface PublicAnswerPolicy {
   readonly mode: 'disabled' | 'fixture' | 'provider';
@@ -311,13 +312,13 @@ export class AnswerPublicQuestion {
       answerReleaseId: command.catalog.answerReleaseId,
       resultKind: resultKind(outcome),
       errorKind: metrics.errorKind,
-      latencyMs: this.clock() - startedAt,
+      latencyMs: Math.min(PUBLIC_ANSWER_REQUEST_TIMEOUT_MS, Math.max(0, this.clock() - startedAt)),
       retrievedCount: metrics.retrievedCount,
       providerInputTokens: metrics.inputTokens,
       providerOutputTokens: metrics.outputTokens,
       rateBucket: metrics.rateBucket,
     });
-    this.dependencies.eventSink.record(event);
+    try { this.dependencies.eventSink.record(event); } catch { /* telemetry never replaces the public outcome */ }
     return outcome;
   }
 }
