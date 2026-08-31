@@ -274,6 +274,69 @@ describe('runtime readiness', () => {
     } as any)).rejects.toThrow(/provider.*drift/u);
   });
 
+  it('binds production evaluation readiness to every active release and evaluator authority', async () => {
+    const usageHash = `sha256:${'7'.repeat(64)}`;
+    const hiddenHash = `sha256:${'8'.repeat(64)}`;
+    const catalog = Object.freeze({
+      ...binding,
+      bindingId: '11111111-1111-4111-8111-111111111111',
+      contentManifestHash: `sha256:${'a'.repeat(64)}`,
+      answerManifestHash: `sha256:${'b'.repeat(64)}`,
+      answerArtifactHash: `sha256:${'c'.repeat(64)}`,
+      corpusApprovalHash: `sha256:${'d'.repeat(64)}`,
+      embeddingSource: 'provider' as const,
+      embeddingReceiptHash: `sha256:${'3'.repeat(64)}`,
+      chunkChecksumById: new Map(), indexInputByChunkId: new Map(), vectorChecksumByChunkId: new Map(),
+      vectorSetChecksum: providerChecksum([]), indexRowsChecksum: providerChecksum([]),
+      indexChecksum: `sha256:${'4'.repeat(64)}`, tombstones: new Set(),
+    });
+    let receivedBinding: Record<string, unknown> | undefined;
+    const dependencies = {
+      pool: { async query(sql: string) { return { rows: sql === 'SELECT 1' ? [{}] : [] }; } },
+      catalogSource: { async snapshot() { return catalog; } },
+      async readProviderDataControl() {
+        return { projectHash: `sha256:${'9'.repeat(64)}`, receiptHash: `sha256:${'5'.repeat(64)}` };
+      },
+      async readProviderPricing() { return { receiptHash: `sha256:${'6'.repeat(64)}` }; },
+      async readProviderEmbedding() {
+        return {
+          contentReleaseId: binding.contentReleaseId, answerReleaseId: binding.answerReleaseId,
+          embeddingModel: 'text-embedding-3-large', embeddingDimensions: 3072, embeddingSource: 'provider',
+          providerDataControlReceiptHash: `sha256:${'5'.repeat(64)}`,
+          providerPricingReceiptHash: `sha256:${'6'.repeat(64)}`,
+        };
+      },
+      async readPublicEvaluationManifest() { return Buffer.from('public-eval-manifest'); },
+      async readEvaluationUsage() { return { receiptHash: usageHash, hiddenManifestHash: hiddenHash }; },
+      async readProductionEvaluation(_path: string, expected: Record<string, unknown>) {
+        receivedBinding = expected;
+        return { evaluationUsageReceiptHash: usageHash, hiddenManifestHash: hiddenHash };
+      },
+    };
+    const config = {
+      nodeEnv: 'production', publicAskMode: 'provider', providerDataControlReceiptPath: '/receipts/control.json',
+      providerEmbeddingReceiptRoot: '/receipts/embedding', productionEvalReportPath: '/receipts/eval.json',
+      evaluationUsageReceiptPath: '/receipts/usage.json',
+    } as any;
+    await expect(runRuntimeStartupChecks(config, dependencies as any)).resolves.toBe(catalog);
+    expect(receivedBinding).toMatchObject({
+      contentReleaseId: binding.contentReleaseId,
+      answerReleaseId: binding.answerReleaseId,
+      contentManifestHash: catalog.contentManifestHash,
+      answerManifestHash: catalog.answerManifestHash,
+      answerArtifactHash: catalog.answerArtifactHash,
+      corpusApprovalHash: catalog.corpusApprovalHash,
+      embeddingModel: 'text-embedding-3-large',
+      embeddingReceiptHash: catalog.embeddingReceiptHash,
+      evaluationUsageReceiptHash: usageHash,
+      retrieverVersion: 'postgres-hybrid-rrf-v1',
+      evaluatorVersion: 'public-answer-evaluator-v1',
+      promptSchemaVersion: 'public-answer-generation-and-support-v1',
+      semanticVerifierVersion: 'semantic-support-v1',
+    });
+    expect(receivedBinding?.publicManifestHash).toBe(providerChecksum(Buffer.from('public-eval-manifest')));
+  });
+
   it('caches one successful startup check and becomes false immediately on shutdown', async () => {
     let checks = 0;
     const readiness = new RuntimeReadiness({

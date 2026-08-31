@@ -4,9 +4,26 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { classifyPublicEvaluation } from '../../src/modules/public-answer/evaluation/public-eval-classifier.js';
-import { buildEvaluationReport, verifyProductionEvaluationReport } from '../../src/modules/public-answer/evaluation/evaluation-report.js';
+import {
+  buildEvaluationReport,
+  EVALUATOR_HASH,
+  EVALUATOR_VERSION,
+  GENERATION_MODEL,
+  PROMPT_SCHEMA_HASH,
+  PROMPT_SCHEMA_VERSION,
+  RETRIEVER_VERSION,
+  SEMANTIC_VERIFIER_HASH,
+  SEMANTIC_VERIFIER_VERSION,
+  verifyProductionEvaluationReport,
+} from '../../src/modules/public-answer/evaluation/evaluation-report.js';
 import { providerChecksum } from '../../src/modules/public-answer/infrastructure/openai/provider-json.js';
-import { parseEvaluationMode, preflightProviderLiveEvaluation } from '../../src/eval-public-answer.js';
+import { verifyPreauthorizedProviderEmbeddingReceipt } from '../../src/index-answer-release.js';
+import {
+  openHiddenAfterAuthorizedProviderBinding,
+  openHiddenAfterAuthorizedProviderIndexing,
+  parseEvaluationMode,
+  runAfterProviderLivePreflight,
+} from '../../src/eval-public-answer.js';
 
 const checksum = (character: string) => `sha256:${character.repeat(64)}`;
 
@@ -45,12 +62,14 @@ describe('offline public-answer evaluation', () => {
     expect(() => verifyProductionEvaluationReport(fixtureLive, productionBinding())).toThrow(/embedding|fixture/i);
     const providerLive = buildEvaluationReport({
       mode: 'hidden-provider-live', contentReleaseId: '1'.repeat(64), answerReleaseId: '2'.repeat(64),
+      contentManifestHash: checksum('1'), answerManifestHash: checksum('2'), answerArtifactHash: checksum('3'),
       corpusApprovalHash: checksum('a'), embeddingSource: 'provider', embeddingReceiptHash: checksum('b'),
       runnableCount: 60, deferredCount: 0, cases: hiddenCases(), absoluteFailures: zeroAbsoluteFailures(), runCount: 3,
       startedAt: '2026-08-30T00:00:00.000Z', completedAt: '2026-08-30T00:00:01.000Z',
       hiddenRuns: [hiddenRun(), hiddenRun(), hiddenRun()],
       providerDataControlReceiptHash: checksum('c'), providerPricingReceiptHash: checksum('d'),
       evaluationUsageReceiptHash: checksum('e'), hiddenManifestHash: checksum('f'), hiddenCustodianRole: 'site-owner',
+      publicManifestHash: checksum('4'), retrievalPolicyHash: checksum('5'),
     });
     expect(verifyProductionEvaluationReport(providerLive, productionBinding())).toBe(providerLive);
     const { reportHash: _reportHash, ...providerLiveBody } = providerLive;
@@ -76,9 +95,119 @@ describe('offline public-answer evaluation', () => {
 
   it('fails provider-live closed before calls when any authority or confirmation is missing', async () => {
     expect(parseEvaluationMode(['--mode=first-slice-offline'])).toBe('first-slice-offline');
-    let providerCalls = 0;
-    await expect(preflightProviderLiveEvaluation({}, { providerCall: async () => { providerCalls += 1; } })).rejects.toThrow(/authority|confirmation|manifest|receipt/i);
-    expect(providerCalls).toBe(0);
+    const complete: NodeJS.ProcessEnv = {
+      FORM_THOUGHT_CONFIRM_HIDDEN_EVAL: 'true', FORM_THOUGHT_CONFIRM_LIVE_PROVIDER: 'true',
+      FORM_THOUGHT_PROVIDER_LIVE_EVAL_AUTHORIZED: 'true', FORM_THOUGHT_HIDDEN_EVAL_MANIFEST: '/authority/hidden.json',
+      FORM_THOUGHT_EXPANDED_CORPUS_APPROVAL_HASH: checksum('1'), FORM_THOUGHT_PUBLIC_ANSWER_EVAL_REPORT: '/authority/report.json',
+      FORM_THOUGHT_EVAL_USAGE_RECEIPT: '/authority/usage.json', FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: '/authority/control.json',
+      FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: '/authority/edge.json', FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT: '/authority/embedding',
+      FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_HASH: checksum('2'), FORM_THOUGHT_HIDDEN_MANIFEST_HASH: checksum('3'),
+      FORM_THOUGHT_RETRIEVAL_POLICY_HASH: checksum('4'), FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/',
+      FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1', OPENAI_API_KEY: 'never-called-test-key',
+    };
+    for (const missing of [
+      'FORM_THOUGHT_CONFIRM_HIDDEN_EVAL', 'FORM_THOUGHT_CONFIRM_LIVE_PROVIDER', 'FORM_THOUGHT_PROVIDER_LIVE_EVAL_AUTHORIZED',
+      'FORM_THOUGHT_HIDDEN_EVAL_MANIFEST', 'FORM_THOUGHT_EXPANDED_CORPUS_APPROVAL_HASH', 'FORM_THOUGHT_PUBLIC_ANSWER_EVAL_REPORT',
+      'FORM_THOUGHT_EVAL_USAGE_RECEIPT', 'FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT', 'FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT',
+      'FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT', 'FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_HASH',
+      'FORM_THOUGHT_HIDDEN_MANIFEST_HASH', 'FORM_THOUGHT_RETRIEVAL_POLICY_HASH', 'FORM_THOUGHT_PUBLIC_ORIGIN',
+      'FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES', 'OPENAI_API_KEY',
+    ]) {
+      let providerCalls = 0;
+      const env = { ...complete };
+      delete env[missing];
+      await expect(runAfterProviderLivePreflight(env, async () => { providerCalls += 1; }), missing)
+        .rejects.toThrow(/authority|confirmation|missing/i);
+      expect(providerCalls, missing).toBe(0);
+    }
+  });
+
+  it('opens hidden authority only after an exact preauthorized active provider binding', async () => {
+    const events: string[] = [];
+    const expected = checksum('b');
+    await expect(openHiddenAfterAuthorizedProviderIndexing(expected, {
+      async indexAuthorizedReceipt() { events.push('index'); },
+      async readActiveBinding() {
+        events.push('binding');
+        return { embeddingSource: 'provider', embeddingReceiptHash: expected };
+      },
+      async openHiddenManifest() { events.push('hidden'); return { split: 'hidden-runtime' as const }; },
+    })).resolves.toEqual({ split: 'hidden-runtime' });
+    expect(events).toEqual(['index', 'binding', 'hidden']);
+
+    events.length = 0;
+    await expect(openHiddenAfterAuthorizedProviderIndexing(expected, {
+      async indexAuthorizedReceipt() { events.push('index'); },
+      async readActiveBinding() {
+        events.push('binding');
+        return { embeddingSource: 'provider', embeddingReceiptHash: checksum('0') };
+      },
+      async openHiddenManifest() { events.push('hidden'); return { split: 'hidden-runtime' as const }; },
+    })).rejects.toThrow(/provenance|receipt|binding/i);
+    expect(events).toEqual(['index', 'binding']);
+
+    await expect(openHiddenAfterAuthorizedProviderBinding(expected, {
+      async readActiveBinding() { return { embeddingSource: 'fixture', embeddingReceiptHash: expected }; },
+      async openHiddenManifest() { throw new Error('hidden must stay closed'); },
+    })).rejects.toThrow(/provenance|receipt|binding/i);
+  });
+
+  it('binds preauthorized provider indexing timestamps and release authorities before a billable call', () => {
+    const answer = {
+      contentReleaseId: '1'.repeat(64), answerReleaseId: '2'.repeat(64),
+      manifest: { identity: { contentManifestHash: checksum('1') } },
+      manifestHash: checksum('2'), artifactHash: checksum('3'), corpusApprovalHash: checksum('4'),
+      indexInputs: [{ chunkChecksum: checksum('9') }],
+    };
+    const receipt = {
+      contentReleaseId: answer.contentReleaseId, answerReleaseId: answer.answerReleaseId,
+      contentManifestHash: checksum('1'), answerManifestHash: checksum('2'), answerArtifactHash: checksum('3'),
+      corpusApprovalHash: checksum('4'), providerDataControlReceiptHash: checksum('5'),
+      providerPricingReceiptHash: checksum('6'), createdAt: '2026-08-30T00:00:00.000Z',
+      completedAt: '2026-08-30T00:00:01.000Z', inputTokens: 100, costMicroUsd: 13,
+      entries: [{ chunkChecksum: checksum('9'), vectorChecksum: checksum('a') }],
+    };
+    expect(verifyPreauthorizedProviderEmbeddingReceipt(answer as any, receipt as any, {
+      providerDataControlReceiptHash: checksum('5'), providerPricingReceiptHash: checksum('6'),
+      maxInputTokens: 100_000, maxCostMicroUsd: 20_000,
+    })).toEqual({ createdAt: receipt.createdAt, completedAt: receipt.completedAt });
+    expect(() => verifyPreauthorizedProviderEmbeddingReceipt(answer as any, {
+      ...receipt, answerArtifactHash: checksum('0'),
+    } as any, {
+      providerDataControlReceiptHash: checksum('5'), providerPricingReceiptHash: checksum('6'),
+      maxInputTokens: 100_000, maxCostMicroUsd: 20_000,
+    })).toThrow(/preauthorized|release|receipt|mismatch/i);
+  });
+
+  it('rejects every substituted active provenance field even when the report hash is recomputed', () => {
+    const report = buildEvaluationReport({
+      mode: 'hidden-provider-live', contentReleaseId: '1'.repeat(64), answerReleaseId: '2'.repeat(64),
+      contentManifestHash: checksum('1'), answerManifestHash: checksum('2'), answerArtifactHash: checksum('3'),
+      corpusApprovalHash: checksum('a'), embeddingSource: 'provider', embeddingReceiptHash: checksum('b'),
+      runnableCount: 60, deferredCount: 0, cases: hiddenCases(), absoluteFailures: zeroAbsoluteFailures(), runCount: 3,
+      startedAt: '2026-08-30T00:00:00.000Z', completedAt: '2026-08-30T00:00:01.000Z',
+      hiddenRuns: [hiddenRun(), hiddenRun(), hiddenRun()], providerDataControlReceiptHash: checksum('c'),
+      providerPricingReceiptHash: checksum('d'), evaluationUsageReceiptHash: checksum('e'),
+      hiddenManifestHash: checksum('f'), hiddenCustodianRole: 'site-owner', publicManifestHash: checksum('4'),
+      retrievalPolicyHash: checksum('5'),
+    });
+    const binding = productionBinding();
+    expect(verifyProductionEvaluationReport(report, binding)).toBe(report);
+    const mutations = {
+      contentManifestHash: checksum('6'), answerManifestHash: checksum('6'), answerArtifactHash: checksum('6'),
+      publicManifestHash: checksum('6'), embeddingModel: 'other-embedding-model', retrieverVersion: 'other-retriever',
+      retrievalPolicyHash: checksum('6'), evaluatorVersion: 'other-evaluator', evaluatorHash: checksum('6'),
+      promptSchemaVersion: 'other-prompt', promptSchemaHash: checksum('6'),
+      semanticVerifierVersion: 'other-semantic', semanticVerifierHash: checksum('6'), generationModel: 'other-model',
+    } as const;
+    for (const [field, value] of Object.entries(mutations)) {
+      const { reportHash: _hash, ...body } = report;
+      const changed = { ...body, [field]: value };
+      expect(() => verifyProductionEvaluationReport({
+        ...changed,
+        reportHash: providerChecksum(changed),
+      } as unknown as typeof report, binding), field).toThrow(/stale|mismatch|provenance|model|version/i);
+    }
   });
 });
 
@@ -93,7 +222,13 @@ function classifiedApprovalHash(value: unknown): string {
 function productionBinding() {
   return {
     contentReleaseId: '1'.repeat(64), answerReleaseId: '2'.repeat(64), corpusApprovalHash: checksum('a'),
-    embeddingSource: 'provider', embeddingReceiptHash: checksum('b'), generationModel: 'gpt-5.4-mini-2026-03-17',
+    contentManifestHash: checksum('1'), answerManifestHash: checksum('2'), answerArtifactHash: checksum('3'),
+    publicManifestHash: checksum('4'), embeddingSource: 'provider', embeddingReceiptHash: checksum('b'),
+    embeddingModel: 'text-embedding-3-large', generationModel: GENERATION_MODEL,
+    retrieverVersion: RETRIEVER_VERSION, retrievalPolicyHash: checksum('5'),
+    evaluatorVersion: EVALUATOR_VERSION, evaluatorHash: EVALUATOR_HASH,
+    promptSchemaVersion: PROMPT_SCHEMA_VERSION, promptSchemaHash: PROMPT_SCHEMA_HASH,
+    semanticVerifierVersion: SEMANTIC_VERIFIER_VERSION, semanticVerifierHash: SEMANTIC_VERIFIER_HASH,
     providerDataControlReceiptHash: checksum('c'), providerPricingReceiptHash: checksum('d'),
     evaluationUsageReceiptHash: checksum('e'),
   } as const;

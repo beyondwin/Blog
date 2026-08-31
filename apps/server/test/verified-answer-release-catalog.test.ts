@@ -12,6 +12,7 @@ import {
 } from '../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
 import { assertCompleteActivatedBinding, runIndexAnswerReleaseCli } from '../src/index-answer-release.js';
 import postgresConfig from '../vitest.postgres.config.js';
+import evaluationConfig from '../vitest.evaluation.config.js';
 import {
   readVerifiedAnswerReleaseAuthority,
   VerifiedAnswerReleaseCatalogSource,
@@ -353,6 +354,37 @@ describe('disposable Postgres harness contract', () => {
     });
     await expect(runTestPostgresHarness('test', failed.dependencies)).rejects.toThrow(/injected child/u);
     expect(failed.calls.at(-1)?.args.slice(-2)).toEqual(['-v', '--remove-orphans']);
+  });
+
+  it('discovers owned evaluation tests and launches the dedicated config and CLI from repository root', async () => {
+    const { calls, dependencies } = harness({
+      evaluationConfig: '/repo/apps/server/vitest.evaluation.config.ts',
+      evaluationEntrypoint: '/repo/apps/server/src/eval-public-answer.ts',
+      tsxEntrypoint: '/repo/node_modules/tsx/dist/cli.mjs',
+      async discoverEvaluation() { return ['offline-evaluation.test.ts']; },
+    });
+    await runTestPostgresHarness('eval', dependencies);
+    expect(calls.every((call) => call.cwd === '/repo')).toBe(true);
+    const nodeChildren = calls.filter((call) => call.command === '/node24/bin/node');
+    expect(nodeChildren.map(({ args }) => args)).toEqual([
+      ['/repo/node_modules/vitest/vitest.mjs', 'run', '--config', '/repo/apps/server/vitest.evaluation.config.ts'],
+      ['/repo/node_modules/tsx/dist/cli.mjs', '/repo/apps/server/src/index-answer-release.ts', '--embedding-mode=fixture'],
+      ['/repo/node_modules/tsx/dist/cli.mjs', '/repo/apps/server/src/eval-public-answer.ts', '--mode=first-slice-offline'],
+    ]);
+    expect(evaluationConfig.root).toBe(repositoryRoot);
+    expect(evaluationConfig.test?.include).toEqual(['apps/server/test/evaluation/**/*.test.ts']);
+    expect(evaluationConfig.test?.exclude).toEqual(['apps/server/test/postgres/**']);
+    expect(evaluationConfig.test?.passWithNoTests).toBe(false);
+  });
+
+  it('refuses evaluation mode unless its dedicated discovery proves at least one owned test', async () => {
+    const missing = harness({
+      evaluationConfig: '/repo/apps/server/vitest.evaluation.config.ts',
+      evaluationEntrypoint: '/repo/apps/server/src/eval-public-answer.ts',
+      tsxEntrypoint: '/repo/node_modules/tsx/dist/cli.mjs',
+    });
+    await expect(runTestPostgresHarness('eval', missing.dependencies)).rejects.toThrow(/evaluation.*discovery|zero owned/i);
+    expect(missing.calls).toEqual([]);
   });
 
   it.each([

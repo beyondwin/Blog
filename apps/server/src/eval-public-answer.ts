@@ -11,7 +11,10 @@ import { FixtureSemanticVerifier } from './modules/public-answer/infrastructure/
 import { InMemoryRedactedEventSink } from './modules/public-answer/infrastructure/fixture/in-memory-redacted-event-sink.js';
 import { InMemoryUsageGuard } from './modules/public-answer/infrastructure/guards/in-memory-usage-guard.js';
 import { providerChecksum } from './modules/public-answer/infrastructure/openai/provider-json.js';
-import { readBundledProviderPricing, readProviderEmbeddingReceipt } from './modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
+import {
+  readBundledProviderPricing,
+  readProviderEmbeddingReceipt,
+} from './modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
 import { OpenAIEmbeddingClient } from './modules/public-answer/infrastructure/openai/openai-embedding-client.js';
 import { OpenAiResponsesClient } from './modules/public-answer/infrastructure/openai/openai-responses-client.js';
 import { OpenAiResponsesGenerator } from './modules/public-answer/infrastructure/openai/openai-responses-generator.js';
@@ -33,13 +36,20 @@ import { classifyPublicEvaluation } from './modules/public-answer/evaluation/pub
 import { readEvaluationUsageReceipt } from './modules/public-answer/evaluation/evaluation-usage-receipt.js';
 import { EvaluationUsageGuard } from './modules/public-answer/evaluation/evaluation-usage-guard.js';
 import { readHiddenEvalManifest, assertRealHiddenEvaluationAuthority } from './modules/public-answer/evaluation/hidden-eval-manifest.js';
-import { retrievalMetrics } from './modules/public-answer/evaluation/retrieval-metrics.js';
 import type { HiddenEvaluationRun } from './modules/public-answer/evaluation/evaluation-gate.js';
 import type { UsageGuard } from './modules/public-answer/application/ports/usage-guard.js';
 import type {
   DeterministicAnswerVerifier,
   SemanticAnswerVerifier,
+  SupportedSentenceUnit,
 } from './modules/public-answer/application/ports/answer-verifier.js';
+import type { Retriever } from './modules/public-answer/application/ports/retriever.js';
+import {
+  classifyDeterministicFailure,
+  countBoundaryLeaks,
+  deriveBoundaryRecordIds,
+  evaluateCapturedCaseMetrics,
+} from './modules/public-answer/evaluation/answer-metrics.js';
 import { indexAnswerRelease, providerIndexBudget } from './index-answer-release.js';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -52,11 +62,8 @@ export function parseEvaluationMode(argv: readonly string[]): EvaluationMode {
   throw new Error('evaluation mode and confirmations must be exact');
 }
 
-export interface ProviderLivePreflightDependencies { readonly providerCall?: () => Promise<unknown> }
-
 export async function preflightProviderLiveEvaluation(
   env: NodeJS.ProcessEnv,
-  _dependencies: ProviderLivePreflightDependencies = {},
 ): Promise<Readonly<Record<string, string>>> {
   const required = [
     'FORM_THOUGHT_HIDDEN_EVAL_MANIFEST',
@@ -252,6 +259,14 @@ function evaluationUsageAdapter(guard: EvaluationUsageGuard): UsageGuard {
   });
 }
 
+export async function runAfterProviderLivePreflight<T>(
+  env: NodeJS.ProcessEnv,
+  authorizedOperation: (authority: Readonly<Record<string, string>>) => Promise<T>,
+): Promise<T> {
+  const authority = await preflightProviderLiveEvaluation(env);
+  return authorizedOperation(authority);
+}
+
 function emptyHiddenRun(): HiddenEvaluationRun {
   return {
     complete: true, answerableCount: 30, hitAt3Count: 0, recallAt5Sum: 0, ndcgAt5Sum: 0,
@@ -264,15 +279,21 @@ function emptyHiddenRun(): HiddenEvaluationRun {
 }
 
 interface HiddenFailureProbe {
-  invalidLocatorCount: number;
-  criticalContradictionCount: number;
+  fusedRecordIds: string[];
+  sentenceUnits: SupportedSentenceUnit[];
+  supportedSentenceIds: Set<string>;
+  contradictedSentenceIds: string[];
+  integrityFailureCount: number;
+  invalidFallbackCount: number;
 }
 
 function evaluationDeterministicVerifier(delegate: DeterministicAnswerVerifier, probe: HiddenFailureProbe): DeterministicAnswerVerifier {
   return Object.freeze({
     verify(input: Parameters<DeterministicAnswerVerifier['verify']>[0]) {
       const result = delegate.verify(input);
-      if (!result.ok && result.reason === 'canonical-locator') probe.invalidLocatorCount += 1;
+      if (result.ok) probe.sentenceUnits.push(...result.sentenceUnits);
+      else if (classifyDeterministicFailure(result.reason) === 'integrity') probe.integrityFailureCount += 1;
+      else probe.invalidFallbackCount += 1;
       return result;
     },
   });
@@ -282,22 +303,68 @@ function evaluationSemanticVerifier(delegate: SemanticAnswerVerifier, probe: Hid
   return Object.freeze({
     async verify(input: Parameters<SemanticAnswerVerifier['verify']>[0]) {
       const result = await delegate.verify(input);
-      probe.criticalContradictionCount += result.contradictedSentenceIds.length;
+      result.supportedSentenceIds.forEach((id) => probe.supportedSentenceIds.add(id));
+      probe.contradictedSentenceIds.push(...result.contradictedSentenceIds);
       return result;
     },
   });
 }
 
+function evaluationRetriever(delegate: Retriever, probe: HiddenFailureProbe): Retriever {
+  return Object.freeze({
+    async retrieve(input: Parameters<Retriever['retrieve']>[0]) {
+      const result = await delegate.retrieve(input);
+      probe.fusedRecordIds.push(...result.evidence.map(({ recordId }) => recordId));
+      return result;
+    },
+  });
+}
+
+function resetHiddenFailureProbe(probe: HiddenFailureProbe): void {
+  probe.fusedRecordIds.length = 0;
+  probe.sentenceUnits.length = 0;
+  probe.supportedSentenceIds.clear();
+  probe.contradictedSentenceIds.length = 0;
+  probe.integrityFailureCount = 0;
+  probe.invalidFallbackCount = 0;
+}
+
+export async function openHiddenAfterAuthorizedProviderBinding<T>(
+  expectedEmbeddingReceiptHash: string,
+  dependencies: Readonly<{
+    readActiveBinding(): Promise<Readonly<{ embeddingSource: 'fixture' | 'provider'; embeddingReceiptHash: string }>>;
+    openHiddenManifest(): Promise<T>;
+  }>,
+): Promise<T> {
+  const active = await dependencies.readActiveBinding();
+  if (active.embeddingSource !== 'provider' || active.embeddingReceiptHash !== expectedEmbeddingReceiptHash) {
+    throw new Error('provider-live active binding provenance or receipt mismatch before hidden access');
+  }
+  return dependencies.openHiddenManifest();
+}
+
+export async function openHiddenAfterAuthorizedProviderIndexing<T>(
+  expectedEmbeddingReceiptHash: string,
+  dependencies: Readonly<{
+    indexAuthorizedReceipt(): Promise<void>;
+    readActiveBinding(): Promise<Readonly<{ embeddingSource: 'fixture' | 'provider'; embeddingReceiptHash: string }>>;
+    openHiddenManifest(): Promise<T>;
+  }>,
+): Promise<T> {
+  await dependencies.indexAuthorizedReceipt();
+  return openHiddenAfterAuthorizedProviderBinding(expectedEmbeddingReceiptHash, dependencies);
+}
+
 export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provider-live', env: NodeJS.ProcessEnv): Promise<Readonly<EvaluationReport>> {
   const provider = mode === 'hidden-provider-live';
-  const preflight = provider ? await preflightProviderLiveEvaluation(env) : null;
+  const preflight = provider ? await runAfterProviderLivePreflight(env, async (authority) => authority) : null;
   if (!env.FORM_THOUGHT_HIDDEN_EVAL_MANIFEST || !isAbsolute(env.FORM_THOUGHT_HIDDEN_EVAL_MANIFEST)
     || !env.FORM_THOUGHT_EXPANDED_CORPUS_APPROVAL_HASH) throw new Error('hidden evaluation authority is missing');
   if (!/^sha256:[a-f0-9]{64}$/u.test(env.FORM_THOUGHT_EXPANDED_CORPUS_APPROVAL_HASH)) throw new Error('hidden expanded approval hash is invalid');
   if (!provider && env.OPENAI_API_KEY !== undefined) throw new Error('hidden offline evaluation forbids a provider key');
   const config = await parseServerConfig(env);
   if (config.publicAskMode !== (provider ? 'provider' : 'fixture')) throw new Error('hidden evaluation runtime mode mismatch');
-  const { approval, answer } = await readVerifiedAnswerReleaseAuthority(config);
+  const { approval, content, answer } = await readVerifiedAnswerReleaseAuthority(config);
   if (answer.corpusApprovalHash !== env.FORM_THOUGHT_EXPANDED_CORPUS_APPROVAL_HASH) throw new Error('hidden expanded approval is not bound to the verified answer release');
   let evaluationGuard: EvaluationUsageGuard | undefined;
   let usageReceipt: Awaited<ReturnType<typeof readEvaluationUsageReceipt>> | undefined;
@@ -314,38 +381,56 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
     const indexBudget = providerIndexBudget(answer.indexInputs);
     evaluationGuard.reserveIndex(indexBudget.tokenUpperBound, indexBudget.costUpperBoundMicroUsd);
   }
-  await indexAnswerRelease(provider
-    ? ['--embedding-mode=provider', '--confirm-live-provider'] : ['--embedding-mode=fixture'], env, () => undefined);
+  if (!provider) await indexAnswerRelease(['--embedding-mode=fixture'], env, () => undefined);
   const pool = createPostgresPool(config.databaseUrl);
   const startedAt = new Date().toISOString();
   try {
-    const catalog = await new VerifiedAnswerReleaseCatalogSource(config, pool).snapshot(new AbortController().signal);
-    if (catalog.embeddingSource !== (provider ? 'provider' : 'fixture')
-      || (provider && catalog.embeddingReceiptHash !== usageReceipt!.providerEmbeddingReceiptHash)) {
-      throw new Error('hidden evaluation active embedding provenance mismatch before opening hidden cases');
-    }
-    if (provider) {
-      const embedding = await readProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, catalog.answerReleaseId, catalog.embeddingReceiptHash);
-      evaluationGuard!.settleIndex(embedding.inputTokens, embedding.costMicroUsd);
-    }
     const publicManifestBytes = await readFile(resolve(repositoryRoot, 'tests/fixtures/public-answer/eval-manifest.v1.json'));
     const publicManifest = JSON.parse(publicManifestBytes.toString('utf8')) as { cases: Array<{ question: string }> };
     const retrievalPolicy = await readFile(new URL('./modules/public-answer/infrastructure/postgres/retrieval-policy.v1.json', import.meta.url));
     const retrievalPolicyHash = providerChecksum(retrievalPolicy);
     if (provider && retrievalPolicyHash !== preflight!.FORM_THOUGHT_RETRIEVAL_POLICY_HASH) throw new Error('hidden retrieval policy changed after authorization');
-    const hidden = assertRealHiddenEvaluationAuthority(await readHiddenEvalManifest(env.FORM_THOUGHT_HIDDEN_EVAL_MANIFEST, {
+    const openHidden = async () => assertRealHiddenEvaluationAuthority(await readHiddenEvalManifest(env.FORM_THOUGHT_HIDDEN_EVAL_MANIFEST!, {
       approvedRecordIds: new Set((approval.entries as readonly { recordId: string }[]).map(({ recordId }) => recordId)),
       publicDevelopmentQuestions: new Set(publicManifest.cases.map(({ question }) => question)),
       corpusApprovalHash: answer.corpusApprovalHash,
       retrievalPolicyHash,
     }));
+    const catalogSource = new VerifiedAnswerReleaseCatalogSource(config, pool);
+    let catalog: Awaited<ReturnType<typeof catalogSource.snapshot>>;
+    const hidden = provider
+      ? await openHiddenAfterAuthorizedProviderIndexing(usageReceipt!.providerEmbeddingReceiptHash, {
+        async indexAuthorizedReceipt() {
+          await indexAnswerRelease(['--embedding-mode=provider', '--confirm-live-provider'], env, () => undefined, {
+            expectedProviderReceiptHash: usageReceipt!.providerEmbeddingReceiptHash,
+          });
+        },
+        async readActiveBinding() {
+          catalog = await catalogSource.snapshot(new AbortController().signal);
+          const receipt = await readProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, catalog.answerReleaseId,
+            catalog.embeddingReceiptHash);
+          evaluationGuard!.settleIndex(receipt.inputTokens, receipt.costMicroUsd);
+          return catalog;
+        },
+        openHiddenManifest: openHidden,
+      })
+      : await (async () => {
+        catalog = await catalogSource.snapshot(new AbortController().signal);
+        if (catalog.embeddingSource !== 'fixture') throw new Error('hidden offline fixture provenance mismatch');
+        return openHidden();
+      })();
+    const activeCatalog = catalog!;
     if (provider && hidden.manifestHash !== preflight!.FORM_THOUGHT_HIDDEN_MANIFEST_HASH) throw new Error('hidden manifest hash changed after authorization');
     const responses = provider ? new OpenAiResponsesClient(config.openAiApiKey!) : null;
-    const failureProbe: HiddenFailureProbe = { invalidLocatorCount: 0, criticalContradictionCount: 0 };
+    const failureProbe: HiddenFailureProbe = {
+      fusedRecordIds: [], sentenceUnits: [], supportedSentenceIds: new Set(), contradictedSentenceIds: [],
+      integrityFailureCount: 0, invalidFallbackCount: 0,
+    };
+    const eventSink = new InMemoryRedactedEventSink();
     const useCase = new AnswerPublicQuestion({
       policy: Object.freeze({ mode: provider ? 'provider' : 'fixture' }),
-      retriever: new PostgresHybridRetriever(provider
-        ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'query' }) : new DeterministicEmbeddingClient('test'), new CancellablePgQueryRunner(pool)),
+      retriever: evaluationRetriever(new PostgresHybridRetriever(provider
+        ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'query' }) : new DeterministicEmbeddingClient('test'), new CancellablePgQueryRunner(pool)), failureProbe),
       generator: provider ? new OpenAiResponsesGenerator(responses!) : new FixtureAnswerGenerator(),
       deterministicVerifier: evaluationDeterministicVerifier(new CitationVerifier(), failureProbe),
       semanticVerifier: evaluationSemanticVerifier(
@@ -353,8 +438,10 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
         failureProbe,
       ),
       usageGuard: provider ? evaluationUsageAdapter(evaluationGuard!) : await InMemoryUsageGuard.create(),
-      eventSink: new InMemoryRedactedEventSink(),
+      eventSink,
     });
+    const approvedIds = new Set((approval.entries as readonly { recordId: string }[]).map(({ recordId }) => recordId));
+    const independentBoundaryIds = deriveBoundaryRecordIds(Object.keys(content.manifest.records), approvedIds, activeCatalog.tombstones);
     const runCount = provider ? 3 : 1;
     const runs: HiddenEvaluationRun[] = [];
     let caseReports: Array<Parameters<typeof buildEvaluationReport>[0]['cases'][number]> = [];
@@ -362,47 +449,63 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
       const metrics = { ...emptyHiddenRun() };
       const reports: typeof caseReports = [];
       for (const item of hidden.cases) {
-        failureProbe.invalidLocatorCount = 0;
-        failureProbe.criticalContradictionCount = 0;
+        resetHiddenFailureProbe(failureProbe);
         const before = performance.now();
+        const telemetryStart = eventSink.events().length;
         const result = await useCase.execute({
           requestId: `hidden-eval-${run + 1}-${item.id}`,
           question: item.question,
-          contentReleaseId: catalog.contentReleaseId,
-          answerReleaseId: catalog.answerReleaseId,
+          contentReleaseId: activeCatalog.contentReleaseId,
+          answerReleaseId: activeCatalog.answerReleaseId,
           networkKey: providerChecksum(`${run + 1}:${item.id}`),
           signal: new AbortController().signal,
           deadlineAt: performance.now() + 12_000,
-          catalog,
+          catalog: activeCatalog,
         });
         const evidence = result.kind === 'answer' ? result.evidence : [];
         const evidenceIds = evidence.map(({ evidenceId }) => evidenceId);
-        const rankedRecords = evidence.map(({ recordId }) => recordId);
+        const citedRecordIds = evidence.map(({ recordId }) => recordId);
         const required = item.requiredEvidence.map(({ recordId }) => recordId);
-        const retrieval = retrievalMetrics(required, rankedRecords);
         const answer = result.kind === 'answer';
-        const claimCharacters = answer ? result.claims.reduce((total, claim) => total + [...claim.text].length, 0) : 0;
+        const citedIds = answer ? result.claims.flatMap((claim) => [...claim.evidenceIds]) : [];
+        const captured = evaluateCapturedCaseMetrics({
+          requiredRecordIds: required,
+          fusedRecordIds: failureProbe.fusedRecordIds,
+          citedEvidenceIds: citedIds,
+          catalogEvidenceIds: new Set(activeCatalog.evidenceById.keys()),
+          sentenceUnits: failureProbe.sentenceUnits.map((unit) => ({
+            id: unit.id, characters: [...unit.text].length, critical: unit.critical,
+          })),
+          supportedSentenceIds: failureProbe.supportedSentenceIds,
+          deterministicPass: failureProbe.integrityFailureCount === 0 && failureProbe.invalidFallbackCount === 0,
+          contradictedSentenceIds: failureProbe.contradictedSentenceIds,
+        });
         if (item.category === 'answerable') {
-          metrics.hitAt3Count += retrieval.hitAt3;
-          metrics.recallAt5Sum += retrieval.recallAt5 ?? 0;
-          metrics.ndcgAt5Sum += retrieval.ndcgAt5 ?? 0;
-          metrics.groundedAnswerCount += answer ? 1 : 0;
+          metrics.hitAt3Count += captured.retrieval.hitAt3;
+          metrics.recallAt5Sum += captured.retrieval.recallAt5 ?? 0;
+          metrics.ndcgAt5Sum += captured.retrieval.ndcgAt5 ?? 0;
+          metrics.groundedAnswerCount += answer && captured.grounded ? 1 : 0;
         }
-        metrics.citedEvidenceCount += answer ? result.claims.reduce((total, claim) => total + claim.evidenceIds.length, 0) : 0;
-        metrics.correctCitationCount += answer ? result.claims.reduce((total, claim) => total
-          + claim.evidenceIds.filter((id) => catalog.evidenceById.has(id)).length, 0) : 0;
-        metrics.sentenceCharacters += claimCharacters;
-        metrics.supportedSentenceCharacters += claimCharacters;
-        metrics.criticalCharacters += claimCharacters;
-        metrics.supportedCriticalCharacters += claimCharacters;
+        metrics.citedEvidenceCount += captured.citedEvidenceCount;
+        metrics.correctCitationCount += captured.correctCitationCount;
+        metrics.sentenceCharacters += captured.sentenceCharacters;
+        metrics.supportedSentenceCharacters += captured.supportedSentenceCharacters;
+        metrics.criticalCharacters += captured.criticalCharacters;
+        metrics.supportedCriticalCharacters += captured.supportedCriticalCharacters;
         if (item.category === 'unanswerable' && result.kind === 'search') metrics.unanswerableSearchCount += 1;
         if (item.category === 'adversarial' && result.kind === 'search') metrics.adversarialSearchCount += 1;
         if (item.category === 'adversarial' && answer) metrics.instructionInjectionSuccessCount += 1;
-        if (item.category === 'robustness' && answer && required.every((recordId) => rankedRecords.includes(recordId))) metrics.robustnessGroundedCount += 1;
-        if (evidence.some(({ recordId }) => item.forbiddenRecordIds.includes(recordId))) metrics.privateBoundarySentinelCount += 1;
-        metrics.invalidLocatorCount += failureProbe.invalidLocatorCount;
-        metrics.criticalContradictionCount += failureProbe.criticalContradictionCount;
-        if (result.kind === 'error') metrics.invalidFallbackCount += 1;
+        if (item.category === 'robustness' && answer && captured.grounded
+          && required.every((recordId) => failureProbe.fusedRecordIds.includes(recordId))) metrics.robustnessGroundedCount += 1;
+        const boundaryIds = new Set([...independentBoundaryIds, ...item.forbiddenRecordIds]);
+        metrics.privateBoundarySentinelCount += countBoundaryLeaks({
+          outputRecordIds: citedRecordIds,
+          redactedTelemetry: eventSink.events().slice(telemetryStart),
+          boundaryRecordIds: boundaryIds,
+        });
+        metrics.invalidLocatorCount += failureProbe.integrityFailureCount;
+        metrics.criticalContradictionCount += failureProbe.contradictedSentenceIds.length;
+        metrics.invalidFallbackCount += failureProbe.invalidFallbackCount + (result.kind === 'error' ? 1 : 0);
         const expectedResult = item.expectedMode === 'answer' ? answer : result.kind === 'search';
         reports.push({
           caseId: item.id, status: 'runnable', resultKind: result.kind, evidenceIds,
@@ -417,7 +520,7 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
       mode, contentReleaseId: answer.contentReleaseId, answerReleaseId: answer.answerReleaseId,
       contentManifestHash: answer.manifest.identity.contentManifestHash, answerManifestHash: answer.manifestHash,
       answerArtifactHash: answer.artifactHash, corpusApprovalHash: answer.corpusApprovalHash,
-      embeddingSource: catalog.embeddingSource, embeddingReceiptHash: catalog.embeddingReceiptHash,
+      embeddingSource: activeCatalog.embeddingSource, embeddingReceiptHash: activeCatalog.embeddingReceiptHash,
       providerDataControlReceiptHash: provider ? preflight!.FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT_HASH : null,
       providerPricingReceiptHash: provider ? preflight!.FORM_THOUGHT_PROVIDER_PRICING_RECEIPT_HASH : null,
       evaluationUsageReceiptHash: usageReceipt?.receiptHash ?? null,

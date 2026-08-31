@@ -103,6 +103,9 @@ const defaultReaders: CatalogReaders = {
 
 export interface VerifiedCatalogSnapshot extends AnswerReleaseCatalogSnapshot {
   readonly normalizerVersion: string;
+  readonly contentManifestHash: string;
+  readonly answerManifestHash: string;
+  readonly answerArtifactHash: string;
   readonly embeddingSource: 'fixture' | 'provider';
   readonly embeddingReceiptHash: string;
   readonly evidenceById: ReadonlyMap<string, AuthorizedEvidence>;
@@ -312,6 +315,9 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
       const snapshot: VerifiedCatalogSnapshot = {
         bindingId: binding.binding_id, contentReleaseId: release.contentReleaseId, answerReleaseId: release.answerReleaseId,
         corpusApprovalHash: release.corpusApprovalHash, chunkCount: chunks.length,
+        contentManifestHash: release.manifest.identity.contentManifestHash,
+        answerManifestHash: release.manifestHash,
+        answerArtifactHash: release.artifactHash,
         embeddingSource: binding.embedding_source, embeddingReceiptHash: binding.embedding_receipt_hash,
         normalizerVersion: release.manifest.identity.normalizerVersion, evidenceById, chunkById, chunkChecksumById,
         indexInputByChunkId, vectorChecksumByChunkId, vectorSetChecksum, indexRowsChecksum,

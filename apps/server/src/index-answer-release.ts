@@ -5,7 +5,13 @@ import { parseServerConfig } from './config/server-config.js';
 import { DeterministicEmbeddingClient } from './modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
 import { readProviderDataControlReceipt } from './config/provider-data-control-receipt.js';
 import { OpenAIEmbeddingClient } from './modules/public-answer/infrastructure/openai/openai-embedding-client.js';
-import { estimateEmbeddingCostMicroUsd, readBundledProviderPricing, readProviderEmbeddingReceipt, writeProviderEmbeddingReceipt } from './modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
+import {
+  estimateEmbeddingCostMicroUsd,
+  readBundledProviderPricing,
+  readProviderEmbeddingReceipt,
+  writeProviderEmbeddingReceipt,
+  type ProviderEmbeddingReceipt,
+} from './modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
 import {
   createProviderEmbeddingAuthorities,
   createFixtureEmbeddingReceipt,
@@ -75,10 +81,43 @@ function bindingAuthority(answer: VerifiedActivePublicAnswerReleaseAuthority, re
   };
 }
 
+export function verifyPreauthorizedProviderEmbeddingReceipt(
+  answer: Pick<VerifiedActivePublicAnswerReleaseAuthority,
+    'contentReleaseId' | 'answerReleaseId' | 'manifest' | 'manifestHash' | 'artifactHash' | 'corpusApprovalHash' | 'indexInputs'>,
+  receipt: Pick<ProviderEmbeddingReceipt,
+    'contentReleaseId' | 'answerReleaseId' | 'contentManifestHash' | 'answerManifestHash' | 'answerArtifactHash'
+    | 'corpusApprovalHash' | 'providerDataControlReceiptHash' | 'providerPricingReceiptHash' | 'createdAt' | 'completedAt'
+    | 'inputTokens' | 'costMicroUsd' | 'entries'>,
+  expected: Readonly<{
+    providerDataControlReceiptHash: string; providerPricingReceiptHash: string;
+    maxInputTokens: number; maxCostMicroUsd: number;
+  }>,
+): Readonly<{ createdAt: string; completedAt: string }> {
+  const releaseMatches = receipt.contentReleaseId === answer.contentReleaseId
+    && receipt.answerReleaseId === answer.answerReleaseId
+    && receipt.contentManifestHash === answer.manifest.identity.contentManifestHash
+    && receipt.answerManifestHash === answer.manifestHash && receipt.answerArtifactHash === answer.artifactHash
+    && receipt.corpusApprovalHash === answer.corpusApprovalHash;
+  const authorityMatches = receipt.providerDataControlReceiptHash === expected.providerDataControlReceiptHash
+    && receipt.providerPricingReceiptHash === expected.providerPricingReceiptHash
+    && receipt.inputTokens <= expected.maxInputTokens && receipt.costMicroUsd <= expected.maxCostMicroUsd;
+  const chunkChecksums = answer.indexInputs.map(({ chunkChecksum }) => chunkChecksum);
+  if (!releaseMatches || !authorityMatches || receipt.entries.length !== chunkChecksums.length
+    || receipt.entries.some((entry, index) => entry.chunkChecksum !== chunkChecksums[index])) {
+    throw new Error('preauthorized provider embedding receipt release or authority mismatch');
+  }
+  return Object.freeze({ createdAt: receipt.createdAt, completedAt: receipt.completedAt });
+}
+
+export interface IndexAnswerReleaseOptions {
+  readonly expectedProviderReceiptHash?: string;
+}
+
 export async function indexAnswerRelease(
   argv: readonly string[],
   env: NodeJS.ProcessEnv,
   stdout: (value: string) => void = (value) => process.stdout.write(value),
+  options: Readonly<IndexAnswerReleaseOptions> = {},
 ): Promise<void> {
   const mode = parseIndexEmbeddingMode(argv); const fixture = mode === 'fixture'; const provider = mode === 'provider';
   const config = await parseServerConfig(env);
@@ -96,22 +135,38 @@ export async function indexAnswerRelease(
       throw new Error('provider indexing requires key, data-control receipt, pricing, and receipt root');
     }
     const dataControl = provider ? await readProviderDataControlReceipt(config.providerDataControlReceiptPath!) : null;
-    const startedAt = new Date().toISOString();
+    const expectedProviderReceipt = provider && options.expectedProviderReceiptHash
+      ? await readProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, answer.answerReleaseId,
+        options.expectedProviderReceiptHash)
+      : null;
+    const authorizedTimes = expectedProviderReceipt ? verifyPreauthorizedProviderEmbeddingReceipt(answer, expectedProviderReceipt, {
+      providerDataControlReceiptHash: dataControl!.receiptHash,
+      providerPricingReceiptHash: pricing!.receiptHash,
+      maxInputTokens: 100_000,
+      maxCostMicroUsd: 20_000,
+    }) : null;
+    const startedAt = authorizedTimes?.createdAt ?? new Date().toISOString();
     const prepared = await prepareEmbeddingSet(answer, provider
       ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'index' }) : new DeterministicEmbeddingClient(config.nodeEnv), new AbortController().signal);
     const providerAuthorities = provider ? createProviderEmbeddingAuthorities(answer, prepared, {
       providerDataControlReceiptHash: dataControl!.receiptHash, providerPricingReceiptHash: pricing!.receiptHash,
-      createdAt: startedAt, completedAt: new Date().toISOString(),
+      createdAt: startedAt, completedAt: authorizedTimes?.completedAt ?? new Date().toISOString(),
     }) : null;
     if (providerAuthorities && (providerAuthorities.durable.inputTokens > 100_000 || providerAuthorities.durable.costMicroUsd > 20_000)) {
       throw new Error('provider indexing measured maximum exceeded');
     }
+    if (expectedProviderReceipt && providerAuthorities?.durable.embeddingReceiptHash !== expectedProviderReceipt.embeddingReceiptHash) {
+      throw new Error('provider indexing result does not match the exact preauthorized receipt');
+    }
     const receipt = providerAuthorities?.activation ?? createFixtureEmbeddingReceipt(prepared);
     let reopenedProvider; let providerReceiptPath: string | undefined;
     if (providerAuthorities) {
-      providerReceiptPath = await writeProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, providerAuthorities.durable);
-      try { reopenedProvider = await readProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, answer.answerReleaseId, providerAuthorities.durable.embeddingReceiptHash); }
-      catch (error) { await rm(providerReceiptPath, { force: true }); throw error; }
+      if (expectedProviderReceipt) reopenedProvider = expectedProviderReceipt;
+      else {
+        providerReceiptPath = await writeProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, providerAuthorities.durable);
+        try { reopenedProvider = await readProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, answer.answerReleaseId, providerAuthorities.durable.embeddingReceiptHash); }
+        catch (error) { await rm(providerReceiptPath, { force: true }); throw error; }
+      }
     }
     let activated;
     try { activated = await new PostgresAnswerReleaseIndexer(config.nodeEnv)

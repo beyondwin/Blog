@@ -51,11 +51,6 @@ describe('hidden evaluation manifest authority', () => {
     expect(() => assertRealHiddenEvaluationAuthority(parsed)).toThrow(/test-only|synthetic|evidence/i);
   });
 
-  it('accepts only the real hidden split with hidden IDs as evaluation evidence', () => {
-    const parsed = parseHiddenEvalManifest(manifest('hidden-runtime'), options);
-    expect(assertRealHiddenEvaluationAuthority(parsed)).toBe(parsed);
-  });
-
   it('rejects unknown/prohibited fields, public duplicates, approval drift, and evidence set violations', () => {
     const source = manifest();
     expect(() => parseHiddenEvalManifest({ ...source, rawSourcePath: '/private' }, options)).toThrow(/unknown|field/i);

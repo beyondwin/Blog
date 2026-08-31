@@ -400,8 +400,9 @@ export async function runTestPostgresHarness(
   const allowed = new Set(['test', 'eval', 'eval-hidden', 'eval-hidden-provider-live']);
   if (!mode || !allowed.has(mode)) throw new Error('mode must be exactly test, eval, eval-hidden, or eval-hidden-provider-live');
   const evaluation = mode !== 'test';
-  const discovered = evaluation && dependencies.discoverEvaluation
-    ? await dependencies.discoverEvaluation() : await dependencies.discover();
+  if (evaluation && !dependencies.discoverEvaluation) throw new Error('dedicated evaluation discovery is missing');
+  const discovered = evaluation
+    ? await dependencies.discoverEvaluation!() : await dependencies.discover();
   if (discovered.length === 0) throw new Error(`dedicated ${evaluation ? 'evaluation' : 'Postgres'} config discovered zero owned tests`);
   let started = false;
   const docker = (args: readonly string[], capture = false) => dependencies.run({

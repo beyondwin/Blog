@@ -12,6 +12,7 @@ import {
 export const EVALUATOR_VERSION = 'public-answer-evaluator-v1' as const;
 export const EVALUATOR_HASH = providerChecksum({ version: EVALUATOR_VERSION, gates: 'hidden-30-12-12-6-v1' });
 export const RETRIEVER_VERSION = 'postgres-hybrid-rrf-v1' as const;
+export const EMBEDDING_MODEL = 'text-embedding-3-large' as const;
 export const GENERATION_MODEL = 'gpt-5.4-mini-2026-03-17' as const;
 export const PROMPT_SCHEMA_VERSION = 'public-answer-generation-and-support-v1' as const;
 export const PROMPT_SCHEMA_HASH = providerChecksum({ generation: 'public_answer_claims_v1', semantic: 'public_answer_support_v1' });
@@ -96,7 +97,7 @@ function reportBody(input: EvaluationReportInput) {
     answerManifestHash: input.answerManifestHash ?? null,
     answerArtifactHash: input.answerArtifactHash ?? null,
     corpusApprovalHash: input.corpusApprovalHash,
-    embeddingModel: 'text-embedding-3-large' as const,
+    embeddingModel: EMBEDDING_MODEL,
     embeddingSource: input.embeddingSource,
     embeddingReceiptHash: input.embeddingReceiptHash,
     providerDataControlReceiptHash: input.providerDataControlReceiptHash ?? null,
@@ -180,17 +181,26 @@ export function buildEvaluationReport(input: EvaluationReportInput): Readonly<Ev
 export interface ProductionEvaluationBinding {
   readonly contentReleaseId: string;
   readonly answerReleaseId: string;
+  readonly contentManifestHash: string;
+  readonly answerManifestHash: string;
+  readonly answerArtifactHash: string;
+  readonly publicManifestHash: string;
   readonly corpusApprovalHash: string;
   readonly embeddingSource: 'provider';
+  readonly embeddingModel: typeof EMBEDDING_MODEL;
   readonly embeddingReceiptHash: string;
   readonly generationModel: typeof GENERATION_MODEL;
-  readonly providerDataControlReceiptHash?: string;
-  readonly providerPricingReceiptHash?: string;
-  readonly evaluationUsageReceiptHash?: string;
-  readonly retrievalPolicyHash?: string;
-  readonly evaluatorHash?: string;
-  readonly promptSchemaHash?: string;
-  readonly semanticVerifierHash?: string;
+  readonly providerDataControlReceiptHash: string;
+  readonly providerPricingReceiptHash: string;
+  readonly evaluationUsageReceiptHash: string;
+  readonly retrieverVersion: typeof RETRIEVER_VERSION;
+  readonly retrievalPolicyHash: string;
+  readonly evaluatorVersion: typeof EVALUATOR_VERSION;
+  readonly evaluatorHash: string;
+  readonly promptSchemaVersion: typeof PROMPT_SCHEMA_VERSION;
+  readonly promptSchemaHash: string;
+  readonly semanticVerifierVersion: typeof SEMANTIC_VERIFIER_VERSION;
+  readonly semanticVerifierHash: string;
 }
 
 function assertExactObjectKeys(value: unknown, expected: readonly string[], label: string): asserts value is Record<string, unknown> {
@@ -283,14 +293,19 @@ export function verifyProductionEvaluationReport(report: EvaluationReport, bindi
     throw new Error('production evaluation report receipt, case, metric, or time evidence is incomplete');
   }
   if (report.contentReleaseId !== binding.contentReleaseId || report.answerReleaseId !== binding.answerReleaseId
+    || report.contentManifestHash !== binding.contentManifestHash
+    || report.answerManifestHash !== binding.answerManifestHash || report.answerArtifactHash !== binding.answerArtifactHash
+    || report.publicManifestHash !== binding.publicManifestHash
     || report.corpusApprovalHash !== binding.corpusApprovalHash || report.generationModel !== binding.generationModel
-    || report.evaluatorHash !== (binding.evaluatorHash ?? EVALUATOR_HASH)
-    || report.promptSchemaHash !== (binding.promptSchemaHash ?? PROMPT_SCHEMA_HASH)
-    || report.semanticVerifierHash !== (binding.semanticVerifierHash ?? SEMANTIC_VERIFIER_HASH)
-    || (binding.providerDataControlReceiptHash !== undefined && report.providerDataControlReceiptHash !== binding.providerDataControlReceiptHash)
-    || (binding.providerPricingReceiptHash !== undefined && report.providerPricingReceiptHash !== binding.providerPricingReceiptHash)
-    || (binding.evaluationUsageReceiptHash !== undefined && report.evaluationUsageReceiptHash !== binding.evaluationUsageReceiptHash)
-    || (binding.retrievalPolicyHash !== undefined && report.retrievalPolicyHash !== binding.retrievalPolicyHash)) {
+    || report.embeddingModel !== binding.embeddingModel || report.retrieverVersion !== binding.retrieverVersion
+    || report.retrievalPolicyHash !== binding.retrievalPolicyHash
+    || report.evaluatorVersion !== binding.evaluatorVersion || report.evaluatorHash !== binding.evaluatorHash
+    || report.promptSchemaVersion !== binding.promptSchemaVersion || report.promptSchemaHash !== binding.promptSchemaHash
+    || report.semanticVerifierVersion !== binding.semanticVerifierVersion
+    || report.semanticVerifierHash !== binding.semanticVerifierHash
+    || report.providerDataControlReceiptHash !== binding.providerDataControlReceiptHash
+    || report.providerPricingReceiptHash !== binding.providerPricingReceiptHash
+    || report.evaluationUsageReceiptHash !== binding.evaluationUsageReceiptHash) {
     throw new Error('production evaluation report is stale or mismatched');
   }
   return report;

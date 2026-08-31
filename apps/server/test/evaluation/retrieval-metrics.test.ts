@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { answerMetrics } from '../../src/modules/public-answer/evaluation/answer-metrics.js';
+import {
+  answerMetrics,
+  classifyDeterministicFailure,
+  countBoundaryLeaks,
+  deriveBoundaryRecordIds,
+  evaluateCapturedCaseMetrics,
+} from '../../src/modules/public-answer/evaluation/answer-metrics.js';
 import { retrievalMetrics } from '../../src/modules/public-answer/evaluation/retrieval-metrics.js';
 
 describe('evaluation metric arithmetic', () => {
@@ -22,5 +28,64 @@ describe('evaluation metric arithmetic', () => {
     })).toEqual({ citationCorrectness: 0.5, sentenceCitationCoverage: 0.9, criticalCoverage: 0.9, grounded: false });
     expect(answerMetrics({ citedEvidenceIds: [], catalogEvidenceIds: new Set(), sentenceUnits: [], deterministicPass: false, semanticPass: false }))
       .toEqual({ citationCorrectness: null, sentenceCitationCoverage: null, criticalCoverage: null, grounded: false });
+  });
+
+  it('uses fused retrieval rank rather than cited evidence and actual character-weighted semantic support', () => {
+    expect(evaluateCapturedCaseMetrics({
+      requiredRecordIds: ['articles/a', 'articles/b'],
+      fusedRecordIds: ['articles/x', 'articles/a', 'articles/y', 'articles/b', 'articles/z'],
+      citedEvidenceIds: ['evidence-z'],
+      catalogEvidenceIds: new Set(['evidence-z']),
+      sentenceUnits: [
+        { id: 'sentence-1', characters: 19, critical: true },
+        { id: 'sentence-2', characters: 1, critical: true },
+      ],
+      supportedSentenceIds: new Set(['sentence-1']),
+      deterministicPass: true,
+      contradictedSentenceIds: [],
+    })).toEqual({
+      retrieval: {
+        hitAt3: 1,
+        recallAt5: 1,
+        ndcgAt5: (1 / Math.log2(3) + 1 / Math.log2(5)) / (1 + 1 / Math.log2(3)),
+      },
+      citedEvidenceCount: 1,
+      correctCitationCount: 1,
+      sentenceCharacters: 20,
+      supportedSentenceCharacters: 19,
+      criticalCharacters: 20,
+      supportedCriticalCharacters: 19,
+      grounded: false,
+    });
+  });
+
+  it('derives excluded/tombstoned boundaries and classifies every integrity and fallback failure', () => {
+    expect([...deriveBoundaryRecordIds(
+      ['articles/approved', 'articles/excluded', 'reviews/excluded'],
+      new Set(['articles/approved']),
+      new Set(['thoughts/tombstoned']),
+    )]).toEqual(['articles/excluded', 'reviews/excluded', 'thoughts/tombstoned']);
+    for (const reason of [
+      'response-evidence-set', 'catalog-evidence-set', 'catalog-evidence-mismatch',
+      'answer-release-mismatch', 'excerpt-integrity', 'canonical-locator',
+    ]) expect(classifyDeterministicFailure(reason)).toBe('integrity');
+    for (const reason of ['claim-count', 'claim-text', 'claim-citations', 'unsafe-claim', 'quote-mismatch', 'sentence-units']) {
+      expect(classifyDeterministicFailure(reason)).toBe('invalid-fallback');
+    }
+  });
+
+  it('finds boundary sentinels in output or retained redacted telemetry without persisting them', () => {
+    const boundary = new Set(['articles/private-sentinel']);
+    expect(countBoundaryLeaks({
+      outputRecordIds: ['articles/private-sentinel'],
+      redactedTelemetry: [{ resultKind: 'answer' }],
+      boundaryRecordIds: boundary,
+    })).toBe(1);
+    expect(countBoundaryLeaks({
+      outputRecordIds: [],
+      redactedTelemetry: [{ resultKind: 'answer', leaked: 'articles/private-sentinel' }],
+      boundaryRecordIds: boundary,
+    })).toBe(1);
+    expect(countBoundaryLeaks({ outputRecordIds: [], redactedTelemetry: [{ resultKind: 'answer' }], boundaryRecordIds: boundary })).toBe(0);
   });
 });

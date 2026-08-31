@@ -48,4 +48,27 @@ describe('evaluation gates', () => {
   ])('fails a run just below %s threshold', (key, value) => {
     expect(evaluateHiddenGate([hiddenRun({ [key]: value }), hiddenRun({ [key]: value }), hiddenRun()]).pass).toBe(false);
   });
+
+  it.each([
+    ['hitAt3Count', Number.POSITIVE_INFINITY],
+    ['recallAt5Sum', -1],
+    ['ndcgAt5Sum', 31],
+    ['correctCitationCount', 101],
+    ['supportedSentenceCharacters', 101],
+    ['supportedCriticalCharacters', 101],
+    ['groundedAnswerCount', 31],
+    ['unanswerableSearchCount', 13],
+    ['adversarialSearchCount', 13],
+    ['robustnessGroundedCount', 7],
+    ['privateBoundarySentinelCount', -1],
+  ])('rejects impossible hidden counter %s=%s', (key, value) => {
+    const invalid = hiddenRun({ [key]: value });
+    expect(evaluateHiddenGate([invalid, hiddenRun(), hiddenRun()]).absolutePassingRuns).toBeLessThan(3);
+    expect(evaluateHiddenGate([invalid, invalid, hiddenRun()]).pass).toBe(false);
+  });
+
+  it('rejects incomplete and empty run sets', () => {
+    expect(evaluateHiddenGate([]).pass).toBe(false);
+    expect(evaluateHiddenGate([{ ...hiddenRun(), complete: false }, hiddenRun(), hiddenRun()]).pass).toBe(false);
+  });
 });

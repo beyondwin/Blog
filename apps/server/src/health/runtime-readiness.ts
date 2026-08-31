@@ -14,8 +14,16 @@ import {
 import type { VerifiedCatalogSnapshot } from '../modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 import { providerChecksum } from '../modules/public-answer/infrastructure/openai/provider-json.js';
 import {
+  EMBEDDING_MODEL,
+  EVALUATOR_HASH,
+  EVALUATOR_VERSION,
   GENERATION_MODEL,
+  PROMPT_SCHEMA_HASH,
+  PROMPT_SCHEMA_VERSION,
   readProductionEvaluationReport,
+  RETRIEVER_VERSION,
+  SEMANTIC_VERIFIER_HASH,
+  SEMANTIC_VERIFIER_VERSION,
 } from '../modules/public-answer/evaluation/evaluation-report.js';
 import { readEvaluationUsageReceipt } from '../modules/public-answer/evaluation/evaluation-usage-receipt.js';
 
@@ -31,6 +39,9 @@ interface RuntimeStartupDependencies {
   readonly readProviderDataControl?: typeof readProviderDataControlReceipt;
   readonly readProviderEmbedding?: typeof readProviderEmbeddingReceipt;
   readonly readProviderPricing?: typeof readBundledProviderPricing;
+  readonly readProductionEvaluation?: typeof readProductionEvaluationReport;
+  readonly readEvaluationUsage?: typeof readEvaluationUsageReceipt;
+  readonly readPublicEvaluationManifest?: () => Promise<Buffer>;
 }
 
 interface RuntimeChunkRow {
@@ -128,27 +139,46 @@ export async function runRuntimeStartupChecks(
       if (!config.productionEvalReportPath || !config.evaluationUsageReceiptPath) throw new Error('runtime readiness production evaluation report or usage receipt is missing');
       const retrievalPolicy = await readFile(new URL('../modules/public-answer/infrastructure/postgres/retrieval-policy.v1.json', import.meta.url));
       const retrievalPolicyHash = providerChecksum(retrievalPolicy);
-      const report = await readProductionEvaluationReport(config.productionEvalReportPath, {
-        contentReleaseId: catalog.contentReleaseId,
-        answerReleaseId: catalog.answerReleaseId,
-        corpusApprovalHash: catalog.corpusApprovalHash,
-        embeddingSource: 'provider',
-        embeddingReceiptHash: catalog.embeddingReceiptHash,
-        generationModel: GENERATION_MODEL,
-        retrievalPolicyHash,
-        providerDataControlReceiptHash: control.receiptHash,
-        providerPricingReceiptHash: pricing.receiptHash,
-      });
-      const usage = await readEvaluationUsageReceipt(config.evaluationUsageReceiptPath, {
+      const publicManifestBytes = dependencies.readPublicEvaluationManifest
+        ? await dependencies.readPublicEvaluationManifest()
+        : await readFile(new URL('../../../../tests/fixtures/public-answer/eval-manifest.v1.json', import.meta.url));
+      const readProduction = dependencies.readProductionEvaluation ?? readProductionEvaluationReport;
+      const readUsage = dependencies.readEvaluationUsage ?? readEvaluationUsageReceipt;
+      const usage = await readUsage(config.evaluationUsageReceiptPath, {
         providerProjectHash: control.projectHash,
         providerDataControlReceiptHash: control.receiptHash,
         providerPricingReceiptHash: pricing.receiptHash,
-        hiddenManifestHash: report.hiddenManifestHash!,
         corpusApprovalHash: catalog.corpusApprovalHash,
         providerEmbeddingReceiptHash: catalog.embeddingReceiptHash,
         retrievalPolicyHash,
       });
-      if (usage.receiptHash !== report.evaluationUsageReceiptHash) throw new Error('runtime readiness evaluation usage receipt drift');
+      const report = await readProduction(config.productionEvalReportPath, {
+        contentReleaseId: catalog.contentReleaseId,
+        answerReleaseId: catalog.answerReleaseId,
+        contentManifestHash: catalog.contentManifestHash,
+        answerManifestHash: catalog.answerManifestHash,
+        answerArtifactHash: catalog.answerArtifactHash,
+        publicManifestHash: providerChecksum(publicManifestBytes),
+        corpusApprovalHash: catalog.corpusApprovalHash,
+        embeddingSource: 'provider',
+        embeddingModel: EMBEDDING_MODEL,
+        embeddingReceiptHash: catalog.embeddingReceiptHash,
+        generationModel: GENERATION_MODEL,
+        retrieverVersion: RETRIEVER_VERSION,
+        retrievalPolicyHash,
+        evaluatorVersion: EVALUATOR_VERSION,
+        evaluatorHash: EVALUATOR_HASH,
+        promptSchemaVersion: PROMPT_SCHEMA_VERSION,
+        promptSchemaHash: PROMPT_SCHEMA_HASH,
+        semanticVerifierVersion: SEMANTIC_VERIFIER_VERSION,
+        semanticVerifierHash: SEMANTIC_VERIFIER_HASH,
+        providerDataControlReceiptHash: control.receiptHash,
+        providerPricingReceiptHash: pricing.receiptHash,
+        evaluationUsageReceiptHash: usage.receiptHash,
+      });
+      if (usage.receiptHash !== report.evaluationUsageReceiptHash || usage.hiddenManifestHash !== report.hiddenManifestHash) {
+        throw new Error('runtime readiness evaluation usage receipt drift');
+      }
     }
   }
   return catalog;
