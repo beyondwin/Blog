@@ -329,7 +329,7 @@ export async function buildSecondBrainAvatarDerivativeCandidates(repositoryRoot)
   return receipt;
 }
 
-async function verifyCandidateReceipt(repositoryRoot, receipt, manifest, original) {
+function validateCandidateReceiptProjection(receipt, manifest, original) {
   exactKeys(receipt, ['version', 'assetId', 'state', 'original', 'encoder', 'derivatives', 'approval', 'rightsBoundary'], 'candidate receipt');
   assert(
     receipt.version === 1 && receipt.assetId === 'form-and-thought-agent-avatar-v1' && receipt.state === 'review-candidate',
@@ -363,7 +363,6 @@ async function verifyCandidateReceipt(repositoryRoot, receipt, manifest, origina
     const derivative = receipt.derivatives[index];
     const label = `candidate ${index + 1}`;
     assertDerivativeDeclaration(derivative, variant, label, ['candidateId', 'file', 'publicPath', 'format', 'width', 'height', 'bytes', 'checksum', 'options']);
-    await verifyDerivativeBytes(repositoryRoot, `${INTAKE_PATH}/${derivative.file}`, derivative, label);
   }
 
   return {
@@ -378,7 +377,10 @@ async function verifyCandidateReceipt(repositoryRoot, receipt, manifest, origina
 export async function verifySecondBrainAvatarDerivativeCandidates(repositoryRoot) {
   const { manifest, original } = await inspectOriginal(repositoryRoot);
   const receipt = await readYamlFile(repositoryRoot, RECEIPT_PATH, 'candidate receipt');
-  const result = await verifyCandidateReceipt(repositoryRoot, receipt, manifest, original);
+  const result = validateCandidateReceiptProjection(receipt, manifest, original);
+  for (const [index, derivative] of receipt.derivatives.entries()) {
+    await verifyDerivativeBytes(repositoryRoot, `${INTAKE_PATH}/${derivative.file}`, derivative, `candidate ${index + 1}`);
+  }
   return {
     original: result.original,
     derivatives: result.derivatives,
@@ -399,13 +401,15 @@ export async function verifyApprovedSecondBrainAvatarDerivatives(repositoryRoot)
   exactKeys(approval, ['state', 'approvedBy', 'reviewedCandidateReceipt', 'rightsBoundary'], 'derivative approval');
   assert(deepEqual(approval.approvedBy, REQUIRED_APPROVERS), 'derivative approval actors are not exact');
   assert(deepEqual(approval.rightsBoundary, manifest.rightsBoundary), 'derivative approval rights caveat changed');
-  exactKeys(approval.reviewedCandidateReceipt, ['name', 'checksum'], 'reviewed candidate receipt reference');
-  assert(approval.reviewedCandidateReceipt.name === 'candidate-receipt.yml', 'reviewed candidate receipt name changed');
-  assert(/^sha256:[a-f0-9]{64}$/.test(approval.reviewedCandidateReceipt.checksum), 'reviewed candidate receipt checksum is invalid');
-  const receiptBytes = await readRegularFileNoFollow(repositoryRoot, RECEIPT_PATH, 'reviewed candidate receipt');
-  assert(sha256(receiptBytes) === approval.reviewedCandidateReceipt.checksum, 'reviewed candidate receipt checksum changed');
-  const receipt = parseYamlBytes(receiptBytes, 'reviewed candidate receipt');
-  const reviewedCandidates = await verifyCandidateReceipt(repositoryRoot, receipt, manifest, original);
+  const reviewedReceipt = approval.reviewedCandidateReceipt;
+  exactKeys(reviewedReceipt, ['name', 'checksum', 'receipt', 'approvedBy'], 'reviewed candidate receipt reference');
+  assert(reviewedReceipt.name === 'candidate-receipt.yml', 'reviewed candidate receipt name changed');
+  assert(/^sha256:[a-f0-9]{64}$/.test(reviewedReceipt.checksum), 'reviewed candidate receipt checksum is invalid');
+  assert(deepEqual(reviewedReceipt.approvedBy, REQUIRED_APPROVERS), 'reviewed candidate receipt approval actors are not exact');
+  assert(deepEqual(reviewedReceipt.approvedBy, approval.approvedBy), 'reviewed candidate receipt approval actors do not match the durable approval');
+  const embeddedReceiptBytes = Buffer.from(stringifyYaml(reviewedReceipt.receipt, { lineWidth: 0 }), 'utf8');
+  assert(sha256(embeddedReceiptBytes) === reviewedReceipt.checksum, 'reviewed candidate receipt checksum changed');
+  const reviewedCandidates = validateCandidateReceiptProjection(reviewedReceipt.receipt, manifest, original);
   assert(Array.isArray(manifest.derivatives) && manifest.derivatives.length === VARIANTS.length, 'approved manifest must contain exactly four derivatives');
 
   for (const [index, variant] of VARIANTS.entries()) {

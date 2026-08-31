@@ -57,6 +57,8 @@ async function approveFixture(root) {
     reviewedCandidateReceipt: {
       name: 'candidate-receipt.yml',
       checksum: `sha256:${createHash('sha256').update(receiptBytes).digest('hex')}`,
+      receipt,
+      approvedBy: ['controller', 'independent-visual-reviewer'],
     },
     rightsBoundary: receipt.rightsBoundary,
   };
@@ -236,9 +238,10 @@ describe('approved second-brain avatar derivatives', () => {
     await expect(verifyApprovedSecondBrainAvatarDerivatives(fixtureRoot)).rejects.toThrow(/derivative approval is missing/i);
   });
 
-  it('verifies only exact public bytes bound to both approval actors', async () => {
+  it('verifies exact durable approval and public bytes after ignored intake is removed', async () => {
     const root = await cloneFixture();
     await approveFixture(root);
+    await rm(join(root, '.superpowers'), { recursive: true });
 
     const result = await verifyApprovedSecondBrainAvatarDerivatives(root);
 
@@ -273,6 +276,27 @@ describe('approved second-brain avatar derivatives', () => {
     await writeYaml(root, manifestPath, manifest);
 
     await expect(verifyApprovedSecondBrainAvatarDerivatives(root)).rejects.toThrow(/reviewed candidate/i);
+  });
+
+  it('rejects tampered embedded receipt projection and matching public bytes in a clean checkout', async () => {
+    const root = await cloneFixture();
+    await approveFixture(root);
+    const manifest = await readYaml(root, manifestPath);
+    const substituted = await sharp(await readFile(join(root, sourcePath)))
+      .resize({ width: 640, withoutEnlargement: true })
+      .avif({ quality: 35, effort: 4, chromaSubsampling: '4:4:4' })
+      .toBuffer();
+    const substitution = {
+      bytes: substituted.byteLength,
+      checksum: `sha256:${createHash('sha256').update(substituted).digest('hex')}`,
+    };
+    Object.assign(manifest.derivatives[0], substitution);
+    Object.assign(manifest.derivativeApproval.reviewedCandidateReceipt.receipt.derivatives[0], substitution);
+    await writeFile(join(root, manifest.derivatives[0].publicPath), substituted);
+    await writeYaml(root, manifestPath, manifest);
+    await rm(join(root, '.superpowers'), { recursive: true });
+
+    await expect(verifyApprovedSecondBrainAvatarDerivatives(root)).rejects.toThrow(/reviewed candidate receipt checksum/i);
   });
 
   it('rejects forged approval actors', async () => {
