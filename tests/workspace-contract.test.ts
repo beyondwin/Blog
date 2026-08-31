@@ -120,6 +120,17 @@ describe('React-only Node 24 workspace contract', () => {
     expect(serverManifest.scripts?.['serve:fixture']).toBe('tsx scripts/with-test-postgres.mts serve-fixture');
     expect(rootManifest.scripts?.['server:serve:fixture'])
       .toBe('npm run serve:fixture --workspace @beyondwin/server');
+    expect(serverManifest.scripts?.eval).toBe('tsx scripts/with-test-postgres.mts eval');
+    expect(serverManifest.scripts?.['eval:hidden:offline'])
+      .toBe('tsx scripts/with-test-postgres.mts eval-hidden --confirm-hidden-eval');
+    expect(serverManifest.scripts?.['eval:hidden:provider:live'])
+      .toBe('tsx scripts/with-test-postgres.mts eval-hidden-provider-live --confirm-hidden-eval --confirm-live-provider');
+    expect(serverManifest.scripts?.['eval:clean'])
+      .toBe('node --eval "import(\'node:fs/promises\').then(({rm}) => rm(\'../../build/public-answer-eval\', {recursive:true, force:true}))"');
+    expect(rootManifest.scripts?.['server:eval']).toBe('npm run eval --workspace @beyondwin/server');
+    expect(rootManifest.scripts?.['server:eval:hidden:offline']).toBe('npm run eval:hidden:offline --workspace @beyondwin/server');
+    expect(rootManifest.scripts?.['server:eval:hidden:provider:live']).toBe('npm run eval:hidden:provider:live --workspace @beyondwin/server');
+    expect(rootManifest.scripts?.['server:eval:clean']).toBe('npm run eval:clean --workspace @beyondwin/server');
   });
 
   it('seals the final ordered validation chain', async () => {
@@ -144,8 +155,11 @@ describe('React-only Node 24 workspace contract', () => {
       'npm run public-release:verify',
       'npm run public-answer-release:build',
       'npm run public-answer-release:verify',
+      'npm run server:test:postgres',
+      'npm run server:eval',
       'npm run public-release:clean-test',
       'npm run public-answer-release:clean-test',
+      'npm run server:eval:clean',
       'npm run site:build',
     ].join(' && '));
     expect(manifest.scripts?.test).toBe('vitest run');

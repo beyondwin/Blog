@@ -6,13 +6,13 @@ import { isAbsolute, resolve } from 'node:path';
 
 import { readProviderDataControlReceipt } from './provider-data-control-receipt.js';
 
-interface ProviderSpendReceiptInput {
+export interface ProviderSpendReceiptInput {
   projectHash: string; currency: 'USD'; monthlyHardCapMicroUsd: number; approvedSiteBudgetMicroUsd: number;
   verifierIdentityHash: string; verifierRole: 'provider-admin'; verifiedAt: string; expiresAt: string;
   externalEvidenceChecksum: string;
 }
 
-interface EdgeReachabilityReceiptInput {
+export interface EdgeReachabilityReceiptInput {
   schemaVersion: 1; publicOrigin: string; replicaCount: 1;
   deployerIdentityHash: string; deployerRole: string; edgeOwnerIdentityHash: string;
   trustedProxyAddresses: readonly string[]; directOriginReachability: 'failed'; forwardedHeaderPolicy: 'overwrite';
@@ -23,7 +23,7 @@ interface EdgeReachabilityReceiptInput {
   verifiedAt: string; expiresAt: string; externalEvidenceChecksum: string;
 }
 
-type SealedEdgeReachabilityReceipt = EdgeReachabilityReceiptInput & { evidenceChecksum: string };
+export type SealedEdgeReachabilityReceipt = EdgeReachabilityReceiptInput & { evidenceChecksum: string };
 const checksumPattern = /^sha256:[a-f0-9]{64}$/u;
 const operationsKeys = [
   'schemaVersion','publicOrigin','replicaCount','deployerIdentityHash','deployerRole','edgeOwnerIdentityHash',
@@ -69,14 +69,14 @@ export function canonicalEdgeReachabilityReceipt(input: EdgeReachabilityReceiptI
   return Object.freeze({ ...normalized, evidenceChecksum: hash(JSON.stringify(normalized)) });
 }
 
-async function readEdgeReachabilityReceipt(
+export async function readEdgeReachabilityReceipt(
   path: string,
   expected: Readonly<{
     publicOrigin: string; trustedProxyAddresses: readonly string[];
     provider: Awaited<ReturnType<typeof readProviderDataControlReceipt>>;
   }>,
   now = new Date(),
-): Promise<void> {
+): Promise<Readonly<SealedEdgeReachabilityReceipt>> {
   const before = await lstat(path);
   if (before.isSymbolicLink()) throw new Error('edge reachability receipt must not be a symbolic link');
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -177,6 +177,7 @@ async function readEdgeReachabilityReceipt(
       || spendVerifiedAt > now.getTime() || spendExpiresAt <= now.getTime()) {
       throw new Error('operations receipt does not prove the production edge, ownership, retention, deletion, or provider spend controls');
     }
+    return Object.freeze({ ...input, evidenceChecksum });
   } finally { await handle.close(); }
 }
 
@@ -188,6 +189,7 @@ export interface ServerConfig {
   edgeReachabilityReceiptPath: string | null; openAiApiKey: string | null;
   providerDataControlReceiptPath: string | null; providerEmbeddingReceiptRoot: string | null;
   deletionReceiptRoot: string | null;
+  productionEvalReportPath?: string | null; evaluationUsageReceiptPath?: string | null;
   fixtureScenario: FixtureScenario | null;
 }
 
@@ -283,6 +285,10 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
     'FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT');
   const providerEmbeddingReceiptRoot = optionalAbsolute(env.FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT,
     'FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT');
+  const productionEvalReportPath = optionalAbsolute(env.FORM_THOUGHT_PUBLIC_ANSWER_EVAL_REPORT,
+    'FORM_THOUGHT_PUBLIC_ANSWER_EVAL_REPORT');
+  const evaluationUsageReceiptPath = optionalAbsolute(env.FORM_THOUGHT_EVAL_USAGE_RECEIPT,
+    'FORM_THOUGHT_EVAL_USAGE_RECEIPT');
   const openAiApiKey = env.OPENAI_API_KEY ?? null;
   if (publicAskMode === 'fixture' && openAiApiKey) throw new Error('fixture mode forbids a provider key');
   if (nodeEnv === 'production' && publicAskMode === 'fixture') throw new Error('fixture mode construction is forbidden in production');
@@ -326,6 +332,7 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
     corpusApprovalPath, trustedProxyAddresses, networkHmacSecret: required(env, 'FORM_THOUGHT_NETWORK_HMAC_SECRET'),
     publicOrigin, edgeReachabilityReceiptPath, openAiApiKey, providerDataControlReceiptPath, providerEmbeddingReceiptRoot,
     deletionReceiptRoot: optionalAbsolute(env.FORM_THOUGHT_DELETION_RECEIPT_ROOT, 'FORM_THOUGHT_DELETION_RECEIPT_ROOT'),
+    productionEvalReportPath, evaluationUsageReceiptPath,
     fixtureScenario,
   };
   return Object.freeze(result);

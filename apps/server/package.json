@@ -7,6 +7,10 @@
     "start": "tsx src/main.ts",
     "test": "vitest run test --exclude \"test/postgres/**\" --exclude \"test/evaluation/**\"",
     "test:postgres": "tsx scripts/with-test-postgres.mts test",
+    "eval": "tsx scripts/with-test-postgres.mts eval",
+    "eval:hidden:offline": "tsx scripts/with-test-postgres.mts eval-hidden --confirm-hidden-eval",
+    "eval:hidden:provider:live": "tsx scripts/with-test-postgres.mts eval-hidden-provider-live --confirm-hidden-eval --confirm-live-provider",
+    "eval:clean": "node --eval \"import('node:fs/promises').then(({rm}) => rm('../../build/public-answer-eval', {recursive:true, force:true}))\"",
     "serve:fixture": "tsx scripts/with-test-postgres.mts serve-fixture",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },

@@ -21,6 +21,10 @@
     "server:start": "npm run start --workspace @beyondwin/server",
     "server:test": "npm run test --workspace @beyondwin/server",
     "server:test:postgres": "npm run test:postgres --workspace @beyondwin/server",
+    "server:eval": "npm run eval --workspace @beyondwin/server",
+    "server:eval:hidden:offline": "npm run eval:hidden:offline --workspace @beyondwin/server",
+    "server:eval:hidden:provider:live": "npm run eval:hidden:provider:live --workspace @beyondwin/server",
+    "server:eval:clean": "npm run eval:clean --workspace @beyondwin/server",
     "server:serve:fixture": "npm run serve:fixture --workspace @beyondwin/server",
     "server:index:fixture": "npm exec --workspace @beyondwin/server -- tsx src/index-answer-release.ts --embedding-mode=fixture",
     "server:index:provider:live": "npm exec --workspace @beyondwin/server -- tsx src/index-answer-release.ts --embedding-mode=provider --confirm-live-provider",
@@ -49,7 +53,7 @@
     "memory:validate": "node scripts/memory/project.mjs --validate",
     "media:validate": "node scripts/validate-media.mjs",
     "agent:check": "node scripts/agent-check.mjs",
-    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm test && npm run typecheck:workspaces && npm run public-release:build && npm run public-release:verify && npm run public-answer-release:build && npm run public-answer-release:verify && npm run public-release:clean-test && npm run public-answer-release:clean-test && npm run site:build"
+    "validate": "npm run agent:check && node scripts/validate-content.mjs && npm run media:validate -- --strict && npm run article:quality && npm run memory:validate && npm test && npm run typecheck:workspaces && npm run public-release:build && npm run public-release:verify && npm run public-answer-release:build && npm run public-answer-release:verify && npm run server:test:postgres && npm run server:eval && npm run public-release:clean-test && npm run public-answer-release:clean-test && npm run server:eval:clean && npm run site:build"
   },
   "dependencies": {
     "yaml": "^2.9.0"

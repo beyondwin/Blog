@@ -1,5 +1,6 @@
 import type { Pool } from 'pg';
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 
 import type { ServerConfig } from '../config/server-config.js';
 import { readProviderDataControlReceipt } from '../config/provider-data-control-receipt.js';
@@ -12,6 +13,11 @@ import {
 } from '../modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
 import type { VerifiedCatalogSnapshot } from '../modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 import { providerChecksum } from '../modules/public-answer/infrastructure/openai/provider-json.js';
+import {
+  GENERATION_MODEL,
+  readProductionEvaluationReport,
+} from '../modules/public-answer/evaluation/evaluation-report.js';
+import { readEvaluationUsageReceipt } from '../modules/public-answer/evaluation/evaluation-usage-receipt.js';
 
 export type RuntimeBinding = Readonly<Pick<AnswerReleaseCatalogSnapshot, 'contentReleaseId' | 'answerReleaseId'>>;
 
@@ -56,7 +62,8 @@ function vectorChecksum(text: string): string {
 
 export async function runRuntimeStartupChecks(
   config: Readonly<Pick<ServerConfig,
-    'publicAskMode' | 'providerDataControlReceiptPath' | 'providerEmbeddingReceiptRoot'>>,
+    'publicAskMode' | 'providerDataControlReceiptPath' | 'providerEmbeddingReceiptRoot'>
+    & Partial<Pick<ServerConfig, 'nodeEnv' | 'productionEvalReportPath' | 'evaluationUsageReceiptPath'>>>,
   dependencies: RuntimeStartupDependencies,
 ): Promise<VerifiedCatalogSnapshot> {
   await dependencies.pool.query('SELECT 1');
@@ -110,12 +117,38 @@ export async function runRuntimeStartupChecks(
       readControl(config.providerDataControlReceiptPath),
       readPricing(),
       readEmbedding(config.providerEmbeddingReceiptRoot, catalog.answerReleaseId, catalog.embeddingReceiptHash),
-    ]) as readonly [Readonly<{ receiptHash: string }>, Readonly<{ receiptHash: string }>, ProviderEmbeddingReceipt];
+    ]) as readonly [Awaited<ReturnType<typeof readProviderDataControlReceipt>>, Readonly<{ receiptHash: string }>, ProviderEmbeddingReceipt];
     if (embedding.contentReleaseId !== catalog.contentReleaseId || embedding.answerReleaseId !== catalog.answerReleaseId
       || embedding.embeddingModel !== 'text-embedding-3-large' || embedding.embeddingDimensions !== 3072
       || embedding.embeddingSource !== 'provider' || embedding.providerDataControlReceiptHash !== control.receiptHash
       || embedding.providerPricingReceiptHash !== pricing.receiptHash) {
       throw new Error('runtime readiness provider evidence drift');
+    }
+    if (config.nodeEnv === 'production') {
+      if (!config.productionEvalReportPath || !config.evaluationUsageReceiptPath) throw new Error('runtime readiness production evaluation report or usage receipt is missing');
+      const retrievalPolicy = await readFile(new URL('../modules/public-answer/infrastructure/postgres/retrieval-policy.v1.json', import.meta.url));
+      const retrievalPolicyHash = providerChecksum(retrievalPolicy);
+      const report = await readProductionEvaluationReport(config.productionEvalReportPath, {
+        contentReleaseId: catalog.contentReleaseId,
+        answerReleaseId: catalog.answerReleaseId,
+        corpusApprovalHash: catalog.corpusApprovalHash,
+        embeddingSource: 'provider',
+        embeddingReceiptHash: catalog.embeddingReceiptHash,
+        generationModel: GENERATION_MODEL,
+        retrievalPolicyHash,
+        providerDataControlReceiptHash: control.receiptHash,
+        providerPricingReceiptHash: pricing.receiptHash,
+      });
+      const usage = await readEvaluationUsageReceipt(config.evaluationUsageReceiptPath, {
+        providerProjectHash: control.projectHash,
+        providerDataControlReceiptHash: control.receiptHash,
+        providerPricingReceiptHash: pricing.receiptHash,
+        hiddenManifestHash: report.hiddenManifestHash!,
+        corpusApprovalHash: catalog.corpusApprovalHash,
+        providerEmbeddingReceiptHash: catalog.embeddingReceiptHash,
+        retrievalPolicyHash,
+      });
+      if (usage.receiptHash !== report.evaluationUsageReceiptHash) throw new Error('runtime readiness evaluation usage receipt drift');
     }
   }
   return catalog;

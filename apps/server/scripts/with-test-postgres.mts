@@ -18,8 +18,10 @@ export interface HarnessRun {
 
 export interface TestPostgresHarnessDependencies {
   repositoryRoot: string; composeFile: string; postgresConfig: string; vitestEntrypoint: string;
+  evaluationConfig?: string; evaluationEntrypoint?: string; tsxEntrypoint?: string;
   projectName: string; env: NodeJS.ProcessEnv; execPath: string;
   discover(): Promise<readonly string[]>;
+  discoverEvaluation?(): Promise<readonly string[]>;
   run(input: HarnessRun): Promise<string>;
 }
 
@@ -134,12 +136,18 @@ function productionDependencies(): TestPostgresHarnessDependencies {
     repositoryRoot,
     composeFile: resolve(repositoryRoot, 'apps/server/compose.test.yml'),
     postgresConfig: resolve(repositoryRoot, 'apps/server/vitest.postgres.config.ts'),
+    evaluationConfig: resolve(repositoryRoot, 'apps/server/vitest.evaluation.config.ts'),
+    evaluationEntrypoint: resolve(repositoryRoot, 'apps/server/src/eval-public-answer.ts'),
+    tsxEntrypoint: resolve(repositoryRoot, 'node_modules/tsx/dist/cli.mjs'),
     vitestEntrypoint: resolve(repositoryRoot, 'node_modules/vitest/vitest.mjs'),
     projectName: `beyondwin-public-answer-${process.pid}`,
     env: process.env,
     execPath: process.execPath,
     async discover() {
       return (await readdir(resolve(repositoryRoot, 'apps/server/test/postgres'))).filter((name) => name.endsWith('.test.ts'));
+    },
+    async discoverEvaluation() {
+      return (await readdir(resolve(repositoryRoot, 'apps/server/test/evaluation'))).filter((name) => name.endsWith('.test.ts'));
     },
     run: spawnRun,
   };
@@ -391,7 +399,10 @@ export async function runTestPostgresHarness(
 ): Promise<void> {
   const allowed = new Set(['test', 'eval', 'eval-hidden', 'eval-hidden-provider-live']);
   if (!mode || !allowed.has(mode)) throw new Error('mode must be exactly test, eval, eval-hidden, or eval-hidden-provider-live');
-  if ((await dependencies.discover()).length === 0) throw new Error('dedicated Postgres config discovered zero owned tests');
+  const evaluation = mode !== 'test';
+  const discovered = evaluation && dependencies.discoverEvaluation
+    ? await dependencies.discoverEvaluation() : await dependencies.discover();
+  if (discovered.length === 0) throw new Error(`dedicated ${evaluation ? 'evaluation' : 'Postgres'} config discovered zero owned tests`);
   let started = false;
   const docker = (args: readonly string[], capture = false) => dependencies.run({
     command: 'docker', args, cwd: dependencies.repositoryRoot, env: dependencies.env, capture,
@@ -404,17 +415,70 @@ export async function runTestPostgresHarness(
     ], true)).trim();
     const port = mapped.slice(mapped.lastIndexOf(':') + 1);
     if (!/^\d+$/u.test(port)) throw new Error('Compose returned an invalid Postgres port');
-    if (mode !== 'test') throw new Error(`${mode} is reserved until its owning runtime task installs the executable suite`);
+    const databaseUrl = `postgresql://beyondwin_test:beyondwin_test@127.0.0.1:${port}/beyondwin_test`;
+    const childEnv: NodeJS.ProcessEnv = {
+      ...dependencies.env,
+      FORM_THOUGHT_TEST_DATABASE_URL: databaseUrl,
+    };
+    if (evaluation) {
+      Object.assign(childEnv, {
+        NODE_ENV: 'test',
+        FORM_THOUGHT_DATABASE_URL: databaseUrl,
+        FORM_THOUGHT_NETWORK_HMAC_SECRET: childEnv.FORM_THOUGHT_NETWORK_HMAC_SECRET ?? randomBytes(32).toString('hex'),
+      });
+    }
+    if (mode === 'eval' || mode === 'eval-hidden') {
+      delete childEnv.OPENAI_API_KEY;
+      Object.assign(childEnv, {
+        FORM_THOUGHT_PUBLIC_ASK_MODE: 'fixture',
+        FORM_THOUGHT_CONTENT_RELEASE_ROOT: childEnv.FORM_THOUGHT_CONTENT_RELEASE_ROOT
+          ?? resolve(dependencies.repositoryRoot, 'build/public-releases'),
+        FORM_THOUGHT_ANSWER_RELEASE_ROOT: childEnv.FORM_THOUGHT_ANSWER_RELEASE_ROOT
+          ?? resolve(dependencies.repositoryRoot, 'build/public-answer-releases'),
+        FORM_THOUGHT_CORPUS_APPROVAL_PATH: childEnv.FORM_THOUGHT_CORPUS_APPROVAL_PATH
+          ?? resolve(dependencies.repositoryRoot, 'src/data/public-answer-corpus-approval.v1.json'),
+      });
+    } else if (mode === 'eval-hidden-provider-live') {
+      childEnv.FORM_THOUGHT_PUBLIC_ASK_MODE = 'provider';
+    }
+    const config = evaluation ? dependencies.evaluationConfig : dependencies.postgresConfig;
+    if (!config) throw new Error('dedicated evaluation config is missing');
     await dependencies.run({
       command: dependencies.execPath,
-      args: [dependencies.vitestEntrypoint, 'run', '--config', dependencies.postgresConfig],
+      args: [dependencies.vitestEntrypoint, 'run', '--config', config],
       cwd: dependencies.repositoryRoot,
-      env: {
-        ...dependencies.env,
-        FORM_THOUGHT_TEST_DATABASE_URL: `postgresql://beyondwin_test:beyondwin_test@127.0.0.1:${port}/beyondwin_test`,
-      },
+      env: childEnv,
       capture: false,
     });
+    if (mode === 'eval') {
+      if (!dependencies.tsxEntrypoint || !dependencies.evaluationEntrypoint) throw new Error('evaluation executable paths are missing');
+      await dependencies.run({
+        command: dependencies.execPath,
+        args: [dependencies.tsxEntrypoint, resolve(dependencies.repositoryRoot, 'apps/server/src/index-answer-release.ts'), '--embedding-mode=fixture'],
+        cwd: dependencies.repositoryRoot,
+        env: childEnv,
+        capture: false,
+      });
+      await dependencies.run({
+        command: dependencies.execPath,
+        args: [dependencies.tsxEntrypoint, dependencies.evaluationEntrypoint, '--mode=first-slice-offline'],
+        cwd: dependencies.repositoryRoot,
+        env: childEnv,
+        capture: false,
+      });
+    } else if (evaluation) {
+      if (!dependencies.tsxEntrypoint || !dependencies.evaluationEntrypoint) throw new Error('evaluation executable paths are missing');
+      const cliArgs = mode === 'eval-hidden'
+        ? ['--mode=hidden-offline', '--confirm-hidden-eval']
+        : ['--mode=hidden-provider-live', '--confirm-hidden-eval', '--confirm-live-provider'];
+      await dependencies.run({
+        command: dependencies.execPath,
+        args: [dependencies.tsxEntrypoint, dependencies.evaluationEntrypoint, ...cliArgs],
+        cwd: dependencies.repositoryRoot,
+        env: childEnv,
+        capture: false,
+      });
+    }
   } finally {
     if (started) await docker([
       'compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'down', '-v', '--remove-orphans',
@@ -434,10 +498,11 @@ export async function runTestPostgresHarnessFromArgv(
     await runServeFixtureHarness(parseServeFixtureArguments(argv));
     return;
   }
-  const allowed = new Set(['test', 'eval', 'eval-hidden', 'eval-hidden-provider-live']);
-  if (argv.length !== 1 || !allowed.has(argv[0]!)) {
-    throw new Error('expected exactly one mode: test, eval, eval-hidden, or eval-hidden-provider-live');
-  }
+  const exact = argv.length === 1 && (argv[0] === 'test' || argv[0] === 'eval')
+    || argv.length === 2 && argv[0] === 'eval-hidden' && argv[1] === '--confirm-hidden-eval'
+    || argv.length === 3 && argv[0] === 'eval-hidden-provider-live' && argv[1] === '--confirm-hidden-eval'
+      && argv[2] === '--confirm-live-provider';
+  if (!exact) throw new Error('expected exactly one mode with its required confirmations');
   await runTestPostgresHarness(argv[0], dependencies);
 }
 
