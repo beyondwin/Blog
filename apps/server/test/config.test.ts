@@ -106,15 +106,24 @@ describe('server configuration', () => {
   ] as const)('accepts the internal %s fixture scenario only for a loopback test fixture runtime', async (scenario) => {
     await expect(parseServerConfig(base({
       HOST: '127.0.0.1', PORT: '4307',
-      FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4307/',
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308/',
       FORM_THOUGHT_TEST_FIXTURE_SCENARIO: scenario,
-    }))).resolves.toMatchObject({ fixtureScenario: scenario, publicOrigin: 'http://127.0.0.1:4307/' });
+    }))).resolves.toMatchObject({
+      host: '127.0.0.1', port: 4307, fixtureScenario: scenario, publicOrigin: 'http://127.0.0.1:4308/',
+    });
   });
 
   it.each([
     ['unknown scenario', { FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'magic' }],
     ['non-loopback host', { HOST: '192.0.2.10', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4307/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['different loopback host', { HOST: '127.0.0.2', PORT: '4307', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
     ['non-loopback origin', { FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['HTTPS loopback origin', { FORM_THOUGHT_PUBLIC_ORIGIN: 'https://127.0.0.1:4308/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['origin credentials', { FORM_THOUGHT_PUBLIC_ORIGIN: 'http://user@127.0.0.1:4308/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['origin path', { FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308/path', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['origin query', { FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308/?query=1', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['origin fragment', { FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308/#fragment', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
+    ['origin without explicit port', { FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
     ['provider mode', {
       FORM_THOUGHT_PUBLIC_ASK_MODE: 'provider', OPENAI_API_KEY: 'forbidden-key', PORT: '4307',
       FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT: resolve('provider-receipts'),
@@ -122,7 +131,7 @@ describe('server configuration', () => {
     }],
     ['provider key', { OPENAI_API_KEY: 'forbidden-key', PORT: '4307', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4307/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
   ])('rejects fixture scenario control with %s', async (_label, overrides) => {
-    await expect(parseServerConfig(base(overrides))).rejects.toThrow(/fixture|scenario|provider key/iu);
+    await expect(parseServerConfig(base(overrides))).rejects.toThrow(/fixture|scenario|provider key|origin/iu);
   });
 
   it('rejects unsafe production reachability and wildcard trust', async () => {

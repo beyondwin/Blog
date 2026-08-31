@@ -301,13 +301,16 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
   if (fixtureScenario !== null) {
     let originHost = '';
     let originPort = '';
+    let originProtocol = '';
     try {
       const url = new URL(publicOrigin ?? '');
       originHost = url.hostname.replace(/^\[|\]$/gu, '');
       originPort = url.port;
+      originProtocol = url.protocol;
     } catch { /* rejected by the complete fixture guard below */ }
     if (nodeEnv !== 'test' || !loopbackAddress(host) || !loopbackAddress(originHost)
-      || originPort !== String(port) || publicAskMode === 'provider'
+      || originHost !== host || originProtocol !== 'http:' || !/^[1-9]\d{0,4}$/u.test(originPort)
+      || Number(originPort) > 65_535 || publicAskMode === 'provider'
       || (publicAskMode !== 'fixture' && fixtureScenario !== 'provider-disabled') || openAiApiKey) {
       throw new Error('fixture scenario requires a test-only loopback fixture runtime without a provider key');
     }

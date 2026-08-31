@@ -34,6 +34,10 @@ export interface ServeFixtureOptions {
   readonly fixtureScenario: FixtureScenario;
 }
 
+export interface ParsedServeFixtureOptions extends ServeFixtureOptions {
+  readonly apiOrigin: string;
+}
+
 export interface OwnedServerProcess {
   readonly startup: Promise<void>;
   readonly wait: Promise<void>;
@@ -62,6 +66,10 @@ function loopback(value: string): boolean {
   return (family === 4 && value.startsWith('127.')) || (family === 6 && value === '::1');
 }
 
+function loopbackOrigin(host: string, port: number): string {
+  return `http://${isIP(host) === 6 ? `[${host}]` : host}:${port}/`;
+}
+
 function optionValues(argv: readonly string[]): ReadonlyMap<string, string> {
   const result = new Map<string, string>();
   for (let index = 1; index < argv.length; index += 1) {
@@ -76,7 +84,7 @@ function optionValues(argv: readonly string[]): ReadonlyMap<string, string> {
   return result;
 }
 
-export function parseServeFixtureArguments(argv: readonly string[]): ServeFixtureOptions {
+export function parseServeFixtureArguments(argv: readonly string[]): ParsedServeFixtureOptions {
   if (argv[0] !== 'serve-fixture') throw new Error('serve-fixture mode is required');
   const options = optionValues(argv);
   if ([...options.keys()].some((key) => !['host', 'port', 'public-origin', 'fixture-scenario'].includes(key))) {
@@ -96,11 +104,19 @@ export function parseServeFixtureArguments(argv: readonly string[]): ServeFixtur
   try {
     const origin = new URL(publicOrigin);
     const originHost = origin.hostname.replace(/^\[|\]$/gu, '');
-    if (origin.protocol !== 'http:' || !loopback(originHost) || originHost !== host || origin.port !== portText
+    const originPort = Number(origin.port);
+    if (origin.protocol !== 'http:' || !loopback(originHost) || originHost !== host
+      || !/^[1-9]\d{0,4}$/u.test(origin.port) || originPort > 65_535
       || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash
       || origin.toString() !== publicOrigin) throw new Error();
-  } catch { throw new Error('serve-fixture public origin must exactly match its loopback host and port'); }
-  return Object.freeze({ host, port, publicOrigin, fixtureScenario: scenario as FixtureScenario });
+  } catch { throw new Error('serve-fixture requires exact loopback API and public proxy origins'); }
+  return Object.freeze({
+    host,
+    port,
+    apiOrigin: loopbackOrigin(host, port),
+    publicOrigin,
+    fixtureScenario: scenario as FixtureScenario,
+  });
 }
 
 function spawnRun(input: HarnessRun): Promise<string> {
@@ -306,6 +322,7 @@ export async function runServeFixtureHarness(
     operation,
     interruption.then((signal) => { throw new Error(`serve-fixture interrupted by ${signal}`); }),
   ]);
+  const apiOrigin = loopbackOrigin(options.host, options.port);
   try {
     databaseStartup = dependencies.startDatabase(startupController.signal);
     database = await interruptible(databaseStartup);
@@ -358,7 +375,7 @@ export async function runServeFixtureHarness(
     } finally {
       if (startupTimer) clearTimeout(startupTimer);
     }
-    while (!await dependencies.ready(options.publicOrigin)) {
+    while (!await dependencies.ready(apiOrigin)) {
       if (dependencies.clock() >= startupDeadline) throw new Error('fixture server readiness deadline elapsed');
       await Promise.race([
         dependencies.sleep(100),

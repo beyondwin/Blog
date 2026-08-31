@@ -418,18 +418,24 @@ describe('owned fixture serve harness', () => {
     expect(parseServeFixtureArguments([
       'serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4307/',
     ])).toEqual({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      host: '127.0.0.1', port: 4307, apiOrigin: 'http://127.0.0.1:4307/',
+      publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
     });
     expect(parseServeFixtureArguments([
-      'serve-fixture', '--host', '::1', '--port', '4308', '--public-origin', 'http://[::1]:4308/',
+      'serve-fixture', '--host', '::1', '--port', '4308', '--public-origin', 'http://[::1]:4309/',
       '--fixture-scenario', 'slow-sql',
     ])).toEqual({
-      host: '::1', port: 4308, publicOrigin: 'http://[::1]:4308/', fixtureScenario: 'slow-sql',
+      host: '::1', port: 4308, apiOrigin: 'http://[::1]:4308/',
+      publicOrigin: 'http://[::1]:4309/', fixtureScenario: 'slow-sql',
     });
     for (const argv of [
       ['serve-fixture'],
       ['serve-fixture', '--host=0.0.0.0', '--port=4307', '--public-origin=http://127.0.0.1:4307/'],
-      ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:9999/'],
+      ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.2:4308/'],
+      ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://user@127.0.0.1:4308/'],
+      ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4308/path'],
+      ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4308/?query=1'],
+      ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4308/#fragment'],
       ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4307/', '--fixture-scenario=magic'],
     ]) expect(() => parseServeFixtureArguments(argv)).toThrow();
   });
@@ -466,17 +472,19 @@ describe('owned fixture serve harness', () => {
   }
 
   it('verifies, migrates, indexes, serves, waits for readiness, and always cleans its database in order', async () => {
-    const h = fixtureDependencies();
+    const h = fixtureDependencies({
+      async ready(origin) { h.events.push(`readiness.poll:${origin}`); return true; },
+    });
     await runServeFixtureHarness({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'insufficient-evidence',
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4308/', fixtureScenario: 'insufficient-evidence',
     }, h.dependencies);
     expect(h.events).toEqual([
       'database.start',
       'release.verify',
       'migration.apply',
       'fixture.index',
-      'server.start:http://127.0.0.1:4307/:insufficient-evidence',
-      'readiness.poll',
+      'server.start:http://127.0.0.1:4308/:insufficient-evidence',
+      'readiness.poll:http://127.0.0.1:4307/',
       'database.stop',
     ]);
   });
