@@ -6,8 +6,11 @@ const KIND_LABELS: Record<SearchKind, '아티클' | '서평' | '생각'> = {
   article: '아티클', review: '서평', thought: '생각',
 };
 
-export function SearchResults({ inventory, query }: {
+export type SearchResultOriginPolicy = 'search-continuation' | 'canonical-only';
+
+export function SearchResults({ inventory, originPolicy, query }: {
   inventory: readonly SearchInventoryItem[];
+  originPolicy: SearchResultOriginPolicy;
   query: string;
 }) {
   const matches = searchMatches(inventory, query);
@@ -31,7 +34,9 @@ export function SearchResults({ inventory, query }: {
       </div>
       <ol className="search-result-list">
         {matches.map(({ item, match }) => {
-          const origin = searchOriginForItem(item, query);
+          const origin = originPolicy === 'search-continuation'
+            ? searchOriginForItem(item, query)
+            : null;
           const content = <>
             <span className="search-result__kind">{KIND_LABELS[item.kind]}</span>
             <strong>{item.title}</strong>

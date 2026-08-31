@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -9,8 +10,9 @@ import {
   type RefObject,
 } from 'react';
 import { createPortal } from 'react-dom';
-import type { PublicAskResponse } from '@beyondwin/contracts';
 import { ORIGIN_QUERY_MAX_LENGTH } from '../navigation/origin';
+import type { AnswerViewModel } from './answerViewModel';
+import { createPublicAskCoordinator } from './publicAskCoordinator';
 import { SearchResults } from './SearchResults';
 import {
   askExperienceReducer,
@@ -26,8 +28,6 @@ const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled
 function ArrowIcon() {
   return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 16h23M19 8l8 8-8 8" /></svg>;
 }
-
-type PublicAnswer = Extract<PublicAskResponse, { kind: 'answer' }>;
 
 function AgentStage() {
   const [imageFailed, setImageFailed] = useState(false);
@@ -109,6 +109,13 @@ function QuestionComposer({ id, label, note, onBlur, onChange, onFocus, onSubmit
         </button>
       </div>
       {note ? <p className="question-composer__note">{note}</p> : null}
+      <details className="question-composer__privacy">
+        <summary>질문과 근거는 어떻게 처리되나요?</summary>
+        <p>
+          현재 질문과 선택된 공개 기록 발췌는 이 답을 만들기 위해 설정된 AI 제공자에게 전달됩니다.
+          원문 질문의 서버 보관 기간은 0일이며, 공개 승인된 근거만 사용합니다.
+        </p>
+      </details>
     </form>
   );
 }
@@ -130,7 +137,7 @@ function RetrievalSequence({ view }: { view: 'retrieving' | 'connecting' | 'comp
 }
 
 function AnswerStage({ answer, evidenceOpen, onOpenEvidence, onSubmit, question }: {
-  answer: PublicAnswer;
+  answer: AnswerViewModel;
   evidenceOpen: boolean;
   onOpenEvidence: (index: number, trigger: HTMLElement) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -176,7 +183,7 @@ function AnswerStage({ answer, evidenceOpen, onOpenEvidence, onSubmit, question 
 }
 
 function EvidencePanel({ answer, closeRef, onClose, onSelect, panelRef, selectedIndex }: {
-  answer: PublicAnswer;
+  answer: AnswerViewModel;
   closeRef: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
   onSelect: (index: number) => void;
@@ -232,22 +239,41 @@ function progressStatus(view: string, query: string, resultCount: number): strin
   return '질문을 기다리고 있습니다.';
 }
 
-export function SecondBrainExperience({ initialQuery, inventory, provider: _provider }: {
+export function SecondBrainExperience({ initialQuery, inventory, provider }: {
   initialQuery: string;
   inventory: readonly SearchInventoryItem[];
   provider: PublicAskProvider;
 }) {
   const [state, dispatch] = useReducer(askExperienceReducer, initialQuery, initialAskState);
-  const [answer, setAnswer] = useState<PublicAnswer | null>(null);
   const [inputValue, setInputValue] = useState(initialQuery || SAMPLE_QUESTION);
   const [composerNote, setComposerNote] = useState('질문을 기다리고 있습니다.');
+  const coordinator = useMemo(() => createPublicAskCoordinator(provider), [provider]);
+  const choreographyTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const backgroundRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const shouldReturnFocusRef = useRef(false);
 
-  const submitQuestion = useCallback((queryValue: string) => {
+  const clearChoreographyTimers = useCallback(() => {
+    for (const timer of choreographyTimersRef.current) clearTimeout(timer);
+    choreographyTimersRef.current = [];
+  }, []);
+
+  const startChoreography = useCallback(() => {
+    clearChoreographyTimers();
+    if (window.matchMedia(REDUCED_MOTION_QUERY).matches) {
+      dispatch({ type: 'visual-complete' });
+      return;
+    }
+    choreographyTimersRef.current = [
+      setTimeout(() => dispatch({ type: 'advance', phase: 'connecting' }), 450),
+      setTimeout(() => dispatch({ type: 'advance', phase: 'composing' }), 900),
+      setTimeout(() => dispatch({ type: 'visual-complete' }), 1_350),
+    ];
+  }, [clearChoreographyTimers]);
+
+  const submitQuestion = useCallback(async (queryValue: string) => {
     const query = boundedSearchQuery(queryValue);
     if (!query) {
       setComposerNote('질문을 입력해 주세요.');
@@ -255,23 +281,32 @@ export function SecondBrainExperience({ initialQuery, inventory, provider: _prov
     }
     setInputValue(query);
     setComposerNote('질문을 기다리고 있습니다.');
-    setAnswer(null);
-    dispatch({ type: 'show-results', query });
-  }, []);
+    dispatch({ type: 'submit-answer', query });
+    startChoreography();
+    const result = await coordinator.submit(query);
+    dispatch({ type: 'network-settled', result });
+  }, [coordinator, startChoreography]);
 
   const restoreQueryFromLocation = useCallback(() => {
+    coordinator.cancel();
+    clearChoreographyTimers();
     const query = boundedSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '');
-    setAnswer(null);
     setInputValue(query || SAMPLE_QUESTION);
     setComposerNote('질문을 기다리고 있습니다.');
     dispatch(query ? { type: 'show-results', query } : { type: 'reset' });
-  }, []);
+  }, [clearChoreographyTimers, coordinator]);
 
   useEffect(() => {
     restoreQueryFromLocation();
     window.addEventListener('popstate', restoreQueryFromLocation);
-    return () => window.removeEventListener('popstate', restoreQueryFromLocation);
-  }, [restoreQueryFromLocation]);
+    window.addEventListener('pageshow', restoreQueryFromLocation);
+    return () => {
+      window.removeEventListener('popstate', restoreQueryFromLocation);
+      window.removeEventListener('pageshow', restoreQueryFromLocation);
+      clearChoreographyTimers();
+      coordinator.dispose();
+    };
+  }, [clearChoreographyTimers, coordinator, restoreQueryFromLocation]);
 
   const closeEvidence = useCallback(() => {
     shouldReturnFocusRef.current = true;
@@ -332,17 +367,17 @@ export function SecondBrainExperience({ initialQuery, inventory, provider: _prov
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    submitQuestion(String(form.get('q') ?? ''));
+    void submitQuestion(String(form.get('q') ?? ''));
   };
   const openEvidence = (index: number, trigger: HTMLElement) => {
-    if (!answer) return;
+    if (state.view !== 'answered' && state.view !== 'evidence-open') return;
+    const answer = state.answer;
     const evidenceId = answer.evidence[index]?.evidenceId;
     if (!evidenceId) return;
     returnFocusRef.current = trigger;
     dispatch({ type: 'open-evidence', evidenceId });
   };
   const progressView = state.view === 'pending' ? state.phase : null;
-  const answerVisible = answer !== null && (state.view === 'answered' || state.view === 'evidence-open');
   const resultCount = state.view === 'search-results' ? searchMatches(inventory, state.query).length : 0;
 
   return (
@@ -353,15 +388,16 @@ export function SecondBrainExperience({ initialQuery, inventory, provider: _prov
           <section className="second-brain-dialogue" aria-label="공개 기록과 대화">
             <div className="second-brain-dialogue__inner">
               {progressView ? <RetrievalSequence view={progressView} /> : null}
-              {answerVisible ? (
+              {state.view === 'answered' || state.view === 'evidence-open' ? (
                 <AnswerStage
-                  answer={answer}
+                  answer={state.answer}
                   evidenceOpen={state.view === 'evidence-open'}
                   question={state.query}
                   onOpenEvidence={openEvidence}
                   onSubmit={onSubmit}
                 />
-              ) : (
+              ) : null}
+              {state.view === 'idle' || state.view === 'search-results' ? (
                 <div className="second-brain-intro">
                   <h1>공개 기록에 무엇을 묻고 싶나요?</h1>
                   <QuestionComposer
@@ -376,23 +412,30 @@ export function SecondBrainExperience({ initialQuery, inventory, provider: _prov
                     onSubmit={onSubmit}
                   />
                 </div>
-              )}
+              ) : null}
             </div>
             <p className="visually-hidden" role="status" aria-live="polite">
-              {progressStatus(state.view, state.query, resultCount)}
+              {progressStatus(progressView ?? state.view, state.query, resultCount)}
             </p>
           </section>
         </div>
         {state.view === 'search-results' ? (
-          <div className="second-brain-search__results"><SearchResults inventory={inventory} query={state.query} /></div>
+          <div className="second-brain-search__results">
+            {state.notice ? <p className="second-brain-search__notice" role="status">{state.notice}</p> : null}
+            <SearchResults
+              inventory={inventory}
+              originPolicy={state.notice === null ? 'search-continuation' : 'canonical-only'}
+              query={state.query}
+            />
+          </div>
         ) : null}
       </div>
-      {state.view === 'evidence-open' && answer ? (
+      {state.view === 'evidence-open' ? (
         <EvidencePanel
-          answer={answer}
-          selectedIndex={Math.max(0, answer.evidence.findIndex((item) => item.evidenceId === state.selectedEvidenceId))}
+          answer={state.answer}
+          selectedIndex={Math.max(0, state.answer.evidence.findIndex((item) => item.evidenceId === state.selectedEvidenceId))}
           onSelect={(index) => {
-            const evidenceId = answer.evidence[index]?.evidenceId;
+            const evidenceId = state.answer.evidence[index]?.evidenceId;
             if (evidenceId) dispatch({ type: 'select-evidence', evidenceId });
           }}
           onClose={closeEvidence}
