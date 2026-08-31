@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ServerConfig } from '../src/config/server-config.js';
+import { parseServerConfig, type ServerConfig } from '../src/config/server-config.js';
 import { RuntimeReadiness } from '../src/health/runtime-readiness.js';
 import { RuntimeLifecycle } from '../src/lifecycle/runtime-lifecycle.js';
 import {
@@ -70,7 +70,7 @@ const config: Readonly<ServerConfig> = Object.freeze({
   corpusApprovalPath: '/tmp/approval.json',
   trustedProxyAddresses: Object.freeze([]),
   networkHmacSecret: 'test-secret-at-least-32-characters',
-  publicOrigin: 'http://127.0.0.1:4307/',
+  publicOrigin: 'http://127.0.0.1:4307',
   edgeReachabilityReceiptPath: null,
   openAiApiKey: null,
   providerDataControlReceiptPath: null,
@@ -85,13 +85,13 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function harness(outcome: PublicAnswerOutcome | Error = answer) {
+async function harness(outcome: PublicAnswerOutcome | Error = answer, runtimeConfig: Readonly<ServerConfig> = config) {
   const commands: AnswerPublicQuestionCommand[] = [];
   let snapshots = 0;
   const readiness = new RuntimeReadiness({ startupCheck: async () => snapshot });
   await readiness.initialize();
   const runtime: ApplicationRuntimeOverrides = {
-    config,
+    config: runtimeConfig,
     readiness,
     catalogSource: {
       async snapshot() {
@@ -107,8 +107,8 @@ async function harness(outcome: PublicAnswerOutcome | Error = answer) {
       },
     },
     networkKey: new TrustedProxyNetworkKey({
-      masterSecret: config.networkHmacSecret,
-      trustedProxyAddresses: config.trustedProxyAddresses,
+      masterSecret: runtimeConfig.networkHmacSecret,
+      trustedProxyAddresses: runtimeConfig.trustedProxyAddresses,
     }),
   };
   const app = await createApplication({ runtime });
@@ -268,6 +268,41 @@ describe('public answer HTTP contract', () => {
     const h = await harness({ kind: 'search', reason: 'unsupported-question', answerReleaseId: ANSWER_RELEASE });
     const response = await h.fastify.inject({ method: 'POST', url: '/api/public/ask', headers, payload: requestPayload() });
     expect(response.statusCode).toBe(status);
+  });
+
+  it('compares the browser Origin header to canonical WHATWG origin serialization and rejects every component drift', async () => {
+    const publicOrigin = 'http://127.0.0.1:4308';
+    const parsed = await parseServerConfig({
+      NODE_ENV: 'test', HOST: '127.0.0.1', PORT: '4307',
+      FORM_THOUGHT_PUBLIC_ASK_MODE: 'fixture', FORM_THOUGHT_SERVER_REPLICA_COUNT: '1',
+      FORM_THOUGHT_DATABASE_URL: config.databaseUrl,
+      FORM_THOUGHT_CONTENT_RELEASE_ROOT: config.contentReleaseRoot,
+      FORM_THOUGHT_ANSWER_RELEASE_ROOT: config.answerReleaseRoot,
+      FORM_THOUGHT_CORPUS_APPROVAL_PATH: config.corpusApprovalPath,
+      FORM_THOUGHT_NETWORK_HMAC_SECRET: config.networkHmacSecret,
+      FORM_THOUGHT_PUBLIC_ORIGIN: publicOrigin,
+      FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success',
+    });
+    expect(parsed.publicOrigin).toBe(publicOrigin);
+    const h = await harness({ kind: 'search', reason: 'unsupported-question', answerReleaseId: ANSWER_RELEASE }, parsed);
+
+    for (const [origin, status] of [
+      [publicOrigin, 200],
+      [`${publicOrigin}/`, 400],
+      [`${publicOrigin}/path`, 400],
+      [`${publicOrigin}?query=1`, 400],
+      [`${publicOrigin}#fragment`, 400],
+      ['http://user@127.0.0.1:4308', 400],
+      ['https://127.0.0.1:4308', 400],
+      ['http://127.0.0.2:4308', 400],
+      ['http://127.0.0.1:4309', 400],
+    ] as const) {
+      const response = await h.fastify.inject({
+        method: 'POST', url: '/api/public/ask',
+        headers: { origin, 'sec-fetch-site': 'same-origin' }, payload: requestPayload(),
+      });
+      expect(response.statusCode, origin).toBe(status);
+    }
   });
 
   it('uses one server snapshot and one internal request ID while ignoring hostile client IDs', async () => {

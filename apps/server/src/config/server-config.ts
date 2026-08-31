@@ -254,8 +254,8 @@ function normalizedOrigin(value: string | undefined, nodeEnv: ServerConfig['node
     const protocolAllowed = url.protocol === 'https:'
       || (nodeEnv === 'test' && url.protocol === 'http:' && loopbackAddress(url.hostname.replace(/^\[|\]$/gu, '')));
     if (!protocolAllowed || url.username || url.password || url.search || url.hash || url.pathname !== '/'
-      || url.toString() !== value) throw new Error();
-    return value;
+      || url.origin !== value) throw new Error();
+    return url.origin;
   } catch { throw new Error('public origin must be exact normalized HTTPS or test loopback HTTP'); }
 }
 

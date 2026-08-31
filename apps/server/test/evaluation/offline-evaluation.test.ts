@@ -136,7 +136,7 @@ describe('offline public-answer evaluation', () => {
       FORM_THOUGHT_EVAL_USAGE_RECEIPT: '/authority/usage.json', FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: '/authority/control.json',
       FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: '/authority/edge.json', FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT: '/authority/embedding',
       FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_HASH: checksum('2'), FORM_THOUGHT_HIDDEN_MANIFEST_HASH: checksum('3'),
-      FORM_THOUGHT_RETRIEVAL_POLICY_HASH: checksum('4'), FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/',
+      FORM_THOUGHT_RETRIEVAL_POLICY_HASH: checksum('4'), FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com',
       FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1', OPENAI_API_KEY: 'never-called-test-key',
     };
     for (const missing of [

@@ -416,20 +416,21 @@ describe('runtime readiness', () => {
 describe('owned fixture serve harness', () => {
   it('requires an exact loopback host, port, public origin, and exact scenario enum', () => {
     expect(parseServeFixtureArguments([
-      'serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4307/',
+      'serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4308',
     ])).toEqual({
       host: '127.0.0.1', port: 4307, apiOrigin: 'http://127.0.0.1:4307/',
-      publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      publicOrigin: 'http://127.0.0.1:4308', fixtureScenario: 'success',
     });
     expect(parseServeFixtureArguments([
-      'serve-fixture', '--host', '::1', '--port', '4308', '--public-origin', 'http://[::1]:4309/',
+      'serve-fixture', '--host', '::1', '--port', '4308', '--public-origin', 'http://[::1]:4309',
       '--fixture-scenario', 'slow-sql',
     ])).toEqual({
       host: '::1', port: 4308, apiOrigin: 'http://[::1]:4308/',
-      publicOrigin: 'http://[::1]:4309/', fixtureScenario: 'slow-sql',
+      publicOrigin: 'http://[::1]:4309', fixtureScenario: 'slow-sql',
     });
     for (const argv of [
       ['serve-fixture'],
+      ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4308/'],
       ['serve-fixture', '--host=0.0.0.0', '--port=4307', '--public-origin=http://127.0.0.1:4307/'],
       ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.2:4308/'],
       ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://user@127.0.0.1:4308/'],
@@ -476,14 +477,14 @@ describe('owned fixture serve harness', () => {
       async ready(origin) { h.events.push(`readiness.poll:${origin}`); return true; },
     });
     await runServeFixtureHarness({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4308/', fixtureScenario: 'insufficient-evidence',
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4308', fixtureScenario: 'insufficient-evidence',
     }, h.dependencies);
     expect(h.events).toEqual([
       'database.start',
       'release.verify',
       'migration.apply',
       'fixture.index',
-      'server.start:http://127.0.0.1:4308/:insufficient-evidence',
+      'server.start:http://127.0.0.1:4308:insufficient-evidence',
       'readiness.poll:http://127.0.0.1:4307/',
       'database.stop',
     ]);
@@ -492,13 +493,13 @@ describe('owned fixture serve harness', () => {
   it('rejects provider keys before database startup and cleans after startup failure', async () => {
     const provider = fixtureDependencies({ env: { OPENAI_API_KEY: 'forbidden' } });
     await expect(runServeFixtureHarness({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307', fixtureScenario: 'success',
     }, provider.dependencies)).rejects.toThrow(/provider key/u);
     expect(provider.events).toEqual([]);
 
     const failed = fixtureDependencies({ async migrate() { throw new Error('migration failed'); } });
     await expect(runServeFixtureHarness({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307', fixtureScenario: 'success',
     }, failed.dependencies)).rejects.toThrow('migration failed');
     expect(failed.events).toEqual(['database.start', 'release.verify', 'database.stop']);
   });
@@ -518,7 +519,7 @@ describe('owned fixture serve harness', () => {
       onSignal(next) { handler = next; return () => { h.events.push('signals.remove'); }; },
     });
     const running = runServeFixtureHarness({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307', fixtureScenario: 'success',
     }, h.dependencies);
     while (!handler || !h.events.includes('server.start')) await Promise.resolve();
     handler(signal);
@@ -544,7 +545,7 @@ describe('owned fixture serve harness', () => {
       onSignal(next) { handler = next; return () => { h.events.push('signals.remove'); }; },
     });
     const running = runServeFixtureHarness({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307', fixtureScenario: 'success',
     }, h.dependencies);
     await Promise.resolve();
     expect(handler).toBeTypeOf('function');
@@ -569,7 +570,7 @@ describe('owned fixture serve harness', () => {
       async sleep() { h.events.push('bounded.wait'); },
     });
     await expect(runServeFixtureHarness({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307', fixtureScenario: 'success',
     }, h.dependencies)).rejects.toThrow(/termination was not confirmed/u);
     expect(h.events).toContain('server.signal:SIGTERM');
     expect(h.events).toContain('server.signal:SIGKILL');
@@ -634,7 +635,7 @@ describe('owned fixture serve harness', () => {
       onSignal() { return () => undefined; },
     });
     await expect(runServeFixtureHarness({
-      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307', fixtureScenario: 'success',
     }, h.dependencies)).rejects.toThrow('owned port already in use');
     expect(unrelatedProbes).toBe(0);
     expect(h.events.at(-1)).toBe('database.stop');
@@ -659,7 +660,7 @@ describe('owned fixture serve harness', () => {
     vi.useFakeTimers();
     try {
       const running = runServeFixtureHarness({
-        host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+        host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307', fixtureScenario: 'success',
       }, h.dependencies);
       const observed = running.then(
         () => ({ kind: 'resolved' as const, error: undefined }),

@@ -42,7 +42,7 @@ function providerInput(overrides: Record<string, unknown> = {}) {
 
 function operationsInput(providerReceiptHash: string, overrides: Record<string, unknown> = {}) {
   return {
-    schemaVersion: 1 as const, publicOrigin: 'https://example.com/', replicaCount: 1 as const,
+    schemaVersion: 1 as const, publicOrigin: 'https://example.com', replicaCount: 1 as const,
     deployerIdentityHash: `sha256:${'4'.repeat(64)}`, deployerRole: 'deployment-admin',
     edgeOwnerIdentityHash: `sha256:${'5'.repeat(64)}`, trustedProxyAddresses: ['127.0.0.1'],
     directOriginReachability: 'failed' as const, forwardedHeaderPolicy: 'overwrite' as const,
@@ -106,15 +106,16 @@ describe('server configuration', () => {
   ] as const)('accepts the internal %s fixture scenario only for a loopback test fixture runtime', async (scenario) => {
     await expect(parseServerConfig(base({
       HOST: '127.0.0.1', PORT: '4307',
-      FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308/',
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308',
       FORM_THOUGHT_TEST_FIXTURE_SCENARIO: scenario,
     }))).resolves.toMatchObject({
-      host: '127.0.0.1', port: 4307, fixtureScenario: scenario, publicOrigin: 'http://127.0.0.1:4308/',
+      host: '127.0.0.1', port: 4307, fixtureScenario: scenario, publicOrigin: 'http://127.0.0.1:4308',
     });
   });
 
   it.each([
     ['unknown scenario', { FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'magic' }],
+    ['non-canonical trailing slash', { FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
     ['non-loopback host', { HOST: '192.0.2.10', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4307/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
     ['different loopback host', { HOST: '127.0.0.2', PORT: '4307', FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
     ['non-loopback origin', { FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TEST_FIXTURE_SCENARIO: 'success' }],
@@ -152,13 +153,13 @@ describe('server configuration', () => {
     await writeFile(edgePath, `${JSON.stringify(edge, null, 2)}\n`);
     await expect(parseServerConfig(base({
       NODE_ENV: 'production', FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
-      FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
       FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: edgePath, FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
     }))).resolves.toMatchObject({ nodeEnv: 'production', edgeReachabilityReceiptPath: edgePath });
     await writeFile(edgePath, `${JSON.stringify({ ...edge, providerDataControlReceiptHash: `sha256:${'f'.repeat(64)}` }, null, 2)}\n`);
     await expect(parseServerConfig(base({
       NODE_ENV: 'production', FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
-      FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
       FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: edgePath, FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
     }))).rejects.toThrow(/operations|checksum/u);
   });
@@ -179,7 +180,7 @@ describe('server configuration', () => {
     await writeFile(edgePath, `${JSON.stringify(edge, null, 2)}\n`);
     await expect(parseServerConfig(base({
       NODE_ENV: 'production', FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled', FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'),
-      FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com', FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1',
       FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: edgePath, FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
     }))).rejects.toThrow(/instant|current|valid|edge/u);
   });
@@ -267,7 +268,7 @@ describe('strict production operations receipt', () => {
     const providerPath = join(root, 'provider.json');
     await writeFile(providerPath, `${JSON.stringify(provider, null, 2)}\n`);
     const strictInput = {
-      schemaVersion: 1, publicOrigin: 'https://example.com/', replicaCount: 1,
+      schemaVersion: 1, publicOrigin: 'https://example.com', replicaCount: 1,
       deployerIdentityHash: `sha256:${'4'.repeat(64)}`, deployerRole: 'deployment-admin',
       edgeOwnerIdentityHash: `sha256:${'5'.repeat(64)}`, trustedProxyAddresses: ['127.0.0.1'],
       directOriginReachability: 'failed', forwardedHeaderPolicy: 'overwrite',
@@ -292,7 +293,7 @@ describe('strict production operations receipt', () => {
     const operationsPath = join(root, 'operations.json');
     const production = {
       NODE_ENV: 'production', FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled',
-      FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'), FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com/',
+      FORM_THOUGHT_CORPUS_APPROVAL_PATH: resolve('approval.json'), FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com',
       FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '127.0.0.1', FORM_THOUGHT_EDGE_REACHABILITY_RECEIPT: operationsPath,
       FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: providerPath,
     };

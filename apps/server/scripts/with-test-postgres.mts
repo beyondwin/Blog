@@ -101,6 +101,7 @@ export function parseServeFixtureArguments(argv: readonly string[]): ParsedServe
   if (port > 65_535 || !fixtureScenarios.has(scenario as FixtureScenario)) {
     throw new Error('serve-fixture port or scenario is invalid');
   }
+  let canonicalPublicOrigin = '';
   try {
     const origin = new URL(publicOrigin);
     const originHost = origin.hostname.replace(/^\[|\]$/gu, '');
@@ -108,13 +109,14 @@ export function parseServeFixtureArguments(argv: readonly string[]): ParsedServe
     if (origin.protocol !== 'http:' || !loopback(originHost) || originHost !== host
       || !/^[1-9]\d{0,4}$/u.test(origin.port) || originPort > 65_535
       || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash
-      || origin.toString() !== publicOrigin) throw new Error();
+      || origin.origin !== publicOrigin) throw new Error();
+    canonicalPublicOrigin = origin.origin;
   } catch { throw new Error('serve-fixture requires exact loopback API and public proxy origins'); }
   return Object.freeze({
     host,
     port,
     apiOrigin: loopbackOrigin(host, port),
-    publicOrigin,
+    publicOrigin: canonicalPublicOrigin,
     fixtureScenario: scenario as FixtureScenario,
   });
 }
