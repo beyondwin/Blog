@@ -118,6 +118,88 @@ describe('runtime readiness', () => {
     expect(released).toBe(true);
   });
 
+  it.each(['begin', 'active-binding-query'] as const)(
+    'settles an abort-ignoring catalog %s at the absolute deadline and destroys its client', async (stalled) => {
+    let released: boolean | undefined;
+    let queries = 0;
+    const client = {
+      query() {
+        queries += 1;
+        if (stalled === 'begin' || queries === 2) return new Promise(() => undefined);
+        return Promise.resolve({ rows: [], rowCount: 0 });
+      },
+      release(destroy?: boolean) { released = destroy; },
+    };
+    const source = new VerifiedAnswerReleaseCatalogSource({
+      nodeEnv: 'test', corpusApprovalPath: '/approval', contentReleaseRoot: '/content', answerReleaseRoot: '/answer',
+      providerEmbeddingReceiptRoot: null,
+    } as any, { async connect() { return client; } } as any, {
+      async readApproval() { return { schemaVersion: 1, entries: [] }; },
+      async readContent() {
+        return { manifest: { releaseId: '1'.repeat(64), records: {} }, manifestHash: `sha256:${'1'.repeat(64)}`, artifactHash: `sha256:${'2'.repeat(64)}` };
+      },
+      async readAnswer() {
+        return {
+          releasePath: '/answer/release', contentReleaseId: '1'.repeat(64), answerReleaseId: '2'.repeat(64),
+          manifestHash: `sha256:${'3'.repeat(64)}`, artifactHash: `sha256:${'4'.repeat(64)}`,
+          corpusApprovalHash: `sha256:${'5'.repeat(64)}`,
+          manifest: { identity: { contentManifestHash: `sha256:${'1'.repeat(64)}`, normalizerVersion: 'nfkc-lower-hangul-ngram-v1' } },
+          chunks: [], evidence: [], indexInputs: [],
+        };
+      },
+      async verifyAnswer() {},
+    } as any);
+    const result = await Promise.race([
+      source.snapshot(new AbortController().signal, performance.now() + 10)
+        .then(() => ({ kind: 'resolved' as const }), (error) => ({ kind: 'rejected' as const, error })),
+      new Promise<{ kind: 'hung' }>((resolve) => setTimeout(() => resolve({ kind: 'hung' }), 100)),
+    ]);
+    expect(result.kind).toBe('rejected');
+    if (result.kind !== 'rejected') throw new Error('catalog deadline did not settle');
+    expect(result.error).toBeInstanceOf(PublicAnswerDeadlineError);
+    expect(released).toBe(true);
+  });
+
+  it('bounds an abort-ignoring catalog rollback by the original deadline before destroying its client', async () => {
+    let released: boolean | undefined;
+    const client = {
+      query(text: string) {
+        if (text.startsWith('BEGIN')) return Promise.resolve({ rows: [], rowCount: 0 });
+        if (text === 'ROLLBACK') return new Promise(() => undefined);
+        return Promise.reject(new Error('active binding query failed'));
+      },
+      release(destroy?: boolean) { released = destroy; },
+    };
+    const source = new VerifiedAnswerReleaseCatalogSource({
+      nodeEnv: 'test', corpusApprovalPath: '/approval', contentReleaseRoot: '/content', answerReleaseRoot: '/answer',
+      providerEmbeddingReceiptRoot: null,
+    } as any, { async connect() { return client; } } as any, {
+      async readApproval() { return { schemaVersion: 1, entries: [] }; },
+      async readContent() {
+        return { manifest: { releaseId: '1'.repeat(64), records: {} }, manifestHash: `sha256:${'1'.repeat(64)}`, artifactHash: `sha256:${'2'.repeat(64)}` };
+      },
+      async readAnswer() {
+        return {
+          releasePath: '/answer/release', contentReleaseId: '1'.repeat(64), answerReleaseId: '2'.repeat(64),
+          manifestHash: `sha256:${'3'.repeat(64)}`, artifactHash: `sha256:${'4'.repeat(64)}`,
+          corpusApprovalHash: `sha256:${'5'.repeat(64)}`,
+          manifest: { identity: { contentManifestHash: `sha256:${'1'.repeat(64)}`, normalizerVersion: 'nfkc-lower-hangul-ngram-v1' } },
+          chunks: [], evidence: [], indexInputs: [],
+        };
+      },
+      async verifyAnswer() {},
+    } as any);
+    const result = await Promise.race([
+      source.snapshot(new AbortController().signal, performance.now() + 10)
+        .then(() => ({ kind: 'resolved' as const }), (error) => ({ kind: 'rejected' as const, error })),
+      new Promise<{ kind: 'hung' }>((resolve) => setTimeout(() => resolve({ kind: 'hung' }), 100)),
+    ]);
+    expect(result.kind).toBe('rejected');
+    if (result.kind !== 'rejected') throw new Error('catalog rollback deadline did not settle');
+    expect(result.error).toEqual(new Error('active binding query failed'));
+    expect(released).toBe(true);
+  });
+
   it('strict-reopens provider evidence and binds its data-control/pricing hashes', async () => {
     const catalog = Object.freeze({
       ...binding,
@@ -271,7 +353,11 @@ describe('owned fixture serve harness', () => {
       async indexFixture() { events.push('fixture.index'); },
       startServer(env) {
         events.push(`server.start:${env.FORM_THOUGHT_PUBLIC_ORIGIN}:${env.FORM_THOUGHT_TEST_FIXTURE_SCENARIO}`);
-        return { signal: (signal) => { events.push(`server.signal:${signal}`); }, wait: Promise.resolve() };
+        return {
+          startup: Promise.resolve(),
+          signal: (signal) => { events.push(`server.signal:${signal}`); },
+          wait: Promise.resolve(),
+        };
       },
       async ready() { events.push('readiness.poll'); return true; },
       async sleep() { events.push('readiness.sleep'); },
@@ -319,6 +405,7 @@ describe('owned fixture serve harness', () => {
       startServer() {
         h.events.push('server.start');
         return {
+          startup: Promise.resolve(),
           signal(value) { h.events.push(`server.signal:${value}`); finishServer(); },
           wait: new Promise<void>((resolve) => { finishServer = resolve; }),
         };
@@ -363,11 +450,12 @@ describe('owned fixture serve harness', () => {
     expect(h.events).not.toContain('release.verify');
   });
 
-  it('force-terminates a server child that ignores graceful termination before removing its database', async () => {
+  it('does not remove the database when SIGKILL cannot confirm owned child termination', async () => {
     const h = fixtureDependencies({
       startServer() {
         h.events.push('server.start');
         return {
+          startup: Promise.resolve(),
           signal(value) { h.events.push(`server.signal:${value}`); },
           wait: new Promise<void>(() => undefined),
         };
@@ -377,10 +465,10 @@ describe('owned fixture serve harness', () => {
     });
     await expect(runServeFixtureHarness({
       host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
-    }, h.dependencies)).rejects.toThrow('readiness failed');
+    }, h.dependencies)).rejects.toThrow(/termination was not confirmed/u);
     expect(h.events).toContain('server.signal:SIGTERM');
     expect(h.events).toContain('server.signal:SIGKILL');
-    expect(h.events.indexOf('server.signal:SIGKILL')).toBeLessThan(h.events.indexOf('database.stop'));
+    expect(h.events).not.toContain('database.stop');
   });
 
   it('removes a partially created owned Docker project when startup or port discovery fails', async () => {
@@ -422,16 +510,28 @@ describe('owned fixture serve harness', () => {
     ]);
   });
 
-  it('does not probe, signal, or replace an unrelated listener when owned server startup fails', async () => {
-    let unrelatedSignals = 0;
+  it('observes an asynchronous owned EADDRINUSE exit before probing an unrelated listener', async () => {
+    let unrelatedProbes = 0;
+    let rejectStartup!: (error: Error) => void;
+    let rejectWait!: (error: Error) => void;
     const h = fixtureDependencies({
-      startServer() { throw new Error('owned port already in use'); },
+      startServer() {
+        const startup = new Promise<void>((_resolve, reject) => { rejectStartup = reject; });
+        const wait = new Promise<void>((_resolve, reject) => { rejectWait = reject; });
+        queueMicrotask(() => {
+          const error = Object.assign(new Error('owned port already in use'), { code: 'EADDRINUSE' });
+          rejectStartup(error);
+          rejectWait(error);
+        });
+        return { startup, wait, signal() {} };
+      },
+      async ready() { unrelatedProbes += 1; return true; },
       onSignal() { return () => undefined; },
     });
     await expect(runServeFixtureHarness({
       host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
     }, h.dependencies)).rejects.toThrow('owned port already in use');
-    expect(unrelatedSignals).toBe(0);
+    expect(unrelatedProbes).toBe(0);
     expect(h.events.at(-1)).toBe('database.stop');
   });
 });

@@ -294,6 +294,7 @@ describe('strict production operations receipt', () => {
       ['project mismatch', (value: any) => ({ ...value, providerSpend: { ...value.providerSpend, projectHash: `sha256:${'f'.repeat(64)}` } })],
       ['receipt hash mismatch', (value: any) => ({ ...value, providerDataControlReceiptHash: `sha256:${'f'.repeat(64)}` })],
       ['overspend', (value: any) => ({ ...value, providerSpend: { ...value.providerSpend, monthlyHardCapMicroUsd: 2_000_000 } })],
+      ['provider role mismatch', (value: any) => ({ ...value, providerSpend: { ...value.providerSpend, verifierRole: 'auditor' } })],
       ['deployer verifier collision', (value: any) => ({ ...value, providerSpend: { ...value.providerSpend, verifierIdentityHash: value.deployerIdentityHash } })],
       ['deployer custodian collision', (value: any) => value],
       ['missing owner', (value: any) => { const { crashOwnerIdentityHash: _, ...rest } = value; return rest; }],
@@ -307,9 +308,14 @@ describe('strict production operations receipt', () => {
         await writeFile(providerPath, `${JSON.stringify(collidingProvider, null, 2)}\n`);
         const openedCollision = await readProviderDataControlReceipt(providerPath, new Date('2026-08-30T00:00:00.000Z'));
         next = canonicalEdgeReachabilityReceipt(operationsInput(openedCollision.receiptHash) as any);
+      } else if (label !== 'missing owner') {
+        const { evidenceChecksum: _staleChecksum, ...semanticInput } = next;
+        next = canonicalEdgeReachabilityReceipt(semanticInput as any);
       }
       await writeFile(operationsPath, `${JSON.stringify(next, null, 2)}\n`);
-      await expect(parseServerConfig(base(production))).rejects.toThrow();
+      await expect(parseServerConfig(base(production))).rejects.toThrow(
+        label === 'missing owner' ? /missing or unknown fields/u : /does not prove/u,
+      );
       await writeFile(providerPath, `${JSON.stringify(provider, null, 2)}\n`);
     }
   });

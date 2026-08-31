@@ -192,4 +192,24 @@ describe('cancellable pg query runner', () => {
       'SELECT pg_sleep(30)', [], new AbortController().signal, performance.now() + 12_000,
     )).rejects.toBeInstanceOf(PublicAnswerDeadlineError);
   });
+
+  it('uses transaction-local statement_timeout and leaves a max-one pooled session clean for reuse', async () => {
+    await pool.end();
+    pool = new Pool({ connectionString: databaseUrl, max: 1 });
+    const runner = new CancellablePgQueryRunner(pool);
+    const first = await runner.query<{ pid: number; timeout: string }>(
+      "SELECT pg_backend_pid() AS pid,current_setting('statement_timeout') AS timeout",
+      [], new AbortController().signal, performance.now() + 500,
+    );
+    expect(Number.parseInt(first.rows[0]!.timeout, 10)).toBeGreaterThan(0);
+    expect(Number.parseInt(first.rows[0]!.timeout, 10)).toBeLessThanOrEqual(500);
+    const between = await pool.query<{ pid: number; timeout: string }>(
+      "SELECT pg_backend_pid() AS pid,current_setting('statement_timeout') AS timeout",
+    );
+    expect(between.rows[0]).toEqual({ pid: first.rows[0]!.pid, timeout: '0' });
+    const second = await runner.query<{ pid: number; ok: number }>(
+      'SELECT pg_backend_pid() AS pid,1 AS ok', [], new AbortController().signal, performance.now() + 2_000,
+    );
+    expect(second.rows[0]).toEqual({ pid: first.rows[0]!.pid, ok: 1 });
+  });
 });

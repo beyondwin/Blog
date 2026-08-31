@@ -330,7 +330,19 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
       };
       return Object.freeze(snapshot);
     } catch (error) {
-      if (!clientReleased) await client.query('ROLLBACK').catch(() => undefined);
+      if (!clientReleased && (signal.aborted || error instanceof PublicAnswerDeadlineError)) {
+        clientReleased = true;
+        client.release(true);
+      } else if (!clientReleased) {
+        try {
+          await query('ROLLBACK');
+        } catch {
+          if (!clientReleased) {
+            clientReleased = true;
+            client.release(true);
+          }
+        }
+      }
       throw error;
     } finally { if (!clientReleased) client.release(); }
   }

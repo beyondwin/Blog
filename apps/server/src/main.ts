@@ -258,4 +258,5 @@ export async function startApplication(): Promise<NestFastifyApplication> {
 const entrypoint = process.argv[1];
 if (entrypoint && import.meta.url === pathToFileURL(entrypoint).href) {
   await startApplication();
+  process.send?.({ type: 'beyondwin-public-answer-listening' });
 }

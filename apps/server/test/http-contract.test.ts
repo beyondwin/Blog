@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ServerConfig } from '../src/config/server-config.js';
 import { RuntimeReadiness } from '../src/health/runtime-readiness.js';
+import { RuntimeLifecycle } from '../src/lifecycle/runtime-lifecycle.js';
 import {
   createApplication,
   createFixtureScenarioExecutor,
@@ -15,6 +16,7 @@ import { TrustedProxyNetworkKey } from '../src/security/network-key.js';
 import { AnswerPublicQuestion } from '../src/modules/public-answer/application/answer-public-question.js';
 import { InMemoryRedactedEventSink } from '../src/modules/public-answer/infrastructure/fixture/in-memory-redacted-event-sink.js';
 import { InMemoryUsageGuard } from '../src/modules/public-answer/infrastructure/guards/in-memory-usage-guard.js';
+import { PublicAnswerTransportError } from '../src/modules/public-answer/domain/public-answer-errors.js';
 
 const CONTENT_RELEASE = '1'.repeat(64);
 const ANSWER_RELEASE = '2'.repeat(64);
@@ -312,6 +314,122 @@ describe('public answer HTTP contract', () => {
     }
   });
 
+  it('keeps release checks, SQL binding, evidence, tombstones, answers, and headers snapshot-local across a paused transition', async () => {
+    const releaseSnapshot = (label: 'old' | 'new', ids: readonly [string, string, string, string, string]) => {
+      const [contentSeed, answerSeed, evidenceSeed, chunkSeed, checksumSeed] = ids;
+      const contentReleaseId = contentSeed.repeat(64);
+      const answerReleaseId = answerSeed.repeat(64);
+      const evidenceId = evidenceSeed.repeat(64);
+      const bindingId = randomUUID();
+      const evidence = Object.freeze({
+        evidenceId,
+        chunkId: chunkSeed.repeat(64),
+        answerReleaseId,
+        recordId: `articles/${label}-binding`,
+        collectionLabel: '기록',
+        recordTitle: `${label} binding`,
+        canonicalPath: `/articles/${label}-binding/`,
+        locator: Object.freeze({ kind: 'heading-paragraph' as const, label: `${label} 근거`, ordinal: 1 }),
+        excerpt: `${label} 바인딩의 검증된 근거입니다.`,
+        excerptChecksum: `sha256:${checksumSeed.repeat(64)}`,
+      });
+      return Object.freeze({
+        ...snapshot,
+        bindingId,
+        contentReleaseId,
+        answerReleaseId,
+        evidenceId,
+        tombstones: new Set([`record:retired-${label}`]),
+        isBoundTo: (content: string, answerRelease: string) => content === contentReleaseId && answerRelease === answerReleaseId,
+        evidenceFor: (ids: readonly string[]) => ids.includes(evidenceId) ? [evidence] : [],
+      });
+    };
+    const oldSnapshot = releaseSnapshot('old', ['1', '2', '3', '4', '5']);
+    const newSnapshot = releaseSnapshot('new', ['6', '7', '8', '9', 'a']);
+    const sqlEvidenceByBinding = new Map([
+      [oldSnapshot.bindingId, oldSnapshot.evidenceId],
+      [newSnapshot.bindingId, newSnapshot.evidenceId],
+    ]);
+    const observations: Array<Record<string, unknown>> = [];
+    let snapshotCalls = 0;
+    let firstEntered!: () => void;
+    let releaseFirst!: () => void;
+    const firstSnapshotEntered = new Promise<void>((resolve) => { firstEntered = resolve; });
+    const firstSnapshotRelease = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const readiness = new RuntimeReadiness({ startupCheck: async () => oldSnapshot });
+    await readiness.initialize();
+    const app = await createApplication({ runtime: {
+      config,
+      readiness,
+      catalogSource: {
+        async snapshot() {
+          snapshotCalls += 1;
+          if (snapshotCalls === 1) { firstEntered(); await firstSnapshotRelease; return oldSnapshot; }
+          return newSnapshot;
+        },
+      },
+      answerPublicQuestion: {
+        async execute(command) {
+          const catalog = command.catalog as typeof oldSnapshot;
+          const sqlEvidenceId = sqlEvidenceByBinding.get(catalog.bindingId)!;
+          const evidence = catalog.evidenceFor([sqlEvidenceId]);
+          observations.push({
+            bindingId: catalog.bindingId,
+            releaseCheck: catalog.isBoundTo(command.contentReleaseId, command.answerReleaseId),
+            sqlEvidenceId,
+            authorizedEvidenceId: evidence[0]?.evidenceId,
+            tombstones: [...catalog.tombstones],
+          });
+          return {
+            kind: 'answer',
+            answerReleaseId: catalog.answerReleaseId,
+            claims: [{ claimId: 'claim-1', text: `${catalog.answerReleaseId[0]} 답변입니다.`, evidenceIds: [sqlEvidenceId] }],
+            evidence,
+          };
+        },
+      },
+    } });
+    apps.push(app);
+    await app.init();
+    const fastify = app.getHttpAdapter().getInstance();
+    const first = fastify.inject({
+      method: 'POST', url: '/api/public/ask',
+      payload: requestPayload({ contentReleaseId: oldSnapshot.contentReleaseId, answerReleaseId: oldSnapshot.answerReleaseId }),
+    });
+    await firstSnapshotEntered;
+    const second = await fastify.inject({
+      method: 'POST', url: '/api/public/ask',
+      payload: requestPayload({ contentReleaseId: newSnapshot.contentReleaseId, answerReleaseId: newSnapshot.answerReleaseId }),
+    });
+    releaseFirst();
+    const firstResponse = await first;
+
+    expect(firstResponse.json()).toMatchObject({
+      kind: 'answer', answerReleaseId: oldSnapshot.answerReleaseId,
+      evidence: [{ evidenceId: oldSnapshot.evidenceId, recordId: 'articles/old-binding' }],
+    });
+    expect(second.json()).toMatchObject({
+      kind: 'answer', answerReleaseId: newSnapshot.answerReleaseId,
+      evidence: [{ evidenceId: newSnapshot.evidenceId, recordId: 'articles/new-binding' }],
+    });
+    expect(firstResponse.headers['x-content-release-id']).toBe(oldSnapshot.contentReleaseId);
+    expect(firstResponse.headers['x-answer-release-id']).toBe(oldSnapshot.answerReleaseId);
+    expect(second.headers['x-content-release-id']).toBe(newSnapshot.contentReleaseId);
+    expect(second.headers['x-answer-release-id']).toBe(newSnapshot.answerReleaseId);
+    expect(snapshotCalls).toBe(2);
+    expect(observations).toEqual(expect.arrayContaining([
+      {
+        bindingId: oldSnapshot.bindingId, releaseCheck: true, sqlEvidenceId: oldSnapshot.evidenceId,
+        authorizedEvidenceId: oldSnapshot.evidenceId, tombstones: ['record:retired-old'],
+      },
+      {
+        bindingId: newSnapshot.bindingId, releaseCheck: true, sqlEvidenceId: newSnapshot.evidenceId,
+        authorizedEvidenceId: newSnapshot.evidenceId, tombstones: ['record:retired-new'],
+      },
+    ]));
+    expect(readiness.status().ready).toBe(true);
+  });
+
   it('keeps post-snapshot error headers request-local across a paused active-binding transition and fails readiness closed', async () => {
     const oldSnapshot = snapshot;
     const newSnapshot = Object.freeze({
@@ -357,6 +475,164 @@ describe('public answer HTTP contract', () => {
     expect(second.headers['x-answer-release-id']).toBe(newSnapshot.answerReleaseId);
     expect(snapshotCalls).toBe(2);
     expect(readiness.status().ready).toBe(false);
+  });
+
+  it('derives the composed network key from the raw peer/header pair for direct, spoofed, and multi-hop requests', async () => {
+    const inputs: Array<{ peerAddress: string; xForwardedFor: string | string[] | undefined }> = [];
+    const trustedProxyConfig = Object.freeze({ ...config, trustedProxyAddresses: Object.freeze(['127.0.0.1']) });
+    const readiness = new RuntimeReadiness({ startupCheck: async () => snapshot });
+    await readiness.initialize();
+    const app = await createApplication({ runtime: {
+      config: trustedProxyConfig,
+      readiness,
+      catalogSource: { async snapshot() { return snapshot; } },
+      answerPublicQuestion: { async execute() { return { kind: 'search', reason: 'unsupported-question', answerReleaseId: ANSWER_RELEASE }; } },
+      networkKey: {
+        derive(input: { peerAddress: string; xForwardedFor: string | string[] | undefined }) {
+          inputs.push(input);
+          return 'derived-network-key';
+        },
+      } as unknown as TrustedProxyNetworkKey,
+    } });
+    apps.push(app);
+    await app.init();
+    const fastify = app.getHttpAdapter().getInstance();
+
+    for (const xForwardedFor of [undefined, '198.51.100.8', '198.51.100.8, 203.0.113.2'] as const) {
+      const response = await fastify.inject({
+        method: 'POST',
+        url: '/api/public/ask',
+        headers: xForwardedFor === undefined ? undefined : { 'x-forwarded-for': xForwardedFor },
+        payload: requestPayload(),
+      });
+      expect(response.statusCode).toBe(200);
+    }
+
+    expect(inputs).toEqual([
+      { peerAddress: '127.0.0.1', xForwardedFor: undefined },
+      { peerAddress: '127.0.0.1', xForwardedFor: '198.51.100.8' },
+      { peerAddress: '127.0.0.1', xForwardedFor: '198.51.100.8, 203.0.113.2' },
+    ]);
+  });
+
+  it('keeps question, claim, excerpt, URL, path, address, and network-key sentinels out of captured runtime channels', async () => {
+    const sentinels = Object.freeze([
+      'QUESTION_SENTINEL',
+      'CLAIM_SENTINEL',
+      'EXCERPT_SENTINEL',
+      'https://private.invalid/URL_SENTINEL',
+      '/Users/example/PATH_SENTINEL',
+      '203.0.113.77',
+      'NETWORK_KEY_SENTINEL',
+    ]);
+    const leakedProviderMessage = sentinels.join(' ');
+    const capturedWrites: string[] = [];
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(((chunk: unknown) => {
+      capturedWrites.push(String(chunk));
+      return true;
+    }) as typeof process.stdout.write);
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(((chunk: unknown) => {
+      capturedWrites.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write);
+    const capture = async <T>(operation: () => Promise<T>) => {
+      const start = capturedWrites.length;
+      const value = await operation();
+      return { value, logs: capturedWrites.slice(start).join('') };
+    };
+
+    try {
+      const sensitiveEvidence = Object.freeze({
+        ...snapshot.evidenceFor([EVIDENCE_ID])[0]!,
+        canonicalPath: '/Users/example/PATH_SENTINEL',
+        excerpt: 'EXCERPT_SENTINEL',
+      });
+      const sensitiveSnapshot = Object.freeze({
+        ...snapshot,
+        evidenceFor(ids: readonly string[]) { return ids.includes(EVIDENCE_ID) ? [sensitiveEvidence] : []; },
+      });
+      const eventSink = new InMemoryRedactedEventSink();
+      const useCase = new AnswerPublicQuestion({
+        policy: { mode: 'fixture' },
+        usageGuard: await InMemoryUsageGuard.create(),
+        retriever: {
+          async retrieve() {
+            return { evidence: [sensitiveEvidence], sufficient: true, candidateCount: 1, usage: { inputTokens: 1, outputTokens: 0 } };
+          },
+        },
+        generator: {
+          async generate() {
+            return {
+              claims: [{ claimId: 'claim-privacy', text: 'CLAIM_SENTINEL.', evidenceIds: [EVIDENCE_ID] }],
+              usage: { inputTokens: 1, outputTokens: 1 },
+            };
+          },
+        },
+        deterministicVerifier: {
+          verify() {
+            return {
+              ok: true,
+              sentenceUnits: [{
+                id: 'sentence-1', claimId: 'claim-privacy', text: 'CLAIM_SENTINEL.',
+                evidenceIds: [EVIDENCE_ID], critical: true,
+              }],
+            };
+          },
+        },
+        semanticVerifier: { async verify() { throw new PublicAnswerTransportError(leakedProviderMessage); } },
+        eventSink,
+      });
+      const readiness = new RuntimeReadiness({ startupCheck: async () => sensitiveSnapshot });
+      await readiness.initialize();
+      const providerApp = await createApplication({ runtime: {
+        config,
+        readiness,
+        catalogSource: { async snapshot() { return sensitiveSnapshot; } },
+        answerPublicQuestion: useCase,
+        networkKey: { derive() { return 'NETWORK_KEY_SENTINEL'; } } as unknown as TrustedProxyNetworkKey,
+      } });
+      apps.push(providerApp);
+      await providerApp.init();
+      const provider = await capture(() => providerApp.getHttpAdapter().getInstance().inject({
+        method: 'POST',
+        url: '/api/public/ask',
+        headers: { 'x-forwarded-for': '203.0.113.77' },
+        payload: requestPayload({ question: 'QUESTION_SENTINEL https://private.invalid/URL_SENTINEL' }),
+      }));
+      expect(provider.value.json()).toEqual({ kind: 'error', code: 'unavailable', retryable: true });
+
+      const exits: number[] = [];
+      const shutdown = await capture(() => new RuntimeLifecycle({
+        readiness,
+        sleep: async () => undefined,
+        closeServer: async () => { throw new Error(leakedProviderMessage); },
+        closePool: async () => { throw new Error(leakedProviderMessage); },
+        setExitCode: (code) => { exits.push(code); },
+      }).shutdown('SIGTERM'));
+      expect(exits).toEqual([1]);
+
+      const crashHarness = await harness(new Error(leakedProviderMessage));
+      const crash = await capture(() => crashHarness.fastify.inject({
+        method: 'POST', url: '/api/public/ask', payload: requestPayload({ question: 'QUESTION_SENTINEL' }),
+      }));
+      expect(crash.value.json()).toEqual({ kind: 'error', code: 'unavailable', retryable: true });
+
+      const channels = {
+        access: provider.logs,
+        application: JSON.stringify(eventSink.events()),
+        provider: provider.logs,
+        shutdown: shutdown.logs,
+        crash: crash.logs,
+      };
+      for (const [channel, output] of Object.entries(channels)) {
+        for (const sentinel of sentinels) {
+          expect(output, `${channel} leaked ${sentinel}`).not.toContain(sentinel);
+        }
+      }
+    } finally {
+      stdout.mockRestore();
+      stderr.mockRestore();
+    }
   });
 
   it('turns readiness false after a request-time catalog authority failure', async () => {

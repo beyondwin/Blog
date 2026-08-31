@@ -33,6 +33,7 @@ export interface ServeFixtureOptions {
 }
 
 export interface OwnedServerProcess {
+  readonly startup: Promise<void>;
   readonly wait: Promise<void>;
   signal(signal: 'SIGINT' | 'SIGTERM' | 'SIGKILL'): void;
 }
@@ -169,12 +170,40 @@ function productionServeFixtureDependencies(): ServeFixtureHarnessDependencies {
         '--tsconfig',
         resolve(repositoryRoot, 'apps/server/tsconfig.json'),
         resolve(repositoryRoot, 'apps/server/src/main.ts'),
-      ], { cwd: repositoryRoot, env, stdio: 'inherit', shell: false, detached: process.platform !== 'win32' });
+      ], {
+        cwd: repositoryRoot,
+        env,
+        stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+        shell: false,
+        detached: process.platform !== 'win32',
+      });
+      const startup = new Promise<void>((accept, reject) => {
+        const message = (value: unknown) => {
+          if (value && typeof value === 'object'
+            && (value as { type?: unknown }).type === 'beyondwin-public-answer-listening') {
+            cleanup();
+            accept();
+          }
+        };
+        const failed = (error: unknown) => { cleanup(); reject(error); };
+        const exited = (code: number | null, signal: NodeJS.Signals | null) => {
+          failed(new Error(`fixture server exited before startup ${code ?? signal}`));
+        };
+        const cleanup = () => {
+          child.removeListener('message', message);
+          child.removeListener('error', failed);
+          child.removeListener('exit', exited);
+        };
+        child.on('message', message);
+        child.once('error', failed);
+        child.once('exit', exited);
+      });
       const wait = new Promise<void>((accept, reject) => {
         child.once('error', reject);
         child.once('exit', (code, signal) => code === 0 ? accept() : reject(new Error(`fixture server exited ${code ?? signal}`)));
       });
       return {
+        startup,
         wait,
         signal(signal) {
           if (!child.pid) return;
@@ -255,6 +284,7 @@ export async function runServeFixtureHarness(
   let databaseStartup: Promise<Awaited<ReturnType<ServeFixtureHarnessDependencies['startDatabase']>>> | undefined;
   let server: OwnedServerProcess | undefined;
   let serverCompleted = false;
+  let childTerminationUnconfirmed = false;
   const startupController = new AbortController();
   let interrupted: 'SIGINT' | 'SIGTERM' | undefined;
   let notifyInterrupted!: (signal: 'SIGINT' | 'SIGTERM') => void;
@@ -297,7 +327,9 @@ export async function runServeFixtureHarness(
     await interruptible(dependencies.migrate(indexingEnv));
     await interruptible(dependencies.indexFixture(indexingEnv));
     server = dependencies.startServer(env);
+    void server.wait.catch(() => undefined);
     if (interrupted) server.signal(interrupted);
+    await interruptible(server.startup);
     const startupDeadline = dependencies.clock() + 20_000;
     while (!await dependencies.ready(options.publicOrigin)) {
       if (dependencies.clock() >= startupDeadline) throw new Error('fixture server readiness deadline elapsed');
@@ -321,10 +353,14 @@ export async function runServeFixtureHarness(
       if (!stopped) {
         server.signal('SIGKILL');
         await Promise.race([observed, dependencies.sleep(2_000)]);
+        if (!stopped) childTerminationUnconfirmed = true;
       }
     }
     if (!database && databaseStartup) {
       database = await databaseStartup.catch(() => undefined);
+    }
+    if (childTerminationUnconfirmed) {
+      throw new Error('fixture server termination was not confirmed; database retained for owned-process safety');
     }
     await database?.stop();
   }
