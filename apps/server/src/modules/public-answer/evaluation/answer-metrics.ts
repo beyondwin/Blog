@@ -83,23 +83,39 @@ export function classifyDeterministicFailure(reason: string): 'integrity' | 'inv
   return integrityReasons.has(reason) ? 'integrity' : 'invalid-fallback';
 }
 
-export function deriveBoundaryRecordIds(
+export function deriveBoundaryIdentifiers(
   contentRecordIds: readonly string[],
   approvedRecordIds: ReadonlySet<string>,
-  tombstonedRecordIds: ReadonlySet<string>,
-): ReadonlySet<string> {
-  return new Set([
-    ...contentRecordIds.filter((recordId) => !approvedRecordIds.has(recordId)),
-    ...tombstonedRecordIds,
-  ].sort());
+  tombstones: ReadonlySet<string>,
+  evidenceRecordIds: ReadonlyMap<string, string>,
+): Readonly<{ recordIds: ReadonlySet<string>; evidenceIds: ReadonlySet<string> }> {
+  const recordIds = new Set(contentRecordIds.filter((recordId) => !approvedRecordIds.has(recordId)));
+  const evidenceIds = new Set<string>();
+  for (const tombstone of tombstones) {
+    if (tombstone.startsWith('record:')) recordIds.add(tombstone.slice('record:'.length));
+    else if (tombstone.startsWith('evidence:')) {
+      const evidenceId = tombstone.slice('evidence:'.length);
+      evidenceIds.add(evidenceId);
+      const recordId = evidenceRecordIds.get(evidenceId);
+      if (recordId) recordIds.add(recordId);
+    }
+  }
+  return Object.freeze({
+    recordIds: new Set([...recordIds].sort()),
+    evidenceIds: new Set([...evidenceIds].sort()),
+  });
 }
 
 export function countBoundaryLeaks(input: Readonly<{
   outputRecordIds: readonly string[];
+  outputEvidenceIds: readonly string[];
   redactedTelemetry: readonly unknown[];
   boundaryRecordIds: ReadonlySet<string>;
+  boundaryEvidenceIds: ReadonlySet<string>;
 }>): number {
-  const output = new Set(input.outputRecordIds);
+  const outputRecords = new Set(input.outputRecordIds);
+  const outputEvidence = new Set(input.outputEvidenceIds);
   const telemetry = JSON.stringify(input.redactedTelemetry);
-  return [...input.boundaryRecordIds].filter((recordId) => output.has(recordId) || telemetry.includes(recordId)).length;
+  return [...input.boundaryRecordIds].filter((recordId) => outputRecords.has(recordId) || telemetry.includes(recordId)).length
+    + [...input.boundaryEvidenceIds].filter((evidenceId) => outputEvidence.has(evidenceId) || telemetry.includes(evidenceId)).length;
 }

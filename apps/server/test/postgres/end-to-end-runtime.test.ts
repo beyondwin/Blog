@@ -1,14 +1,24 @@
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 import { Pool } from 'pg';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { runFirstSliceOfflineEvaluation } from '../../src/eval-public-answer.js';
-import { indexAnswerRelease } from '../../src/index-answer-release.js';
+import { canonicalProviderDataControlReceipt, readProviderDataControlReceipt } from '../../src/config/provider-data-control-receipt.js';
+import { indexAnswerRelease, providerIndexBudget } from '../../src/index-answer-release.js';
+import {
+  createProviderEmbeddingReceipt,
+  readBundledProviderPricing,
+  writeProviderEmbeddingReceipt,
+} from '../../src/modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
+import { readVerifiedAnswerReleaseAuthority } from '../../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
+import { parseServerConfig } from '../../src/config/server-config.js';
 
 const databaseUrl = process.env.FORM_THOUGHT_TEST_DATABASE_URL;
 if (!databaseUrl) throw new Error('FORM_THOUGHT_TEST_DATABASE_URL is required');
+const temporaryRoots: string[] = [];
 
 function evaluationEnv(): NodeJS.ProcessEnv {
   return {
@@ -28,6 +38,7 @@ afterEach(async () => {
     await pool.query('DROP SCHEMA IF EXISTS public CASCADE');
     await pool.query('CREATE SCHEMA public');
   } finally { await pool.end(); }
+  await Promise.all(temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
 describe('public-answer first-slice database evaluation', () => {
@@ -55,5 +66,59 @@ describe('public-answer first-slice database evaluation', () => {
       );
       expect(binding.rows).toEqual([{ embedding_source: 'fixture', count: expect.stringMatching(/^[1-9][0-9]*$/u) }]);
     } finally { await pool.end(); }
+  });
+
+  it('rejects a release-impossible preauthorized receipt before the provider embedding seam', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'provider-preauth-budget-'));
+    temporaryRoots.push(root);
+    const controlInput = canonicalProviderDataControlReceipt({
+      schemaVersion: 1, provider: 'openai', projectHash: `sha256:${'a'.repeat(64)}`,
+      endpoints: ['/v1/embeddings', '/v1/responses'], status: 'zero-data-retention', verifierRole: 'provider-admin',
+      verifierIdentityHash: `sha256:${'1'.repeat(64)}`, custodianIdentityHash: `sha256:${'2'.repeat(64)}`,
+      verifiedAt: '2026-08-30T00:00:00.000Z', expiresAt: '2099-08-30T00:00:00.000Z',
+      externalEvidenceChecksum: `sha256:${'3'.repeat(64)}`,
+    });
+    const controlPath = join(root, 'provider-control.json');
+    await writeFile(controlPath, `${JSON.stringify(controlInput, null, 2)}\n`);
+    const control = await readProviderDataControlReceipt(controlPath);
+    const receiptRoot = join(root, 'embedding-receipts');
+    await mkdir(receiptRoot);
+    const providerEnv = {
+      ...evaluationEnv(), FORM_THOUGHT_PUBLIC_ASK_MODE: 'provider', OPENAI_API_KEY: 'never-called-test-key',
+      FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT: controlPath,
+      FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT: receiptRoot,
+    };
+    const config = await parseServerConfig(providerEnv);
+    const { answer } = await readVerifiedAnswerReleaseAuthority(config);
+    const budget = providerIndexBudget(answer.indexInputs);
+    const pricing = await readBundledProviderPricing();
+    const uniqueInputs = [...new Map(answer.indexInputs.map((item) => [item.chunkChecksum, item])).values()];
+    const impossible = createProviderEmbeddingReceipt({
+      schemaVersion: 1, contentReleaseId: answer.contentReleaseId, answerReleaseId: answer.answerReleaseId,
+      contentManifestHash: answer.manifest.identity.contentManifestHash, answerManifestHash: answer.manifestHash,
+      answerArtifactHash: answer.artifactHash, corpusApprovalHash: answer.corpusApprovalHash,
+      providerDataControlReceiptHash: control.receiptHash, providerPricingReceiptHash: pricing.receiptHash,
+      embeddingModel: 'text-embedding-3-large', embeddingDimensions: 3072, embeddingSource: 'provider',
+      entries: uniqueInputs.map((item, index) => ({
+        chunkChecksum: item.chunkChecksum,
+        vectorChecksum: `sha256:${index.toString(16).padStart(64, '0')}`,
+      })),
+      inputTokens: budget.tokenUpperBound + 1, costMicroUsd: budget.costUpperBoundMicroUsd + 1,
+      providerVectorSetChecksum: `sha256:${'7'.repeat(64)}`, indexChecksum: `sha256:${'8'.repeat(64)}`,
+      createdAt: '2026-08-30T00:00:00.000Z', completedAt: '2026-08-30T00:00:01.000Z',
+    });
+    await writeProviderEmbeddingReceipt(receiptRoot, impossible);
+    let providerCalls = 0;
+    await expect(indexAnswerRelease(
+      ['--embedding-mode=provider', '--confirm-live-provider'], providerEnv, () => undefined,
+      {
+        expectedProviderReceiptHash: impossible.embeddingReceiptHash,
+        providerEmbeddingClient: {
+          model: 'text-embedding-3-large', dimensions: 3072,
+          async embed() { providerCalls += 1; throw new Error('provider embedding seam must stay closed'); },
+        },
+      },
+    )).rejects.toThrow(/preauthorized|budget|authority|provider embedding seam/u);
+    expect(providerCalls).toBe(0);
   });
 });

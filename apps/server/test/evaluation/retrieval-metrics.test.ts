@@ -4,7 +4,7 @@ import {
   answerMetrics,
   classifyDeterministicFailure,
   countBoundaryLeaks,
-  deriveBoundaryRecordIds,
+  deriveBoundaryIdentifiers,
   evaluateCapturedCaseMetrics,
 } from '../../src/modules/public-answer/evaluation/answer-metrics.js';
 import { retrievalMetrics } from '../../src/modules/public-answer/evaluation/retrieval-metrics.js';
@@ -60,11 +60,17 @@ describe('evaluation metric arithmetic', () => {
   });
 
   it('derives excluded/tombstoned boundaries and classifies every integrity and fallback failure', () => {
-    expect([...deriveBoundaryRecordIds(
+    const evidenceId = 'e'.repeat(64);
+    const boundaries = deriveBoundaryIdentifiers(
       ['articles/approved', 'articles/excluded', 'reviews/excluded'],
       new Set(['articles/approved']),
-      new Set(['thoughts/tombstoned']),
-    )]).toEqual(['articles/excluded', 'reviews/excluded', 'thoughts/tombstoned']);
+      new Set(['record:thoughts/tombstoned', `evidence:${evidenceId}`]),
+      new Map([[evidenceId, 'reviews/evidence-tombstoned']]),
+    );
+    expect([...boundaries.recordIds]).toEqual([
+      'articles/excluded', 'reviews/evidence-tombstoned', 'reviews/excluded', 'thoughts/tombstoned',
+    ]);
+    expect([...boundaries.evidenceIds]).toEqual([evidenceId]);
     for (const reason of [
       'response-evidence-set', 'catalog-evidence-set', 'catalog-evidence-mismatch',
       'answer-release-mismatch', 'excerpt-integrity', 'canonical-locator',
@@ -75,17 +81,39 @@ describe('evaluation metric arithmetic', () => {
   });
 
   it('finds boundary sentinels in output or retained redacted telemetry without persisting them', () => {
-    const boundary = new Set(['articles/private-sentinel']);
+    const evidenceId = 'e'.repeat(64);
+    const boundaries = deriveBoundaryIdentifiers(
+      ['articles/approved'],
+      new Set(['articles/approved']),
+      new Set(['record:articles/private-sentinel', `evidence:${evidenceId}`]),
+      new Map([[evidenceId, 'reviews/evidence-private-sentinel']]),
+    );
     expect(countBoundaryLeaks({
       outputRecordIds: ['articles/private-sentinel'],
+      outputEvidenceIds: [],
       redactedTelemetry: [{ resultKind: 'answer' }],
-      boundaryRecordIds: boundary,
+      boundaryRecordIds: boundaries.recordIds,
+      boundaryEvidenceIds: boundaries.evidenceIds,
     })).toBe(1);
     expect(countBoundaryLeaks({
       outputRecordIds: [],
-      redactedTelemetry: [{ resultKind: 'answer', leaked: 'articles/private-sentinel' }],
-      boundaryRecordIds: boundary,
+      outputEvidenceIds: [evidenceId],
+      redactedTelemetry: [{ resultKind: 'answer' }],
+      boundaryRecordIds: boundaries.recordIds,
+      boundaryEvidenceIds: boundaries.evidenceIds,
     })).toBe(1);
-    expect(countBoundaryLeaks({ outputRecordIds: [], redactedTelemetry: [{ resultKind: 'answer' }], boundaryRecordIds: boundary })).toBe(0);
+    expect(countBoundaryLeaks({
+      outputRecordIds: [], outputEvidenceIds: [],
+      redactedTelemetry: [{ resultKind: 'answer', leaked: 'articles/private-sentinel' }],
+      boundaryRecordIds: boundaries.recordIds, boundaryEvidenceIds: boundaries.evidenceIds,
+    })).toBe(1);
+    expect(countBoundaryLeaks({
+      outputRecordIds: [], outputEvidenceIds: [], redactedTelemetry: [{ resultKind: 'answer', leaked: evidenceId }],
+      boundaryRecordIds: boundaries.recordIds, boundaryEvidenceIds: boundaries.evidenceIds,
+    })).toBe(1);
+    expect(countBoundaryLeaks({
+      outputRecordIds: [], outputEvidenceIds: [], redactedTelemetry: [{ resultKind: 'answer' }],
+      boundaryRecordIds: boundaries.recordIds, boundaryEvidenceIds: boundaries.evidenceIds,
+    })).toBe(0);
   });
 });

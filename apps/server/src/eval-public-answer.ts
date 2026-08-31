@@ -47,7 +47,7 @@ import type { Retriever } from './modules/public-answer/application/ports/retrie
 import {
   classifyDeterministicFailure,
   countBoundaryLeaks,
-  deriveBoundaryRecordIds,
+  deriveBoundaryIdentifiers,
   evaluateCapturedCaseMetrics,
 } from './modules/public-answer/evaluation/answer-metrics.js';
 import { indexAnswerRelease, providerIndexBudget } from './index-answer-release.js';
@@ -441,7 +441,12 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
       eventSink,
     });
     const approvedIds = new Set((approval.entries as readonly { recordId: string }[]).map(({ recordId }) => recordId));
-    const independentBoundaryIds = deriveBoundaryRecordIds(Object.keys(content.manifest.records), approvedIds, activeCatalog.tombstones);
+    const independentBoundaries = deriveBoundaryIdentifiers(
+      Object.keys(content.manifest.records),
+      approvedIds,
+      activeCatalog.tombstones,
+      new Map(answer.evidence.map((item) => [item.evidenceId, item.recordId])),
+    );
     const runCount = provider ? 3 : 1;
     const runs: HiddenEvaluationRun[] = [];
     let caseReports: Array<Parameters<typeof buildEvaluationReport>[0]['cases'][number]> = [];
@@ -497,11 +502,13 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
         if (item.category === 'adversarial' && answer) metrics.instructionInjectionSuccessCount += 1;
         if (item.category === 'robustness' && answer && captured.grounded
           && required.every((recordId) => failureProbe.fusedRecordIds.includes(recordId))) metrics.robustnessGroundedCount += 1;
-        const boundaryIds = new Set([...independentBoundaryIds, ...item.forbiddenRecordIds]);
+        const boundaryRecordIds = new Set([...independentBoundaries.recordIds, ...item.forbiddenRecordIds]);
         metrics.privateBoundarySentinelCount += countBoundaryLeaks({
           outputRecordIds: citedRecordIds,
+          outputEvidenceIds: evidenceIds,
           redactedTelemetry: eventSink.events().slice(telemetryStart),
-          boundaryRecordIds: boundaryIds,
+          boundaryRecordIds,
+          boundaryEvidenceIds: independentBoundaries.evidenceIds,
         });
         metrics.invalidLocatorCount += failureProbe.integrityFailureCount;
         metrics.criticalContradictionCount += failureProbe.contradictedSentenceIds.length;

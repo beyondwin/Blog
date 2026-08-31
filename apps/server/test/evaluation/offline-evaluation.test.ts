@@ -169,14 +169,38 @@ describe('offline public-answer evaluation', () => {
     };
     expect(verifyPreauthorizedProviderEmbeddingReceipt(answer as any, receipt as any, {
       providerDataControlReceiptHash: checksum('5'), providerPricingReceiptHash: checksum('6'),
-      maxInputTokens: 100_000, maxCostMicroUsd: 20_000,
+      maxInputTokens: 100, maxCostMicroUsd: 13, orderedIndexInputs: answer.indexInputs,
     })).toEqual({ createdAt: receipt.createdAt, completedAt: receipt.completedAt });
+    const secondInput = { chunkChecksum: checksum('8') };
+    const deduplicatedAnswer = { ...answer, indexInputs: [answer.indexInputs[0], answer.indexInputs[0], secondInput] };
+    const orderedReceipt = {
+      ...receipt,
+      entries: [receipt.entries[0], { chunkChecksum: secondInput.chunkChecksum, vectorChecksum: checksum('b') }],
+    };
+    expect(verifyPreauthorizedProviderEmbeddingReceipt(deduplicatedAnswer as any, orderedReceipt as any, {
+      providerDataControlReceiptHash: checksum('5'), providerPricingReceiptHash: checksum('6'),
+      maxInputTokens: 100, maxCostMicroUsd: 13,
+      orderedIndexInputs: [answer.indexInputs[0], secondInput],
+    })).toEqual({ createdAt: receipt.createdAt, completedAt: receipt.completedAt });
+    expect(() => verifyPreauthorizedProviderEmbeddingReceipt(deduplicatedAnswer as any, {
+      ...orderedReceipt, entries: [...orderedReceipt.entries].reverse(),
+    } as any, {
+      providerDataControlReceiptHash: checksum('5'), providerPricingReceiptHash: checksum('6'),
+      maxInputTokens: 100, maxCostMicroUsd: 13,
+      orderedIndexInputs: [answer.indexInputs[0], secondInput],
+    })).toThrow(/preauthorized|release|receipt|mismatch/i);
     expect(() => verifyPreauthorizedProviderEmbeddingReceipt(answer as any, {
       ...receipt, answerArtifactHash: checksum('0'),
     } as any, {
       providerDataControlReceiptHash: checksum('5'), providerPricingReceiptHash: checksum('6'),
-      maxInputTokens: 100_000, maxCostMicroUsd: 20_000,
+      maxInputTokens: 100, maxCostMicroUsd: 13, orderedIndexInputs: answer.indexInputs,
     })).toThrow(/preauthorized|release|receipt|mismatch/i);
+    for (const [field, value] of [['inputTokens', 101], ['costMicroUsd', 14]] as const) {
+      expect(() => verifyPreauthorizedProviderEmbeddingReceipt(answer as any, { ...receipt, [field]: value } as any, {
+        providerDataControlReceiptHash: checksum('5'), providerPricingReceiptHash: checksum('6'),
+        maxInputTokens: 100, maxCostMicroUsd: 13, orderedIndexInputs: answer.indexInputs,
+      }), field).toThrow(/preauthorized|release|receipt|mismatch/i);
+    }
   });
 
   it('rejects every substituted active provenance field even when the report hash is recomputed', () => {

@@ -25,6 +25,7 @@ import {
   readVerifiedAnswerReleaseAuthority,
   type VerifiedActivePublicAnswerReleaseAuthority,
 } from './modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
+import type { EmbeddingClient } from './modules/public-answer/application/ports/embedding-client.js';
 
 export interface ActivatedBindingRow {
   binding_id: string; content_release_id: string; answer_release_id: string; content_manifest_hash: string;
@@ -47,11 +48,15 @@ export function parseIndexEmbeddingMode(argv: readonly string[]): 'fixture' | 'p
 }
 
 export function providerIndexBudget(inputs: readonly { chunkChecksum: string; text: string }[]): Readonly<{ tokenUpperBound: number; costUpperBoundMicroUsd: number }> {
-  const unique = [...new Map(inputs.map((item) => [item.chunkChecksum, item])).values()];
+  const unique = orderedUniqueIndexInputs(inputs);
   const tokenUpperBound = unique.reduce((total, item) => total + Buffer.byteLength(item.text, 'utf8'), 0);
   const costUpperBoundMicroUsd = estimateEmbeddingCostMicroUsd(tokenUpperBound);
   if (tokenUpperBound > 100_000 || costUpperBoundMicroUsd > 20_000) throw new Error('provider indexing maximum exceeded before call');
   return Object.freeze({ tokenUpperBound, costUpperBoundMicroUsd });
+}
+
+function orderedUniqueIndexInputs<T extends { chunkChecksum: string }>(inputs: readonly T[]): readonly T[] {
+  return [...new Map(inputs.map((item) => [item.chunkChecksum, item])).values()];
 }
 
 export function assertCompleteActivatedBinding(
@@ -91,6 +96,7 @@ export function verifyPreauthorizedProviderEmbeddingReceipt(
   expected: Readonly<{
     providerDataControlReceiptHash: string; providerPricingReceiptHash: string;
     maxInputTokens: number; maxCostMicroUsd: number;
+    orderedIndexInputs: readonly { readonly chunkChecksum: string }[];
   }>,
 ): Readonly<{ createdAt: string; completedAt: string }> {
   const releaseMatches = receipt.contentReleaseId === answer.contentReleaseId
@@ -101,7 +107,7 @@ export function verifyPreauthorizedProviderEmbeddingReceipt(
   const authorityMatches = receipt.providerDataControlReceiptHash === expected.providerDataControlReceiptHash
     && receipt.providerPricingReceiptHash === expected.providerPricingReceiptHash
     && receipt.inputTokens <= expected.maxInputTokens && receipt.costMicroUsd <= expected.maxCostMicroUsd;
-  const chunkChecksums = answer.indexInputs.map(({ chunkChecksum }) => chunkChecksum);
+  const chunkChecksums = expected.orderedIndexInputs.map(({ chunkChecksum }) => chunkChecksum);
   if (!releaseMatches || !authorityMatches || receipt.entries.length !== chunkChecksums.length
     || receipt.entries.some((entry, index) => entry.chunkChecksum !== chunkChecksums[index])) {
     throw new Error('preauthorized provider embedding receipt release or authority mismatch');
@@ -111,6 +117,7 @@ export function verifyPreauthorizedProviderEmbeddingReceipt(
 
 export interface IndexAnswerReleaseOptions {
   readonly expectedProviderReceiptHash?: string;
+  readonly providerEmbeddingClient?: EmbeddingClient;
 }
 
 export async function indexAnswerRelease(
@@ -142,12 +149,14 @@ export async function indexAnswerRelease(
     const authorizedTimes = expectedProviderReceipt ? verifyPreauthorizedProviderEmbeddingReceipt(answer, expectedProviderReceipt, {
       providerDataControlReceiptHash: dataControl!.receiptHash,
       providerPricingReceiptHash: pricing!.receiptHash,
-      maxInputTokens: 100_000,
-      maxCostMicroUsd: 20_000,
+      maxInputTokens: budget!.tokenUpperBound,
+      maxCostMicroUsd: budget!.costUpperBoundMicroUsd,
+      orderedIndexInputs: orderedUniqueIndexInputs(answer.indexInputs),
     }) : null;
     const startedAt = authorizedTimes?.createdAt ?? new Date().toISOString();
     const prepared = await prepareEmbeddingSet(answer, provider
-      ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'index' }) : new DeterministicEmbeddingClient(config.nodeEnv), new AbortController().signal);
+      ? options.providerEmbeddingClient ?? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'index' })
+      : new DeterministicEmbeddingClient(config.nodeEnv), new AbortController().signal);
     const providerAuthorities = provider ? createProviderEmbeddingAuthorities(answer, prepared, {
       providerDataControlReceiptHash: dataControl!.receiptHash, providerPricingReceiptHash: pricing!.receiptHash,
       createdAt: startedAt, completedAt: authorizedTimes?.completedAt ?? new Date().toISOString(),
