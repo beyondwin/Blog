@@ -111,6 +111,31 @@ async function assertNoSymlinkComponents(repositoryRoot, target, label, allowMis
   }
 }
 
+async function createDirectoryTreeNoFollow(repositoryRoot, relativeDirectory, label) {
+  const root = resolve(repositoryRoot);
+  const rootStat = await lstat(root);
+  assert(rootStat.isDirectory() && !rootStat.isSymbolicLink(), 'repository root must be a real directory');
+  let current = root;
+  for (const part of relativeDirectory.split('/').filter(Boolean)) {
+    current = join(current, part);
+    let stat;
+    try {
+      stat = await lstat(current);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      try {
+        await mkdir(current, { mode: 0o700 });
+      } catch (mkdirError) {
+        if (mkdirError?.code !== 'EEXIST') throw mkdirError;
+      }
+      stat = await lstat(current);
+    }
+    assert(!stat.isSymbolicLink(), `${label} symbolic link is not allowed`);
+    assert(stat.isDirectory(), `${label} component must be a directory`);
+  }
+  return current;
+}
+
 async function readRegularFileNoFollow(repositoryRoot, relativePath, label) {
   const target = containedPath(repositoryRoot, relativePath, label);
   let handle;
@@ -131,7 +156,8 @@ async function readRegularFileNoFollow(repositoryRoot, relativePath, label) {
 async function ensurePrivateIntakeDirectory(repositoryRoot) {
   const root = resolve(repositoryRoot);
   const directory = containedPath(root, INTAKE_PATH, 'candidate intake');
-  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const createdDirectory = await createDirectoryTreeNoFollow(root, INTAKE_PATH, 'candidate intake');
+  assert(createdDirectory === directory, 'candidate intake path changed during creation');
   await assertNoSymlinkComponents(root, directory, 'candidate intake');
   const resolvedRoot = await realpath(root);
   const resolvedDirectory = await realpath(directory);
@@ -173,6 +199,10 @@ async function writeAtomicExclusive(repositoryRoot, relativePath, bytes) {
 
 async function readYamlFile(repositoryRoot, relativePath, label) {
   const bytes = await readRegularFileNoFollow(repositoryRoot, relativePath, label);
+  return parseYamlBytes(bytes, label);
+}
+
+function parseYamlBytes(bytes, label) {
   let value;
   try {
     value = parseYaml(bytes.toString('utf8'));
@@ -299,9 +329,7 @@ export async function buildSecondBrainAvatarDerivativeCandidates(repositoryRoot)
   return receipt;
 }
 
-export async function verifySecondBrainAvatarDerivativeCandidates(repositoryRoot) {
-  const { manifest, original } = await inspectOriginal(repositoryRoot);
-  const receipt = await readYamlFile(repositoryRoot, RECEIPT_PATH, 'candidate receipt');
+async function verifyCandidateReceipt(repositoryRoot, receipt, manifest, original) {
   exactKeys(receipt, ['version', 'assetId', 'state', 'original', 'encoder', 'derivatives', 'approval', 'rightsBoundary'], 'candidate receipt');
   assert(
     receipt.version === 1 && receipt.assetId === 'form-and-thought-agent-avatar-v1' && receipt.state === 'review-candidate',
@@ -343,22 +371,51 @@ export async function verifySecondBrainAvatarDerivativeCandidates(repositoryRoot
     derivatives: receipt.derivatives,
     approval: receipt.approval,
     rightsBoundary: receipt.rightsBoundary,
+    receipt,
   };
+}
+
+export async function verifySecondBrainAvatarDerivativeCandidates(repositoryRoot) {
+  const { manifest, original } = await inspectOriginal(repositoryRoot);
+  const receipt = await readYamlFile(repositoryRoot, RECEIPT_PATH, 'candidate receipt');
+  const result = await verifyCandidateReceipt(repositoryRoot, receipt, manifest, original);
+  return {
+    original: result.original,
+    derivatives: result.derivatives,
+    approval: result.approval,
+    rightsBoundary: result.rightsBoundary,
+  };
+}
+
+function approvedDerivativeFromCandidate(candidate) {
+  const { candidateId, publicPath, format, width, height, bytes, checksum, options } = candidate;
+  return { candidateId, publicPath, format, width, height, bytes, checksum, options };
 }
 
 export async function verifyApprovedSecondBrainAvatarDerivatives(repositoryRoot) {
   const { manifest, original } = await inspectOriginal(repositoryRoot);
   const approval = manifest.derivativeApproval;
   assert(approval?.state === 'approved', 'derivative approval is missing');
-  exactKeys(approval, ['state', 'approvedBy', 'rightsBoundary'], 'derivative approval');
+  exactKeys(approval, ['state', 'approvedBy', 'reviewedCandidateReceipt', 'rightsBoundary'], 'derivative approval');
   assert(deepEqual(approval.approvedBy, REQUIRED_APPROVERS), 'derivative approval actors are not exact');
   assert(deepEqual(approval.rightsBoundary, manifest.rightsBoundary), 'derivative approval rights caveat changed');
+  exactKeys(approval.reviewedCandidateReceipt, ['name', 'checksum'], 'reviewed candidate receipt reference');
+  assert(approval.reviewedCandidateReceipt.name === 'candidate-receipt.yml', 'reviewed candidate receipt name changed');
+  assert(/^sha256:[a-f0-9]{64}$/.test(approval.reviewedCandidateReceipt.checksum), 'reviewed candidate receipt checksum is invalid');
+  const receiptBytes = await readRegularFileNoFollow(repositoryRoot, RECEIPT_PATH, 'reviewed candidate receipt');
+  assert(sha256(receiptBytes) === approval.reviewedCandidateReceipt.checksum, 'reviewed candidate receipt checksum changed');
+  const receipt = parseYamlBytes(receiptBytes, 'reviewed candidate receipt');
+  const reviewedCandidates = await verifyCandidateReceipt(repositoryRoot, receipt, manifest, original);
   assert(Array.isArray(manifest.derivatives) && manifest.derivatives.length === VARIANTS.length, 'approved manifest must contain exactly four derivatives');
 
   for (const [index, variant] of VARIANTS.entries()) {
     const derivative = manifest.derivatives[index];
     const label = `approved derivative ${index + 1}`;
     assertDerivativeDeclaration(derivative, variant, label, ['candidateId', 'publicPath', 'format', 'width', 'height', 'bytes', 'checksum', 'options']);
+    assert(
+      deepEqual(derivative, approvedDerivativeFromCandidate(reviewedCandidates.receipt.derivatives[index])),
+      `${label} does not match the reviewed candidate receipt`,
+    );
     await verifyDerivativeBytes(repositoryRoot, derivative.publicPath, derivative, label);
   }
 

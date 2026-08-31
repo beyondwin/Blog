@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
-import { cp, mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import sharp from 'sharp';
 
 import {
   buildSecondBrainAvatarDerivativeCandidates,
@@ -44,6 +45,7 @@ async function cloneFixture() {
 
 async function approveFixture(root) {
   const receipt = await readYaml(root, receiptPath);
+  const receiptBytes = await readFile(join(root, receiptPath));
   for (const derivative of receipt.derivatives) {
     await put(root, derivative.publicPath, await readFile(join(root, intakePath, derivative.file)));
   }
@@ -52,6 +54,10 @@ async function approveFixture(root) {
   manifest.derivativeApproval = {
     state: 'approved',
     approvedBy: ['controller', 'independent-visual-reviewer'],
+    reviewedCandidateReceipt: {
+      name: 'candidate-receipt.yml',
+      checksum: `sha256:${createHash('sha256').update(receiptBytes).digest('hex')}`,
+    },
     rightsBoundary: receipt.rightsBoundary,
   };
   manifest.derivatives = receipt.derivatives.map(({ candidateId, publicPath, format, width, height, bytes, checksum, options }) => ({
@@ -127,6 +133,17 @@ describe('second-brain avatar derivative candidates', () => {
     await symlink('images-real', images);
 
     await expect(buildSecondBrainAvatarDerivativeCandidates(root)).rejects.toThrow(/symbolic link/i);
+  });
+
+  it('rejects a symlinked intake parent without mutating the external target', async () => {
+    const root = await cloneFixture();
+    const outside = await mkdtemp(join(tmpdir(), 'second-brain-avatar-outside-'));
+    roots.push(outside);
+    await rm(join(root, '.superpowers'), { recursive: true });
+    await symlink(outside, join(root, '.superpowers'));
+
+    await expect(buildSecondBrainAvatarDerivativeCandidates(root)).rejects.toThrow(/symbolic link/i);
+    expect(await readdir(outside)).toEqual([]);
   });
 
   it.each([
@@ -239,6 +256,23 @@ describe('approved second-brain avatar derivatives', () => {
     await writeFile(target, bytes);
 
     await expect(verifyApprovedSecondBrainAvatarDerivatives(root)).rejects.toThrow(/checksum/i);
+  });
+
+  it('rejects a re-encoded public derivative even when its manifest checksum and size are also substituted', async () => {
+    const root = await cloneFixture();
+    await approveFixture(root);
+    const manifest = await readYaml(root, manifestPath);
+    const substituted = await sharp(await readFile(join(root, sourcePath)))
+      .resize({ width: 640, withoutEnlargement: true })
+      .avif({ quality: 35, effort: 4, chromaSubsampling: '4:4:4' })
+      .toBuffer();
+    const derivative = manifest.derivatives[0];
+    derivative.bytes = substituted.byteLength;
+    derivative.checksum = `sha256:${createHash('sha256').update(substituted).digest('hex')}`;
+    await writeFile(join(root, derivative.publicPath), substituted);
+    await writeYaml(root, manifestPath, manifest);
+
+    await expect(verifyApprovedSecondBrainAvatarDerivatives(root)).rejects.toThrow(/reviewed candidate/i);
   });
 
   it('rejects forged approval actors', async () => {
