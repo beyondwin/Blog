@@ -1,4 +1,33 @@
 import type { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
+import { PublicAnswerDeadlineError } from '../../domain/public-answer-errors.js';
+
+function deadlineError(): PublicAnswerDeadlineError {
+  return new PublicAnswerDeadlineError('Postgres query absolute deadline elapsed');
+}
+
+async function acquireBeforeDeadline(pool: Pool, signal: AbortSignal, deadlineAt: number): Promise<PoolClient> {
+  const remaining = deadlineAt - performance.now();
+  if (!Number.isFinite(deadlineAt) || remaining <= 0) throw deadlineError();
+  const checkout = pool.connect();
+  let timer: NodeJS.Timeout | undefined;
+  let abortListener: (() => void) | undefined;
+  let acquired = false;
+  try {
+    const interrupted = new Promise<never>((_resolve, reject) => {
+      abortListener = () => reject(signal.reason ?? new Error('query aborted'));
+      signal.addEventListener('abort', abortListener, { once: true });
+      timer = setTimeout(() => reject(deadlineError()), remaining);
+      timer.unref();
+    });
+    const client = await Promise.race([checkout, interrupted]);
+    acquired = true;
+    return client;
+  } finally {
+    if (timer) clearTimeout(timer);
+    if (abortListener) signal.removeEventListener('abort', abortListener);
+    if (!acquired) void checkout.then((client) => client.release(true), () => undefined);
+  }
+}
 
 export class CancellablePgQueryRunner {
   constructor(private readonly pool: Pool) {}
@@ -7,12 +36,11 @@ export class CancellablePgQueryRunner {
     text: string,
     values: readonly unknown[],
     signal: AbortSignal,
-    budgetMs: number,
+    deadlineAt: number,
   ): Promise<QueryResult<T>> {
-    if (!Number.isFinite(budgetMs) || budgetMs <= 0) throw new Error('query budget must be a positive finite duration');
+    if (!Number.isFinite(deadlineAt) || deadlineAt <= 0) throw new Error('query deadline must be a positive finite monotonic instant');
     if (signal.aborted) throw signal.reason ?? new Error('query aborted');
-    const started = performance.now();
-    const worker = await this.pool.connect();
+    const worker = await acquireBeforeDeadline(this.pool, signal, deadlineAt);
     let pid = 0;
     let cancellation: Promise<boolean> | undefined;
     const cancelOnce = (): Promise<boolean> => {
@@ -34,26 +62,28 @@ export class CancellablePgQueryRunner {
     let destroyWorker = false;
     try {
       pid = (await worker.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0]!.pid;
-      const remaining = Math.floor(budgetMs - (performance.now() - started));
-      if (remaining <= 0) throw new Error('query monotonic budget was exhausted before execution');
+      const remaining = Math.floor(deadlineAt - performance.now());
+      if (remaining <= 0) throw deadlineError();
       await worker.query(`SET statement_timeout TO ${remaining}`);
       signal.addEventListener('abort', listener, { once: true });
       if (signal.aborted) {
         destroyWorker = true;
-        await cancelOnce();
+        if (!(signal.reason instanceof PublicAnswerDeadlineError)) await cancelOnce();
         throw signal.reason ?? new Error('query aborted');
       }
       return await worker.query<T>(text, [...values]);
     } catch (error) {
       if (signal.aborted) {
         destroyWorker = true;
-        await cancelOnce();
-        throw new Error('Postgres query aborted', { cause: error });
+        if (!(signal.reason instanceof PublicAnswerDeadlineError)) await cancelOnce();
+        else void cancelOnce();
+        throw signal.reason ?? new Error('Postgres query aborted', { cause: error });
       }
+      if ((error as { code?: unknown })?.code === '57014') throw deadlineError();
       throw error;
     } finally {
       signal.removeEventListener('abort', listener);
-      if (cancellation) {
+      if (cancellation && !(signal.reason instanceof PublicAnswerDeadlineError)) {
         const cancelled = await cancellation;
         if (!cancelled) destroyWorker = true;
       }

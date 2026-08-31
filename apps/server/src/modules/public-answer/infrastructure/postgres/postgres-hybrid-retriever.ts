@@ -31,7 +31,7 @@ interface Row { chunk_id: string; chunk_checksum: string; record_id: string; sco
 function vectorText(values: readonly number[]): string { return `[${values.join(',')}]`; }
 
 export class PostgresHybridRetriever implements Retriever {
-  constructor(private readonly embedder: EmbeddingClient, private readonly queries: CancellablePgQueryRunner, private readonly queryBudgetMs = 2_000) {}
+  constructor(private readonly embedder: EmbeddingClient, private readonly queries: CancellablePgQueryRunner) {}
 
   async retrieve(input: Parameters<Retriever['retrieve']>[0]): ReturnType<Retriever['retrieve']> {
     const catalog = input.catalog as VerifiedCatalogSnapshot;
@@ -43,9 +43,10 @@ export class PostgresHybridRetriever implements Retriever {
     const normalized = normalizeAnswerQuery(input.question); if (!normalized) throw new Error('normalized question is empty');
     const embedded = await this.embedder.embed([normalized], input.signal);
     if (embedded.vectors.length !== 1 || embedded.vectors[0]!.length !== 3072) throw new Error('query embedding contract mismatch');
+    const deadlineAt = input.deadlineAt ?? performance.now() + 2_000;
     const [lexicalResult, vectorResult] = await Promise.all([
-      this.queries.query<Row>(LEXICAL_SQL, [catalog.bindingId, catalog.answerReleaseId, normalized], input.signal, this.queryBudgetMs),
-      this.queries.query<Row>(VECTOR_SQL, [catalog.bindingId, vectorText(embedded.vectors[0]!), catalog.answerReleaseId], input.signal, this.queryBudgetMs),
+      this.queries.query<Row>(LEXICAL_SQL, [catalog.bindingId, catalog.answerReleaseId, normalized], input.signal, deadlineAt),
+      this.queries.query<Row>(VECTOR_SQL, [catalog.bindingId, vectorText(embedded.vectors[0]!), catalog.answerReleaseId], input.signal, deadlineAt),
     ]);
     const validate = (row: Row) => {
       const chunk = catalog.chunkById.get(row.chunk_id); const expectedChecksum = catalog.chunkChecksumById.get(row.chunk_id);

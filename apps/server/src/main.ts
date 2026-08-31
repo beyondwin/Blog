@@ -64,7 +64,7 @@ type PublicAnswerExecutor = Readonly<{
 export function createFixtureScenarioExecutor(
   scenario: FixtureScenario,
   base: PublicAnswerExecutor,
-  slowSql: (signal: AbortSignal) => Promise<void>,
+  slowSql: (signal: AbortSignal, deadlineAt: number) => Promise<void>,
 ): PublicAnswerExecutor {
   return Object.freeze({
     async execute(command: AnswerPublicQuestionCommand): Promise<PublicAnswerOutcome> {
@@ -83,7 +83,7 @@ export function createFixtureScenarioExecutor(
           return { kind: 'search', reason: 'release-mismatch', answerReleaseId: command.catalog.answerReleaseId };
         case 'slow-sql':
           try {
-            await slowSql(command.signal);
+            await slowSql(command.signal, command.deadlineAt);
           } catch (error) {
             if (command.signal.aborted && command.signal.reason instanceof PublicAnswerDeadlineError) {
               return { kind: 'error', code: 'timeout', retryable: true };
@@ -142,6 +142,7 @@ export async function createApplication(options: CreateApplicationOptions = {}):
   const trusted = new Set(runtime.config.trustedProxyAddresses);
   const adapter = new FastifyAdapter({
     bodyLimit: 4096,
+    exposeHeadRoutes: false,
     logger: false,
     trustProxy: (address) => trusted.has(address),
   });
@@ -222,7 +223,7 @@ export async function startApplication(): Promise<NestFastifyApplication> {
     });
     const fixtureExecutor = config.fixtureScenario
       ? createFixtureScenarioExecutor(config.fixtureScenario, baseUseCase,
-        async (signal) => { await queries.query('SELECT pg_sleep(30)', [], signal, 12_000); })
+        async (signal, deadlineAt) => { await queries.query('SELECT pg_sleep(30)', [], signal, deadlineAt); })
       : undefined;
     app = await createApplication({
       runtime: {

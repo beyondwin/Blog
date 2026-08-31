@@ -90,6 +90,7 @@ function command(overrides: Partial<AnswerPublicQuestionCommand> = {}): AnswerPu
     answerReleaseId: snapshot.answerReleaseId,
     networkKey: 'network-secret-456',
     signal: new AbortController().signal,
+    deadlineAt: performance.now() + 12_000,
     catalog: snapshot,
     ...overrides,
   };
@@ -389,6 +390,7 @@ describe('AnswerPublicQuestion', () => {
       catalog: snapshot,
       limit: 6,
       signal: expect.any(AbortSignal),
+      deadlineAt: expect.any(Number),
     }]);
     expect(h.retrievalInputs[0]?.catalog).toBe(snapshot);
     expect(h.deterministicInputs[0]?.catalog).toBe(snapshot);

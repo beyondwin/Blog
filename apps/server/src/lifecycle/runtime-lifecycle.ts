@@ -53,11 +53,11 @@ export class RuntimeLifecycle {
     };
   }
 
-  registerSignals(target: Pick<NodeJS.Process, 'once'> = process): void {
+  registerSignals(target: Pick<NodeJS.Process, 'on'> = process): void {
     if (this.#signalsRegistered) return;
     this.#signalsRegistered = true;
-    target.once('SIGTERM', () => { void this.shutdown('SIGTERM'); });
-    target.once('SIGINT', () => { void this.shutdown('SIGINT'); });
+    target.on('SIGTERM', () => { void this.shutdown('SIGTERM'); });
+    target.on('SIGINT', () => { void this.shutdown('SIGINT'); });
   }
 
   shutdown(_signal: 'SIGTERM' | 'SIGINT'): Promise<void> {
@@ -72,7 +72,7 @@ export class RuntimeLifecycle {
     await this.#sleep(LOAD_BALANCER_GRACE_MS);
     this.#accepting = false;
 
-    const serverClose = this.#closeServer().catch(() => { failed = true; });
+    const serverClose = this.#startBeforeDeadline(this.#closeServer, deadline);
     while (this.#active.size > 0 && this.#clock() < deadline) {
       await this.#sleep(Math.min(DRAIN_POLL_MS, Math.max(0, deadline - this.#clock())));
     }
@@ -82,8 +82,29 @@ export class RuntimeLifecycle {
       for (const controller of this.#active) controller.abort(reason);
       this.#active.clear();
     }
-    await serverClose;
-    await this.#closePool().catch(() => { failed = true; });
+    if (!await serverClose) failed = true;
+    if (!await this.#startBeforeDeadline(this.#closePool, deadline)) failed = true;
     this.#setExitCode(failed ? 1 : 0);
+  }
+
+  async #settleBeforeDeadline(operation: Promise<void>, deadline: number): Promise<boolean> {
+    let completed = false;
+    let result = false;
+    const settled = operation.then(() => { completed = true; result = true; return true; }, () => {
+      completed = true; result = false; return false;
+    });
+    await Promise.resolve();
+    if (completed) return result;
+    const remaining = deadline - this.#clock();
+    if (remaining <= 0) { void settled; return false; }
+    return Promise.race([settled, this.#sleep(remaining).then(() => false)]);
+  }
+
+  #startBeforeDeadline(operation: () => Promise<void>, deadline: number): Promise<boolean> {
+    try {
+      return this.#settleBeforeDeadline(operation(), deadline);
+    } catch {
+      return Promise.resolve(false);
+    }
   }
 }

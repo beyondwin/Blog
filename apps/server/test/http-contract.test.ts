@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ServerConfig } from '../src/config/server-config.js';
 import { RuntimeReadiness } from '../src/health/runtime-readiness.js';
@@ -12,6 +12,9 @@ import {
 import type { AnswerReleaseCatalogSnapshot } from '../src/modules/public-answer/application/ports/answer-release-catalog.js';
 import type { AnswerPublicQuestionCommand, PublicAnswerOutcome } from '../src/modules/public-answer/domain/public-answer.js';
 import { TrustedProxyNetworkKey } from '../src/security/network-key.js';
+import { AnswerPublicQuestion } from '../src/modules/public-answer/application/answer-public-question.js';
+import { InMemoryRedactedEventSink } from '../src/modules/public-answer/infrastructure/fixture/in-memory-redacted-event-sink.js';
+import { InMemoryUsageGuard } from '../src/modules/public-answer/infrastructure/guards/in-memory-usage-guard.js';
 
 const CONTENT_RELEASE = '1'.repeat(64);
 const ANSWER_RELEASE = '2'.repeat(64);
@@ -143,7 +146,7 @@ describe('public answer HTTP contract', () => {
     }, async () => { throw new Error('slow SQL is not expected'); });
     const outcome = await executor.execute({
       requestId: randomUUID(), question: '질문', contentReleaseId: CONTENT_RELEASE, answerReleaseId: ANSWER_RELEASE,
-      networkKey: 'network', signal: new AbortController().signal, catalog: snapshot,
+      networkKey: 'network', signal: new AbortController().signal, deadlineAt: performance.now() + 12_000, catalog: snapshot,
     });
     expect(outcome).toEqual(expected);
     expect(baseCalls).toBe(0);
@@ -156,11 +159,11 @@ describe('public answer HTTP contract', () => {
     const slow = async () => { slowCalls += 1; };
     await expect(createFixtureScenarioExecutor('success', base, slow).execute({
       requestId: randomUUID(), question: '질문', contentReleaseId: CONTENT_RELEASE, answerReleaseId: ANSWER_RELEASE,
-      networkKey: 'network', signal: new AbortController().signal, catalog: snapshot,
+      networkKey: 'network', signal: new AbortController().signal, deadlineAt: performance.now() + 12_000, catalog: snapshot,
     })).resolves.toBe(answer);
     await expect(createFixtureScenarioExecutor('slow-sql', base, slow).execute({
       requestId: randomUUID(), question: '질문', contentReleaseId: CONTENT_RELEASE, answerReleaseId: ANSWER_RELEASE,
-      networkKey: 'network', signal: new AbortController().signal, catalog: snapshot,
+      networkKey: 'network', signal: new AbortController().signal, deadlineAt: performance.now() + 12_000, catalog: snapshot,
     })).resolves.toEqual({ kind: 'search', reason: 'insufficient-evidence', answerReleaseId: ANSWER_RELEASE });
     expect({ baseCalls, slowCalls }).toEqual({ baseCalls: 1, slowCalls: 1 });
   });
@@ -292,5 +295,192 @@ describe('public answer HTTP contract', () => {
     expect(response.statusCode).toBe(503);
     expect(response.json()).toEqual({ kind: 'error', code: 'unavailable', retryable: true });
     expect(response.body).not.toMatch(/secret@example\.com|private_table|stack/iu);
+  });
+
+  it('exposes only the exact three method-route combinations and disables automatic HEAD routes', async () => {
+    const h = await harness();
+    for (const [method, url] of [
+      ['HEAD', '/health/live'],
+      ['HEAD', '/health/ready'],
+      ['GET', '/api/public/ask'],
+      ['POST', '/health/live'],
+      ['POST', '/health/ready'],
+      ['GET', '/api/public/missing'],
+    ] as const) {
+      const response = await h.fastify.inject({ method, url });
+      expect(response.statusCode).not.toBe(200);
+    }
+  });
+
+  it('keeps post-snapshot error headers request-local across a paused active-binding transition and fails readiness closed', async () => {
+    const oldSnapshot = snapshot;
+    const newSnapshot = Object.freeze({
+      ...snapshot,
+      bindingId: randomUUID(),
+      contentReleaseId: 'a'.repeat(64),
+      answerReleaseId: 'b'.repeat(64),
+    });
+    let snapshotCalls = 0;
+    let firstEntered!: () => void;
+    let releaseFirst!: () => void;
+    const firstSnapshotEntered = new Promise<void>((resolve) => { firstEntered = resolve; });
+    const firstSnapshotRelease = new Promise<void>((resolve) => { releaseFirst = resolve; });
+    const readiness = new RuntimeReadiness({ startupCheck: async () => oldSnapshot });
+    await readiness.initialize();
+    const app = await createApplication({ runtime: {
+      config,
+      readiness,
+      catalogSource: {
+        async snapshot() {
+          snapshotCalls += 1;
+          if (snapshotCalls === 1) { firstEntered(); await firstSnapshotRelease; return oldSnapshot; }
+          return newSnapshot;
+        },
+      },
+      answerPublicQuestion: { async execute() { throw new Error('binding authority changed'); } },
+    } });
+    apps.push(app);
+    await app.init();
+    const fastify = app.getHttpAdapter().getInstance();
+    const first = fastify.inject({ method: 'POST', url: '/api/public/ask', payload: requestPayload() });
+    await firstSnapshotEntered;
+    const second = await fastify.inject({
+      method: 'POST', url: '/api/public/ask',
+      payload: requestPayload({ contentReleaseId: newSnapshot.contentReleaseId, answerReleaseId: newSnapshot.answerReleaseId }),
+    });
+    releaseFirst();
+    const firstResponse = await first;
+
+    expect(firstResponse.headers['x-content-release-id']).toBe(oldSnapshot.contentReleaseId);
+    expect(firstResponse.headers['x-answer-release-id']).toBe(oldSnapshot.answerReleaseId);
+    expect(second.headers['x-content-release-id']).toBe(newSnapshot.contentReleaseId);
+    expect(second.headers['x-answer-release-id']).toBe(newSnapshot.answerReleaseId);
+    expect(snapshotCalls).toBe(2);
+    expect(readiness.status().ready).toBe(false);
+  });
+
+  it('turns readiness false after a request-time catalog authority failure', async () => {
+    const readiness = new RuntimeReadiness({ startupCheck: async () => snapshot });
+    await readiness.initialize();
+    const app = await createApplication({ runtime: {
+      config,
+      readiness,
+      catalogSource: { async snapshot() { throw new Error('filesystem release and active binding mismatch'); } },
+      answerPublicQuestion: { async execute() { throw new Error('dispatch must not run'); } },
+    } });
+    apps.push(app);
+    await app.init();
+    const fastify = app.getHttpAdapter().getInstance();
+    expect((await fastify.inject({ method: 'POST', url: '/api/public/ask', payload: requestPayload() })).statusCode).toBe(503);
+    expect((await fastify.inject({ method: 'GET', url: '/health/ready' })).statusCode).toBe(503);
+  });
+
+  it('passes one absolute monotonic deadline through catalog and command dispatch', async () => {
+    let catalogDeadline: number | undefined;
+    let commandDeadline: number | undefined;
+    const readiness = new RuntimeReadiness({ startupCheck: async () => snapshot });
+    await readiness.initialize();
+    const app = await createApplication({ runtime: {
+      config,
+      readiness,
+      catalogSource: {
+        async snapshot(_signal, deadlineAt) { catalogDeadline = deadlineAt; return snapshot; },
+      },
+      answerPublicQuestion: {
+        async execute(command) {
+          commandDeadline = command.deadlineAt;
+          return { kind: 'search', reason: 'insufficient-evidence', answerReleaseId: ANSWER_RELEASE };
+        },
+      },
+    } });
+    apps.push(app);
+    await app.init();
+    const before = performance.now();
+    const response = await app.getHttpAdapter().getInstance().inject({ method: 'POST', url: '/api/public/ask', payload: requestPayload() });
+    expect(response.statusCode).toBe(200);
+    expect(catalogDeadline).toBeGreaterThanOrEqual(before + 11_900);
+    expect(commandDeadline).toBe(catalogDeadline);
+  });
+
+  it('settles an abort-ignoring dispatch at twelve seconds and absorbs its late rejection', async () => {
+    let rejectLate!: (error: Error) => void;
+    const readiness = new RuntimeReadiness({ startupCheck: async () => snapshot });
+    await readiness.initialize();
+    const app = await createApplication({ runtime: {
+      config,
+      readiness,
+      catalogSource: { async snapshot() { return snapshot; } },
+      answerPublicQuestion: {
+        execute() { return new Promise((_resolve, reject) => { rejectLate = reject; }); },
+      },
+    } });
+    apps.push(app);
+    await app.init();
+    const unhandled: unknown[] = [];
+    const observeUnhandled = (error: unknown) => { unhandled.push(error); };
+    process.on('unhandledRejection', observeUnhandled);
+    vi.useFakeTimers();
+    try {
+      const pending = app.getHttpAdapter().getInstance().inject({
+        method: 'POST', url: '/api/public/ask', payload: requestPayload(),
+      });
+      await vi.advanceTimersByTimeAsync(12_000);
+      const response = await pending;
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({ kind: 'error', code: 'timeout', retryable: true });
+      expect(readiness.status().ready).toBe(true);
+      rejectLate(new Error('late provider rejection'));
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(unhandled).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+      process.removeListener('unhandledRejection', observeUnhandled);
+    }
+  });
+
+  it('uses the real guard at the composed HTTP boundary and returns Retry-After on the fourth burst request', async () => {
+    const guard = await InMemoryUsageGuard.create({ clock: () => Date.parse('2026-08-30T00:00:00.000Z') });
+    const useCase = new AnswerPublicQuestion({
+      policy: { mode: 'fixture' },
+      usageGuard: guard,
+      retriever: { async retrieve() { return { evidence: [], sufficient: false, candidateCount: 0, usage: { inputTokens: 0, outputTokens: 0 } }; } },
+      generator: { async generate() { throw new Error('generation is unreachable'); } },
+      deterministicVerifier: { verify() { throw new Error('verification is unreachable'); } },
+      semanticVerifier: { async verify() { throw new Error('semantic verification is unreachable'); } },
+      eventSink: new InMemoryRedactedEventSink(),
+    });
+    const readiness = new RuntimeReadiness({ startupCheck: async () => snapshot });
+    await readiness.initialize();
+    const app = await createApplication({ runtime: {
+      config,
+      readiness,
+      catalogSource: { async snapshot() { return snapshot; } },
+      answerPublicQuestion: useCase,
+    } });
+    apps.push(app);
+    await app.init();
+    const fastify = app.getHttpAdapter().getInstance();
+    const statuses: number[] = [];
+    for (let index = 0; index < 4; index += 1) {
+      statuses.push((await fastify.inject({ method: 'POST', url: '/api/public/ask', payload: requestPayload() })).statusCode);
+    }
+    expect(statuses).toEqual([200, 200, 200, 429]);
+    const rejected = await fastify.inject({ method: 'POST', url: '/api/public/ask', payload: requestPayload() });
+    expect(rejected.headers['retry-after']).toBe('20');
+  });
+
+  it('rejects public fixture scenario query, header, and cookie controls before dispatch', async () => {
+    const h = await harness(answer);
+    for (const request of [
+      { url: '/api/public/ask?fixture-scenario=unavailable', headers: {} },
+      { url: '/api/public/ask', headers: { 'x-fixture-scenario': 'timeout' } },
+      { url: '/api/public/ask', headers: { cookie: 'fixture-scenario=release-mismatch' } },
+    ]) {
+      const response = await h.fastify.inject({ method: 'POST', ...request, payload: requestPayload() });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ kind: 'error', code: 'invalid-response', retryable: false });
+    }
+    expect(h.commands).toEqual([]);
   });
 });

@@ -179,6 +179,7 @@ export class AnswerPublicQuestion {
         catalog: command.catalog,
         limit: 6,
         signal: command.signal,
+        deadlineAt: command.deadlineAt,
       });
       usageLease.settleStage('embedding', retrieval.usage);
       addUsage(metrics, retrieval.usage);

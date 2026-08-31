@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { EventEmitter } from 'node:events';
 
 import { RuntimeReadiness } from '../src/health/runtime-readiness.js';
 import { RuntimeLifecycle } from '../src/lifecycle/runtime-lifecycle.js';
@@ -102,5 +103,70 @@ describe('runtime graceful lifecycle', () => {
     finish();
     await lifecycle.shutdown('SIGTERM');
     expect(() => lifecycle.beginRequest(new AbortController())).toThrow('runtime is not accepting requests');
+  });
+
+  it.each(['server', 'pool'] as const)('bounds a non-settling %s close with the one ten-second deadline', async (stalled) => {
+    let now = 0;
+    const exits: number[] = [];
+    const never = new Promise<void>(() => undefined);
+    const lifecycle = new RuntimeLifecycle({
+      readiness: await ready(),
+      clock: () => now,
+      sleep: async (milliseconds) => { now += milliseconds; },
+      closeServer: () => stalled === 'server' ? never : Promise.resolve(),
+      closePool: () => stalled === 'pool' ? never : Promise.resolve(),
+      setExitCode: (code) => { exits.push(code); },
+    });
+
+    const result = await Promise.race([
+      lifecycle.shutdown('SIGTERM').then(() => 'closed'),
+      new Promise<'hung'>((resolve) => setTimeout(() => resolve('hung'), 50)),
+    ]);
+    expect(result).toBe('closed');
+    expect(now).toBe(10_000);
+    expect(exits).toEqual([1]);
+  });
+
+  it('keeps one installed handler per signal so repeated same-signal delivery joins owned cleanup', async () => {
+    const target = new EventEmitter();
+    let releaseGrace!: () => void;
+    const grace = new Promise<void>((resolve) => { releaseGrace = resolve; });
+    let serverCloses = 0;
+    const lifecycle = new RuntimeLifecycle({
+      readiness: await ready(),
+      sleep: async () => grace,
+      closeServer: async () => { serverCloses += 1; },
+      closePool: async () => undefined,
+      setExitCode: () => undefined,
+    });
+    lifecycle.registerSignals(target as any);
+    expect(target.listenerCount('SIGTERM')).toBe(1);
+    target.emit('SIGTERM');
+    target.emit('SIGTERM');
+    expect(target.listenerCount('SIGTERM')).toBe(1);
+    releaseGrace();
+    await lifecycle.shutdown('SIGTERM');
+    expect(serverCloses).toBe(1);
+  });
+
+  it.each(['server', 'pool'] as const)('contains a synchronous %s close failure and completes the other cleanup', async (failed) => {
+    const events: string[] = [];
+    const lifecycle = new RuntimeLifecycle({
+      readiness: await ready(),
+      sleep: async () => undefined,
+      closeServer: () => {
+        events.push('server.close');
+        if (failed === 'server') throw new Error('server close failed');
+        return Promise.resolve();
+      },
+      closePool: () => {
+        events.push('pool.close');
+        if (failed === 'pool') throw new Error('pool close failed');
+        return Promise.resolve();
+      },
+      setExitCode: (code) => { events.push(`exit:${code}`); },
+    });
+    await expect(lifecycle.shutdown('SIGTERM')).resolves.toBeUndefined();
+    expect(events).toEqual(['server.close', 'pool.close', 'exit:1']);
   });
 });

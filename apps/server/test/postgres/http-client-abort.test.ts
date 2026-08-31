@@ -69,7 +69,7 @@ describe('real HTTP client abort', () => {
         async execute(command) {
           observedSignal = command.signal;
           queryStarted();
-          await queries.query('SELECT pg_sleep(30)', [], command.signal, 12_000);
+          await queries.query('SELECT pg_sleep(30)', [], command.signal, command.deadlineAt);
           return { kind: 'search', reason: 'insufficient-evidence', answerReleaseId: ANSWER_RELEASE };
         },
       },

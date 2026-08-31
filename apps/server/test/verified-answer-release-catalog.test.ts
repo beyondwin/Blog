@@ -68,22 +68,46 @@ describe('deterministic fixture embedding preparation', () => {
       manifestHash: `sha256:${'1'.repeat(64)}`, artifactHash: `sha256:${'2'.repeat(64)}`,
       corpusApprovalHash: `sha256:${'3'.repeat(64)}`,
       manifest: { identity: { contentManifestHash: `sha256:${'4'.repeat(64)}`, normalizerVersion: 'nfkc-lower-hangul-ngram-v1' } },
-      chunks: [{ chunkId: canonicalEvidence.chunkId, recordId: canonicalEvidence.recordId, canonicalPath: canonicalEvidence.canonicalPath }],
+      chunks: [{
+        chunkId: canonicalEvidence.chunkId,
+        recordId: canonicalEvidence.recordId,
+        canonicalPath: canonicalEvidence.canonicalPath,
+        title: 'Example',
+        headingPath: ['판단'],
+        text: '검증된 공개 기록입니다.',
+        searchText: '검증된 공개 기록입니다.',
+      }],
       evidence: [canonicalEvidence],
-      indexInputs: [{ chunkId: canonicalEvidence.chunkId, chunkChecksum: `sha256:${'5'.repeat(64)}` }],
+      indexInputs: [{
+        chunkId: canonicalEvidence.chunkId,
+        chunkChecksum: `sha256:${'5'.repeat(64)}`,
+        recordId: canonicalEvidence.recordId,
+        canonicalPath: canonicalEvidence.canonicalPath,
+        title: 'Example',
+        headingPath: ['판단'],
+        text: '검증된 공개 기록입니다.',
+        searchText: '검증된 공개 기록입니다.',
+      }],
     };
     const content = {
       manifest: { releaseId: contentReleaseId, records: { [canonicalEvidence.recordId]: { href: canonicalEvidence.canonicalPath } } },
       manifestHash: `sha256:${'6'.repeat(64)}`, artifactHash: `sha256:${'7'.repeat(64)}`,
     };
+    const prepared = await prepareEmbeddingSet(
+      release as any,
+      new DeterministicEmbeddingClient('test'),
+      new AbortController().signal,
+    );
+    const fixtureReceipt = createFixtureEmbeddingReceipt(prepared);
     const client = {
       async query(sql: string) {
         if (sql.includes('public_answer_release_bindings')) return { rowCount: 1, rows: [{
-          binding_id: '11111111-1111-4111-8111-111111111111', content_release_id: contentReleaseId,
+          binding_id: fixtureReceipt.bindingId, content_release_id: contentReleaseId,
           answer_release_id: answerReleaseId, content_manifest_hash: release.manifest.identity.contentManifestHash,
           answer_manifest_hash: release.manifestHash, answer_artifact_hash: release.artifactHash,
-          embedding_source: 'fixture', embedding_receipt_hash: `sha256:${'8'.repeat(64)}`,
-          chunk_count: 1, index_checksum: `sha256:${'9'.repeat(64)}`,
+          embedding_model: fixtureReceipt.model, embedding_dimensions: fixtureReceipt.dimensions,
+          embedding_source: 'fixture', embedding_receipt_hash: fixtureReceipt.receiptHash,
+          chunk_count: 1, index_checksum: fixtureReceipt.indexChecksum,
         }] };
         if (sql.includes('public_answer_tombstones')) return { rowCount: 0, rows: [] };
         return { rowCount: 0, rows: [] };

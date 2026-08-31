@@ -1,4 +1,5 @@
 import type { Pool } from 'pg';
+import { createHash } from 'node:crypto';
 
 import type { ServerConfig } from '../config/server-config.js';
 import { readProviderDataControlReceipt } from '../config/provider-data-control-receipt.js';
@@ -10,6 +11,7 @@ import {
   type ProviderEmbeddingReceipt,
 } from '../modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
 import type { VerifiedCatalogSnapshot } from '../modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
+import { providerChecksum } from '../modules/public-answer/infrastructure/openai/provider-json.js';
 
 export type RuntimeBinding = Readonly<Pick<AnswerReleaseCatalogSnapshot, 'contentReleaseId' | 'answerReleaseId'>>;
 
@@ -28,8 +30,28 @@ interface RuntimeStartupDependencies {
 interface RuntimeChunkRow {
   chunk_id: string;
   chunk_checksum: string;
+  record_id: string;
+  canonical_path: string;
+  title: string;
+  heading_path: string[];
+  body: string;
+  search_text: string;
   embedding_model: string;
   embedding_dimensions: number;
+  embedding: string;
+}
+
+function vectorChecksum(text: string): string {
+  if (!/^\[(?:-?\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:,-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)*)?\]$/iu.test(text)) {
+    throw new Error('runtime readiness database vector drift');
+  }
+  const values = text.slice(1, -1).split(',').filter(Boolean).map(Number);
+  if (values.length !== 3072 || values.some((value) => !Number.isFinite(value))) {
+    throw new Error('runtime readiness database vector drift');
+  }
+  const bytes = Buffer.allocUnsafe(values.length * 4);
+  values.forEach((value, index) => bytes.writeFloatBE(Math.fround(value), index * 4));
+  return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
 export async function runRuntimeStartupChecks(
@@ -49,16 +71,34 @@ export async function runRuntimeStartupChecks(
     throw new Error('runtime readiness provider provenance drift');
   }
   const chunks = await dependencies.pool.query<RuntimeChunkRow>(`
-    SELECT chunk_id,chunk_checksum,embedding_model,embedding_dimensions
+    SELECT chunk_id,chunk_checksum,record_id,canonical_path,title,heading_path,body,search_text,
+           embedding_model,embedding_dimensions,embedding::text
     FROM public_answer_chunks WHERE binding_id=$1 ORDER BY chunk_id
   `, [catalog.bindingId]);
   if (chunks.rows.length !== catalog.chunkChecksumById.size) throw new Error('runtime readiness database chunk count drift');
+  const vectorEntries: Array<{ chunkId: string; chunkChecksum: string; vectorChecksum: string }> = [];
+  const indexRows: Array<Record<string, unknown>> = [];
   for (const row of chunks.rows) {
-    if (catalog.chunkChecksumById.get(row.chunk_id) !== row.chunk_checksum
+    const expected = catalog.indexInputByChunkId.get(row.chunk_id);
+    const expectedVector = catalog.vectorChecksumByChunkId.get(row.chunk_id);
+    const actualVector = vectorChecksum(row.embedding);
+    if (catalog.chunkChecksumById.get(row.chunk_id) !== row.chunk_checksum || !expected
+      || expected.recordId !== row.record_id || expected.canonicalPath !== row.canonical_path || expected.title !== row.title
+      || JSON.stringify(expected.headingPath) !== JSON.stringify(row.heading_path) || expected.body !== row.body
+      || expected.searchText !== row.search_text || expectedVector !== actualVector
       || row.embedding_model !== 'text-embedding-3-large' || row.embedding_dimensions !== 3072) {
       throw new Error('runtime readiness database chunk provenance drift');
     }
+    vectorEntries.push({ chunkId: row.chunk_id, chunkChecksum: row.chunk_checksum, vectorChecksum: actualVector });
+    indexRows.push({
+      chunkId: row.chunk_id, chunkChecksum: row.chunk_checksum, recordId: row.record_id,
+      canonicalPath: row.canonical_path, title: row.title, headingPath: row.heading_path,
+      body: row.body, searchText: row.search_text, vectorChecksum: actualVector,
+      model: row.embedding_model, dimensions: row.embedding_dimensions, source: catalog.embeddingSource,
+    });
   }
+  if (providerChecksum(vectorEntries) !== catalog.vectorSetChecksum) throw new Error('runtime readiness database vector-set drift');
+  if (providerChecksum(indexRows) !== catalog.indexRowsChecksum) throw new Error('runtime readiness database index-row checksum drift');
   if (config.publicAskMode === 'provider') {
     if (!config.providerDataControlReceiptPath || !config.providerEmbeddingReceiptRoot) {
       throw new Error('runtime readiness provider evidence is missing');

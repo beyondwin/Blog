@@ -59,5 +59,6 @@ export interface AnswerPublicQuestionCommand {
   answerReleaseId: string;
   networkKey: string;
   signal: AbortSignal;
+  deadlineAt: number;
   catalog: AnswerReleaseCatalogSnapshot;
 }

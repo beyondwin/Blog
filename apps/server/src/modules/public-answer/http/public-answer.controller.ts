@@ -18,6 +18,20 @@ import { PublicAnswerPipe } from './public-answer.pipe.js';
 
 const JSON_MEDIA_TYPE = /^application\/json(?:\s*;\s*charset\s*=\s*utf-8)?$/iu;
 
+async function settleBeforeAbort<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) throw signal.reason ?? new Error('public answer request aborted');
+  let listener: (() => void) | undefined;
+  const interrupted = new Promise<never>((_resolve, reject) => {
+    listener = () => reject(signal.reason ?? new Error('public answer request aborted'));
+    signal.addEventListener('abort', listener, { once: true });
+  });
+  try {
+    return await Promise.race([operation, interrupted]);
+  } finally {
+    if (listener) signal.removeEventListener('abort', listener);
+  }
+}
+
 function responseFor(outcome: PublicAnswerOutcome): PublicAskResponse {
   const candidate: unknown = outcome.kind === 'answer' ? {
     kind: 'answer',
@@ -63,6 +77,7 @@ export class PublicAnswerController {
     if (typeof contentType !== 'string' || !JSON_MEDIA_TYPE.test(contentType)) {
       throw new HttpBoundaryError(415, 'public answer requires UTF-8 JSON');
     }
+    this.assertNoPublicFixtureControl(request);
     this.assertBrowserOrigin(request);
     const body: PublicAskRequest = this.requestPipe.transform(rawBody);
     if (!this.lifecycle.acceptingRequests()) throw new PublicAnswerDeadlineError('runtime is shutting down');
@@ -82,7 +97,13 @@ export class PublicAnswerController {
     if (rawRequest.aborted || rawRequest.complete === false) disconnect();
 
     try {
-      const catalog = await this.catalogSource.snapshot(controller.signal);
+      let catalog;
+      try {
+        catalog = await this.catalogSource.snapshot(controller.signal, deadline);
+      } catch (error) {
+        if (!controller.signal.aborted) this.readiness.hardFailure();
+        throw error;
+      }
       reply.header('X-Content-Release-Id', catalog.contentReleaseId);
       reply.header('X-Answer-Release-Id', catalog.answerReleaseId);
       const peerAddress = rawRequest.socket.remoteAddress ?? (this.config.nodeEnv === 'test' ? '127.0.0.1' : '');
@@ -90,15 +111,22 @@ export class PublicAnswerController {
         peerAddress,
         xForwardedFor: request.headers['x-forwarded-for'],
       });
-      const outcome = await this.useCase.execute({
-        requestId: createRequestId(),
-        question: body.question,
-        contentReleaseId: body.contentReleaseId,
-        answerReleaseId: body.answerReleaseId,
-        networkKey,
-        signal: controller.signal,
-        catalog,
-      });
+      let outcome: PublicAnswerOutcome;
+      try {
+        outcome = await settleBeforeAbort(this.useCase.execute({
+          requestId: createRequestId(),
+          question: body.question,
+          contentReleaseId: body.contentReleaseId,
+          answerReleaseId: body.answerReleaseId,
+          networkKey,
+          signal: controller.signal,
+          deadlineAt: deadline,
+          catalog,
+        }), controller.signal);
+      } catch (error) {
+        if (!controller.signal.aborted) this.readiness.hardFailure();
+        throw error;
+      }
       const status = responseStatus(outcome);
       if (outcome.kind === 'error' && outcome.code === 'rate-limited') reply.header('Retry-After', '20');
       reply.status(status).send(responseFor(outcome));
@@ -116,6 +144,17 @@ export class PublicAnswerController {
     if (origin === undefined && fetchSite === undefined) return;
     if (typeof origin !== 'string' || origin !== this.config.publicOrigin || fetchSite !== 'same-origin') {
       throw new HttpBoundaryError(400, 'browser origin is invalid');
+    }
+  }
+
+  private assertNoPublicFixtureControl(request: FastifyRequest): void {
+    const query = request.query;
+    const hasQuery = Boolean(query && typeof query === 'object' && Object.keys(query as object).length > 0);
+    const fixtureHeader = request.headers['x-fixture-scenario'];
+    const cookie = request.headers.cookie;
+    if (hasQuery || fixtureHeader !== undefined
+      || (typeof cookie === 'string' && /(?:^|;\s*)fixture-scenario=/iu.test(cookie))) {
+      throw new HttpBoundaryError(400, 'public fixture controls are forbidden');
     }
   }
 }

@@ -13,6 +13,7 @@ import { readVerifiedAnswerReleaseAuthority } from '../src/modules/public-answer
 
 export interface HarnessRun {
   command: string; args: readonly string[]; cwd: string; env: NodeJS.ProcessEnv; capture: boolean;
+  signal?: AbortSignal;
 }
 
 export interface TestPostgresHarnessDependencies {
@@ -33,12 +34,12 @@ export interface ServeFixtureOptions {
 
 export interface OwnedServerProcess {
   readonly wait: Promise<void>;
-  signal(signal: 'SIGINT' | 'SIGTERM'): void;
+  signal(signal: 'SIGINT' | 'SIGTERM' | 'SIGKILL'): void;
 }
 
 export interface ServeFixtureHarnessDependencies {
   readonly env: NodeJS.ProcessEnv;
-  startDatabase(): Promise<{ databaseUrl: string; stop(): Promise<void> }>;
+  startDatabase(signal: AbortSignal): Promise<{ databaseUrl: string; stop(): Promise<void> }>;
   verifyReleases(env: NodeJS.ProcessEnv): Promise<void>;
   migrate(env: NodeJS.ProcessEnv): Promise<void>;
   indexFixture(env: NodeJS.ProcessEnv): Promise<void>;
@@ -101,13 +102,29 @@ export function parseServeFixtureArguments(argv: readonly string[]): ServeFixtur
 
 function spawnRun(input: HarnessRun): Promise<string> {
   return new Promise((accept, reject) => {
+    if (input.signal?.aborted) { reject(input.signal.reason ?? new Error('owned process start aborted')); return; }
     const child = spawn(input.command, [...input.args], {
       cwd: input.cwd, env: input.env, stdio: input.capture ? ['ignore', 'pipe', 'inherit'] : 'inherit', shell: false,
     });
     let output = '';
+    let killTimer: NodeJS.Timeout | undefined;
+    const abort = () => {
+      child.kill('SIGTERM');
+      killTimer = setTimeout(() => child.kill('SIGKILL'), 2_000);
+      killTimer.unref();
+    };
+    input.signal?.addEventListener('abort', abort, { once: true });
     child.stdout?.on('data', (chunk: Buffer) => { output += chunk.toString('utf8'); });
-    child.once('error', reject);
-    child.once('exit', (code, signal) => code === 0 ? accept(output) : reject(new Error(`${input.command} exited ${code ?? signal}`)));
+    child.once('error', (error) => {
+      if (killTimer) clearTimeout(killTimer);
+      input.signal?.removeEventListener('abort', abort);
+      reject(error);
+    });
+    child.once('exit', (code, signal) => {
+      if (killTimer) clearTimeout(killTimer);
+      input.signal?.removeEventListener('abort', abort);
+      code === 0 ? accept(output) : reject(input.signal?.reason ?? new Error(`${input.command} exited ${code ?? signal}`));
+    });
   });
 }
 
@@ -130,22 +147,10 @@ function productionDependencies(): TestPostgresHarnessDependencies {
 function productionServeFixtureDependencies(): ServeFixtureHarnessDependencies {
   const composeFile = resolve(repositoryRoot, 'apps/server/compose.test.yml');
   const projectName = `beyondwin-public-answer-serve-${process.pid}`;
-  const docker = (args: readonly string[], capture = false) => spawnRun({
-    command: 'docker', args, cwd: repositoryRoot, env: process.env, capture,
-  });
   return {
     env: process.env,
-    async startDatabase() {
-      await docker(['compose', '-p', projectName, '-f', composeFile, 'up', '-d', '--wait']);
-      const mapped = (await docker(['compose', '-p', projectName, '-f', composeFile, 'port', 'postgres', '5432'], true)).trim();
-      const port = mapped.slice(mapped.lastIndexOf(':') + 1);
-      if (!/^\d+$/u.test(port)) throw new Error('Compose returned an invalid Postgres port');
-      return {
-        databaseUrl: `postgresql://beyondwin_test:beyondwin_test@127.0.0.1:${port}/beyondwin_test`,
-        async stop() {
-          await docker(['compose', '-p', projectName, '-f', composeFile, 'down', '-v', '--remove-orphans']);
-        },
-      };
+    async startDatabase(signal) {
+      return startOwnedFixtureDatabase({ repositoryRoot, composeFile, projectName, env: process.env, run: spawnRun }, signal);
     },
     async verifyReleases(env) {
       await readVerifiedAnswerReleaseAuthority(await parseServerConfig(env));
@@ -164,12 +169,23 @@ function productionServeFixtureDependencies(): ServeFixtureHarnessDependencies {
         '--tsconfig',
         resolve(repositoryRoot, 'apps/server/tsconfig.json'),
         resolve(repositoryRoot, 'apps/server/src/main.ts'),
-      ], { cwd: repositoryRoot, env, stdio: 'inherit', shell: false });
+      ], { cwd: repositoryRoot, env, stdio: 'inherit', shell: false, detached: process.platform !== 'win32' });
       const wait = new Promise<void>((accept, reject) => {
         child.once('error', reject);
         child.once('exit', (code, signal) => code === 0 ? accept() : reject(new Error(`fixture server exited ${code ?? signal}`)));
       });
-      return { wait, signal(signal) { child.kill(signal); } };
+      return {
+        wait,
+        signal(signal) {
+          if (!child.pid) return;
+          try {
+            if (process.platform === 'win32') child.kill(signal);
+            else process.kill(-child.pid, signal);
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+          }
+        },
+      };
     },
     async ready(origin) {
       try {
@@ -192,17 +208,69 @@ function productionServeFixtureDependencies(): ServeFixtureHarnessDependencies {
   };
 }
 
+export async function startOwnedFixtureDatabase(
+  dependencies: Readonly<Pick<TestPostgresHarnessDependencies,
+    'repositoryRoot' | 'composeFile' | 'projectName' | 'env' | 'run'>>,
+  signal?: AbortSignal,
+): Promise<{ databaseUrl: string; stop(): Promise<void> }> {
+  const docker = (args: readonly string[], capture = false, interruptible = true) => dependencies.run({
+    command: 'docker', args, cwd: dependencies.repositoryRoot, env: dependencies.env, capture,
+    ...(interruptible ? { signal } : {}),
+  });
+  let startupAttempted = false;
+  try {
+    startupAttempted = true;
+    await docker(['compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'up', '-d', '--wait']);
+    const mapped = (await docker([
+      'compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'port', 'postgres', '5432',
+    ], true)).trim();
+    const port = mapped.slice(mapped.lastIndexOf(':') + 1);
+    if (!/^\d+$/u.test(port)) throw new Error('Compose returned an invalid Postgres port');
+    return {
+      databaseUrl: `postgresql://beyondwin_test:beyondwin_test@127.0.0.1:${port}/beyondwin_test`,
+      async stop() {
+        await docker([
+          'compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'down', '-v', '--remove-orphans',
+        ], false, false);
+      },
+    };
+  } catch (error) {
+    if (startupAttempted) await dependencies.run({
+      command: 'docker',
+      args: ['compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'down', '-v', '--remove-orphans'],
+      cwd: dependencies.repositoryRoot,
+      env: dependencies.env,
+      capture: false,
+    }).catch(() => undefined);
+    throw error;
+  }
+}
+
 export async function runServeFixtureHarness(
   options: ServeFixtureOptions,
   dependencies: ServeFixtureHarnessDependencies = productionServeFixtureDependencies(),
 ): Promise<void> {
   if (dependencies.env.OPENAI_API_KEY !== undefined) throw new Error('serve-fixture forbids a provider key');
   let database: Awaited<ReturnType<ServeFixtureHarnessDependencies['startDatabase']>> | undefined;
+  let databaseStartup: Promise<Awaited<ReturnType<ServeFixtureHarnessDependencies['startDatabase']>>> | undefined;
   let server: OwnedServerProcess | undefined;
   let serverCompleted = false;
-  let removeSignals: () => void = () => undefined;
+  const startupController = new AbortController();
+  let interrupted: 'SIGINT' | 'SIGTERM' | undefined;
+  let notifyInterrupted!: (signal: 'SIGINT' | 'SIGTERM') => void;
+  const interruption = new Promise<'SIGINT' | 'SIGTERM'>((resolve) => { notifyInterrupted = resolve; });
+  const removeSignals = dependencies.onSignal((signal) => {
+    if (!interrupted) { interrupted = signal; notifyInterrupted(signal); }
+    startupController.abort(new Error(`serve-fixture interrupted by ${signal}`));
+    server?.signal(signal);
+  });
+  const interruptible = async <T,>(operation: Promise<T>): Promise<T> => Promise.race([
+    operation,
+    interruption.then((signal) => { throw new Error(`serve-fixture interrupted by ${signal}`); }),
+  ]);
   try {
-    database = await dependencies.startDatabase();
+    databaseStartup = dependencies.startDatabase(startupController.signal);
+    database = await interruptible(databaseStartup);
     const env: NodeJS.ProcessEnv = {
       ...dependencies.env,
       NODE_ENV: 'test',
@@ -225,11 +293,11 @@ export async function runServeFixtureHarness(
     delete env.FORM_THOUGHT_OPENAI_DATA_CONTROL_RECEIPT;
     delete env.FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT;
     const indexingEnv = { ...env, FORM_THOUGHT_PUBLIC_ASK_MODE: 'fixture' };
-    await dependencies.verifyReleases(indexingEnv);
-    await dependencies.migrate(indexingEnv);
-    await dependencies.indexFixture(indexingEnv);
+    await interruptible(dependencies.verifyReleases(indexingEnv));
+    await interruptible(dependencies.migrate(indexingEnv));
+    await interruptible(dependencies.indexFixture(indexingEnv));
     server = dependencies.startServer(env);
-    removeSignals = dependencies.onSignal((signal) => server?.signal(signal));
+    if (interrupted) server.signal(interrupted);
     const startupDeadline = dependencies.clock() + 20_000;
     while (!await dependencies.ready(options.publicOrigin)) {
       if (dependencies.clock() >= startupDeadline) throw new Error('fixture server readiness deadline elapsed');
@@ -244,10 +312,19 @@ export async function runServeFixtureHarness(
     removeSignals();
     if (server && !serverCompleted) {
       server.signal('SIGTERM');
+      let stopped = false;
+      const observed = server.wait.then(() => { stopped = true; }, () => { stopped = true; });
       await Promise.race([
-        server.wait.catch(() => undefined),
-        dependencies.sleep(12_000),
+        observed,
+        dependencies.sleep(10_000),
       ]);
+      if (!stopped) {
+        server.signal('SIGKILL');
+        await Promise.race([observed, dependencies.sleep(2_000)]);
+      }
+    }
+    if (!database && databaseStartup) {
+      database = await databaseStartup.catch(() => undefined);
     }
     await database?.stop();
   }

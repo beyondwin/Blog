@@ -52,8 +52,8 @@ export class BoundedErrorFilter implements ExceptionFilter {
     const bounded = boundedError(error);
     const binding = this.readiness.startupBinding();
     if (binding) {
-      response.header('X-Content-Release-Id', binding.contentReleaseId);
-      response.header('X-Answer-Release-Id', binding.answerReleaseId);
+      if (!response.hasHeader('X-Content-Release-Id')) response.header('X-Content-Release-Id', binding.contentReleaseId);
+      if (!response.hasHeader('X-Answer-Release-Id')) response.header('X-Answer-Release-Id', binding.answerReleaseId);
     }
     if (bounded.retryAfter) response.header('Retry-After', bounded.retryAfter);
     response.status(bounded.status).send(publicAskResponseSchema.parse(bounded.body));

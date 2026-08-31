@@ -6,14 +6,36 @@ import { isAbsolute, resolve } from 'node:path';
 
 import { readProviderDataControlReceipt } from './provider-data-control-receipt.js';
 
+interface ProviderSpendReceiptInput {
+  projectHash: string; currency: 'USD'; monthlyHardCapMicroUsd: number; approvedSiteBudgetMicroUsd: number;
+  verifierIdentityHash: string; verifierRole: 'provider-admin'; verifiedAt: string; expiresAt: string;
+  externalEvidenceChecksum: string;
+}
+
 interface EdgeReachabilityReceiptInput {
-  schemaVersion: 1; edgeOnly: true; replicaCount: 1; publicOrigin: string;
-  trustedProxyAddresses: readonly string[]; providerProjectSpendCapEvidenceChecksum: string;
-  verifierIdentityHash: string; approvedAt: string; expiresAt: string;
+  schemaVersion: 1; publicOrigin: string; replicaCount: 1;
+  deployerIdentityHash: string; deployerRole: string; edgeOwnerIdentityHash: string;
+  trustedProxyAddresses: readonly string[]; directOriginReachability: 'failed'; forwardedHeaderPolicy: 'overwrite';
+  logOwnerIdentityHash: string; metricsOwnerIdentityHash: string; apmOwnerIdentityHash: string;
+  crashOwnerIdentityHash: string; backupOwnerIdentityHash: string;
+  retentionTtlDays: number; purgeMechanism: string; latestDeletionProofAt: string;
+  providerDataControlReceiptHash: string; providerSpend: ProviderSpendReceiptInput;
+  verifiedAt: string; expiresAt: string; externalEvidenceChecksum: string;
 }
 
 type SealedEdgeReachabilityReceipt = EdgeReachabilityReceiptInput & { evidenceChecksum: string };
 const checksumPattern = /^sha256:[a-f0-9]{64}$/u;
+const operationsKeys = [
+  'schemaVersion','publicOrigin','replicaCount','deployerIdentityHash','deployerRole','edgeOwnerIdentityHash',
+  'trustedProxyAddresses','directOriginReachability','forwardedHeaderPolicy','logOwnerIdentityHash','metricsOwnerIdentityHash',
+  'apmOwnerIdentityHash','crashOwnerIdentityHash','backupOwnerIdentityHash','retentionTtlDays','purgeMechanism',
+  'latestDeletionProofAt','providerDataControlReceiptHash','providerSpend','verifiedAt','expiresAt','externalEvidenceChecksum',
+  'evidenceChecksum',
+] as const;
+const spendKeys = [
+  'projectHash','currency','monthlyHardCapMicroUsd','approvedSiteBudgetMicroUsd','verifierIdentityHash','verifierRole',
+  'verifiedAt','expiresAt','externalEvidenceChecksum',
+] as const;
 
 function hash(value: string | Buffer): string {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
@@ -22,21 +44,37 @@ function hash(value: string | Buffer): string {
 export function canonicalEdgeReachabilityReceipt(input: EdgeReachabilityReceiptInput): Readonly<SealedEdgeReachabilityReceipt> {
   const normalized: EdgeReachabilityReceiptInput = {
     schemaVersion: input.schemaVersion,
-    edgeOnly: input.edgeOnly,
-    replicaCount: input.replicaCount,
     publicOrigin: input.publicOrigin,
+    replicaCount: input.replicaCount,
+    deployerIdentityHash: input.deployerIdentityHash,
+    deployerRole: input.deployerRole,
+    edgeOwnerIdentityHash: input.edgeOwnerIdentityHash,
     trustedProxyAddresses: Object.freeze([...input.trustedProxyAddresses]),
-    providerProjectSpendCapEvidenceChecksum: input.providerProjectSpendCapEvidenceChecksum,
-    verifierIdentityHash: input.verifierIdentityHash,
-    approvedAt: input.approvedAt,
+    directOriginReachability: input.directOriginReachability,
+    forwardedHeaderPolicy: input.forwardedHeaderPolicy,
+    logOwnerIdentityHash: input.logOwnerIdentityHash,
+    metricsOwnerIdentityHash: input.metricsOwnerIdentityHash,
+    apmOwnerIdentityHash: input.apmOwnerIdentityHash,
+    crashOwnerIdentityHash: input.crashOwnerIdentityHash,
+    backupOwnerIdentityHash: input.backupOwnerIdentityHash,
+    retentionTtlDays: input.retentionTtlDays,
+    purgeMechanism: input.purgeMechanism,
+    latestDeletionProofAt: input.latestDeletionProofAt,
+    providerDataControlReceiptHash: input.providerDataControlReceiptHash,
+    providerSpend: Object.freeze({ ...input.providerSpend }),
+    verifiedAt: input.verifiedAt,
     expiresAt: input.expiresAt,
+    externalEvidenceChecksum: input.externalEvidenceChecksum,
   };
   return Object.freeze({ ...normalized, evidenceChecksum: hash(JSON.stringify(normalized)) });
 }
 
 async function readEdgeReachabilityReceipt(
   path: string,
-  expected: Readonly<{ publicOrigin: string; trustedProxyAddresses: readonly string[]; spendCapEvidenceChecksum: string }>,
+  expected: Readonly<{
+    publicOrigin: string; trustedProxyAddresses: readonly string[];
+    provider: Awaited<ReturnType<typeof readProviderDataControlReceipt>>;
+  }>,
   now = new Date(),
 ): Promise<void> {
   const before = await lstat(path);
@@ -53,23 +91,48 @@ async function readEdgeReachabilityReceipt(
       throw new Error('edge reachability receipt changed while reading');
     }
     const parsed = JSON.parse(bytes.toString('utf8')) as Record<string, unknown>;
-    const keys = [
-      'schemaVersion', 'edgeOnly', 'replicaCount', 'publicOrigin', 'trustedProxyAddresses',
-      'providerProjectSpendCapEvidenceChecksum', 'verifierIdentityHash', 'approvedAt', 'expiresAt', 'evidenceChecksum',
-    ];
-    if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join('\0') !== [...keys].sort().join('\0')) {
+    if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join('\0') !== [...operationsKeys].sort().join('\0')) {
       throw new Error('edge reachability receipt has missing or unknown fields');
     }
+    if (!parsed.providerSpend || typeof parsed.providerSpend !== 'object' || Array.isArray(parsed.providerSpend)
+      || Object.keys(parsed.providerSpend as object).sort().join('\0') !== [...spendKeys].sort().join('\0')) {
+      throw new Error('provider spend receipt has missing or unknown fields');
+    }
+    const rawSpend = parsed.providerSpend as Record<string, unknown>;
+    const providerSpend: ProviderSpendReceiptInput = {
+      projectHash: rawSpend.projectHash as string,
+      currency: rawSpend.currency as 'USD',
+      monthlyHardCapMicroUsd: rawSpend.monthlyHardCapMicroUsd as number,
+      approvedSiteBudgetMicroUsd: rawSpend.approvedSiteBudgetMicroUsd as number,
+      verifierIdentityHash: rawSpend.verifierIdentityHash as string,
+      verifierRole: rawSpend.verifierRole as 'provider-admin',
+      verifiedAt: rawSpend.verifiedAt as string,
+      expiresAt: rawSpend.expiresAt as string,
+      externalEvidenceChecksum: rawSpend.externalEvidenceChecksum as string,
+    };
     const input: EdgeReachabilityReceiptInput = {
       schemaVersion: parsed.schemaVersion as 1,
-      edgeOnly: parsed.edgeOnly as true,
-      replicaCount: parsed.replicaCount as 1,
       publicOrigin: parsed.publicOrigin as string,
+      replicaCount: parsed.replicaCount as 1,
+      deployerIdentityHash: parsed.deployerIdentityHash as string,
+      deployerRole: parsed.deployerRole as string,
+      edgeOwnerIdentityHash: parsed.edgeOwnerIdentityHash as string,
       trustedProxyAddresses: parsed.trustedProxyAddresses as string[],
-      providerProjectSpendCapEvidenceChecksum: parsed.providerProjectSpendCapEvidenceChecksum as string,
-      verifierIdentityHash: parsed.verifierIdentityHash as string,
-      approvedAt: parsed.approvedAt as string,
+      directOriginReachability: parsed.directOriginReachability as 'failed',
+      forwardedHeaderPolicy: parsed.forwardedHeaderPolicy as 'overwrite',
+      logOwnerIdentityHash: parsed.logOwnerIdentityHash as string,
+      metricsOwnerIdentityHash: parsed.metricsOwnerIdentityHash as string,
+      apmOwnerIdentityHash: parsed.apmOwnerIdentityHash as string,
+      crashOwnerIdentityHash: parsed.crashOwnerIdentityHash as string,
+      backupOwnerIdentityHash: parsed.backupOwnerIdentityHash as string,
+      retentionTtlDays: parsed.retentionTtlDays as number,
+      purgeMechanism: parsed.purgeMechanism as string,
+      latestDeletionProofAt: parsed.latestDeletionProofAt as string,
+      providerDataControlReceiptHash: parsed.providerDataControlReceiptHash as string,
+      providerSpend,
+      verifiedAt: parsed.verifiedAt as string,
       expiresAt: parsed.expiresAt as string,
+      externalEvidenceChecksum: parsed.externalEvidenceChecksum as string,
     };
     const evidenceChecksum = parsed.evidenceChecksum;
     if (evidenceChecksum !== hash(JSON.stringify(input)) || typeof evidenceChecksum !== 'string' || !checksumPattern.test(evidenceChecksum)) {
@@ -84,15 +147,35 @@ async function readEdgeReachabilityReceipt(
       }
       return Date.parse(value);
     };
-    const approvedAt = exactInstant(input.approvedAt, 'approvedAt');
+    const verifiedAt = exactInstant(input.verifiedAt, 'verifiedAt');
     const expiresAt = exactInstant(input.expiresAt, 'expiresAt');
-    if (input.schemaVersion !== 1 || input.edgeOnly !== true || input.replicaCount !== 1
+    const deletionProofAt = exactInstant(input.latestDeletionProofAt, 'latestDeletionProofAt');
+    const spendVerifiedAt = exactInstant(providerSpend.verifiedAt, 'providerSpend.verifiedAt');
+    const spendExpiresAt = exactInstant(providerSpend.expiresAt, 'providerSpend.expiresAt');
+    const identityFields = [
+      input.deployerIdentityHash,input.edgeOwnerIdentityHash,input.logOwnerIdentityHash,input.metricsOwnerIdentityHash,
+      input.apmOwnerIdentityHash,input.crashOwnerIdentityHash,input.backupOwnerIdentityHash,providerSpend.verifierIdentityHash,
+    ];
+    if (input.schemaVersion !== 1 || input.replicaCount !== 1
       || input.publicOrigin !== expected.publicOrigin
       || JSON.stringify(input.trustedProxyAddresses) !== JSON.stringify(expected.trustedProxyAddresses)
-      || input.providerProjectSpendCapEvidenceChecksum !== expected.spendCapEvidenceChecksum
-      || typeof input.verifierIdentityHash !== 'string' || !checksumPattern.test(input.verifierIdentityHash)
-      || approvedAt > now.getTime() || expiresAt <= now.getTime()) {
-      throw new Error('edge reachability receipt does not prove the production edge or provider-project spend cap');
+      || input.directOriginReachability !== 'failed' || input.forwardedHeaderPolicy !== 'overwrite'
+      || !input.deployerRole || !input.purgeMechanism || !Number.isSafeInteger(input.retentionTtlDays) || input.retentionTtlDays < 1
+      || !identityFields.every((value) => typeof value === 'string' && checksumPattern.test(value))
+      || typeof input.externalEvidenceChecksum !== 'string' || !checksumPattern.test(input.externalEvidenceChecksum)
+      || input.providerDataControlReceiptHash !== expected.provider.receiptHash
+      || providerSpend.projectHash !== expected.provider.projectHash || providerSpend.currency !== 'USD'
+      || !Number.isSafeInteger(providerSpend.monthlyHardCapMicroUsd) || providerSpend.monthlyHardCapMicroUsd < 0
+      || !Number.isSafeInteger(providerSpend.approvedSiteBudgetMicroUsd) || providerSpend.approvedSiteBudgetMicroUsd < 0
+      || providerSpend.monthlyHardCapMicroUsd > providerSpend.approvedSiteBudgetMicroUsd
+      || providerSpend.verifierRole !== 'provider-admin'
+      || typeof providerSpend.externalEvidenceChecksum !== 'string' || !checksumPattern.test(providerSpend.externalEvidenceChecksum)
+      || new Set(identityFields).size !== identityFields.length
+      || expected.provider.verifierIdentityHash === input.deployerIdentityHash
+      || expected.provider.custodianIdentityHash === input.deployerIdentityHash
+      || verifiedAt > now.getTime() || expiresAt <= now.getTime() || deletionProofAt > now.getTime()
+      || spendVerifiedAt > now.getTime() || spendExpiresAt <= now.getTime()) {
+      throw new Error('operations receipt does not prove the production edge, ownership, retention, deletion, or provider spend controls');
     }
   } finally { await handle.close(); }
 }
@@ -232,7 +315,7 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
     }
     const providerReceipt = await readProviderDataControlReceipt(providerDataControlReceiptPath);
     await readEdgeReachabilityReceipt(edgeReachabilityReceiptPath, {
-      publicOrigin, trustedProxyAddresses, spendCapEvidenceChecksum: providerReceipt.spendCapEvidenceChecksum,
+      publicOrigin, trustedProxyAddresses, provider: providerReceipt,
     });
   }
   const result: ServerConfig = {

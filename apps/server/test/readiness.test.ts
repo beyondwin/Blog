@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 
 import { RuntimeReadiness, runRuntimeStartupChecks } from '../src/health/runtime-readiness.js';
 import { createApplication } from '../src/main.js';
+import { PublicAnswerDeadlineError } from '../src/modules/public-answer/domain/public-answer-errors.js';
+import { VerifiedAnswerReleaseCatalogSource } from '../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
+import { providerChecksum } from '../src/modules/public-answer/infrastructure/openai/provider-json.js';
 import {
   parseServeFixtureArguments,
   runServeFixtureHarness,
+  startOwnedFixtureDatabase,
   type ServeFixtureHarnessDependencies,
 } from '../scripts/with-test-postgres.mjs';
 
@@ -19,16 +24,35 @@ afterEach(async () => Promise.all(apps.splice(0).map((app) => app.close())));
 describe('runtime readiness', () => {
   it('rejects database chunk checksum/model/dimension drift without any provider call', async () => {
     let providerCalls = 0;
+    const vector = Array(3072).fill(0) as number[];
+    const vectorBytes = Buffer.alloc(vector.length * 4);
+    vector.forEach((value, index) => vectorBytes.writeFloatBE(Math.fround(value), index * 4));
+    const vectorChecksum = `sha256:${createHash('sha256').update(vectorBytes).digest('hex')}`;
+    const expectedIndexRows = [{
+      chunkId: 'chunk-1', chunkChecksum: `sha256:${'4'.repeat(64)}`, recordId: 'articles/example',
+      canonicalPath: '/articles/example/', title: 'Example', headingPath: ['Heading'], body: 'public body',
+      searchText: 'public search', vectorChecksum, model: 'text-embedding-3-large', dimensions: 3072, source: 'fixture',
+    }];
     const catalog = Object.freeze({
       ...binding,
       bindingId: '11111111-1111-4111-8111-111111111111',
       embeddingSource: 'fixture' as const,
       embeddingReceiptHash: `sha256:${'3'.repeat(64)}`,
       chunkChecksumById: new Map([['chunk-1', `sha256:${'4'.repeat(64)}`]]),
+      indexInputByChunkId: new Map([['chunk-1', Object.freeze({
+        recordId: 'articles/example', canonicalPath: '/articles/example/', title: 'Example', headingPath: ['Heading'],
+        body: 'public body', searchText: 'public search',
+      })]]),
+      vectorChecksumByChunkId: new Map([['chunk-1', vectorChecksum]]),
+      vectorSetChecksum: providerChecksum([{ chunkId: 'chunk-1', chunkChecksum: `sha256:${'4'.repeat(64)}`, vectorChecksum }]),
+      indexRowsChecksum: providerChecksum(expectedIndexRows),
+      indexChecksum: `sha256:${'8'.repeat(64)}`,
     });
     const rows = [{
       chunk_id: 'chunk-1', chunk_checksum: `sha256:${'4'.repeat(64)}`,
       embedding_model: 'text-embedding-3-large', embedding_dimensions: 3072,
+      record_id: 'articles/example', canonical_path: '/articles/example/', title: 'Example', heading_path: ['Heading'],
+      body: 'public body', search_text: 'public search', embedding: `[${vector.join(',')}]`,
     }];
     const config = { publicAskMode: 'fixture', providerDataControlReceiptPath: null, providerEmbeddingReceiptRoot: null } as any;
     const dependencies = {
@@ -45,12 +69,53 @@ describe('runtime readiness', () => {
       { chunk_checksum: `sha256:${'9'.repeat(64)}` },
       { embedding_model: 'other-model' },
       { embedding_dimensions: 1536 },
+      { search_text: 'drifted search payload' },
+      { embedding: `[1,${vector.slice(1).join(',')}]` },
     ]) {
       const drifted = { ...dependencies, pool: { async query(sql: string) {
         return sql === 'SELECT 1' ? { rows: [{}] } : { rows: [{ ...rows[0], ...mutation }] };
       } } };
       await expect(runRuntimeStartupChecks(config, drifted as any)).rejects.toThrow(/drift/u);
     }
+  });
+
+  it('aborts catalog filesystem or pool acquisition at the shared absolute deadline with the exact typed reason', async () => {
+    let resolveClient!: (client: any) => void;
+    let released: boolean | undefined;
+    const config = {
+      nodeEnv: 'test', corpusApprovalPath: '/approval', contentReleaseRoot: '/content', answerReleaseRoot: '/answer',
+      providerEmbeddingReceiptRoot: null,
+    } as any;
+    const readers = {
+      async readApproval() { return { schemaVersion: 1, entries: [] }; },
+      async readContent() { return { manifest: { releaseId: '1'.repeat(64), records: {} }, manifestHash: `sha256:${'1'.repeat(64)}`, artifactHash: `sha256:${'2'.repeat(64)}` }; },
+      async readAnswer() {
+        return {
+          releasePath: '/answer/release', contentReleaseId: '1'.repeat(64), answerReleaseId: '2'.repeat(64),
+          manifestHash: `sha256:${'3'.repeat(64)}`, artifactHash: `sha256:${'4'.repeat(64)}`,
+          corpusApprovalHash: `sha256:${'5'.repeat(64)}`, manifest: { identity: { contentManifestHash: `sha256:${'1'.repeat(64)}`, normalizerVersion: 'nfkc-lower-hangul-ngram-v1' } },
+          chunks: [], evidence: [], indexInputs: [],
+        };
+      },
+      async verifyAnswer() {},
+    };
+    const source = new VerifiedAnswerReleaseCatalogSource(config, {
+      connect: () => new Promise((resolve) => { resolveClient = resolve; }),
+    } as any, readers as any);
+    const controller = new AbortController();
+    const reason = new PublicAnswerDeadlineError('catalog deadline elapsed');
+    const pending = source.snapshot(controller.signal, performance.now() + 12_000);
+    for (let attempt = 0; attempt < 10 && !resolveClient; attempt += 1) await Promise.resolve();
+    expect(resolveClient).toBeTypeOf('function');
+    controller.abort(reason);
+    const result = await Promise.race([
+      pending.then(() => ({ kind: 'resolved' as const }), (error) => ({ kind: 'rejected' as const, error })),
+      new Promise<{ kind: 'hung' }>((resolve) => setTimeout(() => resolve({ kind: 'hung' }), 50)),
+    ]);
+    resolveClient({ query: async () => ({ rows: [], rowCount: 0 }), release(destroy?: boolean) { released = destroy; } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(result).toEqual({ kind: 'rejected', error: reason });
+    expect(released).toBe(true);
   });
 
   it('strict-reopens provider evidence and binds its data-control/pricing hashes', async () => {
@@ -60,6 +125,11 @@ describe('runtime readiness', () => {
       embeddingSource: 'provider' as const,
       embeddingReceiptHash: `sha256:${'3'.repeat(64)}`,
       chunkChecksumById: new Map(),
+      indexInputByChunkId: new Map(),
+      vectorChecksumByChunkId: new Map(),
+      vectorSetChecksum: providerChecksum([]),
+      indexRowsChecksum: providerChecksum([]),
+      indexChecksum: `sha256:${'8'.repeat(64)}`,
     });
     const config = {
       publicAskMode: 'provider', providerDataControlReceiptPath: '/receipts/control.json',
@@ -258,9 +328,110 @@ describe('owned fixture serve harness', () => {
     const running = runServeFixtureHarness({
       host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
     }, h.dependencies);
-    while (!handler) await Promise.resolve();
+    while (!handler || !h.events.includes('server.start')) await Promise.resolve();
     handler(signal);
     await running;
-    expect(h.events.slice(-3)).toEqual([`server.signal:${signal}`, 'signals.remove', 'database.stop']);
+    expect(h.events).toContain(`server.signal:${signal}`);
+    expect(h.events.indexOf(`server.signal:${signal}`)).toBeLessThan(h.events.indexOf('database.stop'));
+    expect(h.events.slice(-2)).toEqual(['signals.remove', 'database.stop']);
+  });
+
+  it('owns signals before database startup and cleans a database handle that arrives after interruption', async () => {
+    let handler: ((signal: 'SIGINT' | 'SIGTERM') => void) | undefined;
+    let finishDatabase!: () => void;
+    const databaseGate = new Promise<void>((resolve) => { finishDatabase = resolve; });
+    const h = fixtureDependencies({
+      async startDatabase() {
+        h.events.push('database.start');
+        await databaseGate;
+        return {
+          databaseUrl: 'postgresql://fixture:fixture@127.0.0.1:6543/fixture',
+          async stop() { h.events.push('database.stop'); },
+        };
+      },
+      onSignal(next) { handler = next; return () => { h.events.push('signals.remove'); }; },
+    });
+    const running = runServeFixtureHarness({
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+    }, h.dependencies);
+    await Promise.resolve();
+    expect(handler).toBeTypeOf('function');
+    handler!('SIGINT');
+    finishDatabase();
+    await expect(running).rejects.toThrow(/interrupt/i);
+    expect(h.events).toContain('database.stop');
+    expect(h.events).not.toContain('release.verify');
+  });
+
+  it('force-terminates a server child that ignores graceful termination before removing its database', async () => {
+    const h = fixtureDependencies({
+      startServer() {
+        h.events.push('server.start');
+        return {
+          signal(value) { h.events.push(`server.signal:${value}`); },
+          wait: new Promise<void>(() => undefined),
+        };
+      },
+      async ready() { throw new Error('readiness failed'); },
+      async sleep() { h.events.push('bounded.wait'); },
+    });
+    await expect(runServeFixtureHarness({
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+    }, h.dependencies)).rejects.toThrow('readiness failed');
+    expect(h.events).toContain('server.signal:SIGTERM');
+    expect(h.events).toContain('server.signal:SIGKILL');
+    expect(h.events.indexOf('server.signal:SIGKILL')).toBeLessThan(h.events.indexOf('database.stop'));
+  });
+
+  it('removes a partially created owned Docker project when startup or port discovery fails', async () => {
+    const calls: string[] = [];
+    await expect(startOwnedFixtureDatabase({
+      repositoryRoot: '/repo', composeFile: '/repo/compose.yml', projectName: 'owned-fixture', env: {},
+      async run(input) {
+        calls.push(input.args.join(' '));
+        if (input.args.includes('up')) throw new Error('partial startup');
+        return '';
+      },
+    })).rejects.toThrow('partial startup');
+    expect(calls).toEqual([
+      'compose -p owned-fixture -f /repo/compose.yml up -d --wait',
+      'compose -p owned-fixture -f /repo/compose.yml down -v --remove-orphans',
+    ]);
+  });
+
+  it('interrupts an in-flight owned Docker startup and tears down the exact project', async () => {
+    const calls: string[] = [];
+    const controller = new AbortController();
+    const starting = startOwnedFixtureDatabase({
+      repositoryRoot: '/repo', composeFile: '/repo/compose.yml', projectName: 'owned-interrupted', env: {},
+      async run(input) {
+        calls.push(input.args.join(' '));
+        if (input.args.includes('up')) {
+          await new Promise<void>((_resolve, reject) => {
+            input.signal?.addEventListener('abort', () => reject(input.signal?.reason), { once: true });
+          });
+        }
+        return '';
+      },
+    }, controller.signal);
+    controller.abort(new Error('operator interruption'));
+    await expect(starting).rejects.toThrow('operator interruption');
+    expect(calls).toEqual([
+      'compose -p owned-interrupted -f /repo/compose.yml up -d --wait',
+      'compose -p owned-interrupted -f /repo/compose.yml down -v --remove-orphans',
+    ]);
+  });
+
+  it('does not probe, signal, or replace an unrelated listener when owned server startup fails', async () => {
+    let unrelatedSignals = 0;
+    const h = fixtureDependencies({
+      startServer() { throw new Error('owned port already in use'); },
+      onSignal() { return () => undefined; },
+    });
+    await expect(runServeFixtureHarness({
+      host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+    }, h.dependencies)).rejects.toThrow('owned port already in use');
+    expect(unrelatedSignals).toBe(0);
+    expect(h.events.at(-1)).toBe('database.stop');
   });
 });

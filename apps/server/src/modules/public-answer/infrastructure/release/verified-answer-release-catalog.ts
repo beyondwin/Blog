@@ -3,7 +3,11 @@ import type { Pool } from 'pg';
 import type { ServerConfig } from '../../../../config/server-config.js';
 import type { AnswerReleaseCatalogSource } from '../../application/ports/answer-release-catalog.js';
 import type { AnswerReleaseCatalogSnapshot, AuthorizedEvidence } from '../../domain/public-answer.js';
+import { PublicAnswerDeadlineError } from '../../domain/public-answer-errors.js';
+import { DeterministicEmbeddingClient } from '../fixture/deterministic-embedding-client.js';
 import { readProviderEmbeddingReceipt } from '../openai/provider-embedding-receipt.js';
+import { providerChecksum } from '../openai/provider-json.js';
+import { createFixtureEmbeddingReceipt, prepareEmbeddingSet } from '../postgres/postgres-answer-release-indexer.js';
 
 const serverVerifiedAnswerRelease = Symbol('ServerVerifiedActivePublicAnswerRelease');
 interface PublicAnswerCorpusApproval { readonly schemaVersion: 1; readonly entries: readonly unknown[] }
@@ -104,7 +108,42 @@ export interface VerifiedCatalogSnapshot extends AnswerReleaseCatalogSnapshot {
   readonly evidenceById: ReadonlyMap<string, AuthorizedEvidence>;
   readonly chunkById: ReadonlyMap<string, VerifiedActivePublicAnswerReleaseAuthority['chunks'][number]>;
   readonly chunkChecksumById: ReadonlyMap<string, string>;
+  readonly indexInputByChunkId: ReadonlyMap<string, Readonly<{
+    recordId: string; canonicalPath: string; title: string; headingPath: readonly string[]; body: string; searchText: string;
+  }>>;
+  readonly vectorChecksumByChunkId: ReadonlyMap<string, string>;
+  readonly vectorSetChecksum: string;
+  readonly indexRowsChecksum: string;
+  readonly indexChecksum: string;
   readonly tombstones: ReadonlySet<string>;
+}
+
+async function beforeDeadline<T>(
+  operation: Promise<T>, signal: AbortSignal, deadlineAt?: number, disposeLate?: (value: T) => void,
+): Promise<T> {
+  if (signal.aborted) throw signal.reason ?? new Error('catalog snapshot aborted');
+  const remaining = deadlineAt === undefined ? Number.POSITIVE_INFINITY : deadlineAt - performance.now();
+  if (remaining <= 0) throw new PublicAnswerDeadlineError('catalog snapshot deadline elapsed');
+  let timer: NodeJS.Timeout | undefined;
+  let listener: (() => void) | undefined;
+  let completed = false;
+  try {
+    const interrupted = new Promise<never>((_resolve, reject) => {
+      listener = () => reject(signal.reason ?? new Error('catalog snapshot aborted'));
+      signal.addEventListener('abort', listener, { once: true });
+      if (Number.isFinite(remaining)) {
+        timer = setTimeout(() => reject(new PublicAnswerDeadlineError('catalog snapshot deadline elapsed')), remaining);
+        timer.unref();
+      }
+    });
+    const value = await Promise.race([operation, interrupted]);
+    completed = true;
+    return value;
+  } finally {
+    if (timer) clearTimeout(timer);
+    if (listener) signal.removeEventListener('abort', listener);
+    if (!completed && disposeLate) void operation.then(disposeLate, () => undefined);
+  }
 }
 
 export async function readVerifiedAnswerReleaseAuthority(config: Readonly<Pick<ServerConfig,
@@ -170,18 +209,24 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
     await this.readers.verifyAnswer(path, content, approval);
   }
 
-  async snapshot(signal: AbortSignal): Promise<VerifiedCatalogSnapshot> {
+  async snapshot(signal: AbortSignal, deadlineAt?: number): Promise<VerifiedCatalogSnapshot> {
     if (signal.aborted) throw signal.reason ?? new Error('catalog snapshot aborted');
-    const approval = await this.readers.readApproval(this.config.corpusApprovalPath);
-    const content = await this.readers.readContent(this.config.contentReleaseRoot);
-    const release = await this.readers.readAnswer(this.config.answerReleaseRoot, content, approval);
-    const client = await this.pool.connect();
+    const approval = await beforeDeadline(this.readers.readApproval(this.config.corpusApprovalPath), signal, deadlineAt);
+    const content = await beforeDeadline(this.readers.readContent(this.config.contentReleaseRoot), signal, deadlineAt);
+    const release = await beforeDeadline(this.readers.readAnswer(this.config.answerReleaseRoot, content, approval), signal, deadlineAt);
+    const client = await beforeDeadline(this.pool.connect(), signal, deadlineAt, (late) => late.release(true));
+    let clientReleased = false;
+    const query = async <T extends Record<string, unknown> = Record<string, unknown>>(text: string, values?: readonly unknown[]) => (
+      beforeDeadline(client.query<T>(text, values ? [...values] : undefined), signal, deadlineAt, () => {
+        if (!clientReleased) { clientReleased = true; client.release(true); }
+      })
+    );
     try {
-      await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-      const bindingResult = await client.query<{
+      await query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+      const bindingResult = await query<{
         binding_id: string; content_release_id: string; answer_release_id: string; content_manifest_hash: string;
         answer_manifest_hash: string; answer_artifact_hash: string; embedding_source: 'fixture' | 'provider';
-        embedding_receipt_hash: string; chunk_count: number;
+        embedding_model: string; embedding_dimensions: number; embedding_receipt_hash: string; chunk_count: number;
         index_checksum: string;
       }>("SELECT * FROM public_answer_release_bindings WHERE state='active'");
       if (bindingResult.rowCount !== 1) throw new Error('catalog requires exactly one active binding');
@@ -190,18 +235,43 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
       if (binding.content_release_id !== release.contentReleaseId || binding.answer_release_id !== release.answerReleaseId
         || binding.content_manifest_hash !== release.manifest.identity.contentManifestHash
         || binding.answer_manifest_hash !== release.manifestHash || binding.answer_artifact_hash !== release.artifactHash
+        || binding.embedding_model !== 'text-embedding-3-large' || binding.embedding_dimensions !== 3072
         || binding.chunk_count !== release.chunks.length) throw new Error('filesystem release and active binding mismatch');
+      let vectorChecksumByChunkId: ReadonlyMap<string, string>;
+      let vectorSetChecksum: string;
       if (binding.embedding_source === 'provider') {
         if (!this.config.providerEmbeddingReceiptRoot) throw new Error('provider binding requires configured durable receipt root');
         const receipt = await readProviderEmbeddingReceipt(this.config.providerEmbeddingReceiptRoot, binding.answer_release_id, binding.embedding_receipt_hash);
         if (receipt.contentReleaseId !== binding.content_release_id || receipt.answerReleaseId !== binding.answer_release_id
           || receipt.contentManifestHash !== binding.content_manifest_hash || receipt.answerManifestHash !== binding.answer_manifest_hash
           || receipt.answerArtifactHash !== binding.answer_artifact_hash || receipt.corpusApprovalHash !== release.corpusApprovalHash
-          || receipt.indexChecksum !== binding.index_checksum) throw new Error('active provider binding durable receipt mismatch');
+          || receipt.indexChecksum !== binding.index_checksum || receipt.entries.length !== release.indexInputs.length
+          || receipt.entries.some((entry, index) => entry.chunkChecksum !== release.indexInputs[index]!.chunkChecksum)) {
+          throw new Error('active provider binding durable receipt mismatch');
+        }
+        vectorChecksumByChunkId = immutableMap(release.indexInputs.map((input, index) => [
+          input.chunkId, receipt.entries[index]!.vectorChecksum,
+        ] as const));
+        vectorSetChecksum = providerChecksum(release.indexInputs.map((input, index) => ({
+          chunkId: input.chunkId, chunkChecksum: input.chunkChecksum, vectorChecksum: receipt.entries[index]!.vectorChecksum,
+        })));
+        if (vectorSetChecksum !== receipt.providerVectorSetChecksum) throw new Error('active provider vector-set checksum mismatch');
+      } else {
+        const fixturePrepared = await beforeDeadline(prepareEmbeddingSet(
+          release, new DeterministicEmbeddingClient(this.config.nodeEnv), signal,
+        ), signal, deadlineAt);
+        const fixtureReceipt = createFixtureEmbeddingReceipt(fixturePrepared);
+        if (binding.binding_id !== fixtureReceipt.bindingId
+          || binding.embedding_receipt_hash !== fixtureReceipt.receiptHash || binding.index_checksum !== fixtureReceipt.indexChecksum
+          || binding.content_release_id !== fixtureReceipt.contentReleaseId || binding.answer_release_id !== fixtureReceipt.answerReleaseId) {
+          throw new Error('active fixture binding provenance mismatch');
+        }
+        vectorChecksumByChunkId = immutableMap(fixturePrepared.vectors.map((entry) => [entry.chunkId, entry.vectorChecksum] as const));
+        vectorSetChecksum = fixturePrepared.vectorSetChecksum;
       }
-      const tombstoneRows = (await client.query<{ entity_kind: 'record' | 'evidence'; entity_id: string }>(
+      const tombstoneRows = (await query<{ entity_kind: 'record' | 'evidence'; entity_id: string }>(
         'SELECT entity_kind,entity_id FROM public_answer_tombstones ORDER BY entity_kind,entity_id')).rows;
-      await client.query('COMMIT');
+      await query('COMMIT');
       const tombstones = immutableSet(tombstoneRows.map((row) => `${row.entity_kind}:${row.entity_id}`));
       const records = content.manifest.records;
       const chunks = release.chunks.filter((chunk) => !tombstones.has(`record:${chunk.recordId}`));
@@ -221,11 +291,31 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
       const authorizedEvidenceLocations = immutableSet(evidence.map((item) => evidenceLocationKey(item)));
       const chunkById = immutableMap(chunks.map((item) => [item.chunkId, Object.freeze({ ...item })] as const));
       const chunkChecksumById = immutableMap(release.indexInputs.map((item) => [item.chunkId, item.chunkChecksum] as const));
+      const indexInputByChunkId = immutableMap(release.indexInputs.map((item) => [item.chunkId, Object.freeze({
+        recordId: item.recordId, canonicalPath: item.canonicalPath, title: item.title,
+        headingPath: Object.freeze([...item.headingPath]), body: item.text, searchText: item.searchText,
+      })] as const));
+      const indexRowsChecksum = providerChecksum(release.indexInputs.map((item) => ({
+        chunkId: item.chunkId,
+        chunkChecksum: item.chunkChecksum,
+        recordId: item.recordId,
+        canonicalPath: item.canonicalPath,
+        title: item.title,
+        headingPath: [...item.headingPath],
+        body: item.text,
+        searchText: item.searchText,
+        vectorChecksum: vectorChecksumByChunkId.get(item.chunkId)!,
+        model: 'text-embedding-3-large',
+        dimensions: 3072,
+        source: binding.embedding_source,
+      })).sort((left, right) => left.chunkId < right.chunkId ? -1 : left.chunkId > right.chunkId ? 1 : 0));
       const snapshot: VerifiedCatalogSnapshot = {
         bindingId: binding.binding_id, contentReleaseId: release.contentReleaseId, answerReleaseId: release.answerReleaseId,
         corpusApprovalHash: release.corpusApprovalHash, chunkCount: chunks.length,
         embeddingSource: binding.embedding_source, embeddingReceiptHash: binding.embedding_receipt_hash,
-        normalizerVersion: release.manifest.identity.normalizerVersion, evidenceById, chunkById, chunkChecksumById, tombstones,
+        normalizerVersion: release.manifest.identity.normalizerVersion, evidenceById, chunkById, chunkChecksumById,
+        indexInputByChunkId, vectorChecksumByChunkId, vectorSetChecksum, indexRowsChecksum,
+        indexChecksum: binding.index_checksum, tombstones,
         isBoundTo: (contentReleaseId, answerReleaseId) => (
           contentReleaseId === release.contentReleaseId && answerReleaseId === release.answerReleaseId
         ),
@@ -240,8 +330,8 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
       };
       return Object.freeze(snapshot);
     } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
+      if (!clientReleased) await client.query('ROLLBACK').catch(() => undefined);
       throw error;
-    } finally { client.release(); }
+    } finally { if (!clientReleased) client.release(); }
   }
 }

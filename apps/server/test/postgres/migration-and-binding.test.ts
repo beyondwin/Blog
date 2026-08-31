@@ -3,6 +3,8 @@ import { resolve } from 'node:path';
 import { Pool } from 'pg';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { runRuntimeStartupChecks } from '../../src/health/runtime-readiness.js';
+import { providerChecksum } from '../../src/modules/public-answer/infrastructure/openai/provider-json.js';
 import { runPostgresMigrations } from '../../src/modules/public-answer/infrastructure/postgres/postgres-migrations.js';
 import { DeterministicEmbeddingClient } from '../../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
 import {
@@ -161,6 +163,45 @@ describe('public answer Postgres migration', () => {
     const result = await new PostgresAnswerReleaseIndexer('test').activate(value, prepared, receipt, pool, new AbortController().signal);
     return { prepared, receipt, result };
   }
+
+  it('recomputes the active database vector-set and index-row checksums during readiness', async () => {
+    const value = release('a');
+    const active = await fixtureActivation(value);
+    const indexRows = active.prepared.indexRows.map((row) => ({ ...row, source: 'fixture' }));
+    const catalog = Object.freeze({
+      bindingId: active.receipt.bindingId,
+      contentReleaseId: value.contentReleaseId,
+      answerReleaseId: value.answerReleaseId,
+      corpusApprovalHash: value.corpusApprovalHash,
+      chunkCount: value.indexInputs.length,
+      embeddingSource: 'fixture' as const,
+      embeddingReceiptHash: active.receipt.receiptHash,
+      chunkChecksumById: new Map(value.indexInputs.map((input: any) => [input.chunkId, input.chunkChecksum])),
+      indexInputByChunkId: new Map(value.indexInputs.map((input: any) => [input.chunkId, {
+        recordId: input.recordId, canonicalPath: input.canonicalPath, title: input.title,
+        headingPath: input.headingPath, body: input.text, searchText: input.searchText,
+      }])),
+      vectorChecksumByChunkId: new Map(active.prepared.vectors.map((entry) => [entry.chunkId, entry.vectorChecksum])),
+      vectorSetChecksum: active.receipt.vectorSetChecksum,
+      indexRowsChecksum: providerChecksum(indexRows),
+      indexChecksum: active.receipt.indexChecksum,
+    });
+    const config = {
+      publicAskMode: 'fixture', providerDataControlReceiptPath: null, providerEmbeddingReceiptRoot: null,
+    } as const;
+    await expect(runRuntimeStartupChecks(config, {
+      pool,
+      catalogSource: { async snapshot() { return catalog as any; } },
+    })).resolves.toBe(catalog);
+
+    await pool.query('UPDATE public_answer_chunks SET search_text=$1 WHERE binding_id=$2', [
+      'substituted search payload', active.receipt.bindingId,
+    ]);
+    await expect(runRuntimeStartupChecks(config, {
+      pool,
+      catalogSource: { async snapshot() { return catalog as any; } },
+    })).rejects.toThrow(/provenance|checksum|drift/u);
+  });
 
   it('keeps the receipt and written payload detached from mutable verifier inputs and freezes prepared rows', async () => {
     const value = release('c');

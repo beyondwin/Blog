@@ -8,6 +8,7 @@ export interface Retriever {
     catalog: AnswerReleaseCatalogSnapshot;
     limit: 6;
     signal: AbortSignal;
+    deadlineAt?: number;
   }): Promise<{
     evidence: readonly AuthorizedEvidence[];
     sufficient: boolean;

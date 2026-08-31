@@ -122,7 +122,8 @@ describe('redacted telemetry schema and retention', () => {
       corpusApprovalHash: 'sha256:approval', chunkCount: 1, isBoundTo: () => false, evidenceFor: () => [],
       hasAuthorizedEvidenceLocation: () => false } as const;
     await expect(useCase.execute({ requestId: 'composed', question: '질문', contentReleaseId: catalog.contentReleaseId,
-      answerReleaseId: 'b'.repeat(64), networkKey: 'network', signal: new AbortController().signal, catalog })).resolves.toMatchObject({ kind: 'search', reason: 'release-mismatch' });
+      answerReleaseId: 'b'.repeat(64), networkKey: 'network', signal: new AbortController().signal,
+      deadlineAt: performance.now() + 12_000, catalog })).resolves.toMatchObject({ kind: 'search', reason: 'release-mismatch' });
     await sink.waitForIdle();
     expect((await pool.query('SELECT result_kind,latency_bucket,rate_bucket FROM public_answer_events WHERE request_id=$1',['composed'])).rows)
       .toEqual([{ result_kind: 'release-mismatch', latency_bucket: '<250ms', rate_bucket: 'admitted' }]);
@@ -150,7 +151,8 @@ describe('redacted telemetry schema and retention', () => {
       const catalog = { bindingId: 'binding', contentReleaseId: 'c'.repeat(64), answerReleaseId: 'a'.repeat(64), corpusApprovalHash: 'sha256:approval', chunkCount: 1,
         isBoundTo: () => false, evidenceFor: () => [], hasAuthorizedEvidenceLocation: () => false } as const;
       const answer = useCase.execute({ requestId: 'stalled', question: '질문', contentReleaseId: catalog.contentReleaseId,
-        answerReleaseId: 'b'.repeat(64), networkKey: 'network', signal: new AbortController().signal, catalog });
+        answerReleaseId: 'b'.repeat(64), networkKey: 'network', signal: new AbortController().signal,
+        deadlineAt: performance.now() + 12_000, catalog });
       await expect(Promise.race([answer, new Promise((accept) => setTimeout(() => accept('timeout'), 50))])).resolves.toMatchObject({ kind: 'search', reason: 'release-mismatch' });
       rejectStalled(new Error('late-database-secret'));
       await new Promise((accept) => setImmediate(accept));

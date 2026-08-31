@@ -4,26 +4,22 @@ import { lstat, open } from 'node:fs/promises';
 
 const checksumPattern = /^sha256:[a-f0-9]{64}$/u;
 const exactKeys = [
-  'schemaVersion', 'provider', 'projectId', 'endpoints', 'verifierIdentityHash', 'custodianIdentityHash',
-  'zeroDataRetentionEvidenceChecksum', 'spendCapEvidenceChecksum', 'approvedAt', 'expiresAt', 'evidenceChecksum',
+  'schemaVersion', 'provider', 'projectHash', 'endpoints', 'status', 'verifierRole',
+  'verifierIdentityHash', 'custodianIdentityHash', 'verifiedAt', 'expiresAt', 'externalEvidenceChecksum', 'evidenceChecksum',
 ] as const;
-const endpointKeys = ['embeddings', 'generation', 'semanticVerification'] as const;
 
 export interface ProviderDataControlReceiptInput {
   schemaVersion: 1;
   provider: 'openai';
-  projectId: string;
-  endpoints: {
-    embeddings: '/v1/embeddings';
-    generation: '/v1/responses';
-    semanticVerification: '/v1/responses';
-  };
+  projectHash: string;
+  endpoints: readonly ['/v1/embeddings', '/v1/responses'];
+  status: 'zero-data-retention';
+  verifierRole: 'provider-admin';
   verifierIdentityHash: string;
   custodianIdentityHash: string;
-  zeroDataRetentionEvidenceChecksum: string;
-  spendCapEvidenceChecksum: string;
-  approvedAt: string;
+  verifiedAt: string;
   expiresAt: string;
+  externalEvidenceChecksum: string;
 }
 
 export interface ProviderDataControlReceipt extends ProviderDataControlReceiptInput {
@@ -73,21 +69,24 @@ function validInstant(value: unknown, label: string): string {
 
 function parseInput(value: unknown, includeChecksum: boolean): ProviderDataControlReceiptInput & { evidenceChecksum?: string } {
   exactObject(value, includeChecksum ? exactKeys : exactKeys.slice(0, -1), 'provider data-control receipt');
-  exactObject(value.endpoints, endpointKeys, 'provider data-control endpoints');
-  if (value.schemaVersion !== 1 || value.provider !== 'openai' || typeof value.projectId !== 'string' || !value.projectId.trim()) {
+  if (value.schemaVersion !== 1 || value.provider !== 'openai' || typeof value.projectHash !== 'string'
+    || !checksumPattern.test(value.projectHash) || value.status !== 'zero-data-retention'
+    || value.verifierRole !== 'provider-admin') {
     throw new Error('provider data-control identity is invalid');
   }
-  if (value.endpoints.embeddings !== '/v1/embeddings'
-    || value.endpoints.generation !== '/v1/responses'
-    || value.endpoints.semanticVerification !== '/v1/responses') {
+  if (!Array.isArray(value.endpoints) || value.endpoints.length !== 2
+    || value.endpoints[0] !== '/v1/embeddings' || value.endpoints[1] !== '/v1/responses') {
     throw new Error('provider data-control receipt has an endpoint gap');
   }
   for (const field of [
-    'verifierIdentityHash', 'custodianIdentityHash', 'zeroDataRetentionEvidenceChecksum', 'spendCapEvidenceChecksum',
+    'verifierIdentityHash', 'custodianIdentityHash', 'externalEvidenceChecksum',
   ] as const) {
     if (typeof value[field] !== 'string' || !checksumPattern.test(value[field])) {
       throw new Error(`provider data-control ${field} is invalid`);
     }
+  }
+  if (value.verifierIdentityHash === value.custodianIdentityHash) {
+    throw new Error('provider data-control verifier and custodian identities must be distinct');
   }
   if (includeChecksum && (typeof value.evidenceChecksum !== 'string' || !checksumPattern.test(value.evidenceChecksum))) {
     throw new Error('provider data-control evidence checksum is invalid');
@@ -95,14 +94,15 @@ function parseInput(value: unknown, includeChecksum: boolean): ProviderDataContr
   return {
     schemaVersion: 1,
     provider: 'openai',
-    projectId: value.projectId,
-    endpoints: { embeddings: '/v1/embeddings', generation: '/v1/responses', semanticVerification: '/v1/responses' },
+    projectHash: value.projectHash,
+    endpoints: ['/v1/embeddings', '/v1/responses'],
+    status: 'zero-data-retention',
+    verifierRole: 'provider-admin',
     verifierIdentityHash: value.verifierIdentityHash as string,
     custodianIdentityHash: value.custodianIdentityHash as string,
-    zeroDataRetentionEvidenceChecksum: value.zeroDataRetentionEvidenceChecksum as string,
-    spendCapEvidenceChecksum: value.spendCapEvidenceChecksum as string,
-    approvedAt: validInstant(value.approvedAt, 'approvedAt'),
+    verifiedAt: validInstant(value.verifiedAt, 'verifiedAt'),
     expiresAt: validInstant(value.expiresAt, 'expiresAt'),
+    externalEvidenceChecksum: value.externalEvidenceChecksum as string,
     ...(includeChecksum ? { evidenceChecksum: value.evidenceChecksum as string } : {}),
   };
 }
@@ -138,7 +138,7 @@ export async function readProviderDataControlReceipt(path: string, now = new Dat
     if (bytes.toString('utf8') !== `${JSON.stringify({ ...input, evidenceChecksum }, null, 2)}\n`) {
       throw new Error('provider data-control receipt bytes are not canonical');
     }
-    if (Date.parse(input.approvedAt) > now.getTime() || Date.parse(input.expiresAt) <= now.getTime()) {
+    if (Date.parse(input.verifiedAt) > now.getTime() || Date.parse(input.expiresAt) <= now.getTime()) {
       throw new Error('provider data-control receipt is not currently valid');
     }
     return Object.freeze({ ...input, evidenceChecksum: evidenceChecksum!, receiptHash: checksum(bytes) });
