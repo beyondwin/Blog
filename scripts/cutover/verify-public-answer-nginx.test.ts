@@ -79,8 +79,13 @@ describe('prepared public-answer core-Nginx verifier', () => {
     expect(receipt.accessLogMarkerAbsent).toBe(true);
     expect(receipt.proofScope).toBe('enumerated-forbidden-response-headers-only');
     expect(receipt.statuses).toEqual([200, 409, 429, 503]);
-    expect(receipt.validApiConnections).toBe(4);
-    expect(receipt.rejectedApiConnections).toBe(0);
+    expect(receipt.validApiHttpRequests).toBe(4);
+    expect(receipt.validApiTcpConnections).toBe(4);
+    expect(receipt.validApiSocketsClosedBeforeRejected).toBe(true);
+    expect(receipt.rejectedApiHttpRequests).toBe(0);
+    expect(receipt.rejectedApiTcpConnections).toBe(0);
+    expect(receipt).not.toHaveProperty('validApiConnections');
+    expect(receipt).not.toHaveProperty('rejectedApiConnections');
     expect(receipt.requestGateBodiesBounded).toBe(true);
     expect(receipt.requestGateStatuses).toEqual({
       query: 404,

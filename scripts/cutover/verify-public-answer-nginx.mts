@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, rmdir, writeFile } from 'node:fs/promises';
 import { createServer, request as requestHttp, type IncomingHttpHeaders, type Server } from 'node:http';
+import type { Socket } from 'node:net';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
@@ -52,12 +53,15 @@ export interface PublicAnswerNginxReceipt {
   platform: keyof typeof NGINX_VERIFIER_IMAGES;
   productServer: string | null;
   proofScope: 'enumerated-forbidden-response-headers-only';
-  rejectedApiConnections: 0;
+  rejectedApiHttpRequests: 0;
+  rejectedApiTcpConnections: 0;
   requestGateBodiesBounded: true;
   requestGateStatuses: Record<string, number>;
   statuses: number[];
   transportHeaders: string[];
-  validApiConnections: number;
+  validApiHttpRequests: number;
+  validApiSocketsClosedBeforeRejected: true;
+  validApiTcpConnections: number;
 }
 
 export function parseNginxVerifierArguments(argv: readonly string[]): Record<string, never> {
@@ -150,6 +154,14 @@ async function close(server: Server): Promise<void> {
   await new Promise<void>((resolveClose, reject) => server.close((error) => error ? reject(error) : resolveClose()));
 }
 
+async function waitForNoSockets(sockets: ReadonlySet<Socket>): Promise<void> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (sockets.size === 0) return;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 25));
+  }
+  throw new Error('Nginx verifier API valid-phase sockets did not close before rejection probes');
+}
+
 function hostileHeaders(): Record<string, string> {
   return Object.fromEntries(ENUMERATED_FORBIDDEN_RESPONSE_HEADERS.map((name) => [
     name,
@@ -171,6 +183,7 @@ function createApiStub(observed: IncomingHttpHeaders[]): Server {
       }
       if (!STATUSES.includes(status as (typeof STATUSES)[number])) status = 400;
       response.writeHead(status, {
+        Connection: 'close',
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store, private',
         Vary: 'Origin',
@@ -310,6 +323,14 @@ export async function verifyPublicAnswerNginx({
   const react = createServer((_request, response) => response.end('react'));
   const observedApiRequests: IncomingHttpHeaders[] = [];
   const api = createApiStub(observedApiRequests);
+  let observedApiTcpConnections = 0;
+  const activeApiSockets = new Set<Socket>();
+  api.on('connection', (socket) => {
+    observedApiTcpConnections += 1;
+    activeApiSockets.add(socket);
+    socket.once('close', () => activeApiSockets.delete(socket));
+    socket.setNoDelay(true);
+  });
   let containerStarted = false;
   try {
     const [reactPort, apiPort] = await Promise.all([listen(react), listen(api)]);
@@ -351,6 +372,8 @@ export async function verifyPublicAnswerNginx({
 
     const transport = new Set<string>();
     let productServer: string | null = null;
+    const validHttpRequestBaseline = observedApiRequests.length;
+    const validTcpConnectionBaseline = observedApiTcpConnections;
     for (const status of STATUSES) {
       const response = await requestThroughNginx(port, status);
       if (response.status !== status || JSON.parse(response.body).status !== status) {
@@ -385,7 +408,11 @@ export async function verifyPublicAnswerNginx({
         }
       }
     }
-    if (observedApiRequests.length !== STATUSES.length) throw new Error('Nginx API verifier missed or repeated upstream requests');
+    const validApiHttpRequests = observedApiRequests.length - validHttpRequestBaseline;
+    const validApiTcpConnections = observedApiTcpConnections - validTcpConnectionBaseline;
+    if (validApiHttpRequests !== STATUSES.length || validApiTcpConnections !== STATUSES.length) {
+      throw new Error('Nginx API verifier valid-phase HTTP request or TCP connection count drifted');
+    }
     for (const headers of observedApiRequests) {
       if (headers.host !== '127.0.0.1:4392'
         || headers.origin !== 'https://public.example'
@@ -399,8 +426,9 @@ export async function verifyPublicAnswerNginx({
         throw new Error('Nginx leaked untrusted request identity or credentials upstream');
       }
     }
-    const validApiConnections = observedApiRequests.length;
-    const rejectedBefore = observedApiRequests.length;
+    await waitForNoSockets(activeApiSockets);
+    const rejectedHttpRequestBaseline = observedApiRequests.length;
+    const rejectedTcpConnectionBaseline = observedApiTcpConnections;
     const gateCases: Array<{
       expected: number;
       name: string;
@@ -429,8 +457,11 @@ export async function verifyPublicAnswerNginx({
         throw new Error(`Nginx request gate ${gate.name} response was not bounded and generic`);
       }
     }
-    const rejectedApiConnections = observedApiRequests.length - rejectedBefore;
-    if (rejectedApiConnections !== 0) throw new Error('Nginx connected a rejected request to the API upstream');
+    const rejectedApiHttpRequests = observedApiRequests.length - rejectedHttpRequestBaseline;
+    const rejectedApiTcpConnections = observedApiTcpConnections - rejectedTcpConnectionBaseline;
+    if (rejectedApiHttpRequests !== 0 || rejectedApiTcpConnections !== 0) {
+      throw new Error('Nginx connected or forwarded a rejected request to the API upstream');
+    }
     const containerLogs = await docker(['logs', containerName]);
     if (containerLogs.includes(PRIVATE_QUERY_MARKER)) {
       throw new Error('Nginx logged a rejected private query marker');
@@ -446,12 +477,15 @@ export async function verifyPublicAnswerNginx({
       platform: selected.platform,
       productServer,
       proofScope: 'enumerated-forbidden-response-headers-only',
-      rejectedApiConnections: 0,
+      rejectedApiHttpRequests: 0,
+      rejectedApiTcpConnections: 0,
       requestGateBodiesBounded: true,
       requestGateStatuses,
       statuses: [...STATUSES],
       transportHeaders: [...transport].sort(),
-      validApiConnections,
+      validApiHttpRequests,
+      validApiSocketsClosedBeforeRejected: true,
+      validApiTcpConnections,
     };
   } finally {
     if (containerStarted) await docker(['rm', '-f', containerName]).catch(() => undefined);
