@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -8,6 +8,10 @@ import ts from 'typescript';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readActiveRelease } from '@beyondwin/content/release';
 import type { VerifiedActivePublicRelease } from '@beyondwin/content/release';
+import {
+  canonicalPrettyJson,
+  writeAnswerReleaseFixture,
+} from '../../../packages/content/test/helpers/answer-release-fixture';
 
 const ARTICLE_ID = 'graphify-code-knowledge-graph-deep-dive';
 const ESTABLISHED_ARTICLE_ID = ARTICLE_ID;
@@ -22,6 +26,27 @@ const originalReleaseBinding = process.env[releaseBindingEnvironment];
 async function candidateModule<T>(relativePath: string): Promise<T> {
   const moduleUrl = pathToFileURL(resolve(candidateRoot, relativePath)).href;
   return import(/* @vite-ignore */ moduleUrl) as Promise<T>;
+}
+
+async function routeAnswerAuthority(options: { emptyApproval?: boolean } = {}) {
+  const fixture = await writeAnswerReleaseFixture(options);
+  const authorityRoot = join(fixture.sandbox, 'route-authority');
+  const answerReleasesRoot = join(authorityRoot, 'build/public-answer-releases');
+  const approvalPath = join(authorityRoot, 'src/data/public-answer-corpus-approval.v1.json');
+  await mkdir(join(authorityRoot, 'build'), { recursive: true });
+  await mkdir(join(authorityRoot, 'src/data'), { recursive: true });
+  await rename(fixture.answerReleasesRoot, answerReleasesRoot);
+  await writeFile(approvalPath, canonicalPrettyJson(fixture.approval));
+  return { ...fixture, authorityRoot, answerReleasesRoot, approvalPath };
+}
+
+function assertIdOnlySearchLoaderData(data: Record<string, unknown>) {
+  expect(Object.keys(data).sort()).toEqual(['binding', 'initialQuery', 'inventory']);
+  expect(Object.keys(data.binding as object).sort()).toEqual(['answerReleaseId', 'contentReleaseId']);
+  const serialized = JSON.stringify(data);
+  expect(serialized).not.toMatch(
+    /"(?:answer|claims?|evidence|chunks?|excerpt|checksum|canonicalPath|recordTitle|approval|providerMode|manifest)"\s*:/u,
+  );
 }
 
 beforeAll(async () => {
@@ -404,17 +429,123 @@ describe('React Router current-behavior static route contract', () => {
     expect(html).not.toMatch(/저에게 독서는|결론까지 가는 시간|답을 쉽게 믿지 않기/u);
   });
 
-  it.each([
-    ['missing', ''],
-    ['mismatched', 'f'.repeat(64)],
-    ['tampered', '0'.repeat(64)],
-  ])('fails closed when the content binding is %s', async (_label, releaseId) => {
+  it('passes the exact verified content-release object and authority paths to the answer reader', async () => {
     const releaseModule = await candidateModule<any>('app/release.server.ts');
-    const release = structuredClone(await releaseModule.loadVerifiedRelease());
-    release.manifest.releaseId = releaseId;
+    const release = await releaseModule.loadVerifiedRelease();
+    const approval = { schemaVersion: 1 as const, entries: [] };
+    const answerRelease = { manifest: { answerReleaseId: 'b'.repeat(64) } };
+    const readApproval = async (path: string) => {
+      expect(path).toBe('/verified-repository/src/data/public-answer-corpus-approval.v1.json');
+      return approval;
+    };
+    const readAnswerRelease = async (root: string, receivedRelease: unknown, receivedApproval: unknown) => {
+      expect(root).toBe('/verified-repository/build/public-answer-releases');
+      expect(receivedRelease).toBe(release);
+      expect(receivedApproval).toBe(approval);
+      return answerRelease;
+    };
 
-    await expect(releaseModule.loadVerifiedSearchAnswerRelease(release)).rejects.toThrow();
+    await expect(releaseModule.loadVerifiedSearchAnswerReleaseWithAuthority(release, {
+      repositoryRoot: '/verified-repository',
+      readApproval,
+      readAnswerRelease,
+    })).resolves.toBe(answerRelease);
   });
+
+  it('fails closed when the active answer binding is missing', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const fixture = await routeAnswerAuthority();
+    try {
+      await unlink(join(fixture.answerReleasesRoot, 'active.json'));
+      await expect(releaseModule.loadVerifiedSearchAnswerReleaseWithAuthority(
+        fixture.contentRelease,
+        { repositoryRoot: fixture.authorityRoot },
+      )).rejects.toThrow();
+    } finally {
+      await rm(fixture.sandbox, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it('fails closed when the active answer binding names a substituted release', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const fixture = await routeAnswerAuthority();
+    try {
+      const activePath = join(fixture.answerReleasesRoot, 'active.json');
+      const pointer = JSON.parse(await readFile(activePath, 'utf8'));
+      pointer.answerReleaseId = 'f'.repeat(64);
+      pointer.path = `${pointer.contentReleaseId}/${pointer.answerReleaseId}`;
+      await writeFile(activePath, canonicalPrettyJson(pointer));
+      await expect(releaseModule.loadVerifiedSearchAnswerReleaseWithAuthority(
+        fixture.contentRelease,
+        { repositoryRoot: fixture.authorityRoot },
+      )).rejects.toThrow();
+    } finally {
+      await rm(fixture.sandbox, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it('fails closed when a bound answer artifact is tampered', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const fixture = await routeAnswerAuthority();
+    try {
+      const releasePath = join(
+        fixture.answerReleasesRoot,
+        fixture.contentRelease.manifest.releaseId,
+        fixture.answerReleaseId,
+      );
+      await writeFile(join(releasePath, 'chunks.ndjson'), '{"tampered":true}\n', { flag: 'a' });
+      await expect(releaseModule.loadVerifiedSearchAnswerReleaseWithAuthority(
+        fixture.contentRelease,
+        { repositoryRoot: fixture.authorityRoot },
+      )).rejects.toThrow();
+    } finally {
+      await rm(fixture.sandbox, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it('serializes only IDs for a valid explicit empty approval', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const fixture = await routeAnswerAuthority({ emptyApproval: true });
+    try {
+      const answerRelease = await releaseModule.loadVerifiedSearchAnswerReleaseWithAuthority(
+        fixture.contentRelease,
+        { repositoryRoot: fixture.authorityRoot },
+      );
+      expect(answerRelease.manifest.counts).toEqual({ records: 0, chunks: 0, evidence: 0, answerOnly: 0 });
+      const data = releaseModule.verifiedSearchLoaderData(
+        fixture.contentRelease,
+        answerRelease,
+        'Graphify',
+      );
+      assertIdOnlySearchLoaderData(data);
+      expect(data.binding).toEqual({
+        contentReleaseId: fixture.contentRelease.manifest.releaseId,
+        answerReleaseId: fixture.answerReleaseId,
+      });
+    } finally {
+      await rm(fixture.sandbox, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it('serializes only IDs when the removed legacy thought source is absent', async () => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const fixture = await routeAnswerAuthority();
+    try {
+      expect(fixture.contentRelease.manifest.records['thoughts/why-i-read-in-the-ai-era']).toBeUndefined();
+      const answerRelease = await releaseModule.loadVerifiedSearchAnswerReleaseWithAuthority(
+        fixture.contentRelease,
+        { repositoryRoot: fixture.authorityRoot },
+      );
+      const data = releaseModule.verifiedSearchLoaderData(fixture.contentRelease, answerRelease, '');
+      assertIdOnlySearchLoaderData(data);
+      expect(data.binding).toEqual({
+        contentReleaseId: fixture.contentRelease.manifest.releaseId,
+        answerReleaseId: fixture.answerReleaseId,
+      });
+    } finally {
+      await rm(fixture.sandbox, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it('uses FORM & THOUGHT metadata for established article and review records', async () => {
     const article = await candidateModule<any>('app/routes/article.tsx');

@@ -232,7 +232,7 @@ function progressStatus(view: string, query: string, resultCount: number): strin
   return '질문을 기다리고 있습니다.';
 }
 
-export function SecondBrainExperience({ initialQuery, inventory, provider }: {
+export function SecondBrainExperience({ initialQuery, inventory, provider: _provider }: {
   initialQuery: string;
   inventory: readonly SearchInventoryItem[];
   provider: PublicAskProvider;
@@ -241,47 +241,25 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
   const [answer, setAnswer] = useState<PublicAnswer | null>(null);
   const [inputValue, setInputValue] = useState(initialQuery || SAMPLE_QUESTION);
   const [composerNote, setComposerNote] = useState('질문을 기다리고 있습니다.');
-  const requestRef = useRef<AbortController | null>(null);
   const backgroundRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const shouldReturnFocusRef = useRef(false);
 
-  useEffect(() => () => requestRef.current?.abort(), []);
-
-  const submitQuestion = useCallback(async (queryValue: string) => {
+  const submitQuestion = useCallback((queryValue: string) => {
     const query = boundedSearchQuery(queryValue);
     if (!query) {
       setComposerNote('질문을 입력해 주세요.');
       return;
     }
-    requestRef.current?.abort();
-    const controller = new AbortController();
-    requestRef.current = controller;
-    window.history.replaceState({}, '', '/search/');
     setInputValue(query);
     setComposerNote('질문을 기다리고 있습니다.');
     setAnswer(null);
-    dispatch({ type: 'submit-answer', query });
-    try {
-      const response = await provider.ask(query, { signal: controller.signal });
-      if (controller.signal.aborted) return;
-      if (response.kind === 'answer') {
-        setAnswer(response);
-        dispatch({ type: 'complete' });
-      } else {
-        dispatch({ type: 'show-results', query });
-      }
-    } catch {
-      if (!controller.signal.aborted) dispatch({ type: 'show-results', query });
-    } finally {
-      if (requestRef.current === controller) requestRef.current = null;
-    }
-  }, [provider]);
+    dispatch({ type: 'show-results', query });
+  }, []);
 
   const restoreQueryFromLocation = useCallback(() => {
-    requestRef.current?.abort();
     const query = boundedSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '');
     setAnswer(null);
     setInputValue(query || SAMPLE_QUESTION);
@@ -354,7 +332,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    void submitQuestion(String(form.get('q') ?? ''));
+    submitQuestion(String(form.get('q') ?? ''));
   };
   const openEvidence = (index: number, trigger: HTMLElement) => {
     if (!answer) return;

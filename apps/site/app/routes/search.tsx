@@ -4,7 +4,7 @@ import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } fr
 import {
   loadVerifiedRelease,
   loadVerifiedSearchAnswerRelease,
-  searchInventory,
+  verifiedSearchLoaderData,
 } from '../release.server';
 
 const searchCss = import.meta.env.SSR
@@ -18,14 +18,7 @@ export async function loader({ request }: { request?: Request } = {}) {
   const initialQuery = boundedSearchQuery(
     request ? new URL(request.url).searchParams.get('q') ?? '' : '',
   );
-  return {
-    binding: {
-      contentReleaseId: release.manifest.releaseId,
-      answerReleaseId: answerRelease.manifest.answerReleaseId,
-    },
-    initialQuery,
-    inventory: searchInventory(release),
-  };
+  return verifiedSearchLoaderData(release, answerRelease, initialQuery);
 }
 
 export function SearchPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {

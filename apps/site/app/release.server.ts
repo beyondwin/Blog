@@ -74,11 +74,44 @@ export function loadVerifiedRelease(): Promise<VerifiedActivePublicRelease> {
 export async function loadVerifiedSearchAnswerRelease(
   release: VerifiedActivePublicRelease,
 ): Promise<VerifiedActivePublicAnswerRelease> {
-  const root = repositoryRootFromModuleUrl(import.meta.url);
-  const approval = await readPublicAnswerCorpusApproval(
-    join(root, 'src/data/public-answer-corpus-approval.v1.json'),
+  return loadVerifiedSearchAnswerReleaseWithAuthority(release, {
+    repositoryRoot: repositoryRootFromModuleUrl(import.meta.url),
+  });
+}
+
+export async function loadVerifiedSearchAnswerReleaseWithAuthority(
+  release: VerifiedActivePublicRelease,
+  authority: {
+    repositoryRoot: string;
+    readApproval?: typeof readPublicAnswerCorpusApproval;
+    readAnswerRelease?: typeof readActiveAnswerRelease;
+  },
+): Promise<VerifiedActivePublicAnswerRelease> {
+  const readApproval = authority.readApproval ?? readPublicAnswerCorpusApproval;
+  const readAnswerRelease = authority.readAnswerRelease ?? readActiveAnswerRelease;
+  const approval = await readApproval(
+    join(authority.repositoryRoot, 'src/data/public-answer-corpus-approval.v1.json'),
   );
-  return readActiveAnswerRelease(join(root, 'build/public-answer-releases'), release, approval);
+  return readAnswerRelease(
+    join(authority.repositoryRoot, 'build/public-answer-releases'),
+    release,
+    approval,
+  );
+}
+
+export function verifiedSearchLoaderData(
+  release: VerifiedActivePublicRelease,
+  answerRelease: VerifiedActivePublicAnswerRelease,
+  initialQuery: string,
+) {
+  return {
+    binding: {
+      contentReleaseId: release.manifest.releaseId,
+      answerReleaseId: answerRelease.manifest.answerReleaseId,
+    },
+    initialQuery,
+    inventory: searchInventory(release),
+  };
 }
 
 function hasRawPublicationState(record: object): record is object & { status?: unknown; draft?: unknown } {
