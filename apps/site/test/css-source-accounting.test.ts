@@ -157,6 +157,32 @@ describe('route-scoped critical CSS source accounting', () => {
     expect(search).not.toMatch(/route-(?:reading|collections|index|detail)\.css\?inline/u);
   });
 
+  it('keeps the living evidence desk semantic and dependency-free at source', async () => {
+    const [desk, experience, parallax, css, lock] = await Promise.all([
+      readFile(join(candidateRoot, 'src/ui/search/LivingEvidenceDesk.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/search/SecondBrainExperience.tsx'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/search/usePointerParallax.ts'), 'utf8'),
+      readFile(join(candidateRoot, 'src/ui/styles/route-search.css'), 'utf8'),
+      readFile(resolve(candidateRoot, '../../package-lock.json'), 'utf8'),
+    ]);
+    const changedSurface = `${desk}\n${experience}\n${parallax}`;
+
+    expect(changedSurface).not.toMatch(/<canvas|webgl|getContext\s*\(\s*['"]webgl|from\s*['"]three|THREE\./iu);
+    expect(lock).not.toMatch(/node_modules\/(?:@types\/)?three"/u);
+    expect(desk).toContain('<svg');
+    expect(desk).toContain('aria-hidden="true"');
+    expect(desk).toContain('data-evidence-id={evidence.evidenceId}');
+    expect(desk).not.toMatch(/<text\b/u);
+    expect(css).toContain('.living-evidence-desk__decoration');
+    expect(css).toContain('.living-evidence-desk__threads');
+    expect(css).toMatch(/pointer-events:\s*none/u);
+    expect(css).not.toContain('.memory-fragment');
+    expect(css).not.toContain('will-change');
+    expect(experience).toContain('src="/images/form-and-thought-agent-avatar-v1.png"');
+    expect(experience).not.toContain('<picture');
+    expect(experience).not.toMatch(/form-and-thought-agent-avatar-v1-(?:640w|960w)\.(?:avif|webp)/u);
+  });
+
   it('removes retired scene and reading CSS owners and their active imports', async () => {
     const retired = [
       'scene.css',

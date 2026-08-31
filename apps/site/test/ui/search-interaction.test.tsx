@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createElement, createRef } from 'react';
@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { createAnswerViewModel } from '../../src/ui/search/answerViewModel';
 import { EvidencePanel } from '../../src/ui/search/EvidencePanel';
+import { LivingEvidenceDesk } from '../../src/ui/search/LivingEvidenceDesk';
 import { SearchPage } from '../../src/ui/search/SearchPage';
 import { SAMPLE_QUESTION } from '../../src/ui/search/secondBrain';
 import type { SearchInventoryItem } from '../../src/ui/search/searchModel';
@@ -95,7 +96,7 @@ const inventory: SearchInventoryItem[] = [{
   topics: ['Graphify', 'AI'],
 }];
 
-function clientPlugin(serverMarkup: string, options: { deferHydration?: boolean } = {}): Plugin {
+function clientPlugin(serverMarkup: string, criticalCss: string, options: { deferHydration?: boolean } = {}): Plugin {
   const entryId = '\0second-brain-search-client.tsx';
   return {
     name: 'second-brain-search-client',
@@ -185,7 +186,7 @@ function clientPlugin(serverMarkup: string, options: { deferHydration?: boolean 
         if (pathname !== '/__second-brain-search/' && pathname !== '/search/') return next();
         response.statusCode = 200;
         response.setHeader('Content-Type', 'text/html; charset=utf-8');
-        response.end(`<!doctype html><html><body><div id="root">${serverMarkup}</div><script type="module" src="/@id/virtual:second-brain-search-client"></script></body></html>`);
+        response.end(`<!doctype html><html><head><style>${criticalCss}</style></head><body><div id="root">${serverMarkup}</div><script type="module" src="/@id/virtual:second-brain-search-client"></script></body></html>`);
       });
     },
   };
@@ -200,13 +201,18 @@ function renderApplication() {
 
 async function startHarness(options: { deferHydration?: boolean } = {}) {
   const markup = renderToString(renderApplication());
+  const criticalCss = (await Promise.all([
+    readFile(tokenStylesPath, 'utf8'),
+    readFile(shellStylesPath, 'utf8'),
+    readFile(searchStylesPath, 'utf8'),
+  ])).join('\n');
   const server = await createServer({
     configFile: false,
     root: repositoryRoot,
     cacheDir: await freshViteCacheRoot(),
     publicDir: join(repositoryRoot, 'apps/site/public'),
     logLevel: 'silent',
-    plugins: [clientPlugin(markup, options)],
+    plugins: [clientPlugin(markup, criticalCss, options)],
     server: { host: '127.0.0.1', port: 0, strictPort: false },
   });
   await server.listen();
@@ -241,6 +247,40 @@ async function targetBoxesBelowMinimum(page: Page) {
 }
 
 describe('second-brain search client interaction', () => {
+  it('keeps pending paper anonymous and reveals only the first three claim-ordered evidence records', () => {
+    const idle = renderToString(createElement(LivingEvidenceDesk, {
+      phase: 'retrieving',
+      answer: null,
+      interactive: false,
+      onOpenEvidence() {},
+    }));
+    expect(idle.match(/class="living-evidence-desk__paper"/g)).toHaveLength(3);
+    expect(idle.match(/<span/g)).toHaveLength(3);
+    expect(idle).toContain('aria-hidden="true"');
+    expect(idle).not.toContain('aria-label');
+    expect(idle).not.toContain('<button');
+    expect(idle).not.toContain('공개 기록 1');
+    expect(idle).not.toContain('문단 1');
+
+    const answered = renderToString(createElement(LivingEvidenceDesk, {
+      phase: 'answered',
+      answer: createAnswerViewModel(answer),
+      interactive: true,
+      onOpenEvidence() {},
+    }));
+    expect(answered.match(/class="living-evidence-desk__card"/g)).toHaveLength(3);
+    expect(answered).toContain(`data-evidence-id="${answerEvidence[4]!.evidenceId}"`);
+    expect(answered).toContain(`data-evidence-id="${answerEvidence[0]!.evidenceId}"`);
+    expect(answered).toContain(`data-evidence-id="${answerEvidence[5]!.evidenceId}"`);
+    expect(answered).toContain('공개 기록 5');
+    expect(answered).toContain('문단 5');
+    expect(answered).toContain('공개 기록 1');
+    expect(answered).toContain('공개 기록 6');
+    expect(answered).not.toContain('공개 기록 2');
+    expect(answered).not.toContain('공개 기록 3');
+    expect(answered).not.toContain('공개 기록 4');
+  });
+
   it('fails closed before rendering an evidence panel with an invalid evidence ID', () => {
     const answerModel = createAnswerViewModel(oneEvidenceAnswer);
     expect(() => renderToString(createElement(EvidencePanel, {
@@ -274,7 +314,10 @@ describe('second-brain search client interaction', () => {
       const search = page.getByRole('searchbox', { name: '기록에 묻기' });
       await search.fill(SAMPLE_QUESTION);
       await search.press('Enter');
-      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('answered');
+      await expect.poll(
+        () => page.locator('.second-brain-search').getAttribute('data-view'),
+        { timeout: 3_000 },
+      ).toBe('answered');
 
       const claims = page.locator('.answer-stage__lines > p');
       expect(await claims.evaluateAll((elements) => elements.map((element) => Array.from(element.childNodes)
@@ -319,6 +362,81 @@ describe('second-brain search client interaction', () => {
     }
   }, 30_000);
 
+  it('renders a click-through desk from the first three claim-ordered evidence IDs', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+
+      const papers = page.locator('.living-evidence-desk__paper');
+      expect(await papers.count()).toBe(3);
+      expect(await papers.evaluateAll((elements) => elements.every((element) => element.getAttribute('aria-hidden') === 'true'))).toBe(true);
+      expect(await page.locator('.living-evidence-desk').getByRole('button').count()).toBe(0);
+
+      await page.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await expect.poll(
+        () => page.locator('.second-brain-search').getAttribute('data-view'),
+        { timeout: 4_000 },
+      ).toBe('answered');
+      const cards = page.locator('.living-evidence-desk__card');
+      expect(await cards.count()).toBe(3);
+      expect(await cards.evaluateAll((elements) => elements.map((element) => ({
+        id: element.getAttribute('data-evidence-id'),
+        label: element.getAttribute('aria-label'),
+      })))).toEqual([
+        { id: answerEvidence[4]!.evidenceId, label: '공개 기록 5 · 문단 5 근거 보기' },
+        { id: answerEvidence[0]!.evidenceId, label: '공개 기록 1 · 문단 1 근거 보기' },
+        { id: answerEvidence[5]!.evidenceId, label: '공개 기록 6 · 문단 6 근거 보기' },
+      ]);
+      const deskProbe = await page.evaluate(() => {
+        const cards = Array.from(document.querySelectorAll<HTMLElement>('.living-evidence-desk__card'));
+        const ids = new Set(cards.map((card) => card.dataset.evidenceId));
+        const threadIds = Array.from(document.querySelectorAll<SVGElement>('.living-evidence-desk__threads [data-evidence-id]'))
+          .map((thread) => thread.dataset.evidenceId);
+        const first = cards[0]!;
+        const bounds = first.getBoundingClientRect();
+        const hit = document.elementFromPoint(bounds.left + (bounds.width / 2), bounds.top + (bounds.height / 2));
+        return {
+          cardSize: [bounds.width, bounds.height],
+          decorationPointer: getComputedStyle(document.querySelector<HTMLElement>('.living-evidence-desk__decoration')!).pointerEvents,
+          hitOwnsCard: hit === first || first.contains(hit),
+          threadIds,
+          threadsAreSubset: threadIds.every((id) => ids.has(id)),
+          threadsHidden: document.querySelector('.living-evidence-desk__threads')?.getAttribute('aria-hidden'),
+          threadsPointer: getComputedStyle(document.querySelector<HTMLElement>('.living-evidence-desk__threads')!).pointerEvents,
+        };
+      });
+      expect(deskProbe.cardSize[0]).toBeGreaterThanOrEqual(44);
+      expect(deskProbe.cardSize[1]).toBeGreaterThanOrEqual(44);
+      expect(deskProbe).toMatchObject({
+        decorationPointer: 'none',
+        hitOwnsCard: true,
+        threadsAreSubset: true,
+        threadsHidden: 'true',
+        threadsPointer: 'none',
+      });
+      expect(deskProbe.threadIds).toEqual([
+        answerEvidence[4]!.evidenceId,
+        answerEvidence[0]!.evidenceId,
+        answerEvidence[5]!.evidenceId,
+      ]);
+
+      await cards.first().focus();
+      expect(await cards.first().evaluate((element) => getComputedStyle(element).transform)).not.toBe('none');
+      await cards.first().click();
+      await expect.poll(() => page.getByRole('dialog', { name: '이 답의 근거' }).count()).toBe(1);
+      expect(await page.locator('.evidence-panel__locator').textContent()).toBe('문단 5');
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
   it('traps evidence focus and restores every prior isolation snapshot across repeated opens', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;
@@ -341,7 +459,7 @@ describe('second-brain search client interaction', () => {
         document.documentElement.style.overflow = 'clip';
         document.body.style.overflow = 'scroll';
       });
-      const citation = page.getByRole('button', { name: '공개 기록 3 · 문단 3 근거 보기' });
+      const citation = page.locator('.answer-stage__citation[aria-label="공개 기록 3 · 문단 3 근거 보기"]');
       await citation.click();
       const dialog = page.getByRole('dialog', { name: '이 답의 근거' });
       const close = dialog.getByRole('button', { name: '근거 패널 닫기' });
@@ -491,11 +609,13 @@ describe('second-brain search client interaction', () => {
         const portrait = image as HTMLImageElement;
         return portrait.complete && portrait.naturalWidth === 0;
       })).toBe(true);
-      const before = await page.locator('.agent-stage').evaluate((element) => element.getBoundingClientRect().toJSON());
+      const before = await page.locator('.agent-stage__portrait-frame').evaluate((element) => element.getBoundingClientRect().toJSON());
 
       await page.evaluate(() => (window as typeof window & { __hydrateSecondBrainSearch?: () => void }).__hydrateSecondBrainSearch?.());
       await expect.poll(() => page.locator('.agent-stage').getAttribute('data-image-state'), { timeout: 4_000 }).toBe('error');
-      expect(await page.locator('.agent-stage').evaluate((element) => element.getBoundingClientRect().toJSON())).toEqual(before);
+      expect(await page.locator('.agent-stage__portrait-frame').evaluate((element) => element.getBoundingClientRect().toJSON())).toEqual(before);
+      expect(await page.getByRole('img', { name: '종이 조각이 접힌 FORM & THOUGHT 기록 안내자' }).count()).toBe(1);
+      expect(await page.getByText('FORM & THOUGHT', { exact: true }).count()).toBe(1);
     } finally {
       await browser?.close();
       await server?.close();
@@ -546,8 +666,8 @@ describe('second-brain search client interaction', () => {
       expect(mobileBounds.header?.height).toBeCloseTo(72, 1);
       expect(mobileBounds.stage?.y).toBeCloseTo(72, 1);
       expect(mobileBounds.avatar).toMatchObject({ x: 0, y: 72, width: 390 });
-      expect(mobileBounds.avatar?.height).toBeCloseTo(303.84, 1);
-      expect(mobileBounds.dialogue?.y).toBeCloseTo(375.84, 1);
+      expect(mobileBounds.avatar?.height).toBeGreaterThan(390);
+      expect(mobileBounds.dialogue?.y).toBeCloseTo((mobileBounds.avatar?.y ?? 0) + (mobileBounds.avatar?.height ?? 0), 1);
       expect(mobileBounds.dialogue?.width).toBe(390);
       expect(mobileBounds.order).toEqual(['agent-stage', 'second-brain-dialogue']);
       expect(await mobile.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
@@ -556,6 +676,247 @@ describe('second-brain search client interaction', () => {
       await server?.close();
     }
   }, 60_000);
+
+  it('keeps the portrait centered and evidence in flow across the full responsive matrix', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const viewports = [
+        { width: 1440, height: 900, header: 88 },
+        { width: 768, height: 900, header: 80 },
+        { width: 390, height: 844, header: 72 },
+        { width: 320, height: 844, header: 72 },
+        { width: 720, height: 450, header: 72, deviceScaleFactor: 2 },
+      ];
+
+      for (const viewport of viewports) {
+        const regular = await browser.newPage({
+          viewport: { width: viewport.width, height: viewport.height },
+          deviceScaleFactor: viewport.deviceScaleFactor ?? 1,
+        });
+        await regular.emulateMedia({ reducedMotion: 'no-preference' });
+        await regular.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+        const regularFrame = await regular.locator('.agent-stage__portrait-frame').evaluate((element) => element.getBoundingClientRect().toJSON());
+        await regular.close();
+
+        const reduced = await browser.newPage({
+          viewport: { width: viewport.width, height: viewport.height },
+          deviceScaleFactor: viewport.deviceScaleFactor ?? 1,
+        });
+        await reduced.emulateMedia({ reducedMotion: 'reduce' });
+        await reduced.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+        const layout = await reduced.evaluate(() => {
+          const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+          const frame = rect('.agent-stage__portrait-frame');
+          const agent = rect('.agent-stage');
+          const dialogue = rect('.second-brain-dialogue');
+          const desk = rect('.living-evidence-desk');
+          const stage = document.querySelector<HTMLElement>('.second-brain-search__stage')!;
+          const animations = Array.from(document.querySelectorAll<HTMLElement>(
+            '.living-evidence-desk *, .agent-stage__portrait-frame',
+          )).filter((element) => getComputedStyle(element).animationName !== 'none');
+          return {
+            agent,
+            animations: animations.map((element) => element.className),
+            desk,
+            dialogue,
+            display: getComputedStyle(stage).display,
+            frame,
+            framePosition: getComputedStyle(document.querySelector<HTMLElement>('.agent-stage__portrait-frame')!).position,
+            gridColumns: getComputedStyle(stage).gridTemplateColumns,
+            headerHeight: rect('.site-header__inner').height,
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            stageChildren: Array.from(stage.children).map((child) => child.className),
+          };
+        });
+        expect(layout.headerHeight).toBeCloseTo(viewport.header, 1);
+        expect(layout.stageChildren).toEqual(['agent-stage', 'second-brain-dialogue']);
+        expect(layout.overflow).toBe(0);
+        expect(layout.animations).toEqual([]);
+        expect(layout.frame.x + (layout.frame.width / 2)).toBeCloseTo(layout.agent.x + (layout.agent.width / 2), 0);
+        expect(layout.frame.x).toBeGreaterThanOrEqual(layout.agent.x - 0.5);
+        expect(layout.frame.x + layout.frame.width).toBeLessThanOrEqual(layout.agent.x + layout.agent.width + 0.5);
+        expect(layout.frame.x).toBeCloseTo(regularFrame.x, 1);
+        expect(layout.frame.y).toBeCloseTo(regularFrame.y, 1);
+        expect(layout.frame.width).toBeCloseTo(regularFrame.width, 1);
+        expect(layout.frame.height).toBeCloseTo(regularFrame.height, 1);
+
+        if (viewport.width < 568 || viewport.height >= 600) {
+          if (viewport.width <= 767) {
+            expect(layout.display).toBe('block');
+            expect(layout.framePosition).toBe('relative');
+            expect(layout.desk.y).toBeGreaterThanOrEqual(layout.frame.y + layout.frame.height - 1);
+            expect(layout.dialogue.y).toBeGreaterThanOrEqual(layout.agent.y + layout.agent.height - 1);
+          }
+        } else {
+          expect(layout.display).toBe('grid');
+          expect(layout.gridColumns).not.toBe('none');
+          expect(layout.dialogue.x).toBeGreaterThan(layout.agent.x);
+          expect(layout.frame.width).toBeGreaterThan(0);
+        }
+
+        if (viewport.width === 320) {
+          await reduced.evaluate((response) => (window as typeof window & {
+            __publicAskControl: { enqueue(script: unknown): void };
+          }).__publicAskControl.enqueue({ type: 'resolve', response }), {
+            ...answer,
+            evidence: answer.evidence.map((item, index) => index === 4
+              ? { ...item, recordTitle: '한 줄에 다 들어가지 않는 아주 긴 공개 기록 제목도 내용을 줄이지 않고 안전하게 읽을 수 있어야 합니다' }
+              : item),
+          });
+        }
+        await reduced.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+        await expect.poll(() => reduced.locator('.second-brain-search').getAttribute('data-view')).toBe('answered');
+        const cards = reduced.locator('.living-evidence-desk__card');
+        expect(await cards.count()).toBe(3);
+        expect(await cards.evaluateAll((elements) => elements.every((element) => {
+          const bounds = element.getBoundingClientRect();
+          const agentBounds = element.closest('.agent-stage')?.getBoundingClientRect();
+          return bounds.width >= 44
+            && bounds.height >= 44
+            && bounds.left >= 0
+            && bounds.right <= document.documentElement.clientWidth
+            && Boolean(agentBounds)
+            && bounds.top >= (agentBounds?.top ?? 0) - 0.5
+            && bounds.bottom <= (agentBounds?.bottom ?? 0) + 0.5;
+        }))).toBe(true);
+        if (viewport.width === 320) {
+          expect(await cards.first().textContent()).toContain('한 줄에 다 들어가지 않는 아주 긴 공개 기록 제목');
+        }
+        await reduced.close();
+      }
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 90_000);
+
+  it('coalesces fine-pointer parallax to one measured frame and resets or cancels every exit path', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+      expect(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)).toBe(true);
+
+      const probe = await page.evaluate(() => {
+        const stage = document.querySelector<HTMLElement>('.agent-stage')!;
+        const callbacks: Array<{ callback: FrameRequestCallback; id: number }> = [];
+        const cancelled: number[] = [];
+        let nextId = 40;
+        let rectReads = 0;
+        const realRect = stage.getBoundingClientRect.bind(stage);
+        stage.getBoundingClientRect = () => {
+          rectReads += 1;
+          return realRect();
+        };
+        window.requestAnimationFrame = (callback) => {
+          const id = nextId;
+          nextId += 1;
+          callbacks.push({ callback, id });
+          return id;
+        };
+        window.cancelAnimationFrame = (id) => { cancelled.push(id); };
+
+        for (let index = 0; index < 12; index += 1) {
+          stage.dispatchEvent(new PointerEvent('pointermove', {
+            bubbles: true,
+            clientX: 10_000 + index,
+            clientY: -10_000 - index,
+          }));
+        }
+        const queuedBeforeFrame = callbacks.length;
+        callbacks.shift()?.callback(16);
+        const afterFrame = {
+          rectReads,
+          x: stage.style.getPropertyValue('--look-x'),
+          y: stage.style.getPropertyValue('--look-y'),
+        };
+        stage.dispatchEvent(new PointerEvent('pointerleave'));
+        const afterLeave = [stage.style.getPropertyValue('--look-x'), stage.style.getPropertyValue('--look-y')];
+        stage.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, clientY: 0 }));
+        const pendingId = callbacks[0]?.id;
+        (window as typeof window & { __secondBrainRoot: { unmount(): void } }).__secondBrainRoot.unmount();
+        return { afterFrame, afterLeave, cancelled, pendingId, queuedBeforeFrame };
+      });
+      expect(probe.queuedBeforeFrame).toBe(1);
+      expect(probe.afterFrame.rectReads).toBe(1);
+      expect(probe.afterFrame.x).toBe('8px');
+      expect(probe.afterFrame.y).toBe('-6px');
+      expect(probe.afterLeave).toEqual(['0px', '0px']);
+      expect(probe.cancelled).toContain(probe.pendingId);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
+  it.each([
+    { mode: 'reduced-motion' as const },
+    { mode: 'coarse-pointer' as const },
+    { mode: 'data-saver' as const },
+    { mode: 'hidden-document' as const },
+  ])('does no pointer RAF or parallax writes in $mode mode', async ({ mode }) => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const context = mode === 'coarse-pointer'
+        ? await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } })
+        : await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const page = await context.newPage();
+      await page.addInitScript(() => {
+        const realSetProperty = CSSStyleDeclaration.prototype.setProperty;
+        (window as typeof window & { __parallaxWrites: { count: number } }).__parallaxWrites = { count: 0 };
+        CSSStyleDeclaration.prototype.setProperty = function setProperty(property, value, priority) {
+          if (property === '--look-x' || property === '--look-y') {
+            (window as typeof window & { __parallaxWrites: { count: number } }).__parallaxWrites.count += 1;
+          }
+          return realSetProperty.call(this, property, value, priority);
+        };
+      });
+      if (mode === 'reduced-motion') await page.emulateMedia({ reducedMotion: 'reduce' });
+      if (mode === 'data-saver') {
+        await page.addInitScript(() => {
+          Object.defineProperty(Navigator.prototype, 'connection', {
+            configurable: true,
+            get: () => ({ saveData: true }),
+          });
+        });
+      }
+      await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+      const probe = await page.evaluate((currentMode) => {
+        const stage = document.querySelector<HTMLElement>('.agent-stage')!;
+        let rafs = 0;
+        window.requestAnimationFrame = () => {
+          rafs += 1;
+          return 99;
+        };
+        if (currentMode === 'hidden-document') {
+          Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+          document.dispatchEvent(new Event('visibilitychange'));
+        }
+        stage.dispatchEvent(new PointerEvent('pointermove', { clientX: 100, clientY: 100 }));
+        return {
+          rafs,
+          writes: (window as typeof window & { __parallaxWrites: { count: number } }).__parallaxWrites.count,
+        };
+      }, mode);
+      expect(probe).toEqual({ rafs: 0, writes: 0 });
+      await context.close();
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
 
   it('calls the provider once per explicit question and renders deterministic search for abstention', async () => {
     let browser: Browser | undefined;

@@ -6,11 +6,11 @@ import {
   useRef,
   useState,
   type FormEvent,
-  type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { ORIGIN_QUERY_MAX_LENGTH } from '../navigation/origin';
 import type { AnswerViewModel } from './answerViewModel';
 import { EvidencePanel } from './EvidencePanel';
+import { LivingEvidenceDesk, type LivingEvidenceDeskProps } from './LivingEvidenceDesk';
 import { createPublicAskCoordinator } from './publicAskCoordinator';
 import { SearchResults } from './SearchResults';
 import {
@@ -20,55 +20,59 @@ import {
 } from './secondBrain';
 import type { PublicAskProvider } from './publicAskProvider';
 import { boundedSearchQuery, searchMatches, type SearchInventoryItem } from './searchModel';
+import { usePointerParallax } from './usePointerParallax';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 function ArrowIcon() {
   return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 16h23M19 8l8 8-8 8" /></svg>;
 }
 
-function AgentStage() {
+function AgentStage({ answer, interactive, onOpenEvidence, phase }: LivingEvidenceDeskProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const stageRef = useRef<HTMLElement>(null);
   const portraitRef = useRef<HTMLImageElement>(null);
+  usePointerParallax(stageRef);
   useEffect(() => {
     if (portraitRef.current?.complete && portraitRef.current.naturalWidth === 0) setImageFailed(true);
   }, []);
-  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
-    if (typeof window !== 'undefined' && window.matchMedia(REDUCED_MOTION_QUERY).matches) return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * 9;
-    const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * 6;
-    stageRef.current?.style.setProperty('--look-x', `${x}px`);
-    stageRef.current?.style.setProperty('--look-y', `${y}px`);
-  };
   return (
     <section
       ref={stageRef}
       className="agent-stage"
       aria-label="FORM & THOUGHT의 공개 기록"
       data-image-state={imageFailed ? 'error' : 'ready'}
-      onPointerMove={onPointerMove}
-      onPointerLeave={() => {
-        stageRef.current?.style.setProperty('--look-x', '0px');
-        stageRef.current?.style.setProperty('--look-y', '0px');
-      }}
     >
       <div className="agent-stage__field" aria-hidden="true" />
       <div className="agent-stage__plane agent-stage__plane--one" aria-hidden="true" />
       <div className="agent-stage__plane agent-stage__plane--two" aria-hidden="true" />
       <div className="agent-stage__plane agent-stage__plane--three" aria-hidden="true" />
-      <div className="agent-stage__rule" aria-hidden="true" />
-      <div className="agent-stage__portrait-frame">
+      <div
+        className="agent-stage__portrait-frame"
+        role="img"
+        aria-label="종이 조각이 접힌 FORM & THOUGHT 기록 안내자"
+      >
         <img
           ref={portraitRef}
           className="agent-stage__portrait"
           src="/images/form-and-thought-agent-avatar-v1.png"
-          alt="종이와 기록으로 구성된 인물"
+          width="1254"
+          height="1254"
+          alt=""
+          aria-hidden="true"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
           onError={() => setImageFailed(true)}
         />
+        <span className="agent-stage__portrait-fallback" aria-hidden="true">FORM &amp; THOUGHT</span>
         <div className="agent-stage__portrait-slice" aria-hidden="true" />
       </div>
-      <div className="agent-stage__thread" aria-hidden="true" />
+      <LivingEvidenceDesk
+        phase={phase}
+        answer={answer}
+        interactive={interactive}
+        onOpenEvidence={onOpenEvidence}
+      />
     </section>
   );
 }
@@ -283,12 +287,22 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
   };
   const progressView = state.view === 'pending' ? state.phase : null;
   const resultCount = state.view === 'search-results' ? searchMatches(inventory, state.query).length : 0;
+  const deskPhase = progressView
+    ?? (state.view === 'answered' || state.view === 'evidence-open' ? 'answered' : 'idle');
+  const deskAnswer = state.view === 'pending' || state.view === 'answered' || state.view === 'evidence-open'
+    ? state.answer
+    : null;
 
   return (
     <section className="second-brain-search" data-view={state.view} aria-label="공개 기록에 묻기">
       <div className="second-brain-search__background">
         <div className="second-brain-search__stage">
-          <AgentStage />
+          <AgentStage
+            phase={deskPhase}
+            answer={deskAnswer}
+            interactive={state.view === 'answered'}
+            onOpenEvidence={openEvidence}
+          />
           <section className="second-brain-dialogue" aria-label="공개 기록과 대화">
             <div className="second-brain-dialogue__inner">
               {progressView ? <RetrievalSequence view={progressView} /> : null}
