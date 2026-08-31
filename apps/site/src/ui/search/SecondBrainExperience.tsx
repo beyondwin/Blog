@@ -7,11 +7,10 @@ import {
   useState,
   type FormEvent,
   type PointerEvent as ReactPointerEvent,
-  type RefObject,
 } from 'react';
-import { createPortal } from 'react-dom';
 import { ORIGIN_QUERY_MAX_LENGTH } from '../navigation/origin';
 import type { AnswerViewModel } from './answerViewModel';
+import { EvidencePanel } from './EvidencePanel';
 import { createPublicAskCoordinator } from './publicAskCoordinator';
 import { SearchResults } from './SearchResults';
 import {
@@ -23,8 +22,6 @@ import type { PublicAskProvider } from './publicAskProvider';
 import { boundedSearchQuery, searchMatches, type SearchInventoryItem } from './searchModel';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
-const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 function ArrowIcon() {
   return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 16h23M19 8l8 8-8 8" /></svg>;
 }
@@ -142,7 +139,7 @@ function RetrievalSequence({ view }: { view: 'retrieving' | 'connecting' | 'comp
 function AnswerStage({ answer, evidenceOpen, onOpenEvidence, onSubmit, question }: {
   answer: AnswerViewModel;
   evidenceOpen: boolean;
-  onOpenEvidence: (index: number, trigger: HTMLElement) => void;
+  onOpenEvidence: (evidenceId: string, trigger: HTMLElement) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   question: string;
 }) {
@@ -151,18 +148,20 @@ function AnswerStage({ answer, evidenceOpen, onOpenEvidence, onSubmit, question 
     <div className="answer-stage">
       <p className="answer-stage__asked">당신이 물었습니다<strong>{question}</strong></p>
       <div className="answer-stage__lines">
-        {answer.claims.map((claim) => {
-          const firstEvidenceId = claim.evidenceIds[0];
-          const evidenceIndex = answer.evidence.findIndex((item) => item.evidenceId === firstEvidenceId);
-          return (
-            <p key={claim.id}>{claim.text}{evidenceIndex >= 0 ? <button
+        {answer.claims.map((claim) => (
+          <p key={claim.id}>{claim.text}{claim.evidenceIds.map((evidenceId) => {
+            const evidence = answer.evidenceById.get(evidenceId);
+            if (!evidence) throw new Error('claim evidence must resolve');
+            const evidenceNumber = answer.evidence.findIndex((item) => item.evidenceId === evidenceId) + 1;
+            return <button
+              key={evidenceId}
               className="answer-stage__citation"
               type="button"
-              aria-label={`${answer.evidence[evidenceIndex]?.recordTitle ?? '첫 번째'} 근거 보기`}
-              onClick={(event) => onOpenEvidence(evidenceIndex, event.currentTarget)}
-            ><span aria-hidden="true">{evidenceIndex + 1}</span></button> : null}</p>
-          );
-        })}
+              aria-label={`${evidence.recordTitle} · ${evidence.locator.label} 근거 보기`}
+              onClick={(event) => onOpenEvidence(evidenceId, event.currentTarget)}
+            ><span aria-hidden="true">{evidenceNumber}</span></button>;
+          })}</p>
+        ))}
       </div>
       <div className="answer-stage__meta">
         <p>공개된 글의 근거 {answer.evidence.length}개를 연결한 답</p>
@@ -170,8 +169,12 @@ function AnswerStage({ answer, evidenceOpen, onOpenEvidence, onSubmit, question 
           className="answer-stage__evidence"
           type="button"
           aria-expanded={evidenceOpen}
-          onClick={(event) => onOpenEvidence(0, event.currentTarget)}
-        >근거 {answer.evidence.length}개 보기</button>
+          onClick={(event) => {
+            const firstEvidenceId = answer.claims[0]?.evidenceIds[0];
+            if (!firstEvidenceId) throw new Error('answer evidence must resolve');
+            onOpenEvidence(firstEvidenceId, event.currentTarget);
+          }}
+        >이 답의 근거 {answer.evidence.length}개 보기</button>
       </div>
       <QuestionComposer
         id="second-brain-follow-up"
@@ -182,50 +185,6 @@ function AnswerStage({ answer, evidenceOpen, onOpenEvidence, onSubmit, question 
         onSubmit={onSubmit}
       />
     </div>
-  );
-}
-
-function EvidencePanel({ answer, closeRef, onClose, onSelect, panelRef, selectedIndex }: {
-  answer: AnswerViewModel;
-  closeRef: RefObject<HTMLButtonElement | null>;
-  onClose: () => void;
-  onSelect: (index: number) => void;
-  panelRef: RefObject<HTMLElement | null>;
-  selectedIndex: number;
-}) {
-  const selected = answer.evidence[selectedIndex] ?? answer.evidence[0];
-  if (!selected) return null;
-  if (typeof document === 'undefined') return null;
-  return createPortal(
-    <div className="evidence-modal-layer">
-      <button className="evidence-backdrop" type="button" tabIndex={-1} aria-hidden="true" onClick={onClose} />
-      <aside ref={panelRef} className="evidence-panel" role="dialog" aria-modal="true" aria-labelledby="evidence-panel-title">
-        <header className="evidence-panel__head">
-          <div>
-            <p>MEMORY LENS · {String(answer.evidence.length).padStart(2, '0')} PASSAGES</p>
-            <h2 id="evidence-panel-title">이 답의 기억</h2>
-          </div>
-          <button ref={closeRef} className="evidence-panel__close" type="button" aria-label="근거 패널 닫기" onClick={onClose} />
-        </header>
-        <div className="evidence-panel__body">
-          <div className="evidence-panel__sources" aria-label="답변에 사용한 근거">
-            {answer.evidence.map((item, index) => (
-              <button key={item.evidenceId} type="button" aria-pressed={selectedIndex === index} onClick={() => onSelect(index)}>
-                <span>{String(index + 1).padStart(2, '0')}</span><strong>{item.recordTitle}</strong>
-              </button>
-            ))}
-          </div>
-          <article className="evidence-panel__preview">
-            <p className="evidence-panel__meta">{selected.collectionLabel} · {selected.locator.label}</p>
-            <blockquote>“{selected.excerpt}”</blockquote>
-            <div className="evidence-panel__location">
-              <span>{selected.recordTitle}</span><a href={selected.canonicalPath}>원문 보기 ↗</a>
-            </div>
-          </article>
-        </div>
-      </aside>
-    </div>,
-    document.body,
   );
 }
 
@@ -252,11 +211,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
   const [composerNote, setComposerNote] = useState('질문을 기다리고 있습니다.');
   const coordinator = useMemo(() => createPublicAskCoordinator(provider), [provider]);
   const choreographyTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const backgroundRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
-  const shouldReturnFocusRef = useRef(false);
 
   const clearChoreographyTimers = useCallback(() => {
     for (const timer of choreographyTimersRef.current) clearTimeout(timer);
@@ -312,71 +267,17 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
   }, [clearChoreographyTimers, coordinator, restoreQueryFromLocation]);
 
   const closeEvidence = useCallback(() => {
-    shouldReturnFocusRef.current = true;
     dispatch({ type: 'close-evidence' });
   }, []);
-
-  useEffect(() => {
-    if (state.view !== 'evidence-open') {
-      if (shouldReturnFocusRef.current) {
-        shouldReturnFocusRef.current = false;
-        const frame = window.requestAnimationFrame(() => returnFocusRef.current?.focus({ preventScroll: true }));
-        return () => window.cancelAnimationFrame(frame);
-      }
-      return;
-    }
-    const shell = backgroundRef.current?.closest<HTMLElement>('.site-shell') ?? null;
-    const panel = panelRef.current;
-    const hadInert = shell?.hasAttribute('inert') ?? false;
-    const previousAriaHidden = shell?.getAttribute('aria-hidden') ?? null;
-    const previousDocumentOverflow = document.documentElement.style.overflow;
-    const previousBodyOverflow = document.body.style.overflow;
-    shell?.setAttribute('inert', '');
-    shell?.setAttribute('aria-hidden', 'true');
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-    const focusFrame = window.requestAnimationFrame(() => closeRef.current?.focus({ preventScroll: true }));
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        closeEvidence();
-        return;
-      }
-      if (event.key !== 'Tab' || !panel) return;
-      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      window.cancelAnimationFrame(focusFrame);
-      if (!hadInert) shell?.removeAttribute('inert');
-      if (previousAriaHidden === null) shell?.removeAttribute('aria-hidden');
-      else shell?.setAttribute('aria-hidden', previousAriaHidden);
-      document.documentElement.style.overflow = previousDocumentOverflow;
-      document.body.style.overflow = previousBodyOverflow;
-    };
-  }, [closeEvidence, state.view]);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     void submitQuestion(String(form.get('q') ?? ''));
   };
-  const openEvidence = (index: number, trigger: HTMLElement) => {
+  const openEvidence = (evidenceId: string, trigger: HTMLElement) => {
     if (state.view !== 'answered' && state.view !== 'evidence-open') return;
-    const answer = state.answer;
-    const evidenceId = answer.evidence[index]?.evidenceId;
-    if (!evidenceId) return;
+    if (!state.answer.evidenceById.has(evidenceId)) return;
     returnFocusRef.current = trigger;
     dispatch({ type: 'open-evidence', evidenceId });
   };
@@ -385,7 +286,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
 
   return (
     <section className="second-brain-search" data-view={state.view} aria-label="공개 기록에 묻기">
-      <div className="second-brain-search__background" ref={backgroundRef}>
+      <div className="second-brain-search__background">
         <div className="second-brain-search__stage">
           <AgentStage />
           <section className="second-brain-dialogue" aria-label="공개 기록과 대화">
@@ -436,14 +337,10 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
       {state.view === 'evidence-open' ? (
         <EvidencePanel
           answer={state.answer}
-          selectedIndex={Math.max(0, state.answer.evidence.findIndex((item) => item.evidenceId === state.selectedEvidenceId))}
-          onSelect={(index) => {
-            const evidenceId = state.answer.evidence[index]?.evidenceId;
-            if (evidenceId) dispatch({ type: 'select-evidence', evidenceId });
-          }}
+          selectedEvidenceId={state.selectedEvidenceId}
+          returnFocusRef={returnFocusRef}
+          onSelect={(evidenceId) => dispatch({ type: 'select-evidence', evidenceId })}
           onClose={closeEvidence}
-          closeRef={closeRef}
-          panelRef={panelRef}
         />
       ) : null}
     </section>

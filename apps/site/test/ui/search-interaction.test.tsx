@@ -1,12 +1,14 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { createElement } from 'react';
+import { createElement, createRef } from 'react';
 import { renderToString } from 'react-dom/server';
 import { chromium, type Browser, type Page } from 'playwright';
 import { createServer, transformWithEsbuild, type Plugin, type ViteDevServer } from 'vite';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SiteShell } from '../../src/ui/components/SiteShell';
+import { createAnswerViewModel } from '../../src/ui/search/answerViewModel';
+import { EvidencePanel } from '../../src/ui/search/EvidencePanel';
 import { SearchPage } from '../../src/ui/search/SearchPage';
 import { SAMPLE_QUESTION } from '../../src/ui/search/secondBrain';
 import type { SearchInventoryItem } from '../../src/ui/search/searchModel';
@@ -35,7 +37,7 @@ const binding = {
   answerReleaseId: 'b'.repeat(64),
 };
 const compactPrivacyDisclosure = '공개 승인 기록만 사용 · 이 사이트는 질문을 저장하지 않음';
-const answerEvidence = [0, 1, 2].map((index) => ({
+const answerEvidence = [0, 1, 2, 3, 4, 5].map((index) => ({
     evidenceId: String(index + 3).repeat(64).slice(0, 64),
     chunkId: String(index + 6).repeat(64).slice(0, 64),
     recordId: 'thoughts/why-i-read-in-the-ai-era' as const,
@@ -49,12 +51,33 @@ const answerEvidence = [0, 1, 2].map((index) => ({
 const answer = {
   kind: 'answer' as const,
   answerReleaseId: binding.answerReleaseId,
+  claims: [
+    {
+      id: 'claim-1' as const,
+      text: '첫 번째 검증 문장입니다.',
+      evidenceIds: [answerEvidence[4]!.evidenceId, answerEvidence[0]!.evidenceId],
+    },
+    {
+      id: 'claim-2' as const,
+      text: '두 번째 검증 문장입니다.',
+      evidenceIds: [answerEvidence[0]!.evidenceId, answerEvidence[5]!.evidenceId, answerEvidence[2]!.evidenceId],
+    },
+    {
+      id: 'claim-3' as const,
+      text: '세 번째 검증 문장입니다.',
+      evidenceIds: [answerEvidence[3]!.evidenceId, answerEvidence[1]!.evidenceId],
+    },
+  ],
+  evidence: answerEvidence,
+};
+const oneEvidenceAnswer = {
+  ...answer,
   claims: [{
     id: 'claim-1' as const,
-    text: '공개 기록을 근거로 답합니다.',
-    evidenceIds: answerEvidence.map(({ evidenceId }) => evidenceId),
+    text: '하나의 근거로 검증한 문장입니다.',
+    evidenceIds: [answerEvidence[2]!.evidenceId],
   }],
-  evidence: answerEvidence,
+  evidence: [answerEvidence[2]!],
 };
 const provider = {
   ask: async (question: string) => question === SAMPLE_QUESTION
@@ -218,6 +241,181 @@ async function targetBoxesBelowMinimum(page: Page) {
 }
 
 describe('second-brain search client interaction', () => {
+  it('fails closed before rendering an evidence panel with an invalid evidence ID', () => {
+    const answerModel = createAnswerViewModel(oneEvidenceAnswer);
+    expect(() => renderToString(createElement(EvidencePanel, {
+      answer: answerModel,
+      selectedEvidenceId: '9'.repeat(64),
+      returnFocusRef: createRef<HTMLElement>(),
+      onClose() {},
+      onSelect() {},
+    }))).toThrow('selected evidence must resolve');
+  });
+
+  it('renders every claim citation in provider order and opens evidence by exact ID', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+      await page.evaluate((response) => (window as typeof window & {
+        __publicAskControl: { enqueue(script: unknown): void };
+      }).__publicAskControl.enqueue({ type: 'resolve', response }), {
+        ...answer,
+        evidence: answer.evidence.map((item, index) => index === 4
+          ? { ...item, dateLabel: '꾸며낸 날짜', context: '꾸며낸 맥락', rawUrl: 'https://provider.invalid/private' }
+          : item),
+      });
+
+      const search = page.getByRole('searchbox', { name: '기록에 묻기' });
+      await search.fill(SAMPLE_QUESTION);
+      await search.press('Enter');
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('answered');
+
+      const claims = page.locator('.answer-stage__lines > p');
+      expect(await claims.evaluateAll((elements) => elements.map((element) => Array.from(element.childNodes)
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent)
+        .join('')))).toEqual([
+        '첫 번째 검증 문장입니다.',
+        '두 번째 검증 문장입니다.',
+        '세 번째 검증 문장입니다.',
+      ]);
+      expect(await claims.nth(0).getByRole('button').allTextContents()).toEqual(['5', '1']);
+      expect(await claims.nth(1).getByRole('button').allTextContents()).toEqual(['1', '6', '3']);
+      expect(await claims.nth(2).getByRole('button').allTextContents()).toEqual(['4', '2']);
+      expect(await claims.nth(0).getByRole('button').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))))
+        .toEqual(['공개 기록 5 · 문단 5 근거 보기', '공개 기록 1 · 문단 1 근거 보기']);
+
+      const firstCitation = claims.nth(0).getByRole('button').first();
+      await firstCitation.click();
+      const dialog = page.getByRole('dialog', { name: '이 답의 근거' });
+      await expect.poll(() => dialog.count()).toBe(1);
+      expect(await dialog.locator('.evidence-panel__locator').textContent()).toBe('문단 5');
+      expect(await dialog.locator('blockquote').textContent()).toBe('공개 기록 근거 5');
+      expect(await dialog.getByRole('link', { name: '원문 보기' }).getAttribute('href'))
+        .toBe('/thoughts/why-i-read-in-the-ai-era/');
+      expect(await dialog.textContent()).not.toContain('꾸며낸 날짜');
+      expect(await dialog.textContent()).not.toContain('꾸며낸 맥락');
+      expect(await dialog.textContent()).not.toContain('provider.invalid');
+      expect(await dialog.textContent()).not.toContain('MEMORY LENS');
+      expect(await dialog.textContent()).not.toContain('PASSAGES');
+      expect(await targetBoxesBelowMinimum(page)).toEqual([]);
+
+      await dialog.getByRole('button', { name: '공개 기록 1 · 문단 1' }).click();
+      expect(await page.getByRole('dialog', { name: '이 답의 근거' }).count()).toBe(1);
+      expect(await dialog.locator('.evidence-panel__locator').textContent()).toBe('문단 1');
+      expect(await dialog.locator('blockquote').textContent()).toBe('공개 기록 근거 1');
+      await dialog.getByRole('button', { name: '근거 패널 닫기' }).click();
+      await page.getByRole('button', { name: '이 답의 근거 6개 보기' }).click();
+      expect(await dialog.locator('.evidence-panel__locator').textContent()).toBe('문단 5');
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
+  it('traps evidence focus and restores every prior isolation snapshot across repeated opens', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+      await page.evaluate((response) => (window as typeof window & {
+        __publicAskControl: { enqueue(script: unknown): void };
+      }).__publicAskControl.enqueue({ type: 'resolve', response }), oneEvidenceAnswer);
+      await page.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('answered');
+
+      const shell = page.locator('.site-shell');
+      await shell.evaluate((element) => element.setAttribute('aria-hidden', 'false'));
+      await page.evaluate(() => {
+        document.documentElement.style.overflow = 'clip';
+        document.body.style.overflow = 'scroll';
+      });
+      const citation = page.getByRole('button', { name: '공개 기록 3 · 문단 3 근거 보기' });
+      await citation.click();
+      const dialog = page.getByRole('dialog', { name: '이 답의 근거' });
+      const close = dialog.getByRole('button', { name: '근거 패널 닫기' });
+      await expect.poll(() => close.evaluate((element) => document.activeElement === element)).toBe(true);
+      expect(await shell.getAttribute('inert')).not.toBeNull();
+      expect(await shell.getAttribute('aria-hidden')).toBe('true');
+      expect(await page.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow]))
+        .toEqual(['hidden', 'hidden']);
+      expect(await targetBoxesBelowMinimum(page)).toEqual([]);
+      await close.press('Shift+Tab');
+      expect(await dialog.getByRole('link', { name: '원문 보기' }).evaluate((element) => document.activeElement === element)).toBe(true);
+      await dialog.getByRole('link', { name: '원문 보기' }).press('Tab');
+      expect(await close.evaluate((element) => document.activeElement === element)).toBe(true);
+      await page.keyboard.press('Escape');
+      await expect.poll(() => dialog.count()).toBe(0);
+      await expect.poll(() => citation.evaluate((element) => document.activeElement === element)).toBe(true);
+      expect(await shell.getAttribute('inert')).toBeNull();
+      expect(await shell.getAttribute('aria-hidden')).toBe('false');
+      expect(await page.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow]))
+        .toEqual(['clip', 'scroll']);
+
+      await citation.click();
+      await page.locator('.evidence-backdrop').click({ position: { x: 2, y: 2 } });
+      await expect.poll(() => dialog.count()).toBe(0);
+      await expect.poll(() => citation.evaluate((element) => document.activeElement === element)).toBe(true);
+
+      await shell.evaluate((element) => element.setAttribute('inert', ''));
+      await citation.evaluate((element) => (element as HTMLButtonElement).click());
+      await expect.poll(() => dialog.count()).toBe(1);
+      await close.click();
+      await expect.poll(() => dialog.count()).toBe(0);
+      expect(await shell.getAttribute('inert')).not.toBeNull();
+      expect(await shell.getAttribute('aria-hidden')).toBe('false');
+      await shell.evaluate((element) => element.removeAttribute('inert'));
+
+      expect(await targetBoxesBelowMinimum(page)).toEqual([]);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
+  it('cleans evidence isolation without focusing a removed trigger when a new question starts', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+      await page.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('answered');
+      await page.locator('.answer-stage__citation').first().click();
+      await expect.poll(() => page.getByRole('dialog', { name: '이 답의 근거' }).count()).toBe(1);
+      await page.evaluate(() => {
+        const input = document.querySelector<HTMLInputElement>('#second-brain-follow-up');
+        if (!input?.form) throw new Error('follow-up form missing');
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        setter?.call(input, '새 질문');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.form.requestSubmit();
+      });
+      await expect.poll(() => page.getByRole('dialog', { name: '이 답의 근거' }).count()).toBe(0);
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).not.toBe('evidence-open');
+      expect(await page.locator('.site-shell').getAttribute('inert')).toBeNull();
+      expect(await page.evaluate(() => document.activeElement === null || document.activeElement.isConnected)).toBe(true);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
   it('defers the answer until the provider settles and preserves the exact URL without history writes', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;
