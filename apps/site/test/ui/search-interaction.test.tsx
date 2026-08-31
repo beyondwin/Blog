@@ -1095,6 +1095,89 @@ describe('second-brain search client interaction', () => {
     }
   }, 30_000);
 
+  it('does not capture a stale GET query after the live search location silently becomes queryless', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 426, height: 926 } });
+      await page.goto(`${harness.baseUrl}/search/?q=Graphify`, { waitUntil: 'networkidle' });
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('search-results');
+
+      await page.evaluate(() => window.history.replaceState({ preserve: 'yes' }, '', '/search/'));
+      await page.locator('#record-articles-graphify-code-knowledge-graph-deep-dive').getByRole('link').click();
+      await expect.poll(() => page.getByRole('heading', { name: 'Graphify detail' }).count()).toBe(1);
+      await page.goBack({ waitUntil: 'networkidle' });
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('idle');
+
+      const snapshot = await page.evaluate(() => ({
+        historyState: window.history.state,
+        providerCalls: (window as typeof window & { __publicAskCalls: unknown[] }).__publicAskCalls.length,
+        url: window.location.href,
+      }));
+      expect(snapshot.url).toBe(`${harness.baseUrl}/search/`);
+      expect(snapshot.historyState).toEqual({ preserve: 'yes' });
+      expect(JSON.stringify(snapshot.historyState)).not.toContain('Graphify');
+      expect(JSON.stringify(snapshot.historyState)).not.toContain('bwSearchReturnPosition');
+      expect(snapshot.providerCalls).toBe(0);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
+  it('rejects forged non-result anchors and out-of-document return coordinates without forced scroll', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 426, height: 926 } });
+      await page.goto(`${harness.baseUrl}/search/?q=Graphify`, { waitUntil: 'networkidle' });
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('search-results');
+
+      for (const candidate of [
+        { anchorId: 'second-brain-question', anchorTop: 0, scrollY: 0 },
+        {
+          anchorId: 'record-articles-graphify-code-knowledge-graph-deep-dive',
+          anchorTop: Number.MAX_SAFE_INTEGER,
+          scrollY: Number.MAX_SAFE_INTEGER,
+        },
+      ]) {
+        await page.evaluate((value) => {
+          const host = window as typeof window & { __forcedScrollCalls?: number };
+          host.__forcedScrollCalls = 0;
+          window.scrollTo = (() => {
+            host.__forcedScrollCalls = (host.__forcedScrollCalls ?? 0) + 1;
+          }) as typeof window.scrollTo;
+          window.history.replaceState({
+            preserve: 'yes',
+            bwSearchReturnPosition: {
+              ...value,
+              issuedAt: Date.now(),
+              location: '/search/?q=Graphify',
+              query: 'Graphify',
+            },
+          }, '');
+          window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+        }, candidate);
+        await page.waitForTimeout(50);
+        const snapshot = await page.evaluate(() => ({
+          forcedScrollCalls: (window as typeof window & { __forcedScrollCalls?: number }).__forcedScrollCalls,
+          historyState: window.history.state,
+        }));
+        expect(snapshot.forcedScrollCalls).toBe(0);
+        expect(snapshot.historyState).toEqual({ preserve: 'yes' });
+      }
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
   it('maps every provider and transport fallback to a real deterministic result without retrying', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;

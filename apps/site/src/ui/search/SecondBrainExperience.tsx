@@ -45,6 +45,31 @@ function relativeLocation(): string {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
+function liveSearchContinuationLocation(query: string): string | null {
+  if (window.location.pathname !== '/search/') return null;
+  const liveQueries = new URLSearchParams(window.location.search).getAll('q');
+  if (liveQueries.length !== 1 || boundedSearchQuery(liveQueries[0] ?? '') !== query) return null;
+  return relativeLocation();
+}
+
+function documentScrollHeight(): number {
+  return Math.max(
+    window.innerHeight,
+    document.documentElement.scrollHeight,
+    document.body?.scrollHeight ?? 0,
+  );
+}
+
+function boundedReturnCoordinates(anchorTop: number, scrollY: number): boolean {
+  if (!Number.isFinite(anchorTop) || !Number.isFinite(scrollY)) return false;
+  const height = documentScrollHeight();
+  const maxScrollY = Math.max(0, height - window.innerHeight);
+  return scrollY >= 0
+    && scrollY <= maxScrollY + 1
+    && anchorTop >= -window.innerHeight
+    && anchorTop <= window.innerHeight;
+}
+
 function takeSearchReturnPosition(query: string): SearchReturnPosition | null {
   const state = objectState(window.history.state);
   if (!(SEARCH_RETURN_POSITION_KEY in state)) return null;
@@ -58,7 +83,6 @@ function takeSearchReturnPosition(query: string): SearchReturnPosition | null {
   if (
     typeof value.anchorId !== 'string'
     || typeof value.anchorTop !== 'number'
-    || !Number.isFinite(value.anchorTop)
     || typeof issuedAt !== 'number'
     || !Number.isSafeInteger(issuedAt)
     || age < 0
@@ -66,8 +90,7 @@ function takeSearchReturnPosition(query: string): SearchReturnPosition | null {
     || value.location !== relativeLocation()
     || value.query !== query
     || typeof value.scrollY !== 'number'
-    || !Number.isFinite(value.scrollY)
-    || value.scrollY < 0
+    || !boundedReturnCoordinates(value.anchorTop, value.scrollY)
   ) return null;
   return value as unknown as SearchReturnPosition;
 }
@@ -323,8 +346,11 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
     if (state.view !== 'search-results' || state.originPolicy !== 'search-continuation') return;
     const position = takeSearchReturnPosition(state.query);
     if (position === null) return;
+    const matchingItem = searchMatches(inventory, state.query)
+      .find(({ item }) => item.anchorId === position.anchorId)?.item;
+    if (matchingItem === undefined) return;
     const anchor = document.getElementById(position.anchorId);
-    if (anchor === null) return;
+    if (anchor === null || !anchor.matches('.search-result-list > li')) return;
     const restore = () => {
       window.scrollTo(0, position.scrollY);
       const topDelta = anchor.getBoundingClientRect().top - position.anchorTop;
@@ -333,7 +359,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
     restore();
     const frame = window.requestAnimationFrame(restore);
     return () => window.cancelAnimationFrame(frame);
-  }, [state]);
+  }, [inventory, state]);
 
   const rememberSearchReturnPosition = useCallback((event: ReactMouseEvent<HTMLElement>) => {
     if (
@@ -348,18 +374,24 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
     const target = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('.search-result-list a[href]') : null;
     const item = target?.closest<HTMLElement>('li[id]') ?? null;
     if (target === null || item === null || !event.currentTarget.contains(target)) return;
+    const matchingItem = searchMatches(inventory, state.query)
+      .find(({ item: inventoryItem }) => inventoryItem.anchorId === item.id)?.item;
+    const location = liveSearchContinuationLocation(state.query);
+    const anchorTop = item.getBoundingClientRect().top;
+    const scrollY = window.scrollY;
+    if (matchingItem === undefined || location === null || !boundedReturnCoordinates(anchorTop, scrollY)) return;
     const position: SearchReturnPosition = {
       anchorId: item.id,
-      anchorTop: item.getBoundingClientRect().top,
+      anchorTop,
       issuedAt: Date.now(),
-      location: relativeLocation(),
+      location,
       query: state.query,
-      scrollY: window.scrollY,
+      scrollY,
     };
     const historyState = objectState(window.history.state);
     historyState[SEARCH_RETURN_POSITION_KEY] = position;
     try { window.history.replaceState(historyState, ''); } catch { /* Native navigation remains available. */ }
-  }, [state]);
+  }, [inventory, state]);
 
   const closeEvidence = useCallback(() => {
     dispatch({ type: 'close-evidence' });
