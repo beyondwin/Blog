@@ -1,11 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useReducer,
   useRef,
   useState,
   type FormEvent,
+  type MouseEvent as ReactMouseEvent,
 } from 'react';
 import { ORIGIN_QUERY_MAX_LENGTH } from '../navigation/origin';
 import type { AnswerViewModel } from './answerViewModel';
@@ -23,6 +25,53 @@ import { boundedSearchQuery, searchMatches, type SearchInventoryItem } from './s
 import { usePointerParallax } from './usePointerParallax';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+const SEARCH_RETURN_POSITION_KEY = 'bwSearchReturnPosition';
+const SEARCH_RETURN_POSITION_MAX_AGE_MS = 600_000;
+
+interface SearchReturnPosition {
+  anchorId: string;
+  anchorTop: number;
+  issuedAt: number;
+  location: string;
+  query: string;
+  scrollY: number;
+}
+
+function objectState(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? { ...value } : {};
+}
+
+function relativeLocation(): string {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+function takeSearchReturnPosition(query: string): SearchReturnPosition | null {
+  const state = objectState(window.history.state);
+  if (!(SEARCH_RETURN_POSITION_KEY in state)) return null;
+  const candidate = state[SEARCH_RETURN_POSITION_KEY];
+  delete state[SEARCH_RETURN_POSITION_KEY];
+  try { window.history.replaceState(state, ''); } catch { return null; }
+  if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) return null;
+  const value = candidate as Record<string, unknown>;
+  const issuedAt = value.issuedAt;
+  const age = typeof issuedAt === 'number' ? Date.now() - issuedAt : Number.NaN;
+  if (
+    typeof value.anchorId !== 'string'
+    || typeof value.anchorTop !== 'number'
+    || !Number.isFinite(value.anchorTop)
+    || typeof issuedAt !== 'number'
+    || !Number.isSafeInteger(issuedAt)
+    || age < 0
+    || age > SEARCH_RETURN_POSITION_MAX_AGE_MS
+    || value.location !== relativeLocation()
+    || value.query !== query
+    || typeof value.scrollY !== 'number'
+    || !Number.isFinite(value.scrollY)
+    || value.scrollY < 0
+  ) return null;
+  return value as unknown as SearchReturnPosition;
+}
+
 function ArrowIcon() {
   return <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 16h23M19 8l8 8-8 8" /></svg>;
 }
@@ -270,6 +319,48 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
     };
   }, [clearChoreographyTimers, coordinator, restoreQueryFromLocation]);
 
+  useLayoutEffect(() => {
+    if (state.view !== 'search-results' || state.originPolicy !== 'search-continuation') return;
+    const position = takeSearchReturnPosition(state.query);
+    if (position === null) return;
+    const anchor = document.getElementById(position.anchorId);
+    if (anchor === null) return;
+    const restore = () => {
+      window.scrollTo(0, position.scrollY);
+      const topDelta = anchor.getBoundingClientRect().top - position.anchorTop;
+      if (Math.abs(topDelta) > 0.5) window.scrollTo(0, window.scrollY + topDelta);
+    };
+    restore();
+    const frame = window.requestAnimationFrame(restore);
+    return () => window.cancelAnimationFrame(frame);
+  }, [state]);
+
+  const rememberSearchReturnPosition = useCallback((event: ReactMouseEvent<HTMLElement>) => {
+    if (
+      state.view !== 'search-results'
+      || state.originPolicy !== 'search-continuation'
+      || event.button !== 0
+      || event.altKey
+      || event.ctrlKey
+      || event.metaKey
+      || event.shiftKey
+    ) return;
+    const target = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('.search-result-list a[href]') : null;
+    const item = target?.closest<HTMLElement>('li[id]') ?? null;
+    if (target === null || item === null || !event.currentTarget.contains(target)) return;
+    const position: SearchReturnPosition = {
+      anchorId: item.id,
+      anchorTop: item.getBoundingClientRect().top,
+      issuedAt: Date.now(),
+      location: relativeLocation(),
+      query: state.query,
+      scrollY: window.scrollY,
+    };
+    const historyState = objectState(window.history.state);
+    historyState[SEARCH_RETURN_POSITION_KEY] = position;
+    try { window.history.replaceState(historyState, ''); } catch { /* Native navigation remains available. */ }
+  }, [state]);
+
   const closeEvidence = useCallback(() => {
     dispatch({ type: 'close-evidence' });
   }, []);
@@ -294,7 +385,12 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
     : null;
 
   return (
-    <section className="second-brain-search" data-view={state.view} aria-label="공개 기록에 묻기">
+    <section
+      className="second-brain-search"
+      data-view={state.view}
+      aria-label="공개 기록에 묻기"
+      onClickCapture={rememberSearchReturnPosition}
+    >
       <div className="second-brain-search__background">
         <div className="second-brain-search__stage">
           <AgentStage

@@ -1061,6 +1061,40 @@ describe('second-brain search client interaction', () => {
     }
   }, 30_000);
 
+  it('restores the exact 426px GET result scroll after detail and native Back without provider work', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 426, height: 926 } });
+      await page.goto(`${harness.baseUrl}/search/?q=Graphify`, { waitUntil: 'networkidle' });
+      const result = page.locator('#record-articles-graphify-code-knowledge-graph-deep-dive');
+      await result.scrollIntoViewIfNeeded();
+      const before = await result.evaluate((node) => ({
+        scrollY: window.scrollY,
+        top: node.getBoundingClientRect().top,
+      }));
+
+      await result.getByRole('link').click();
+      await expect.poll(() => page.getByRole('heading', { name: 'Graphify detail' }).count()).toBe(1);
+      await page.goBack({ waitUntil: 'networkidle' });
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('search-results');
+      const after = await result.evaluate((node) => ({
+        scrollY: window.scrollY,
+        top: node.getBoundingClientRect().top,
+      }));
+
+      expect(Math.abs(after.scrollY - before.scrollY)).toBeLessThanOrEqual(2);
+      expect(Math.abs(after.top - before.top)).toBeLessThanOrEqual(2);
+      expect(await page.evaluate(() => (window as typeof window & { __publicAskCalls: unknown[] }).__publicAskCalls.length)).toBe(0);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
   it('maps every provider and transport fallback to a real deterministic result without retrying', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;
