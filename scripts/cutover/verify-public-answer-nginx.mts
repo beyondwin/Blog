@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, rmdir, writeFile } from 'node:fs/promises';
 import { createServer, request as requestHttp, type IncomingHttpHeaders, type Server } from 'node:http';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -39,8 +39,10 @@ const APPLICATION_HEADERS = [
   'x-content-release-id',
 ] as const;
 const STATUSES = [200, 409, 429, 503] as const;
+const PRIVATE_QUERY_MARKER = 'task7-private-query-marker-96f31b64';
 
 export interface PublicAnswerNginxReceipt {
+  accessLogMarkerAbsent: true;
   applicationHeaders: string[];
   configurationValidated: true;
   forbiddenHeaders: readonly string[];
@@ -50,8 +52,12 @@ export interface PublicAnswerNginxReceipt {
   platform: keyof typeof NGINX_VERIFIER_IMAGES;
   productServer: string | null;
   proofScope: 'enumerated-forbidden-response-headers-only';
+  rejectedApiConnections: 0;
+  requestGateBodiesBounded: true;
+  requestGateStatuses: Record<string, number>;
   statuses: number[];
   transportHeaders: string[];
+  validApiConnections: number;
 }
 
 export function parseNginxVerifierArguments(argv: readonly string[]): Record<string, never> {
@@ -69,6 +75,53 @@ export function selectNginxVerifierImage(
     : architecture === 'arm64' ? 'linux/arm64' : null;
   if (!selected) throw new Error(`unsupported Nginx verifier host architecture: ${architecture}`);
   return { image: NGINX_VERIFIER_IMAGES[selected], platform: selected };
+}
+
+export async function createNginxVerifierTemporaryRoot(repositoryRoot: string): Promise<{
+  cleanup: () => Promise<void>;
+  temporaryRoot: string;
+}> {
+  const root = resolve(repositoryRoot);
+  const parent = join(root, '.superpowers');
+  const ignoreFile = await readFile(join(root, '.gitignore'), 'utf8').catch(() => '');
+  const ignoreRules = ignoreFile
+    .split(/\r?\n/u)
+    .map((line) => line.trim());
+  if (!ignoreRules.includes('.superpowers/') && !ignoreRules.includes('/.superpowers/')) {
+    throw new Error('Nginx verifier parent must be explicitly ignored by the repository');
+  }
+  let createdParent = false;
+  try {
+    await mkdir(parent, { mode: 0o700 });
+    createdParent = true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  }
+  const state = await lstat(parent);
+  if (!state.isDirectory() || state.isSymbolicLink()) {
+    throw new Error('Nginx verifier parent must be one real directory');
+  }
+  if (typeof process.getuid === 'function' && state.uid !== process.getuid()) {
+    throw new Error('Nginx verifier parent must be owned by the current user');
+  }
+  if (await realpath(parent) !== join(await realpath(root), '.superpowers')) {
+    throw new Error('Nginx verifier parent real path changed');
+  }
+  const temporaryRoot = await mkdtemp(join(parent, 'nginx-verifier-'));
+  let cleaned = false;
+  return {
+    temporaryRoot,
+    cleanup: async () => {
+      if (cleaned) return;
+      cleaned = true;
+      await rm(temporaryRoot, { recursive: true, force: true });
+      if (createdParent) {
+        await rmdir(parent).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOTEMPTY' && error.code !== 'ENOENT') throw error;
+        });
+      }
+    },
+  };
 }
 
 async function docker(arguments_: readonly string[]): Promise<string> {
@@ -144,34 +197,30 @@ function harnessConfiguration(configuration: string, reactPort: number, apiPort:
   return result;
 }
 
-function requestThroughNginx(port: number, status: number): Promise<{
+interface NginxProbeOptions {
+  body?: string;
+  headers?: Record<string, string>;
+  method?: string;
+  path: string;
+}
+
+function requestNginx(port: number, options: NginxProbeOptions): Promise<{
   body: string;
   headers: IncomingHttpHeaders;
   rawHeaders: string[];
   status: number;
 }> {
   return new Promise((resolveRequest, reject) => {
-    const body = JSON.stringify({ status });
+    const body = options.body ?? '';
     const request = requestHttp({
       hostname: '127.0.0.1',
       port,
-      method: 'POST',
-      path: '/api/public/ask',
+      method: options.method ?? 'POST',
+      path: options.path,
       headers: {
         Host: 'localhost:4389',
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-        Origin: 'https://public.example',
-        'Sec-Fetch-Site': 'same-origin',
-        Cookie: 'secret=1',
-        Authorization: 'Bearer secret',
-        Forwarded: 'for=hostile',
-        'X-Forwarded-For': 'hostile',
-        'X-Forwarded-Proto': 'https',
-        'X-Forwarded-Host': 'hostile.example',
-        'X-Forwarded-Port': '666',
-        'X-Real-IP': 'hostile',
-        'X-Arbitrary-Request': 'hostile',
+        ...(body ? { 'Content-Length': String(Buffer.byteLength(body)) } : {}),
+        ...options.headers,
       },
     }, (response) => {
       const chunks: Buffer[] = [];
@@ -188,10 +237,33 @@ function requestThroughNginx(port: number, status: number): Promise<{
   });
 }
 
+function requestThroughNginx(port: number, status: number): ReturnType<typeof requestNginx> {
+  const body = JSON.stringify({ status });
+  return requestNginx(port, {
+    path: '/api/public/ask',
+    body,
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: 'https://public.example',
+      'Sec-Fetch-Site': 'same-origin',
+      Cookie: 'secret=1',
+      Authorization: 'Bearer secret',
+      Forwarded: 'for=hostile',
+      'X-Forwarded-For': 'hostile',
+      'X-Forwarded-Proto': 'https',
+      'X-Forwarded-Host': 'hostile.example',
+      'X-Forwarded-Port': '666',
+      'X-Real-IP': 'hostile',
+      'X-Arbitrary-Request': 'hostile',
+    },
+  });
+}
+
 async function waitForNginx(port: number): Promise<void> {
   for (let attempt = 0; attempt < 40; attempt += 1) {
     try {
-      await requestThroughNginx(port, 200);
+      const response = await requestNginx(port, { method: 'GET', path: '/' });
+      if (response.status !== 200) throw new Error('not ready');
       return;
     } catch {
       await new Promise((resolveWait) => setTimeout(resolveWait, 100));
@@ -232,7 +304,8 @@ export async function verifyPublicAnswerNginx({
     throw new Error('pinned Nginx build receipt is incomplete');
   }
 
-  const temporaryRoot = await mkdtemp(join(root, '.superpowers/nginx-verifier-'));
+  const workspace = await createNginxVerifierTemporaryRoot(root);
+  const { temporaryRoot } = workspace;
   const containerName = `beyondwin-public-answer-nginx-${process.pid}-${randomBytes(4).toString('hex')}`;
   const react = createServer((_request, response) => response.end('react'));
   const observedApiRequests: IncomingHttpHeaders[] = [];
@@ -250,9 +323,10 @@ export async function verifyPublicAnswerNginx({
     if (!prepared.includes('proxy_redirect off;') || !prepared.includes('server_tokens off;')) {
       throw new Error('prepared Nginx finite response seal is incomplete');
     }
+    const mountedPreparedPath = await realpath(preparedPath);
     await docker([
       'run', '--rm', '--platform', selected.platform,
-      '-v', `${preparedPath}:/etc/nginx/conf.d/public-site.conf:ro`,
+      '-v', `${mountedPreparedPath}:/etc/nginx/conf.d/public-site.conf:ro`,
       selected.image, 'nginx', '-t',
     ]);
 
@@ -311,7 +385,7 @@ export async function verifyPublicAnswerNginx({
         }
       }
     }
-    if (observedApiRequests.length < STATUSES.length) throw new Error('Nginx API verifier missed upstream requests');
+    if (observedApiRequests.length !== STATUSES.length) throw new Error('Nginx API verifier missed or repeated upstream requests');
     for (const headers of observedApiRequests) {
       if (headers.host !== '127.0.0.1:4392'
         || headers.origin !== 'https://public.example'
@@ -325,7 +399,44 @@ export async function verifyPublicAnswerNginx({
         throw new Error('Nginx leaked untrusted request identity or credentials upstream');
       }
     }
+    const validApiConnections = observedApiRequests.length;
+    const rejectedBefore = observedApiRequests.length;
+    const gateCases: Array<{
+      expected: number;
+      name: string;
+      options: NginxProbeOptions;
+    }> = [
+      { name: 'query', expected: 404, options: { path: `/api/public/ask?question=${PRIVATE_QUERY_MARKER}`, body: '{}' } },
+      { name: 'trailingSlash', expected: 404, options: { path: '/api/public/ask/', body: PRIVATE_QUERY_MARKER } },
+      { name: 'doubleSlash', expected: 404, options: { path: '//api/public/ask', body: PRIVATE_QUERY_MARKER } },
+      { name: 'dotSegment', expected: 404, options: { path: '/api/./public/ask', body: PRIVATE_QUERY_MARKER } },
+      { name: 'encodedSegment', expected: 404, options: { path: '/api/public/%61sk', body: PRIVATE_QUERY_MARKER } },
+      { name: 'wrongMethod', expected: 405, options: { method: 'GET', path: '/api/public/ask' } },
+      { name: 'wrongHost', expected: 400, options: { path: '/api/public/ask', body: PRIVATE_QUERY_MARKER, headers: { Host: 'hostile.example' } } },
+      { name: 'upgrade', expected: 400, options: { path: '/api/public/ask', headers: { Connection: 'Upgrade', Upgrade: 'websocket' } } },
+      { name: 'health', expected: 404, options: { path: '/health/live', body: PRIVATE_QUERY_MARKER } },
+      { name: 'otherApi', expected: 404, options: { path: '/api/private', body: PRIVATE_QUERY_MARKER } },
+      { name: 'oversized', expected: 413, options: { path: '/api/public/ask', body: PRIVATE_QUERY_MARKER.padEnd(4_097, 'x') } },
+    ];
+    const requestGateStatuses: Record<string, number> = {};
+    for (const gate of gateCases) {
+      const response = await requestNginx(port, gate.options);
+      requestGateStatuses[gate.name] = response.status;
+      if (response.status !== gate.expected) {
+        throw new Error(`Nginx request gate ${gate.name} returned ${response.status}, expected ${gate.expected}`);
+      }
+      if (Buffer.byteLength(response.body) > 1_024 || response.body.includes(PRIVATE_QUERY_MARKER)) {
+        throw new Error(`Nginx request gate ${gate.name} response was not bounded and generic`);
+      }
+    }
+    const rejectedApiConnections = observedApiRequests.length - rejectedBefore;
+    if (rejectedApiConnections !== 0) throw new Error('Nginx connected a rejected request to the API upstream');
+    const containerLogs = await docker(['logs', containerName]);
+    if (containerLogs.includes(PRIVATE_QUERY_MARKER)) {
+      throw new Error('Nginx logged a rejected private query marker');
+    }
     return {
+      accessLogMarkerAbsent: true,
       applicationHeaders: [...APPLICATION_HEADERS],
       configurationValidated: true,
       forbiddenHeaders: ENUMERATED_FORBIDDEN_RESPONSE_HEADERS,
@@ -335,13 +446,17 @@ export async function verifyPublicAnswerNginx({
       platform: selected.platform,
       productServer,
       proofScope: 'enumerated-forbidden-response-headers-only',
+      rejectedApiConnections: 0,
+      requestGateBodiesBounded: true,
+      requestGateStatuses,
       statuses: [...STATUSES],
       transportHeaders: [...transport].sort(),
+      validApiConnections,
     };
   } finally {
     if (containerStarted) await docker(['rm', '-f', containerName]).catch(() => undefined);
     await Promise.allSettled([close(react), close(api)]);
-    await rm(temporaryRoot, { recursive: true, force: true });
+    await workspace.cleanup();
   }
 }
 

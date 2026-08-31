@@ -13,6 +13,10 @@ export interface ProxyArguments {
   pidFile?: string;
 }
 
+export interface ProxyRuntimeOptions {
+  apiDeadlineMs?: number;
+}
+
 const allowedValueArguments = new Set(['--listen', '--react', '--api', '--pid-file']);
 const hopByHopHeaders = new Set([
   'connection',
@@ -62,7 +66,7 @@ function parseUpstream(value: string, argument: '--api' | '--react'): URL {
     throw new Error(`${argument} requires one valid URL`, { cause: error });
   }
   if (url.protocol !== 'http:') throw new Error(`${argument} permits HTTP only`);
-  if (!['127.0.0.1', '[::1]'].includes(url.hostname)) throw new Error(`${argument} permits exact loopback upstreams only`);
+  if (url.hostname !== '127.0.0.1') throw new Error(`${argument} permits exact loopback 127.0.0.1 upstreams only`);
   if (!url.port || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
     throw new Error(`${argument} requires only an origin with an explicit port`);
   }
@@ -227,8 +231,15 @@ async function writePidFile(path: string): Promise<void> {
   }
 }
 
-export async function createProxyServer(options: ProxyArguments): Promise<Server> {
+export async function createProxyServer(
+  options: ProxyArguments,
+  runtime: ProxyRuntimeOptions = {},
+): Promise<Server> {
   if (!options.pidFile) throw new Error('proxy PID file is required at runtime');
+  const apiDeadlineMs = runtime.apiDeadlineMs ?? API_DEADLINE_MS;
+  if (!Number.isSafeInteger(apiDeadlineMs) || apiDeadlineMs < 1 || apiDeadlineMs > API_DEADLINE_MS) {
+    throw new Error('API deadline must be a positive integer no greater than the prepared 12 second deadline');
+  }
   await assertOwnedCutoverPath(options.pidFile);
   const server = http.createServer((request, response) => {
     const authority = listenerAuthority(options.listen);
@@ -283,7 +294,7 @@ export async function createProxyServer(options: ProxyArguments): Promise<Server
         if (!response.writableEnded) abortUpstream();
       });
       request.once('aborted', abortUpstream);
-      upstreamRequest.setTimeout(API_DEADLINE_MS, () => upstreamRequest.destroy(new Error('deadline')));
+      upstreamRequest.setTimeout(apiDeadlineMs, () => upstreamRequest.destroy(new Error('deadline')));
       upstreamRequest.once('error', (error) => {
         if (response.headersSent || response.destroyed) {
           response.destroy();

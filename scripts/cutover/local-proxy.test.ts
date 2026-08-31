@@ -17,7 +17,7 @@ async function listen(server: Server): Promise<number> {
   return address.port;
 }
 
-async function startProxy(reactPort: number, apiPort: number) {
+async function startProxy(reactPort: number, apiPort: number, apiDeadlineMs?: number) {
   const root = await mkdtemp('/tmp/beyondwin-cutover.');
   createdRoots.push(root);
   const reservation = createServer();
@@ -30,7 +30,7 @@ async function startProxy(reactPort: number, apiPort: number) {
     '--api', `http://127.0.0.1:${apiPort}`,
     '--pid-file', join(root, 'proxy.pid'),
   ]);
-  const proxy = await createProxyServer(parsed);
+  const proxy = await createProxyServer(parsed, apiDeadlineMs === undefined ? {} : { apiDeadlineMs });
   closeables.push(proxy);
   return { origin: `http://127.0.0.1:${proxyPort}`, authority: `127.0.0.1:${proxyPort}` };
 }
@@ -92,6 +92,12 @@ describe('React-only local cutover proxy', () => {
     expect(() => parseProxyArguments(valid.map((value) => value === 'http://127.0.0.1:4392'
       ? 'http://example.com:4392'
       : value))).toThrow('loopback');
+    expect(() => parseProxyArguments(valid.map((value) => value === 'http://127.0.0.1:4391'
+      ? 'http://[::1]:4391'
+      : value))).toThrow('127.0.0.1');
+    expect(() => parseProxyArguments(valid.map((value) => value === 'http://127.0.0.1:4392'
+      ? 'http://[::1]:4392'
+      : value))).toThrow('127.0.0.1');
   });
 
   it('confines the PID file to one real owned cutover directory', async () => {
@@ -361,6 +367,38 @@ describe('React-only local cutover proxy', () => {
     expect(attempts).toBe(1);
   });
 
+  it('settles a never-responding API request at the injected deadline and closes upstream work', async () => {
+    let attempts = 0;
+    let resolveClosed!: () => void;
+    const closed = new Promise<void>((resolve) => { resolveClosed = resolve; });
+    const reactPort = await listen(createServer((_request, response) => response.end('react')));
+    const apiPort = await listen(createServer((_request, response) => {
+      attempts += 1;
+      response.once('close', resolveClosed);
+    }));
+    const proxy = await startProxy(reactPort, apiPort, 40);
+    const marker = 'private-never-settling-question-7a2d';
+    const started = Date.now();
+    const deadline = await rawRequest(proxy.origin, {
+      method: 'POST',
+      path: '/api/public/ask',
+      body: JSON.stringify({ question: marker }),
+      headers: { Host: proxy.authority, 'Content-Type': 'application/json' },
+    });
+    const elapsed = Date.now() - started;
+    expect(deadline.status).toBe(504);
+    expect(deadline.body).not.toContain(marker);
+    expect(deadline.headers['cache-control']).toBe('no-store');
+    expect(elapsed).toBeGreaterThanOrEqual(30);
+    expect(elapsed).toBeLessThan(1_000);
+    await Promise.race([
+      closed,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('deadline did not close upstream work')), 1_000)),
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(attempts).toBe(1);
+  });
+
   it('rejects oversized bodies and HTTP upgrades before opening the API upstream', async () => {
     let attempts = 0;
     const reactPort = await listen(createServer((_request, response) => response.end('react')));
@@ -458,5 +496,6 @@ describe('React-only local cutover proxy', () => {
     ]) expect(configuration).toContain(`proxy_hide_header ${header};`);
     expect(configuration).toContain('proxy_redirect off;');
     expect(configuration).toContain('server_tokens off;');
+    expect(configuration).toContain('access_log off;');
   });
 });

@@ -1,8 +1,10 @@
-import { resolve } from 'node:path';
+import { access, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   ENUMERATED_FORBIDDEN_RESPONSE_HEADERS,
   NGINX_VERIFIER_IMAGES,
+  createNginxVerifierTemporaryRoot,
   parseNginxVerifierArguments,
   selectNginxVerifierImage,
   verifyPublicAnswerNginx,
@@ -47,13 +49,52 @@ describe('prepared public-answer core-Nginx verifier', () => {
     expect(ENUMERATED_FORBIDDEN_RESPONSE_HEADERS).toEqual(EXPECTED_FORBIDDEN);
   });
 
+  it('creates and removes an owned verifier workspace when .superpowers is absent', async () => {
+    const repositoryRoot = resolve(import.meta.dirname, '../..');
+    await mkdir(join(repositoryRoot, 'build'), { recursive: true });
+    const cleanRoot = await mkdtemp(join(repositoryRoot, 'build/nginx-clean-root-'));
+    try {
+      await expect(access(join(cleanRoot, '.superpowers'))).rejects.toThrow();
+      await expect(createNginxVerifierTemporaryRoot(cleanRoot)).rejects.toThrow(/ignored/iu);
+      await expect(access(join(cleanRoot, '.superpowers'))).rejects.toThrow();
+      await writeFile(join(cleanRoot, '.gitignore'), '.superpowers/\n', 'utf8');
+      await mkdir(join(cleanRoot, 'deploy/reverse-proxy'), { recursive: true });
+      await copyFile(
+        new URL('../../deploy/reverse-proxy/public-site.conf', import.meta.url),
+        join(cleanRoot, 'deploy/reverse-proxy/public-site.conf'),
+      );
+      const receipt = await verifyPublicAnswerNginx({ repositoryRoot: cleanRoot });
+      expect(receipt.configurationValidated).toBe(true);
+      await expect(access(join(cleanRoot, '.superpowers'))).rejects.toThrow();
+    } finally {
+      await rm(cleanRoot, { recursive: true, force: true });
+    }
+  });
+
   it('runs the pinned real core Nginx and seals every named hostile header on success and errors', async () => {
     const receipt = await verifyPublicAnswerNginx({ repositoryRoot: resolve(import.meta.dirname, '../..') });
     expect(receipt.nginxVersion).toBe('nginx version: nginx/1.28.0');
     expect(receipt.nginxBuild).toContain('configure arguments:');
     expect(receipt.configurationValidated).toBe(true);
+    expect(receipt.accessLogMarkerAbsent).toBe(true);
     expect(receipt.proofScope).toBe('enumerated-forbidden-response-headers-only');
     expect(receipt.statuses).toEqual([200, 409, 429, 503]);
+    expect(receipt.validApiConnections).toBe(4);
+    expect(receipt.rejectedApiConnections).toBe(0);
+    expect(receipt.requestGateBodiesBounded).toBe(true);
+    expect(receipt.requestGateStatuses).toEqual({
+      query: 404,
+      trailingSlash: 404,
+      doubleSlash: 404,
+      dotSegment: 404,
+      encodedSegment: 404,
+      wrongMethod: 405,
+      wrongHost: 400,
+      upgrade: 400,
+      health: 404,
+      otherApi: 404,
+      oversized: 413,
+    });
     expect(receipt.forbiddenHeaders).toEqual(EXPECTED_FORBIDDEN);
     expect(receipt.applicationHeaders).toEqual([
       'cache-control', 'content-type', 'retry-after', 'vary',
