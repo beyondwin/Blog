@@ -34,6 +34,7 @@ const binding = {
   contentReleaseId: 'a'.repeat(64),
   answerReleaseId: 'b'.repeat(64),
 };
+const compactPrivacyDisclosure = '공개 승인 기록만 사용 · 이 사이트는 질문을 저장하지 않음';
 const answerEvidence = [0, 1, 2].map((index) => ({
     evidenceId: String(index + 3).repeat(64).slice(0, 64),
     chunkId: String(index + 6).repeat(64).slice(0, 64),
@@ -270,6 +271,7 @@ describe('second-brain search client interaction', () => {
         { timeout: 3_000 },
       ).toBe('answered');
       expect(await page.locator('.answer-stage').count()).toBe(1);
+      expect(await page.getByText(compactPrivacyDisclosure, { exact: true }).count()).toBe(1);
       expect(page.url()).toBe(before);
     } finally {
       await browser?.close();
@@ -440,7 +442,7 @@ describe('second-brain search client interaction', () => {
         };
       });
 
-      await page.goto(`${harness.baseUrl}/search/?q=Graphify`, { waitUntil: 'networkidle' });
+      await page.goto(`${harness.baseUrl}/search/?q=Graphify&keep=%2F#exact`, { waitUntil: 'networkidle' });
       const restoredUrl = page.url();
       await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('search-results');
       await expect.poll(() => page.getByRole('searchbox', { name: '기록에 묻기' }).inputValue()).toBe('Graphify');
@@ -555,22 +557,93 @@ describe('second-brain search client interaction', () => {
       server = harness.server;
       browser = await chromium.launch({ headless: true });
       const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.addInitScript(() => {
+        const pushState = window.history.pushState.bind(window.history);
+        const replaceState = window.history.replaceState.bind(window.history);
+        Object.defineProperty(window, '__timeoutHistoryWrites', {
+          configurable: true,
+          value: { push: 0, replace: 0 },
+        });
+        window.history.pushState = (...args) => {
+          (window as typeof window & { __timeoutHistoryWrites: { push: number } }).__timeoutHistoryWrites.push += 1;
+          return pushState(...args);
+        };
+        window.history.replaceState = (...args) => {
+          (window as typeof window & { __timeoutHistoryWrites: { replace: number } }).__timeoutHistoryWrites.replace += 1;
+          return replaceState(...args);
+        };
+      });
       await page.goto(`${harness.baseUrl}/search/?q=Graphify&keep=%2F#exact`, { waitUntil: 'networkidle' });
       const exactUrl = page.url();
       await page.evaluate(() => (window as typeof window & {
         __publicAskControl: { enqueue(script: unknown): void };
       }).__publicAskControl.enqueue({ type: 'defer' }));
       const search = page.getByRole('searchbox', { name: '기록에 묻기' });
-      await search.fill('Graphify');
+      const differentQuestion = 'Graphify와 다른 timeout 질문';
+      await search.fill(differentQuestion);
       await search.press('Enter');
       await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view'), { timeout: 10_000 })
         .toBe('search-results');
       expect(page.url()).toBe(exactUrl);
-      expect(await page.getByRole('searchbox', { name: '기록에 묻기' }).inputValue()).toBe('Graphify');
+      expect(await page.getByRole('searchbox', { name: '기록에 묻기' }).inputValue()).toBe(differentQuestion);
+      expect(await page.evaluate(() => (window as typeof window & {
+        __timeoutHistoryWrites: { push: number; replace: number };
+      }).__timeoutHistoryWrites)).toEqual({ push: 0, replace: 0 });
       expect(await page.locator('.second-brain-search__results [role="status"]').textContent())
         .toBe('답변을 기다리는 시간이 길어져 공개 기록 검색 결과로 전환했습니다.');
-      expect(await page.locator('.search-result-list').count()).toBe(1);
+      expect(await page.locator('.search-zero').count()).toBe(1);
       expect(await page.evaluate(() => (window as typeof window & { __publicAskCalls: unknown[] }).__publicAskCalls.length)).toBe(1);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 20_000);
+
+  it('preserves the entire query and hash with zero history writes for a different-question server error', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness();
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.goto(`${harness.baseUrl}/search/?q=Graphify&keep=%2F#error`, { waitUntil: 'networkidle' });
+      const exactUrl = page.url();
+      await page.evaluate(() => {
+        const pushState = window.history.pushState.bind(window.history);
+        const replaceState = window.history.replaceState.bind(window.history);
+        Object.defineProperty(window, '__errorHistoryWrites', {
+          configurable: true,
+          value: { push: 0, replace: 0 },
+        });
+        window.history.pushState = (...args) => {
+          (window as typeof window & { __errorHistoryWrites: { push: number } }).__errorHistoryWrites.push += 1;
+          return pushState(...args);
+        };
+        window.history.replaceState = (...args) => {
+          (window as typeof window & { __errorHistoryWrites: { replace: number } }).__errorHistoryWrites.replace += 1;
+          return replaceState(...args);
+        };
+      });
+      await page.evaluate(() => (window as typeof window & {
+        __publicAskControl: { enqueue(script: unknown): void };
+      }).__publicAskControl.enqueue({
+        type: 'resolve',
+        response: { kind: 'error', code: 'unavailable', retryable: true },
+      }));
+
+      const differentQuestion = '서버 오류로 전환할 다른 질문';
+      const search = page.getByRole('searchbox', { name: '기록에 묻기' });
+      await search.fill(differentQuestion);
+      await search.press('Enter');
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('search-results');
+      expect(page.url()).toBe(exactUrl);
+      expect(await page.evaluate(() => (window as typeof window & {
+        __errorHistoryWrites: { push: number; replace: number };
+      }).__errorHistoryWrites)).toEqual({ push: 0, replace: 0 });
+      expect(await page.locator('.second-brain-search__results [role="status"]').textContent())
+        .toBe('답변 기능에 연결하지 못해 공개 기록 검색 결과를 보여드립니다.');
+      expect(await page.getByRole('searchbox', { name: '기록에 묻기' }).inputValue()).toBe(differentQuestion);
     } finally {
       await browser?.close();
       await server?.close();
@@ -697,6 +770,9 @@ describe('second-brain search client interaction', () => {
       await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
       expect(await page.getByRole('heading', { name: '공개 기록에 무엇을 묻고 싶나요?', exact: true }).count()).toBe(1);
       expect((await page.locator('h1').allTextContents()).join(' ')).not.toContain('제 기록에');
+      const compactDisclosure = page.getByText(compactPrivacyDisclosure, { exact: true });
+      expect(await compactDisclosure.count()).toBe(1);
+      expect(await compactDisclosure.isVisible()).toBe(true);
       const summary = page.getByText('질문과 근거는 어떻게 처리되나요?', { exact: true });
       await summary.focus();
       await summary.press('Enter');

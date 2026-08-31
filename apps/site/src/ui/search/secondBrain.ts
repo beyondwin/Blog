@@ -26,11 +26,16 @@ export type AskExperienceState =
     }
   | { view: 'answered'; query: string; answer: AnswerViewModel }
   | { view: 'evidence-open'; query: string; answer: AnswerViewModel; selectedEvidenceId: string }
-  | { view: 'search-results'; query: string; notice: string | null };
+  | {
+      view: 'search-results';
+      query: string;
+      notice: string | null;
+      originPolicy: 'search-continuation' | 'canonical-only';
+    };
 
 export type AskExperienceAction =
   | { type: 'submit-answer'; query: string }
-  | { type: 'show-results'; query: string; notice?: string | null }
+  | { type: 'restore-search'; query: string }
   | { type: 'advance'; phase: 'connecting' | 'composing' }
   | { type: 'visual-complete' }
   | { type: 'network-settled'; result: CoordinatedAskResult }
@@ -46,11 +51,18 @@ function boundedQuestion(value: string): string {
 
 export function initialAskState(initialQuery: string): AskExperienceState {
   const query = boundedQuestion(initialQuery);
-  return query ? { view: 'search-results', query, notice: null } : { view: 'idle', query: '' };
+  return query
+    ? { view: 'search-results', query, notice: null, originPolicy: 'search-continuation' }
+    : { view: 'idle', query: '' };
 }
 
 function fallback(query: string, code: keyof typeof FALLBACK_NOTICE): AskExperienceState {
-  return { view: 'search-results', query, notice: FALLBACK_NOTICE[code] };
+  return {
+    view: 'search-results',
+    query,
+    notice: FALLBACK_NOTICE[code],
+    originPolicy: 'canonical-only',
+  };
 }
 
 function settleNetwork(
@@ -84,10 +96,10 @@ export function askExperienceReducer(
         ? { view: 'pending', query, phase: 'retrieving', visualComplete: false, answer: null }
         : { view: 'idle', query: '' };
     }
-    case 'show-results': {
+    case 'restore-search': {
       const query = boundedQuestion(action.query);
       return query
-        ? { view: 'search-results', query, notice: action.notice ?? null }
+        ? { view: 'search-results', query, notice: null, originPolicy: 'search-continuation' }
         : { view: 'idle', query: '' };
     }
     case 'advance':

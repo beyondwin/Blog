@@ -108,6 +108,9 @@ function QuestionComposer({ id, label, note, onBlur, onChange, onFocus, onSubmit
           <ArrowIcon />
         </button>
       </div>
+      <p className="question-composer__privacy-summary">
+        공개 승인 기록만 사용 · 이 사이트는 질문을 저장하지 않음
+      </p>
       {note ? <p className="question-composer__note">{note}</p> : null}
       <details className="question-composer__privacy">
         <summary>질문과 근거는 어떻게 처리되나요?</summary>
@@ -293,7 +296,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
     const query = boundedSearchQuery(new URLSearchParams(window.location.search).get('q') ?? '');
     setInputValue(query || SAMPLE_QUESTION);
     setComposerNote('질문을 기다리고 있습니다.');
-    dispatch(query ? { type: 'show-results', query } : { type: 'reset' });
+    dispatch(query ? { type: 'restore-search', query } : { type: 'reset' });
   }, [clearChoreographyTimers, coordinator]);
 
   useEffect(() => {
@@ -424,7 +427,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
             {state.notice ? <p className="second-brain-search__notice" role="status">{state.notice}</p> : null}
             <SearchResults
               inventory={inventory}
-              originPolicy={state.notice === null ? 'search-continuation' : 'canonical-only'}
+              originPolicy={state.originPolicy}
               query={state.query}
             />
           </div>

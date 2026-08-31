@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -51,6 +52,7 @@ const binding = {
   contentReleaseId: 'a'.repeat(64),
   answerReleaseId: 'b'.repeat(64),
 };
+const compactPrivacyDisclosure = '공개 승인 기록만 사용 · 이 사이트는 질문을 저장하지 않음';
 
 function renderSearch(initialQuery: string) {
   return renderToStaticMarkup(createElement(SearchPage as any, {
@@ -63,8 +65,11 @@ function renderSearch(initialQuery: string) {
 describe('FORM & THOUGHT public search', () => {
   it('renders the approved question-led idle screen with a canonical GET fallback', () => {
     const html = renderSearch('');
+    const source = readFileSync(new URL('../../src/ui/search/SecondBrainExperience.tsx', import.meta.url), 'utf8');
 
     expect(html).toContain('공개 기록에 무엇을 묻고 싶나요?');
+    expect(source).toContain(compactPrivacyDisclosure);
+    expect(html).toContain(compactPrivacyDisclosure);
     expect(html).toContain('<form class="question-composer" action="/search/" method="get">');
     expect(html).toContain('name="q"');
     expect(html).toContain('aria-label="기록에 묻기"');

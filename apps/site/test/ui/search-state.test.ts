@@ -30,6 +30,31 @@ function settled(response: PublicAskResponse, token = 1): CoordinatedAskResult {
 }
 
 describe('provider-aware second-brain state', () => {
+  it('seals GET restoration and POST fallback provenance in the discriminated search state', () => {
+    expect(initialAskState(' Graphify ')).toEqual({
+      view: 'search-results',
+      query: 'Graphify',
+      notice: null,
+      originPolicy: 'search-continuation',
+    });
+    expect(askExperienceReducer(initialAskState(''), {
+      type: 'restore-search', query: 'Graphify',
+    })).toEqual({
+      view: 'search-results',
+      query: 'Graphify',
+      notice: null,
+      originPolicy: 'search-continuation',
+    });
+
+    const pending = askExperienceReducer(initialAskState(''), {
+      type: 'submit-answer', query: 'Graphify',
+    });
+    expect(askExperienceReducer(pending, {
+      type: 'network-settled',
+      result: settled({ kind: 'search', reason: 'provider-disabled' }),
+    })).toMatchObject({ view: 'search-results', originPolicy: 'canonical-only' });
+  });
+
   it('keeps network and choreography completion separate in either arrival order', () => {
     const pending = askExperienceReducer(initialAskState(''), {
       type: 'submit-answer', query: SAMPLE_QUESTION,
@@ -83,7 +108,9 @@ describe('provider-aware second-brain state', () => {
 
     expect(askExperienceReducer(pending, {
       type: 'network-settled', result: settled(response),
-    })).toEqual({ view: 'search-results', query: SAMPLE_QUESTION, notice });
+    })).toEqual({
+      view: 'search-results', query: SAMPLE_QUESTION, notice, originPolicy: 'canonical-only',
+    });
   });
 
   it.each([
@@ -97,7 +124,9 @@ describe('provider-aware second-brain state', () => {
 
     expect(askExperienceReducer(pending, {
       type: 'network-settled', result: { kind: 'transport-error', token: 1, code },
-    })).toEqual({ view: 'search-results', query: SAMPLE_QUESTION, notice });
+    })).toEqual({
+      view: 'search-results', query: SAMPLE_QUESTION, notice, originPolicy: 'canonical-only',
+    });
   });
 
   it('turns a schema-bypassed invalid answer into an invalid-response fallback', () => {
@@ -115,6 +144,7 @@ describe('provider-aware second-brain state', () => {
       view: 'search-results',
       query: SAMPLE_QUESTION,
       notice: '검증할 수 없는 답변 대신 공개 기록 검색 결과를 보여드립니다.',
+      originPolicy: 'canonical-only',
     });
   });
 
@@ -150,7 +180,9 @@ describe('provider-aware second-brain state', () => {
   });
 
   it('uses deterministic real search for direct URLs with no provider answer state', () => {
-    expect(initialAskState(' Graphify ')).toEqual({ view: 'search-results', query: 'Graphify', notice: null });
+    expect(initialAskState(' Graphify ')).toEqual({
+      view: 'search-results', query: 'Graphify', notice: null, originPolicy: 'search-continuation',
+    });
     expect(initialAskState('')).toEqual({ view: 'idle', query: '' });
   });
 });
