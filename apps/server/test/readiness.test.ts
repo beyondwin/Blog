@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 
 import { RuntimeReadiness, runRuntimeStartupChecks } from '../src/health/runtime-readiness.js';
@@ -160,7 +160,7 @@ describe('runtime readiness', () => {
     expect(released).toBe(true);
   });
 
-  it('bounds an abort-ignoring catalog rollback by the original deadline before destroying its client', async () => {
+  it('classifies an abort-ignoring catalog rollback that consumes the original deadline as the exact typed timeout', async () => {
     let released: boolean | undefined;
     const client = {
       query(text: string) {
@@ -196,7 +196,41 @@ describe('runtime readiness', () => {
     ]);
     expect(result.kind).toBe('rejected');
     if (result.kind !== 'rejected') throw new Error('catalog rollback deadline did not settle');
-    expect(result.error).toEqual(new Error('active binding query failed'));
+    expect(result.error).toBeInstanceOf(PublicAnswerDeadlineError);
+    expect(released).toBe(true);
+  });
+
+  it('preserves the earlier catalog error when rollback fails before the deadline', async () => {
+    let released: boolean | undefined;
+    const original = new Error('active binding query failed');
+    const client = {
+      query(text: string) {
+        if (text.startsWith('BEGIN')) return Promise.resolve({ rows: [], rowCount: 0 });
+        if (text === 'ROLLBACK') return Promise.reject(new Error('rollback failed'));
+        return Promise.reject(original);
+      },
+      release(destroy?: boolean) { released = destroy; },
+    };
+    const source = new VerifiedAnswerReleaseCatalogSource({
+      nodeEnv: 'test', corpusApprovalPath: '/approval', contentReleaseRoot: '/content', answerReleaseRoot: '/answer',
+      providerEmbeddingReceiptRoot: null,
+    } as any, { async connect() { return client; } } as any, {
+      async readApproval() { return { schemaVersion: 1, entries: [] }; },
+      async readContent() {
+        return { manifest: { releaseId: '1'.repeat(64), records: {} }, manifestHash: `sha256:${'1'.repeat(64)}`, artifactHash: `sha256:${'2'.repeat(64)}` };
+      },
+      async readAnswer() {
+        return {
+          releasePath: '/answer/release', contentReleaseId: '1'.repeat(64), answerReleaseId: '2'.repeat(64),
+          manifestHash: `sha256:${'3'.repeat(64)}`, artifactHash: `sha256:${'4'.repeat(64)}`,
+          corpusApprovalHash: `sha256:${'5'.repeat(64)}`,
+          manifest: { identity: { contentManifestHash: `sha256:${'1'.repeat(64)}`, normalizerVersion: 'nfkc-lower-hangul-ngram-v1' } },
+          chunks: [], evidence: [], indexInputs: [],
+        };
+      },
+      async verifyAnswer() {},
+    } as any);
+    await expect(source.snapshot(new AbortController().signal, performance.now() + 1_000)).rejects.toBe(original);
     expect(released).toBe(true);
   });
 
@@ -533,5 +567,44 @@ describe('owned fixture serve harness', () => {
     }, h.dependencies)).rejects.toThrow('owned port already in use');
     expect(unrelatedProbes).toBe(0);
     expect(h.events.at(-1)).toBe('database.stop');
+  });
+
+  it('bounds a child that never acknowledges startup and cleans the confirmed stopped process before its database', async () => {
+    let finishServer!: () => void;
+    const h = fixtureDependencies({
+      startServer() {
+        h.events.push('server.start');
+        return {
+          startup: new Promise<void>(() => undefined),
+          wait: new Promise<void>((resolve) => { finishServer = resolve; }),
+          signal(value) {
+            h.events.push(`server.signal:${value}`);
+            if (value === 'SIGTERM') finishServer();
+          },
+        };
+      },
+      async ready() { h.events.push('unrelated.readiness'); return true; },
+    });
+    vi.useFakeTimers();
+    try {
+      const running = runServeFixtureHarness({
+        host: '127.0.0.1', port: 4307, publicOrigin: 'http://127.0.0.1:4307/', fixtureScenario: 'success',
+      }, h.dependencies);
+      const observed = running.then(
+        () => ({ kind: 'resolved' as const, error: undefined }),
+        (error: unknown) => ({ kind: 'rejected' as const, error }),
+      );
+      while (!h.events.includes('server.start')) await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(20_000);
+      const result = await observed;
+      expect(result.kind).toBe('rejected');
+      expect(result.error).toBeInstanceOf(Error);
+      expect((result.error as Error).message).toMatch(/startup deadline/u);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(h.events).not.toContain('unrelated.readiness');
+    expect(h.events).toContain('server.signal:SIGTERM');
+    expect(h.events.indexOf('server.signal:SIGTERM')).toBeLessThan(h.events.indexOf('database.stop'));
   });
 });

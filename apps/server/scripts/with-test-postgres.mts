@@ -326,11 +326,30 @@ export async function runServeFixtureHarness(
     await interruptible(dependencies.verifyReleases(indexingEnv));
     await interruptible(dependencies.migrate(indexingEnv));
     await interruptible(dependencies.indexFixture(indexingEnv));
+    const startupDeadline = dependencies.clock() + 20_000;
     server = dependencies.startServer(env);
     void server.wait.catch(() => undefined);
     if (interrupted) server.signal(interrupted);
-    await interruptible(server.startup);
-    const startupDeadline = dependencies.clock() + 20_000;
+    let startupTimer: NodeJS.Timeout | undefined;
+    const startupTimedOut = new Promise<never>((_resolve, reject) => {
+      startupTimer = setTimeout(
+        () => reject(new Error('fixture server startup deadline elapsed')),
+        Math.max(0, startupDeadline - dependencies.clock()),
+      );
+      startupTimer.unref();
+    });
+    try {
+      await interruptible(Promise.race([
+        server.startup,
+        server.wait.then(
+          () => { throw new Error('fixture server exited before startup acknowledgement'); },
+          (error) => { throw error; },
+        ),
+        startupTimedOut,
+      ]));
+    } finally {
+      if (startupTimer) clearTimeout(startupTimer);
+    }
     while (!await dependencies.ready(options.publicOrigin)) {
       if (dependencies.clock() >= startupDeadline) throw new Error('fixture server readiness deadline elapsed');
       await Promise.race([

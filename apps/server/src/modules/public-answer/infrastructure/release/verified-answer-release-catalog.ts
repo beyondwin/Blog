@@ -336,11 +336,12 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
       } else if (!clientReleased) {
         try {
           await query('ROLLBACK');
-        } catch {
+        } catch (rollbackError) {
           if (!clientReleased) {
             clientReleased = true;
             client.release(true);
           }
+          if (rollbackError instanceof PublicAnswerDeadlineError) throw rollbackError;
         }
       }
       throw error;
