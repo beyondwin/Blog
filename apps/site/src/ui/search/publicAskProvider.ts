@@ -54,7 +54,7 @@ function isAllowedStatusBodyPair(
 export class HttpPublicAskProvider implements PublicAskProvider {
   constructor(
     private readonly binding: PublicAnswerReleaseBinding,
-    private readonly fetchImpl: typeof fetch = globalThis.fetch,
+    private readonly fetchImpl: typeof fetch = globalThis.fetch.bind(globalThis),
   ) {}
 
   async ask(question: string, { signal }: { signal: AbortSignal }): Promise<PublicAskResponse> {

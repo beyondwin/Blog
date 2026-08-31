@@ -1,4 +1,9 @@
 import { createServer } from 'node:http';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { chromium, type Browser } from 'playwright';
+import { createServer as createViteServer, type ViteDevServer } from 'vite';
 import { describe, expect, it, vi } from 'vitest';
 import {
   HttpPublicAskProvider,
@@ -11,6 +16,8 @@ const binding: PublicAnswerReleaseBinding = {
   answerReleaseId: 'b'.repeat(64),
 };
 const evidenceId = 'c'.repeat(64);
+const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+const publicAskProviderPath = join(repositoryRoot, 'apps/site/src/ui/search/publicAskProvider.ts');
 
 const answer = {
   kind: 'answer' as const,
@@ -248,6 +255,85 @@ describe('HttpPublicAskProvider', () => {
       ]);
     }
   });
+
+  it('uses the default browser fetch with its required receiver', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    const cacheRoot = await mkdtemp(join(tmpdir(), 'beyondwin-provider-fetch-vite-'));
+    let requestCount = 0;
+    try {
+      const entryId = '\0public-ask-provider-browser.ts';
+      server = await createViteServer({
+        configFile: false,
+        root: repositoryRoot,
+        cacheDir: cacheRoot,
+        logLevel: 'silent',
+        plugins: [{
+          name: 'public-ask-provider-browser',
+          resolveId(source) {
+            return source === 'virtual:public-ask-provider-browser' ? entryId : null;
+          },
+          load(id) {
+            if (id !== entryId) return null;
+            return `
+              import { HttpPublicAskProvider } from ${JSON.stringify(publicAskProviderPath)};
+              const binding = ${JSON.stringify(binding)};
+              const provider = new HttpPublicAskProvider(binding);
+              window.__providerResult = provider.ask('브라우저 질문', {
+                signal: new AbortController().signal,
+              }).then(
+                (value) => ({ ok: true, value }),
+                (error) => ({
+                  ok: false,
+                  code: error?.code,
+                  cause: error?.cause?.message ?? error?.message,
+                }),
+              );
+            `;
+          },
+          configureServer(viteServer) {
+            viteServer.middlewares.use((request, response, next) => {
+              const pathname = new URL(request.url ?? '/', 'http://provider.test').pathname;
+              if (pathname === '/api/public/ask') {
+                requestCount += 1;
+                response.statusCode = 200;
+                response.setHeader('content-type', 'application/json');
+                response.setHeader('x-content-release-id', binding.contentReleaseId);
+                response.setHeader('x-answer-release-id', binding.answerReleaseId);
+                response.end(JSON.stringify({ kind: 'search', reason: 'provider-disabled' }));
+                return;
+              }
+              if (pathname !== '/__public-ask-provider-browser/') return next();
+              response.statusCode = 200;
+              response.setHeader('content-type', 'text/html; charset=utf-8');
+              response.end('<!doctype html><script type="module" src="/@id/virtual:public-ask-provider-browser"></script>');
+            });
+          },
+        }],
+        server: { host: '127.0.0.1', port: 0, strictPort: false },
+      });
+      await server.listen();
+      const address = server.httpServer?.address();
+      if (!address || typeof address === 'string') throw new Error('Vite did not bind an ephemeral TCP port');
+
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage();
+      await page.goto(`http://127.0.0.1:${address.port}/__public-ask-provider-browser/`);
+      const result = await page.evaluate(() => (window as typeof window & {
+        __providerResult: Promise<unknown>;
+      }).__providerResult);
+
+      expect(result).toEqual({
+        ok: true,
+        value: { kind: 'search', reason: 'provider-disabled' },
+      });
+      expect(requestCount).toBe(1);
+    } finally {
+      await browser?.close();
+      await server?.close();
+      await rm(cacheRoot, { recursive: true, force: true });
+    }
+  }, 20_000);
 
   it('exposes only the bounded transport codes', () => {
     expect(new PublicAskTransportError('timeout').code).toBe('timeout');
