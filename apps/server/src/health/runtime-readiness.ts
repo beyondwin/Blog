@@ -91,7 +91,9 @@ export async function runRuntimeStartupChecks(
   const chunks = await dependencies.pool.query<RuntimeChunkRow>(`
     SELECT chunk_id,chunk_checksum,record_id,canonical_path,title,heading_path,body,search_text,
            embedding_model,embedding_dimensions,embedding::text
-    FROM public_answer_chunks WHERE binding_id=$1 ORDER BY chunk_id
+    FROM public_answer_chunks c WHERE binding_id=$1 AND NOT EXISTS (
+      SELECT 1 FROM public_answer_tombstones t WHERE t.entity_kind='record' AND t.entity_id=c.record_id
+    ) ORDER BY chunk_id
   `, [catalog.bindingId]);
   if (chunks.rows.length !== catalog.chunkChecksumById.size) throw new Error('runtime readiness database chunk count drift');
   const vectorEntries: Array<{ chunkId: string; chunkChecksum: string; vectorChecksum: string }> = [];

@@ -50,7 +50,18 @@ async function settleBeforeDeadline<T>(operation: Promise<T>, signal: AbortSigna
 }
 
 export class CancellablePgQueryRunner {
-  constructor(private readonly pool: Pool) {}
+  private readonly cancellationTimeoutMs: number;
+
+  constructor(
+    private readonly pool: Pool,
+    private readonly controlPool: Pool = pool,
+    options: Readonly<{ cancellationTimeoutMs?: number }> = {},
+  ) {
+    this.cancellationTimeoutMs = options.cancellationTimeoutMs ?? 500;
+    if (!Number.isFinite(this.cancellationTimeoutMs) || this.cancellationTimeoutMs <= 0) {
+      throw new Error('Postgres cancellation timeout is invalid');
+    }
+  }
 
   async query<T extends QueryResultRow = QueryResultRow>(
     text: string,
@@ -66,14 +77,25 @@ export class CancellablePgQueryRunner {
     const cancelOnce = (): Promise<boolean> => {
       cancellation ??= (async () => {
         let control: PoolClient | undefined;
+        let timer: NodeJS.Timeout | undefined;
+        const checkout = this.controlPool.connect();
+        let completed = false;
         try {
-          control = await this.pool.connect();
-          const result = await control.query<{ cancelled: boolean }>('SELECT pg_cancel_backend($1) AS cancelled', [pid]);
+          const timeout = new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => reject(new Error('Postgres cancellation control timeout')), this.cancellationTimeoutMs);
+            timer.unref();
+          });
+          control = await Promise.race([checkout, timeout]);
+          const query = control.query<{ cancelled: boolean }>('SELECT pg_cancel_backend($1) AS cancelled', [pid]);
+          const result = await Promise.race([query, timeout]);
+          completed = true;
           return result.rows[0]?.cancelled === true;
         } catch {
           return false;
         } finally {
-          control?.release();
+          if (timer) clearTimeout(timer);
+          if (control) control.release(!completed);
+          else void checkout.then((late) => late.release(true), () => undefined);
         }
       })();
       return cancellation;

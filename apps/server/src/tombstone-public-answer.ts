@@ -12,7 +12,7 @@ import { providerChecksum } from './modules/public-answer/infrastructure/openai/
 import { CancellablePgQueryRunner } from './modules/public-answer/infrastructure/postgres/cancellable-pg-query-runner.js';
 import { PostgresHybridRetriever } from './modules/public-answer/infrastructure/postgres/postgres-hybrid-retriever.js';
 import { runPostgresMigrations } from './modules/public-answer/infrastructure/postgres/postgres-migrations.js';
-import { createPostgresPool } from './modules/public-answer/infrastructure/postgres/postgres-pool.js';
+import { createPostgresControlPool, createPostgresPool } from './modules/public-answer/infrastructure/postgres/postgres-pool.js';
 import { readDeletionEvidenceBundle } from './modules/public-answer/infrastructure/release/deletion-evidence-receipt.js';
 import { readVerifiedAnswerReleaseAuthority, VerifiedAnswerReleaseCatalogSource } from './modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 
@@ -28,9 +28,15 @@ export async function addPublicAnswerTombstone(input: Readonly<{
   entityKind: TombstoneKind; entityId: string; reasonCode: string; signal: AbortSignal;
 }>): Promise<Readonly<{ tombstoneHash: string; createdAt: string }>> {
   if (!validEntity(input.entityKind,input.entityId) || !/^[a-z0-9][a-z0-9-]{0,63}$/u.test(input.reasonCode)) throw new Error('tombstone identity or reason is invalid');
-  const before = await input.catalog.snapshot(input.signal);
-  const exists = input.entityKind === 'record' ? [...before.chunkById.values()].some((item) => item.recordId === input.entityId) : before.evidenceById.has(input.entityId);
-  if (!exists) throw new Error('tombstone entity is not catalog-valid');
+  const existing = (await input.pool.query<{ reason_code: string; created_at: string }>(`SELECT reason_code,
+    to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at
+    FROM public_answer_tombstones WHERE entity_kind=$1 AND entity_id=$2`, [input.entityKind, input.entityId])).rows[0];
+  if (existing && existing.reason_code !== input.reasonCode) throw new Error('existing tombstone has different authority');
+  if (!existing) {
+    const before = await input.catalog.snapshot(input.signal);
+    const exists = input.entityKind === 'record' ? [...before.chunkById.values()].some((item) => item.recordId === input.entityId) : before.evidenceById.has(input.entityId);
+    if (!exists) throw new Error('tombstone entity is not catalog-valid');
+  }
   await input.pool.query(`INSERT INTO public_answer_tombstones(entity_kind,entity_id,reason_code,created_at)
     VALUES($1,$2,$3,clock_timestamp()) ON CONFLICT(entity_kind,entity_id) DO NOTHING`, [input.entityKind, input.entityId, input.reasonCode]);
   const row = (await input.pool.query<{ reason_code: string; created_at: string }>(`SELECT reason_code,
@@ -138,13 +144,14 @@ export async function runTombstoneCli(argv: readonly string[], env: NodeJS.Proce
   const command=parseTombstoneCommand(argv);
   const config = await parseServerConfig(env); if (!config.deletionReceiptRoot) throw new Error('deletion receipt root is required');
   const pool = createPostgresPool(config.databaseUrl);
+  const controlPool = createPostgresControlPool(config.databaseUrl);
   try {
     await runPostgresMigrations(pool); const catalog = new VerifiedAnswerReleaseCatalogSource(config, pool);
     if (command.operation === 'add') {
       if (config.publicAskMode === 'provider' && !command.confirmLiveProvider) throw new Error('provider tombstone proof requires explicit live-provider confirmation');
       const embedder = config.publicAskMode === 'provider'
         ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'query' }) : new DeterministicEmbeddingClient(config.nodeEnv);
-      const result=await addPublicAnswerTombstone({ pool, catalog, retriever: new PostgresHybridRetriever(embedder, new CancellablePgQueryRunner(pool)),
+      const result=await addPublicAnswerTombstone({ pool, catalog, retriever: new PostgresHybridRetriever(embedder, new CancellablePgQueryRunner(pool,controlPool)),
         entityKind:command.entityKind,entityId:command.entityId,reasonCode:command.reasonCode,signal:new AbortController().signal});stdout(tombstoneSuccessAudit(command,result));
     } else {
       if(config.publicAskMode==='provider'){
@@ -153,9 +160,9 @@ export async function runTombstoneCli(argv: readonly string[], env: NodeJS.Proce
         const warning=providerPurgeCostWarning(command,(await catalog.snapshot(new AbortController().signal)).chunkCount,preflightBundle.receipt.entityId);if(warning)stdout(warning);
       }
       const embedder=config.publicAskMode==='provider'?new OpenAIEmbeddingClient(config.openAiApiKey!,{profile:'query'}):new DeterministicEmbeddingClient(config.nodeEnv);
-      const result=await verifyPublicAnswerPurge({pool,catalog,retriever:new PostgresHybridRetriever(embedder,new CancellablePgQueryRunner(pool)),config,receiptPath:command.receiptPath,signal:new AbortController().signal});stdout(tombstoneSuccessAudit(command,result));
+      const result=await verifyPublicAnswerPurge({pool,catalog,retriever:new PostgresHybridRetriever(embedder,new CancellablePgQueryRunner(pool,controlPool)),config,receiptPath:command.receiptPath,signal:new AbortController().signal});stdout(tombstoneSuccessAudit(command,result));
     }
-  } finally { await pool.end(); }
+  } finally { await Promise.all([pool.end(),controlPool.end()]); }
 }
 
 export async function runTombstoneCliWithExit(argv:readonly string[],env:NodeJS.ProcessEnv,io:Readonly<{stdout(value:string):void;stderr(value:string):void}>,operation:typeof runTombstoneCli=runTombstoneCli):Promise<0|1>{try{await operation(argv,env,io.stdout);return 0;}catch{io.stderr('{"kind":"failure"}\n');return 1;}}

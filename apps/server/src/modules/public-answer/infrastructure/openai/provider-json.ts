@@ -4,17 +4,34 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
-export async function readCappedJson(response: Response, cap: number): Promise<unknown> {
+export async function readCappedJson(response: Response, cap: number, signal?: AbortSignal): Promise<unknown> {
   if (!Number.isInteger(cap) || cap < 1) throw new Error('JSON byte cap is invalid');
   if (!response.body) throw new OpenAIEmbeddingError('invalid-json');
   const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let total = 0;
   try {
     while (true) {
-      const { done, value } = await reader.read(); if (done) break;
-      total += value.byteLength; if (total > cap) { await reader.cancel(); throw new OpenAIEmbeddingError('body-too-large'); }
-      chunks.push(value);
+      if (signal?.aborted) throw signal.reason ?? new OpenAIEmbeddingError('aborted');
+      const read = reader.read();
+      let abortListener: (() => void) | undefined;
+      try {
+        const interrupted = new Promise<never>((_resolve, reject) => {
+          if (!signal) return;
+          abortListener = () => reject(signal.reason ?? new OpenAIEmbeddingError('aborted'));
+          signal.addEventListener('abort', abortListener, { once: true });
+          if (signal.aborted) abortListener();
+        });
+        const { done, value } = await Promise.race([read, interrupted]); if (done) break;
+        total += value.byteLength; if (total > cap) { void reader.cancel().catch(() => undefined); throw new OpenAIEmbeddingError('body-too-large'); }
+        chunks.push(value);
+      } finally {
+        if (abortListener) signal?.removeEventListener('abort', abortListener);
+      }
     }
   } catch (error) {
+    if (signal?.aborted) {
+      void reader.cancel(signal.reason).catch(() => undefined);
+      throw signal.reason ?? new OpenAIEmbeddingError('aborted');
+    }
     if (error instanceof OpenAIEmbeddingError) throw error;
     throw new OpenAIEmbeddingError('invalid-json', { cause: error });
   }

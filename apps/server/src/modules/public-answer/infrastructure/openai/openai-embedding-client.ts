@@ -35,7 +35,9 @@ export class OpenAIEmbeddingClient implements EmbeddingClient {
       throw new OpenAIEmbeddingError('http', { cause: error });
     }
     if (!response.ok) { await response.body?.cancel().catch(() => undefined); throw new OpenAIEmbeddingError('http'); }
-    const parsed = exactObject(await readCappedJson(response, this.profile === 'query' ? 256 * 1024 : 8 * 1024 * 1024), ['object', 'data', 'model', 'usage']);
+    const parsed = exactObject(await readCappedJson(
+      response, this.profile === 'query' ? 256 * 1024 : 8 * 1024 * 1024, signal,
+    ), ['object', 'data', 'model', 'usage']);
     if (parsed.object !== 'list' || parsed.model !== MODEL || !Array.isArray(parsed.data)) throw new OpenAIEmbeddingError('invalid-response');
     const usage = exactObject(parsed.usage, ['prompt_tokens', 'total_tokens']);
     if (!Number.isInteger(usage.prompt_tokens) || !Number.isInteger(usage.total_tokens)

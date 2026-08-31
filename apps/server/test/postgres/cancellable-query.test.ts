@@ -51,7 +51,8 @@ describe('cancellable pg query runner', () => {
   });
 
   it('cancels pg_sleep using a reserved control connection and leaves the pool usable', async () => {
-    const runner = new CancellablePgQueryRunner(pool);
+    const controlPool = new Pool({ connectionString: databaseUrl, max: 1 });
+    const runner = new CancellablePgQueryRunner(pool, controlPool);
     const controller = new AbortController();
     const marker = `cancel_exact_${process.pid}_${Date.now()}`;
     const pending = runner.query(`SELECT pg_sleep($1) /* ${marker} */`, [30], controller.signal, performance.now() + 10_000);
@@ -74,6 +75,75 @@ describe('cancellable pg query runner', () => {
     const fresh = await pool.query<{ pid: number; ok: number }>('SELECT pg_backend_pid() AS pid, 1 AS ok');
     expect(fresh.rows[0]).toMatchObject({ ok: 1 });
     expect(fresh.rows[0]!.pid).not.toBe(workerPid);
+    await controlPool.end();
+  });
+
+  it('cancels and recovers while every worker slot is saturated because control capacity is distinct', async () => {
+    await pool.end();
+    pool = new Pool({ connectionString: databaseUrl, max: 2 });
+    const controlPool = new Pool({ connectionString: databaseUrl, max: 1 });
+    const occupied = await pool.connect();
+    let occupiedReleased = false;
+    const controller = new AbortController();
+    const marker = `saturated_cancel_${process.pid}_${Date.now()}`;
+    try {
+      const pending = new CancellablePgQueryRunner(pool, controlPool).query(
+        `SELECT pg_sleep(30) /* ${marker} */`, [], controller.signal, performance.now() + 10_000,
+      );
+      let workerPid: number | undefined;
+      for (let attempt = 0; attempt < 100 && workerPid === undefined; attempt += 1) {
+        workerPid = (await controlPool.query<{ pid: number }>(
+          'SELECT pid FROM pg_stat_activity WHERE query LIKE $1 AND state=$2', [`%${marker}%`, 'active'],
+        )).rows[0]?.pid;
+        if (workerPid === undefined) await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(workerPid).toBeTypeOf('number');
+      controller.abort(new Error('saturated request aborted'));
+      await expect(Promise.race([
+        pending,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('saturated cancellation hung')), 1_000)),
+      ])).rejects.toThrow(/abort/u);
+      for (let attempt = 0; attempt < 100; attempt += 1) {
+        const present = (await controlPool.query<{ present: boolean }>(
+          'SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE pid=$1) AS present', [workerPid],
+        )).rows[0]!.present;
+        if (!present) break;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect((await controlPool.query<{ present: boolean }>(
+        'SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE pid=$1) AS present', [workerPid],
+      )).rows[0]!.present).toBe(false);
+      occupied.release();
+      occupiedReleased = true;
+      expect((await pool.query<{ ok: number }>('SELECT 1 AS ok')).rows[0]).toEqual({ ok: 1 });
+    } finally {
+      if (!occupiedReleased) occupied.release();
+      await controlPool.end();
+    }
+  });
+
+  it('settles an abort even when the distinct control checkout never settles', async () => {
+    let rejectWorker!: (error: Error) => void;
+    const worker = {
+      async query(text: string) {
+        if (text.includes('pg_backend_pid')) return { rows: [{ pid: 42 }] };
+        if (text.startsWith('SET')) return { rows: [] };
+        return new Promise((_resolve, reject) => { rejectWorker = reject; });
+      },
+      release() {},
+    };
+    const workerPool = { async connect() { return worker; } } as any;
+    const controlPool = { connect: () => new Promise(() => undefined) } as any;
+    const controller = new AbortController();
+    const pending = new CancellablePgQueryRunner(workerPool, controlPool, { cancellationTimeoutMs: 20 })
+      .query('SELECT pg_sleep(30)', [], controller.signal, performance.now() + 12_000);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort(new Error('caller aborted'));
+    rejectWorker(new Error('worker cancelled late'));
+    await expect(Promise.race([
+      pending,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('control failure hung')), 100)),
+    ])).rejects.toThrow(/abort/u);
   });
 
   it('uses one delayed control checkout and awaits cancellation before releasing the worker', async () => {

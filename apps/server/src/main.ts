@@ -30,7 +30,7 @@ import { OpenAiResponsesClient } from './modules/public-answer/infrastructure/op
 import { OpenAiResponsesGenerator } from './modules/public-answer/infrastructure/openai/openai-responses-generator.js';
 import { CancellablePgQueryRunner } from './modules/public-answer/infrastructure/postgres/cancellable-pg-query-runner.js';
 import { PostgresHybridRetriever } from './modules/public-answer/infrastructure/postgres/postgres-hybrid-retriever.js';
-import { createPostgresPool } from './modules/public-answer/infrastructure/postgres/postgres-pool.js';
+import { createPostgresControlPool, createPostgresPool } from './modules/public-answer/infrastructure/postgres/postgres-pool.js';
 import { PostgresRedactedEventSink } from './modules/public-answer/infrastructure/postgres/postgres-redacted-event-sink.js';
 import { VerifiedAnswerReleaseCatalogSource, type VerifiedCatalogSnapshot } from './modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 import { CitationVerifier } from './modules/public-answer/infrastructure/verification/citation-verifier.js';
@@ -170,13 +170,14 @@ export async function createApplication(options: CreateApplicationOptions = {}):
 export async function startApplication(): Promise<NestFastifyApplication> {
   const config = await parseServerConfig(process.env);
   const pool = createPostgresPool(config.databaseUrl);
+  const controlPool = createPostgresControlPool(config.databaseUrl);
   let app: NestFastifyApplication | undefined;
   try {
     const catalogSource = new VerifiedAnswerReleaseCatalogSource(config, pool);
     const readiness = new RuntimeReadiness<VerifiedCatalogSnapshot>({
       startupCheck: async () => runRuntimeStartupChecks(config, { pool, catalogSource }),
     });
-    const queries = new CancellablePgQueryRunner(pool);
+    const queries = new CancellablePgQueryRunner(pool, controlPool);
     const retriever: Retriever = config.publicAskMode === 'disabled'
       ? {
         async retrieve() {
@@ -210,7 +211,7 @@ export async function startApplication(): Promise<NestFastifyApplication> {
     const lifecycle = new RuntimeLifecycle({
       readiness,
       closeServer: async () => { if (app) await app.close(); },
-      closePool: async () => pool.end(),
+      closePool: async () => { await Promise.all([pool.end(), controlPool.end()]); },
     });
     const baseUseCase = new AnswerPublicQuestion({
       policy: Object.freeze({ mode: config.publicAskMode }),
@@ -250,7 +251,7 @@ export async function startApplication(): Promise<NestFastifyApplication> {
     return app;
   } catch (error) {
     await app?.close().catch(() => undefined);
-    await pool.end().catch(() => undefined);
+    await Promise.all([pool.end().catch(() => undefined), controlPool.end().catch(() => undefined)]);
     throw error;
   }
 }

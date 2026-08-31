@@ -113,7 +113,18 @@ describe('evaluation metric arithmetic', () => {
     })).toBe(1);
     expect(countBoundaryLeaks({
       outputRecordIds: [], outputEvidenceIds: [], redactedTelemetry: [{ resultKind: 'answer' }],
+      outputText: '공개 근거만 사용한 답변입니다.',
       boundaryRecordIds: boundaries.recordIds, boundaryEvidenceIds: boundaries.evidenceIds,
     })).toBe(0);
+    expect(countBoundaryLeaks({
+      outputRecordIds: [], outputEvidenceIds: [], redactedTelemetry: [{ resultKind: 'answer' }],
+      outputText: '숨겨진 경로 /articles/private-sentinel/ 를 참고했습니다.',
+      boundaryRecordIds: boundaries.recordIds, boundaryEvidenceIds: boundaries.evidenceIds,
+    })).toBe(1);
+    expect(countBoundaryLeaks({
+      outputRecordIds: [], outputEvidenceIds: [], redactedTelemetry: [{ resultKind: 'answer' }],
+      outputText: `근거 식별자 ${evidenceId} 는 노출하면 안 됩니다.`,
+      boundaryRecordIds: boundaries.recordIds, boundaryEvidenceIds: boundaries.evidenceIds,
+    })).toBe(1);
   });
 });

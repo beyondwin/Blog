@@ -85,6 +85,36 @@ describe('OpenAI embedding client', () => {
     await expect(pending).rejects.toThrow(/caller deadline|abort/u);
   });
 
+  it('settles when a successful response body never yields and ignores a late body rejection', async () => {
+    let rejectPull!: (error: Error) => void;
+    const body = new ReadableStream<Uint8Array>({
+      pull() { return new Promise<void>((_resolve, reject) => { rejectPull = reject; }); },
+      cancel() { return new Promise<void>(() => undefined); },
+    });
+    const controller = new AbortController();
+    const unhandled: unknown[] = [];
+    const observe = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', observe);
+    try {
+      const pending = new OpenAIEmbeddingClient('secret', {
+        profile: 'query',
+        fetch: async () => new Response(body, { status: 200 }),
+      }).embed(['question'], controller.signal);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const reason = new Error('embedding deadline');
+      controller.abort(reason);
+      await expect(Promise.race([
+        pending,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('embedding remained pending')), 100)),
+      ])).rejects.toBe(reason);
+      rejectPull(new Error('late stream failure'));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', observe);
+    }
+  });
+
   it('binds caps and cardinality to the explicit operation profile', async () => {
     let calls=0;let baseUrl=await endpoint((_request,response)=>{calls+=1;response.setHeader('content-type','application/json');response.end(`{"padding":"${'x'.repeat(300_000)}"}`);});
     const indexError:any=await new OpenAIEmbeddingClient('secret',{profile:'index',baseUrl}).embed(['one'],new AbortController().signal).catch((error)=>error);

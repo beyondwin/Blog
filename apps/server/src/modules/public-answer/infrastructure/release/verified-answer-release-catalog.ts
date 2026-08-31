@@ -283,6 +283,13 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
         if (!record || record.href !== chunk.canonicalPath) throw new Error('answer chunk canonical route is not emitted by the verified content release');
       }
       const chunkIds = new Set(chunks.map((chunk) => chunk.chunkId));
+      const effectiveIndexInputs = release.indexInputs.filter((item) => chunkIds.has(item.chunkId));
+      vectorChecksumByChunkId = immutableMap([...vectorChecksumByChunkId.entries()]
+        .filter(([chunkId]) => chunkIds.has(chunkId)));
+      vectorSetChecksum = providerChecksum(effectiveIndexInputs.map((item) => ({
+        chunkId: item.chunkId, chunkChecksum: item.chunkChecksum,
+        vectorChecksum: vectorChecksumByChunkId.get(item.chunkId)!,
+      })));
       const evidence = release.evidence.filter((item) => chunkIds.has(item.chunkId)
         && !tombstones.has(`record:${item.recordId}`) && !tombstones.has(`evidence:${item.evidenceId}`));
       const evidenceById = immutableMap(evidence.map((item) => [item.evidenceId, Object.freeze({
@@ -293,12 +300,12 @@ export class VerifiedAnswerReleaseCatalogSource implements AnswerReleaseCatalogS
       }) satisfies AuthorizedEvidence] as const));
       const authorizedEvidenceLocations = immutableSet(evidence.map((item) => evidenceLocationKey(item)));
       const chunkById = immutableMap(chunks.map((item) => [item.chunkId, Object.freeze({ ...item })] as const));
-      const chunkChecksumById = immutableMap(release.indexInputs.map((item) => [item.chunkId, item.chunkChecksum] as const));
-      const indexInputByChunkId = immutableMap(release.indexInputs.map((item) => [item.chunkId, Object.freeze({
+      const chunkChecksumById = immutableMap(effectiveIndexInputs.map((item) => [item.chunkId, item.chunkChecksum] as const));
+      const indexInputByChunkId = immutableMap(effectiveIndexInputs.map((item) => [item.chunkId, Object.freeze({
         recordId: item.recordId, canonicalPath: item.canonicalPath, title: item.title,
         headingPath: Object.freeze([...item.headingPath]), body: item.text, searchText: item.searchText,
       })] as const));
-      const indexRowsChecksum = providerChecksum(release.indexInputs.map((item) => ({
+      const indexRowsChecksum = providerChecksum(effectiveIndexInputs.map((item) => ({
         chunkId: item.chunkId,
         chunkChecksum: item.chunkChecksum,
         recordId: item.recordId,

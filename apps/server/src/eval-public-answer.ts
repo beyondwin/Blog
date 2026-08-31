@@ -20,7 +20,7 @@ import { OpenAiResponsesClient } from './modules/public-answer/infrastructure/op
 import { OpenAiResponsesGenerator } from './modules/public-answer/infrastructure/openai/openai-responses-generator.js';
 import { CancellablePgQueryRunner } from './modules/public-answer/infrastructure/postgres/cancellable-pg-query-runner.js';
 import { PostgresHybridRetriever } from './modules/public-answer/infrastructure/postgres/postgres-hybrid-retriever.js';
-import { createPostgresPool } from './modules/public-answer/infrastructure/postgres/postgres-pool.js';
+import { createPostgresControlPool, createPostgresPool } from './modules/public-answer/infrastructure/postgres/postgres-pool.js';
 import {
   readVerifiedAnswerReleaseAuthority,
   VerifiedAnswerReleaseCatalogSource,
@@ -53,6 +53,30 @@ import {
 import { indexAnswerRelease, providerIndexBudget } from './index-answer-release.js';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+
+export async function runEvaluationCaseWithDeadline<T>(
+  operation: (signal: AbortSignal, deadlineAt: number) => Promise<T>,
+  timeoutMs = 12_000,
+): Promise<T> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new Error('evaluation deadline duration is invalid');
+  const controller = new AbortController();
+  const deadlineAt = performance.now() + timeoutMs;
+  const operationPromise = Promise.resolve().then(() => operation(controller.signal, deadlineAt));
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        const error = new Error('evaluation case deadline elapsed');
+        controller.abort(error);
+        reject(error);
+      }, Math.max(0, deadlineAt - performance.now()));
+      timer.unref();
+    });
+    return await Promise.race([operationPromise, deadline]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 export function parseEvaluationMode(argv: readonly string[]): EvaluationMode {
   if (argv.length === 1 && argv[0] === '--mode=first-slice-offline') return 'first-slice-offline';
@@ -155,6 +179,7 @@ export async function runFirstSliceOfflineEvaluation(env: NodeJS.ProcessEnv): Pr
   const manifest = JSON.parse(manifestBytes.toString('utf8')) as unknown;
   const classification = classifyPublicEvaluation(manifest, approval, answer.corpusApprovalHash);
   const pool = createPostgresPool(config.databaseUrl);
+  const controlPool = createPostgresControlPool(config.databaseUrl);
   const startedAt = new Date().toISOString();
   try {
     const catalogSource = new VerifiedAnswerReleaseCatalogSource(config, pool);
@@ -164,7 +189,9 @@ export async function runFirstSliceOfflineEvaluation(env: NodeJS.ProcessEnv): Pr
     }
     const useCase = new AnswerPublicQuestion({
       policy: Object.freeze({ mode: 'fixture' }),
-      retriever: new PostgresHybridRetriever(new DeterministicEmbeddingClient('test'), new CancellablePgQueryRunner(pool)),
+      retriever: new PostgresHybridRetriever(
+        new DeterministicEmbeddingClient('test'), new CancellablePgQueryRunner(pool, controlPool),
+      ),
       generator: new FixtureAnswerGenerator(),
       deterministicVerifier: new CitationVerifier(),
       semanticVerifier: new FixtureSemanticVerifier(),
@@ -174,16 +201,16 @@ export async function runFirstSliceOfflineEvaluation(env: NodeJS.ProcessEnv): Pr
     const cases = [];
     for (const item of classification.runnable) {
       const before = performance.now();
-      const result = await useCase.execute({
+      const result = await runEvaluationCaseWithDeadline((signal, deadlineAt) => useCase.execute({
         requestId: `eval-${item.id}`,
         question: item.question,
         contentReleaseId: catalog.contentReleaseId,
         answerReleaseId: catalog.answerReleaseId,
         networkKey: providerChecksum(item.id),
-        signal: new AbortController().signal,
-        deadlineAt: performance.now() + 12_000,
+        signal,
+        deadlineAt,
         catalog,
-      });
+      }));
       const evidenceIds = result.kind === 'answer' ? result.evidence.map(({ evidenceId }) => evidenceId) : [];
       const expected = new Set(item.expectedEvidence.map(({ recordId }) => recordId));
       const expectedPresent = result.kind === 'answer' && result.evidence.some(({ recordId }) => expected.has(recordId));
@@ -239,7 +266,7 @@ export async function runFirstSliceOfflineEvaluation(env: NodeJS.ProcessEnv): Pr
     const outputPath = resolve(repositoryRoot, 'build/public-answer-eval/first-slice-offline.json');
     await writeReport(outputPath, report);
     return report;
-  } finally { await pool.end(); }
+  } finally { await Promise.all([pool.end(), controlPool.end()]); }
 }
 
 function evaluationUsageAdapter(guard: EvaluationUsageGuard): UsageGuard {
@@ -383,6 +410,7 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
   }
   if (!provider) await indexAnswerRelease(['--embedding-mode=fixture'], env, () => undefined);
   const pool = createPostgresPool(config.databaseUrl);
+  const controlPool = createPostgresControlPool(config.databaseUrl);
   const startedAt = new Date().toISOString();
   try {
     const publicManifestBytes = await readFile(resolve(repositoryRoot, 'tests/fixtures/public-answer/eval-manifest.v1.json'));
@@ -430,7 +458,8 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
     const useCase = new AnswerPublicQuestion({
       policy: Object.freeze({ mode: provider ? 'provider' : 'fixture' }),
       retriever: evaluationRetriever(new PostgresHybridRetriever(provider
-        ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'query' }) : new DeterministicEmbeddingClient('test'), new CancellablePgQueryRunner(pool)), failureProbe),
+        ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'query' }) : new DeterministicEmbeddingClient('test'),
+      new CancellablePgQueryRunner(pool, controlPool)), failureProbe),
       generator: provider ? new OpenAiResponsesGenerator(responses!) : new FixtureAnswerGenerator(),
       deterministicVerifier: evaluationDeterministicVerifier(new CitationVerifier(), failureProbe),
       semanticVerifier: evaluationSemanticVerifier(
@@ -457,16 +486,16 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
         resetHiddenFailureProbe(failureProbe);
         const before = performance.now();
         const telemetryStart = eventSink.events().length;
-        const result = await useCase.execute({
+        const result = await runEvaluationCaseWithDeadline((signal, deadlineAt) => useCase.execute({
           requestId: `hidden-eval-${run + 1}-${item.id}`,
           question: item.question,
           contentReleaseId: activeCatalog.contentReleaseId,
           answerReleaseId: activeCatalog.answerReleaseId,
           networkKey: providerChecksum(`${run + 1}:${item.id}`),
-          signal: new AbortController().signal,
-          deadlineAt: performance.now() + 12_000,
+          signal,
+          deadlineAt,
           catalog: activeCatalog,
-        });
+        }));
         const evidence = result.kind === 'answer' ? result.evidence : [];
         const evidenceIds = evidence.map(({ evidenceId }) => evidenceId);
         const citedRecordIds = evidence.map(({ recordId }) => recordId);
@@ -506,6 +535,7 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
         metrics.privateBoundarySentinelCount += countBoundaryLeaks({
           outputRecordIds: citedRecordIds,
           outputEvidenceIds: evidenceIds,
+          outputText: answer ? result.claims.map((claim) => claim.text).join('\n') : '',
           redactedTelemetry: eventSink.events().slice(telemetryStart),
           boundaryRecordIds,
           boundaryEvidenceIds: independentBoundaries.evidenceIds,
@@ -546,7 +576,7 @@ export async function runHiddenEvaluation(mode: 'hidden-offline' | 'hidden-provi
     await writeReport(provider ? config.productionEvalReportPath! : resolve(repositoryRoot, 'build/public-answer-eval/hidden-offline.json'), report);
     if (provider && report.verticalSliceStatus !== 'pass') throw new Error('provider-live hidden evaluation gate failed');
     return report;
-  } finally { await pool.end(); }
+  } finally { await Promise.all([pool.end(), controlPool.end()]); }
 }
 
 export async function runEvaluationCli(argv: readonly string[], env: NodeJS.ProcessEnv): Promise<0 | 1> {

@@ -17,17 +17,51 @@ import {
   verifyProductionEvaluationReport,
 } from '../../src/modules/public-answer/evaluation/evaluation-report.js';
 import { providerChecksum } from '../../src/modules/public-answer/infrastructure/openai/provider-json.js';
+import { OpenAIEmbeddingClient } from '../../src/modules/public-answer/infrastructure/openai/openai-embedding-client.js';
 import { verifyPreauthorizedProviderEmbeddingReceipt } from '../../src/index-answer-release.js';
 import {
   openHiddenAfterAuthorizedProviderBinding,
   openHiddenAfterAuthorizedProviderIndexing,
   parseEvaluationMode,
   runAfterProviderLivePreflight,
+  runEvaluationCaseWithDeadline,
 } from '../../src/eval-public-answer.js';
 
 const checksum = (character: string) => `sha256:${character.repeat(64)}`;
 
 describe('offline public-answer evaluation', () => {
+  it('gives each direct case a real aborting monotonic deadline and handles late settlement', async () => {
+    const unhandled: unknown[] = [];
+    const observe = (reason: unknown) => { unhandled.push(reason); };
+    process.on('unhandledRejection', observe);
+    try {
+      let capturedSignal: AbortSignal | undefined;
+      let lateReject!: (error: Error) => void;
+      const provider = new OpenAIEmbeddingClient('test-key', { profile: 'query', fetch: async (_url, init) => {
+        capturedSignal = init?.signal as AbortSignal;
+        return new Promise<Response>((_resolve, reject) => { lateReject = reject; });
+      } });
+      const stalled = runEvaluationCaseWithDeadline((signal, deadlineAt) => {
+        expect(deadlineAt).toBeGreaterThan(performance.now());
+        return provider.embed(['public evaluation question'], signal);
+      }, 20);
+      await expect(Promise.race([
+        stalled,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('evaluation remained pending')), 100)),
+      ])).rejects.toThrow(/deadline/u);
+      expect(capturedSignal?.aborted).toBe(true);
+      lateReject(new Error('late provider rejection'));
+
+      let lateResolve!: (value: string) => void;
+      await expect(runEvaluationCaseWithDeadline(() => new Promise((resolve) => { lateResolve = resolve; }), 20))
+        .rejects.toThrow(/deadline/u);
+      lateResolve('late provider response');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', observe);
+    }
+  });
   it('classifies the tracked public manifest only from independently approved IDs and bound approval hash', async () => {
     const manifest = JSON.parse(await readFile(resolve('tests/fixtures/public-answer/eval-manifest.v1.json'), 'utf8'));
     const approval = JSON.parse(await readFile(resolve('src/data/public-answer-corpus-approval.v1.json'), 'utf8'));

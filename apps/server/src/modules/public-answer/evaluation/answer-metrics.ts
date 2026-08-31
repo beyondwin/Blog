@@ -109,13 +109,17 @@ export function deriveBoundaryIdentifiers(
 export function countBoundaryLeaks(input: Readonly<{
   outputRecordIds: readonly string[];
   outputEvidenceIds: readonly string[];
+  outputText?: string;
   redactedTelemetry: readonly unknown[];
   boundaryRecordIds: ReadonlySet<string>;
   boundaryEvidenceIds: ReadonlySet<string>;
 }>): number {
   const outputRecords = new Set(input.outputRecordIds);
   const outputEvidence = new Set(input.outputEvidenceIds);
+  const outputText = input.outputText ?? '';
   const telemetry = JSON.stringify(input.redactedTelemetry);
-  return [...input.boundaryRecordIds].filter((recordId) => outputRecords.has(recordId) || telemetry.includes(recordId)).length
-    + [...input.boundaryEvidenceIds].filter((evidenceId) => outputEvidence.has(evidenceId) || telemetry.includes(evidenceId)).length;
+  return [...input.boundaryRecordIds].filter((recordId) => outputRecords.has(recordId)
+    || outputText.includes(recordId) || telemetry.includes(recordId)).length
+    + [...input.boundaryEvidenceIds].filter((evidenceId) => outputEvidence.has(evidenceId)
+      || outputText.includes(evidenceId) || telemetry.includes(evidenceId)).length;
 }
