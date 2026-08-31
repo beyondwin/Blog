@@ -1,5 +1,10 @@
+import { useMemo } from 'react';
 import { SecondBrainExperience } from './SecondBrainExperience';
-import type { PublicAnswerFixture } from './secondBrain';
+import {
+  HttpPublicAskProvider,
+  type PublicAnswerReleaseBinding,
+  type PublicAskProvider,
+} from './publicAskProvider';
 import type { SearchInventoryItem } from './searchModel';
 
 export {
@@ -13,10 +18,15 @@ export {
   type SearchMatch,
 } from './searchModel';
 
-export function SearchPage({ fixture, initialQuery = '', inventory }: {
-  fixture: PublicAnswerFixture;
+export function SearchPage({ binding, initialQuery = '', inventory, provider }: {
+  binding: PublicAnswerReleaseBinding;
   initialQuery?: string;
   inventory: readonly SearchInventoryItem[];
+  provider?: PublicAskProvider;
 }) {
-  return <SecondBrainExperience fixture={fixture} initialQuery={initialQuery} inventory={inventory} />;
+  const activeProvider = useMemo(
+    () => provider ?? new HttpPublicAskProvider(binding),
+    [provider, binding.answerReleaseId, binding.contentReleaseId],
+  );
+  return <SecondBrainExperience initialQuery={initialQuery} inventory={inventory} provider={activeProvider} />;
 }

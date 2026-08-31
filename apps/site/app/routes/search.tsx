@@ -3,7 +3,7 @@ import { boundedSearchQuery, SearchPage } from '../../src/ui/search/SearchPage';
 import { type RouteCriticalCssHandle, DocumentMetadata, publicMetadataTitle } from '../root';
 import {
   loadVerifiedRelease,
-  publicSecondBrainFixture,
+  loadVerifiedSearchAnswerRelease,
   searchInventory,
 } from '../release.server';
 
@@ -14,11 +14,15 @@ export const handle: RouteCriticalCssHandle = { criticalCss: searchCss };
 
 export async function loader({ request }: { request?: Request } = {}) {
   const release = await loadVerifiedRelease();
+  const answerRelease = await loadVerifiedSearchAnswerRelease(release);
   const initialQuery = boundedSearchQuery(
     request ? new URL(request.url).searchParams.get('q') ?? '' : '',
   );
   return {
-    fixture: publicSecondBrainFixture(release),
+    binding: {
+      contentReleaseId: release.manifest.releaseId,
+      answerReleaseId: answerRelease.manifest.answerReleaseId,
+    },
     initialQuery,
     inventory: searchInventory(release),
   };
@@ -34,7 +38,7 @@ export function SearchPresentation({ data }: { data: Awaited<ReturnType<typeof l
       />
       <SiteShell currentSection="search">
         <SearchPage
-          fixture={data.fixture}
+          binding={data.binding}
           initialQuery={data.initialQuery}
           inventory={data.inventory}
         />

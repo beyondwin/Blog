@@ -2,32 +2,6 @@ import { ORIGIN_QUERY_MAX_LENGTH } from '../navigation/origin';
 
 export const SAMPLE_QUESTION = 'AI 시대에도 왜 계속 책을 읽나요?';
 
-export interface SecondBrainEvidence {
-  id: string;
-  label: string;
-  collectionLabel: '생각';
-  dateLabel: string;
-  locatorLabel: string;
-  excerpt: string;
-  context: string;
-  recordTitle: string;
-  canonicalPath: string;
-}
-
-export interface PublicAnswerFixture {
-  question: typeof SAMPLE_QUESTION;
-  answerLead: string;
-  answerConclusionPrefix: string;
-  answerEmphasis: string;
-  answerConclusionSuffix: string;
-  evidence: readonly SecondBrainEvidence[];
-}
-
-export type AskSubmission =
-  | { kind: 'empty' }
-  | { kind: 'answer'; query: string }
-  | { kind: 'search'; query: string };
-
 export type AskExperienceState =
   | { view: 'idle'; query: '' }
   | { view: 'retrieving' | 'connecting' | 'composing' | 'answered'; query: string }
@@ -49,12 +23,6 @@ export type AskExperienceAction =
 function boundedQuestion(value: string): string {
   const query = value.trim();
   return query.length > 0 && Array.from(query).length <= ORIGIN_QUERY_MAX_LENGTH ? query : '';
-}
-
-export function resolveAskSubmission(rawQuery: string, sampleQuestion: string): AskSubmission {
-  const query = boundedQuestion(rawQuery);
-  if (!query) return { kind: 'empty' };
-  return query === sampleQuestion ? { kind: 'answer', query } : { kind: 'search', query };
 }
 
 export function initialAskState(initialQuery: string): AskExperienceState {

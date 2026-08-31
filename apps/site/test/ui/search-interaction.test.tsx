@@ -8,7 +8,7 @@ import { createServer, transformWithEsbuild, type Plugin, type ViteDevServer } f
 import { afterEach, describe, expect, it } from 'vitest';
 import { SiteShell } from '../../src/ui/components/SiteShell';
 import { SearchPage } from '../../src/ui/search/SearchPage';
-import { SAMPLE_QUESTION, type PublicAnswerFixture } from '../../src/ui/search/secondBrain';
+import { SAMPLE_QUESTION } from '../../src/ui/search/secondBrain';
 import type { SearchInventoryItem } from '../../src/ui/search/searchModel';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -29,23 +29,35 @@ async function freshViteCacheRoot() {
   return root;
 }
 
-const fixture: PublicAnswerFixture = {
-  question: SAMPLE_QUESTION,
-  answerLead: '저에게 독서는 답을 얻는 일이 아닙니다.',
-  answerConclusionPrefix: '결론까지 가는 시간을 지나며 ',
-  answerEmphasis: '내 판단',
-  answerConclusionSuffix: '을 되찾는 일입니다.',
-  evidence: [0, 1, 2].map((index) => ({
-    id: `evidence-${index + 1}`,
-    label: ['결론까지 가는 시간', '판단의 마지막 몫', '답을 쉽게 믿지 않기'][index]!,
-    collectionLabel: '생각' as const,
-    dateLabel: '2026.08',
-    locatorLabel: `문단 ${index + 1}`,
+const binding = {
+  contentReleaseId: 'a'.repeat(64),
+  answerReleaseId: 'b'.repeat(64),
+};
+const answerEvidence = [0, 1, 2].map((index) => ({
+    evidenceId: String(index + 3).repeat(64).slice(0, 64),
+    chunkId: String(index + 6).repeat(64).slice(0, 64),
+    recordId: 'thoughts/why-i-read-in-the-ai-era' as const,
+    collectionLabel: '생각',
+    recordTitle: `공개 기록 ${index + 1}`,
+    canonicalPath: '/thoughts/why-i-read-in-the-ai-era/' as const,
+    locator: { kind: 'heading-paragraph' as const, label: `문단 ${index + 1}`, ordinal: index + 1 },
     excerpt: `공개 기록 근거 ${index + 1}`,
-    context: `답변에 사용한 맥락 ${index + 1}`,
-    recordTitle: 'AI 시대에, 나는 왜 책을 읽는가',
-    canonicalPath: '/thoughts/why-i-read-in-the-ai-era/',
-  })),
+    excerptChecksum: `sha256:${'e'.repeat(64)}` as const,
+}));
+const answer = {
+  kind: 'answer' as const,
+  answerReleaseId: binding.answerReleaseId,
+  claims: [{
+    id: 'claim-1' as const,
+    text: '공개 기록을 근거로 답합니다.',
+    evidenceIds: answerEvidence.map(({ evidenceId }) => evidenceId),
+  }],
+  evidence: answerEvidence,
+};
+const provider = {
+  ask: async (question: string) => question === SAMPLE_QUESTION
+    ? answer
+    : { kind: 'search' as const, reason: 'unsupported-question' as const },
 };
 
 const inventory: SearchInventoryItem[] = [{
@@ -76,13 +88,18 @@ function clientPlugin(serverMarkup: string, options: { deferHydration?: boolean 
         import ${JSON.stringify(tokenStylesPath)};
         import ${JSON.stringify(shellStylesPath)};
         import ${JSON.stringify(searchStylesPath)};
-        const fixture = ${JSON.stringify(fixture)};
+        const binding = ${JSON.stringify(binding)};
+        const answer = ${JSON.stringify(answer)};
+        const sampleQuestion = ${JSON.stringify(SAMPLE_QUESTION)};
+        const provider = { ask: async (question) => question === sampleQuestion
+          ? answer
+          : { kind: 'search', reason: 'unsupported-question' } };
         const inventory = ${JSON.stringify(inventory)};
         const hydrate = () => {
           window.__secondBrainRoot = hydrateRoot(
             document.querySelector('#root'),
             <SiteShell currentSection="search">
-              <SearchPage fixture={fixture} initialQuery="" inventory={inventory} />
+              <SearchPage binding={binding} initialQuery="" inventory={inventory} provider={provider} />
             </SiteShell>,
           );
         };
@@ -113,7 +130,7 @@ function clientPlugin(serverMarkup: string, options: { deferHydration?: boolean 
 
 function renderApplication() {
   return createElement(SiteShell, {
-    children: createElement(SearchPage, { fixture, initialQuery: '', inventory }),
+    children: createElement(SearchPage, { binding, initialQuery: '', inventory, provider }),
     currentSection: 'search',
   });
 }
@@ -280,7 +297,7 @@ describe('second-brain search client interaction', () => {
       await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('search-results');
       await expect.poll(() => page.getByRole('heading', { name: '검색 결과' }).count()).toBe(1);
       await expect.poll(() => page.getByRole('status').textContent()).toBe('“Graphify”에 이어지는 공개 기록 1건을 찾았습니다.');
-      expect(await page.locator('body').textContent()).not.toContain(fixture.answerLead);
+      expect(await page.locator('body').textContent()).not.toContain('공개 기록을 근거로 답합니다.');
 
       const search = page.getByRole('searchbox', { name: '기록에 묻기' });
       await search.fill('존재하지않는검색어');
@@ -345,9 +362,11 @@ describe('second-brain search client interaction', () => {
       const directQuery = page.getByRole('searchbox', { name: '기록에 묻기' });
       await directQuery.fill('없는질문');
       await directQuery.press('Enter');
-      await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe('없는질문');
-      await page.goBack();
-      await expect.poll(() => directQuery.inputValue()).toBe('Graphify');
+      await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBeNull();
+      expect(new URL(page.url()).pathname).toBe('/search/');
+
+      await page.goto(`${harness.baseUrl}/search/?q=Graphify`, { waitUntil: 'networkidle' });
+      await expect.poll(() => page.getByRole('searchbox', { name: '기록에 묻기' }).inputValue()).toBe('Graphify');
       await expect.poll(() => page.locator('a[href="/articles/graphify-code-knowledge-graph-deep-dive/"]').count()).toBe(1);
 
       await page.goto(`${harness.baseUrl}/search/?q=없는질문`, { waitUntil: 'networkidle' });

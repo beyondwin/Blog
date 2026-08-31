@@ -340,30 +340,34 @@ describe('React Router current-behavior static route contract', () => {
     }
   });
 
-  it('loads one primary-only search corpus with a bounded GET query and verified answer fixture', async () => {
+  it('loads one primary-only search corpus with a bounded GET query and only the verified release IDs', async () => {
     const search = await candidateModule<any>('app/routes/search.tsx');
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
     const searchPage = await candidateModule<any>('src/ui/search/SearchPage.tsx');
     const keywordModule = await candidateModule<any>('src/ui/search/popularKeywords.ts');
     const data = await search.loader({ request: new Request('https://beyondwin.test/search/?q=%20Graphify%20') });
 
     expect(data.initialQuery).toBe('Graphify');
-    expect(data.fixture.question).toBe('AI 시대에도 왜 계속 책을 읽나요?');
-    expect(data.fixture.evidence).toHaveLength(3);
-    expect(data.fixture.evidence.map((item: { locatorLabel: string }) => item.locatorLabel)).toEqual([
-      '문단 10', '문단 05', '문단 16',
-    ]);
-    expect(data.fixture.evidence.every((item: { canonicalPath: string }) => (
-      item.canonicalPath === '/thoughts/why-i-read-in-the-ai-era/'
-    ))).toBe(true);
+    expect(data.binding).toEqual({
+      contentReleaseId: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      answerReleaseId: expect.stringMatching(/^[a-f0-9]{64}$/u),
+    });
+    const active = await releaseModule.loadVerifiedRelease();
+    const answerRelease = await releaseModule.loadVerifiedSearchAnswerRelease(active);
+    expect(data.binding).toEqual({
+      contentReleaseId: active.manifest.releaseId,
+      answerReleaseId: answerRelease.manifest.answerReleaseId,
+    });
     const serializedSearchLoader = JSON.stringify(data);
     expect(serializedSearchLoader).not.toMatch(
-      /bodyHtml|privatePath|sourcePath|memory\/|\/Users\/|src\/content\//u,
+      /"(?:bodyHtml|privatePath|sourcePath|claims?|evidence|excerpt|checksum|canonicalPath|recordTitle|approval|providerMode|manifest)"\s*:|memory\/|\/Users\/|src\/content\//u,
     );
     expect(serializedSearchLoader).not.toMatch(/AI 대리인|AI DELEGATE|MIND 01/u);
     expect(new Set(data.inventory.map((item: { kind: string }) => item.kind))).toEqual(
       new Set(['article', 'review', 'thought']),
     );
-    expect(Object.keys(data).sort()).toEqual(['fixture', 'initialQuery', 'inventory']);
+    expect(Object.keys(data).sort()).toEqual(['binding', 'initialQuery', 'inventory']);
+    expect(Object.keys(data.binding).sort()).toEqual(['answerReleaseId', 'contentReleaseId']);
     expect(data.inventory.every((item: { id: string }) => (
       /^(?:articles|reviews|thoughts)\//u.test(item.id)
     ))).toBe(true);
@@ -395,7 +399,21 @@ describe('React Router current-behavior static route contract', () => {
     expect(html).toContain('<title>검색 · FORM &amp; THOUGHT</title>');
     expect(html).toContain('content="공개된 기록에 질문하고, 연결된 답과 근거를 살펴봅니다."');
     expect(html).toContain('href="/search/" aria-current="page"');
+    expect(html).toContain('공개 기록에 무엇을 묻고 싶나요?');
     expect(html).not.toMatch(/>찾기<|>글<|>책<|>문장</u);
+    expect(html).not.toMatch(/저에게 독서는|결론까지 가는 시간|답을 쉽게 믿지 않기/u);
+  });
+
+  it.each([
+    ['missing', ''],
+    ['mismatched', 'f'.repeat(64)],
+    ['tampered', '0'.repeat(64)],
+  ])('fails closed when the content binding is %s', async (_label, releaseId) => {
+    const releaseModule = await candidateModule<any>('app/release.server.ts');
+    const release = structuredClone(await releaseModule.loadVerifiedRelease());
+    release.manifest.releaseId = releaseId;
+
+    await expect(releaseModule.loadVerifiedSearchAnswerRelease(release)).rejects.toThrow();
   });
 
   it('uses FORM & THOUGHT metadata for established article and review records', async () => {
@@ -457,17 +475,4 @@ describe('React Router current-behavior static route contract', () => {
     }
   });
 
-  it('rejects a public answer fixture when an exact excerpt moves away from its declared paragraph', async () => {
-    const releaseModule = await candidateModule<any>('app/release.server.ts');
-    const release = structuredClone(await releaseModule.loadVerifiedRelease());
-    const record = release.manifest.records['thoughts/why-i-read-in-the-ai-era'];
-    const paragraphs = record.bodyHtml.match(/<p(?:\s[^>]*)?>[\s\S]*?<\/p>/gu);
-    expect(paragraphs).toHaveLength(17);
-    [paragraphs[8], paragraphs[9]] = [paragraphs[9], paragraphs[8]];
-    record.bodyHtml = paragraphs.join('\n');
-
-    expect(() => releaseModule.publicSecondBrainFixture(release)).toThrow(
-      'Public answer fixture locator drifted: 문단 10',
-    );
-  });
 });

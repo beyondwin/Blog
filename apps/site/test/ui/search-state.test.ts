@@ -3,23 +3,9 @@ import {
   SAMPLE_QUESTION,
   askExperienceReducer,
   initialAskState,
-  resolveAskSubmission,
 } from '../../src/ui/search/secondBrain';
 
 describe('FORM & THOUGHT second-brain question state', () => {
-  it('routes only the exact approved question to the answer fixture', () => {
-    expect(resolveAskSubmission(` ${SAMPLE_QUESTION} `, SAMPLE_QUESTION)).toEqual({
-      kind: 'answer',
-      query: SAMPLE_QUESTION,
-    });
-    expect(resolveAskSubmission('Graphify', SAMPLE_QUESTION)).toEqual({
-      kind: 'search',
-      query: 'Graphify',
-    });
-    expect(resolveAskSubmission('   ', SAMPLE_QUESTION)).toEqual({ kind: 'empty' });
-    expect(resolveAskSubmission('가'.repeat(121), SAMPLE_QUESTION)).toEqual({ kind: 'empty' });
-  });
-
   it('moves through retrieval, answer, evidence, and focus-return states', () => {
     let state = initialAskState('');
     expect(state.view).toBe('idle');

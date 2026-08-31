@@ -172,11 +172,13 @@ describe('full public route expansion', () => {
     expect(collectionHtml).not.toMatch(/reading-sheet|data-surface-mode|public-scene/iu);
 
     const inventory = releaseModule.searchInventory(active);
-    const discovery = releaseModule.searchDiscovery(active);
-    const fixture = releaseModule.publicSecondBrainFixture(active);
+    const answerRelease = await releaseModule.loadVerifiedSearchAnswerRelease(active);
+    const binding = {
+      contentReleaseId: active.manifest.releaseId,
+      answerReleaseId: answerRelease.manifest.answerReleaseId,
+    };
     const searchHtml = renderToStaticMarkup(createElement(SearchPage, {
-      discovery,
-      fixture,
+      binding,
       initialQuery: 'Graphify',
       inventory,
     }));
@@ -186,13 +188,13 @@ describe('full public route expansion', () => {
     expect(JSON.stringify(inventory)).not.toMatch(/bodyHtml|releaseId|rendererVersion|rawPrompt|privatePath/u);
 
     const emptySearchHtml = renderToStaticMarkup(createElement(SearchPage, {
-      discovery,
-      fixture,
+      binding,
       initialQuery: '',
       inventory,
     }));
-    expect(emptySearchHtml).toContain('제 기록에');
+    expect(emptySearchHtml).toContain('공개 기록에 무엇을 묻고 싶나요?');
     expect(emptySearchHtml).not.toContain('__bw_');
+    expect(`${searchHtml}${emptySearchHtml}`).not.toMatch(/answerLead|fixture|excerpt|checksum|답변에 사용한 맥락/u);
 
     const memoryHtml = renderToStaticMarkup(createElement(MemoryIndexPage, { records: [memory] }));
     expect(memoryHtml).toContain(`href="${memory.href}"`);
@@ -362,23 +364,16 @@ describe('full public route expansion', () => {
 
   it('preserves raw search typing, creates a bounded primary-result origin, and detects safe tag-anchor collisions', async () => {
     const search = await candidateModule<any>('src/ui/search/SearchPage.tsx');
-    const secondBrain = await candidateModule<any>('src/ui/search/secondBrain.ts');
     const anchors = await candidateModule<any>('src/ui/navigation/search-anchor.ts');
     const article = { id: 'articles/AI-design', anchorId: 'record-articles-ai-design', href: '/articles/ai-design/', kind: 'article', title: 'AI 설계', description: '설명', topics: ['AI 설계'] };
     const html = renderToStaticMarkup(createElement(search.SearchPage, {
-      fixture: {
-        question: secondBrain.SAMPLE_QUESTION,
-        answerLead: '답변',
-        answerConclusionPrefix: '판단 ',
-        answerEmphasis: '근거',
-        answerConclusionSuffix: '입니다.',
-        evidence: [],
-      },
+      binding: { contentReleaseId: 'a'.repeat(64), answerReleaseId: 'b'.repeat(64) },
       initialQuery: 'AI 설계 ',
       inventory: [article],
     }));
 
     expect(html).toContain('value="AI 설계 "');
+    expect(html).not.toMatch(/answerLead|claims?|evidence|excerpt|checksum|fixture|답변에 사용한 맥락/u);
     expect(search.boundedSearchQuery('AI 설계 ')).toBe('AI 설계');
     expect(search.searchOriginForItem(article, 'AI 설계 ')).toEqual({
       kind: 'search', query: 'AI 설계', anchorId: 'record-articles-ai-design',
@@ -421,7 +416,10 @@ describe('full public route expansion', () => {
         ? { records: releaseModule.summariesForCollection(active, 'memory') }
         : path.includes('search')
           ? {
-              fixture: releaseModule.publicSecondBrainFixture(active),
+              binding: {
+                contentReleaseId: active.manifest.releaseId,
+                answerReleaseId: (await releaseModule.loadVerifiedSearchAnswerRelease(active)).manifest.answerReleaseId,
+              },
               initialQuery: '',
               inventory: releaseModule.searchInventory(active),
             }
@@ -429,6 +427,15 @@ describe('full public route expansion', () => {
       const html = renderToStaticMarkup(createElement(route[presentationName], { data }));
       expect(html).toContain(title);
       expect(html).toContain(`content="${description}"`);
+      if (path.includes('search')) {
+        const searchData = data as { binding: Record<string, unknown>; initialQuery: string; inventory: unknown[] };
+        expect(Object.keys(data).sort()).toEqual(['binding', 'initialQuery', 'inventory']);
+        expect(Object.keys(searchData.binding).sort()).toEqual(['answerReleaseId', 'contentReleaseId']);
+        expect(JSON.stringify(data)).not.toMatch(
+          /"(?:answer|claims?|evidence|excerpt|checksum|fixture|manifest)"\s*:/u,
+        );
+        expect(html).not.toMatch(/answerLead|claims?|evidence|excerpt|checksum|fixture|답변에 사용한 맥락/u);
+      }
     }
   });
 
