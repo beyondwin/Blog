@@ -336,11 +336,12 @@ export function SecondBrainExperience({ initialQuery, inventory, provider: _prov
   };
   const openEvidence = (index: number, trigger: HTMLElement) => {
     if (!answer) return;
+    const evidenceId = answer.evidence[index]?.evidenceId;
+    if (!evidenceId) return;
     returnFocusRef.current = trigger;
-    dispatch({ type: 'open-evidence', index, evidenceCount: answer.evidence.length });
+    dispatch({ type: 'open-evidence', evidenceId });
   };
-  const progressView = state.view === 'retrieving' || state.view === 'connecting' || state.view === 'composing'
-    ? state.view : null;
+  const progressView = state.view === 'pending' ? state.phase : null;
   const answerVisible = answer !== null && (state.view === 'answered' || state.view === 'evidence-open');
   const resultCount = state.view === 'search-results' ? searchMatches(inventory, state.query).length : 0;
 
@@ -389,8 +390,11 @@ export function SecondBrainExperience({ initialQuery, inventory, provider: _prov
       {state.view === 'evidence-open' && answer ? (
         <EvidencePanel
           answer={answer}
-          selectedIndex={state.selectedEvidenceIndex}
-          onSelect={(index) => dispatch({ type: 'select-evidence', index, evidenceCount: answer.evidence.length })}
+          selectedIndex={Math.max(0, answer.evidence.findIndex((item) => item.evidenceId === state.selectedEvidenceId))}
+          onSelect={(index) => {
+            const evidenceId = answer.evidence[index]?.evidenceId;
+            if (evidenceId) dispatch({ type: 'select-evidence', evidenceId });
+          }}
           onClose={closeEvidence}
           closeRef={closeRef}
           panelRef={panelRef}
