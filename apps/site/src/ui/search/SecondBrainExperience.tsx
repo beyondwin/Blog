@@ -114,7 +114,7 @@ function QuestionComposer({ id, label, note, onBlur, onChange, onFocus, onSubmit
       </p>
       {note ? <p className="question-composer__note">{note}</p> : null}
       <details className="question-composer__privacy">
-        <summary>질문과 근거는 어떻게 처리되나요?</summary>
+        <summary className="touch-target">질문과 근거는 어떻게 처리되나요?</summary>
         <p>
           현재 질문과 선택된 공개 기록 발췌는 이 답을 만들기 위해 설정된 AI 제공자에게 전달됩니다.
           원문 질문의 서버 보관 기간은 0일이며, 공개 승인된 근거만 사용합니다.

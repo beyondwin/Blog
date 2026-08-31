@@ -9,10 +9,11 @@ export interface ProxyArguments {
   check: boolean;
   listen: { host: '127.0.0.1' | '::1'; port: number };
   react: URL;
+  api: URL;
   pidFile?: string;
 }
 
-const allowedValueArguments = new Set(['--listen', '--react', '--pid-file']);
+const allowedValueArguments = new Set(['--listen', '--react', '--api', '--pid-file']);
 const hopByHopHeaders = new Set([
   'connection',
   'keep-alive',
@@ -24,6 +25,26 @@ const hopByHopHeaders = new Set([
   'upgrade',
 ]);
 const cutoverRootPattern = /^\/tmp\/beyondwin-cutover\.[A-Za-z0-9_-]+$/u;
+const API_BODY_LIMIT_BYTES = 4 * 1024;
+const API_DEADLINE_MS = 12_000;
+const API_REQUEST_HEADERS = new Set([
+  'accept',
+  'accept-language',
+  'content-length',
+  'content-type',
+  'origin',
+  'sec-fetch-site',
+  'transfer-encoding',
+  'user-agent',
+]);
+const API_RESPONSE_HEADERS = new Set([
+  'cache-control',
+  'content-type',
+  'retry-after',
+  'vary',
+  'x-answer-release-id',
+  'x-content-release-id',
+]);
 
 function parseListen(value: string): ProxyArguments['listen'] {
   const match = value.match(/^(127\.0\.0\.1|\[::1\]):([1-9][0-9]{0,4})$/u);
@@ -33,17 +54,17 @@ function parseListen(value: string): ProxyArguments['listen'] {
   return { host: match[1] === '[::1]' ? '::1' : '127.0.0.1', port };
 }
 
-function parseUpstream(value: string): URL {
+function parseUpstream(value: string, argument: '--api' | '--react'): URL {
   let url: URL;
   try {
     url = new URL(value);
   } catch (error) {
-    throw new Error('--react requires one valid URL', { cause: error });
+    throw new Error(`${argument} requires one valid URL`, { cause: error });
   }
-  if (url.protocol !== 'http:') throw new Error('--react permits HTTP only');
-  if (!['127.0.0.1', '[::1]'].includes(url.hostname)) throw new Error('--react permits exact loopback upstreams only');
+  if (url.protocol !== 'http:') throw new Error(`${argument} permits HTTP only`);
+  if (!['127.0.0.1', '[::1]'].includes(url.hostname)) throw new Error(`${argument} permits exact loopback upstreams only`);
   if (!url.port || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
-    throw new Error('--react requires only an origin with an explicit port');
+    throw new Error(`${argument} requires only an origin with an explicit port`);
   }
   return url;
 }
@@ -65,14 +86,15 @@ export function parseProxyArguments(argv: readonly string[]): ProxyArguments {
     values.set(argument, value);
     index += 1;
   }
-  for (const required of ['--listen', '--react']) {
+  for (const required of ['--listen', '--react', '--api']) {
     if (!values.has(required)) throw new Error(`missing required argument: ${required}`);
   }
   if (!check && !values.has('--pid-file')) throw new Error('--pid-file is required at runtime');
   return {
     check,
     listen: parseListen(values.get('--listen')!),
-    react: parseUpstream(values.get('--react')!),
+    react: parseUpstream(values.get('--react')!, '--react'),
+    api: parseUpstream(values.get('--api')!, '--api'),
     ...(values.has('--pid-file') ? { pidFile: resolve(values.get('--pid-file')!) } : {}),
   };
 }
@@ -107,7 +129,7 @@ export async function checkExactDrillPorts(
   checker: (port: number) => Promise<boolean> = portIsFree,
 ): Promise<void> {
   const occupied: number[] = [];
-  for (const port of [4390, 4391]) if (!await checker(port)) occupied.push(port);
+  for (const port of [4390, 4391, 4392]) if (!await checker(port)) occupied.push(port);
   if (occupied.length > 0) throw new Error(`React cutover drill port occupied: ${occupied.join(', ')}`);
 }
 
@@ -116,6 +138,78 @@ function filteredHeaders(headers: IncomingHttpHeaders): IncomingHttpHeaders {
   return Object.fromEntries(Object.entries(headers).filter(([name, value]) => (
     value !== undefined && !hopByHopHeaders.has(name.toLowerCase()) && !connectionTokens.has(name.toLowerCase())
   )));
+}
+
+function listenerAuthority(listen: ProxyArguments['listen']): string {
+  return `${listen.host === '::1' ? '[::1]' : listen.host}:${listen.port}`;
+}
+
+function firstHeader(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function withoutUntrustedIdentity(headers: IncomingHttpHeaders): IncomingHttpHeaders {
+  return Object.fromEntries(Object.entries(filteredHeaders(headers)).filter(([name]) => {
+    const lower = name.toLowerCase();
+    return lower !== 'host'
+      && lower !== 'forwarded'
+      && !lower.startsWith('x-forwarded-')
+      && lower !== 'x-real-ip'
+      && lower !== 'cookie'
+      && lower !== 'authorization'
+      && lower !== 'proxy-authorization';
+  }));
+}
+
+function trustedForwardingHeaders(
+  request: http.IncomingMessage,
+  authority: string,
+  upstream: URL,
+): IncomingHttpHeaders {
+  return {
+    host: upstream.host,
+    'x-forwarded-for': request.socket.remoteAddress ?? '',
+    'x-forwarded-proto': 'http',
+    'x-forwarded-host': authority,
+  };
+}
+
+function apiRequestHeaders(
+  request: http.IncomingMessage,
+  authority: string,
+  upstream: URL,
+): IncomingHttpHeaders {
+  const approved = Object.fromEntries(Object.entries(request.headers).filter(([name, value]) => (
+    value !== undefined && API_REQUEST_HEADERS.has(name.toLowerCase())
+  )));
+  return { ...approved, ...trustedForwardingHeaders(request, authority, upstream) };
+}
+
+function apiResponseHeaders(status: number, headers: IncomingHttpHeaders): IncomingHttpHeaders {
+  const approved = Object.fromEntries(Object.entries(headers).filter(([name, value]) => (
+    value !== undefined
+      && API_RESPONSE_HEADERS.has(name.toLowerCase())
+      && (name.toLowerCase() !== 'retry-after' || status === 429 || status === 503)
+  )));
+  return {
+    ...approved,
+    'cache-control': firstHeader(headers['cache-control']) ?? 'no-store',
+    ...PUBLIC_SECURITY_HEADERS,
+  };
+}
+
+function rejectRequest(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  status: 400 | 404 | 405 | 413,
+): void {
+  request.resume();
+  response.writeHead(status, {
+    ...PUBLIC_SECURITY_HEADERS,
+    'cache-control': 'no-store',
+    'content-type': 'text/plain; charset=utf-8',
+  });
+  response.end('Request is not available on the public proxy\n');
 }
 
 async function writePidFile(path: string): Promise<void> {
@@ -137,13 +231,87 @@ export async function createProxyServer(options: ProxyArguments): Promise<Server
   if (!options.pidFile) throw new Error('proxy PID file is required at runtime');
   await assertOwnedCutoverPath(options.pidFile);
   const server = http.createServer((request, response) => {
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      response.writeHead(405, {
-        ...PUBLIC_SECURITY_HEADERS,
-        allow: 'GET, HEAD',
-        'content-type': 'text/plain; charset=utf-8',
+    const authority = listenerAuthority(options.listen);
+    if (firstHeader(request.headers.host) !== authority) {
+      rejectRequest(request, response, 400);
+      return;
+    }
+    const requestTarget = request.url ?? '/';
+    let pathname: string;
+    try {
+      pathname = new URL(requestTarget, 'http://public.local.invalid').pathname;
+    } catch {
+      rejectRequest(request, response, 400);
+      return;
+    }
+    const publicAsk = requestTarget === '/api/public/ask' && request.method === 'POST';
+    const staticRequest = !pathname.startsWith('/api/')
+      && pathname !== '/api'
+      && !pathname.startsWith('/health/')
+      && pathname !== '/health'
+      && (request.method === 'GET' || request.method === 'HEAD');
+
+    if (publicAsk) {
+      const declaredLength = Number(firstHeader(request.headers['content-length']) ?? '0');
+      if (!Number.isSafeInteger(declaredLength) || declaredLength > API_BODY_LIMIT_BYTES) {
+        rejectRequest(request, response, 413);
+        return;
+      }
+      const upstreamRequest = http.request({
+        protocol: options.api.protocol,
+        hostname: options.api.hostname,
+        port: options.api.port,
+        method: 'POST',
+        path: '/api/public/ask',
+        headers: apiRequestHeaders(request, authority, options.api),
+      }, (upstreamResponse) => {
+        if (response.destroyed) {
+          upstreamResponse.destroy();
+          return;
+        }
+        const status = upstreamResponse.statusCode ?? 502;
+        response.writeHead(status, apiResponseHeaders(status, upstreamResponse.headers));
+        upstreamResponse.pipe(response);
       });
-      response.end('public proxy accepts GET and HEAD only\n');
+      let received = 0;
+      let settled = false;
+      const abortUpstream = () => {
+        if (!settled) upstreamRequest.destroy();
+      };
+      response.once('finish', () => { settled = true; });
+      response.once('close', () => {
+        if (!response.writableEnded) abortUpstream();
+      });
+      request.once('aborted', abortUpstream);
+      upstreamRequest.setTimeout(API_DEADLINE_MS, () => upstreamRequest.destroy(new Error('deadline')));
+      upstreamRequest.once('error', (error) => {
+        if (response.headersSent || response.destroyed) {
+          response.destroy();
+          return;
+        }
+        response.writeHead(error.message === 'deadline' ? 504 : 502, {
+          ...PUBLIC_SECURITY_HEADERS,
+          'cache-control': 'no-store',
+          'content-type': 'text/plain; charset=utf-8',
+        });
+        response.end('Public answer origin is unavailable\n');
+      });
+      request.on('data', (chunk: Buffer) => {
+        received += chunk.byteLength;
+        if (received > API_BODY_LIMIT_BYTES) {
+          upstreamRequest.destroy();
+          if (!response.headersSent) rejectRequest(request, response, 413);
+          return;
+        }
+        if (!upstreamRequest.destroyed) upstreamRequest.write(chunk);
+      });
+      request.once('end', () => {
+        if (!upstreamRequest.destroyed) upstreamRequest.end();
+      });
+      return;
+    }
+    if (!staticRequest) {
+      rejectRequest(request, response, request.method === 'GET' || request.method === 'HEAD' ? 404 : 405);
       return;
     }
     const upstreamRequest = http.request({
@@ -152,7 +320,10 @@ export async function createProxyServer(options: ProxyArguments): Promise<Server
       port: options.react.port,
       method: request.method,
       path: request.url ?? '/',
-      headers: { ...filteredHeaders(request.headers), host: options.react.host },
+      headers: {
+        ...withoutUntrustedIdentity(request.headers),
+        ...trustedForwardingHeaders(request, authority, options.react),
+      },
     }, (upstreamResponse) => {
       response.writeHead(upstreamResponse.statusCode ?? 502, {
         ...filteredHeaders(upstreamResponse.headers),
@@ -175,6 +346,9 @@ export async function createProxyServer(options: ProxyArguments): Promise<Server
     });
     request.pipe(upstreamRequest);
   });
+  server.on('upgrade', (_request, socket) => {
+    socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n');
+  });
   await new Promise<void>((resolveListen, reject) => {
     server.once('error', reject);
     server.listen(options.listen.port, options.listen.host, () => {
@@ -195,7 +369,7 @@ async function main(): Promise<void> {
   const arguments_ = parseProxyArguments(process.argv.slice(2));
   if (arguments_.check) {
     await checkExactDrillPorts();
-    process.stdout.write(`${JSON.stringify({ check: 'passed', ports: [4390, 4391], renderer: 'react' })}\n`);
+    process.stdout.write(`${JSON.stringify({ check: 'passed', ports: [4390, 4391, 4392], renderer: 'react' })}\n`);
     return;
   }
   await createProxyServer(arguments_);

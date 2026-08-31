@@ -21,6 +21,39 @@ export interface ProductionBoundary {
   productionHost: null;
 }
 
+export function assertPreparedPublicProxyConfiguration(configuration: string): void {
+  const upstreams = configuration.match(/^upstream /gmu) ?? [];
+  if (upstreams.length !== 2
+    || !configuration.includes('upstream beyondwin_public_react')
+    || !configuration.includes('upstream beyondwin_public_api')
+    || /astro|rollback/iu.test(configuration)) {
+    throw new Error('Prepared reverse proxy must contain exact React and public API upstreams only');
+  }
+  if (!configuration.includes('location = /api/public/ask')) {
+    throw new Error('Prepared reverse proxy must use one exact public answer location');
+  }
+  if (!configuration.includes('if ($request_uri != "/api/public/ask") { return 404; }')) {
+    throw new Error('Prepared reverse proxy must reject every non-exact raw request target');
+  }
+  for (const required of [
+    'if ($request_method != POST) { return 405; }',
+    'if ($http_host != "localhost:4389") { return 400; }',
+    'proxy_pass_request_headers off;',
+    'proxy_set_header X-Forwarded-For $remote_addr;',
+    'proxy_set_header X-Forwarded-Proto http;',
+    'proxy_set_header X-Forwarded-Host localhost:4389;',
+    'location ^~ /api/ { return 404; }',
+    'location ^~ /health/ { return 404; }',
+  ]) {
+    if (!configuration.includes(required)) throw new Error(`Prepared proxy contract is missing: ${required}`);
+  }
+  if (configuration.includes('$proxy_add_x_forwarded_for')
+    || configuration.includes('proxy_set_header X-Forwarded-Host $host')
+    || configuration.includes('proxy_set_header X-Forwarded-Proto $scheme')) {
+    throw new Error('Prepared proxy forwarding identity must overwrite, never append or trust inbound values');
+  }
+}
+
 export function assertProductionBoundary(input: {
   productionCanonicalOrigin: unknown;
   production_cutover_authorized: unknown;
@@ -88,11 +121,7 @@ export async function verifyReactPublicSite({
   if (paths.length !== 93) throw new Error(`Expected exact release-derived route count 93, got ${paths.length}`);
   await verifyStaticDelivery(join(repositoryRoot, 'apps/site/build/client'), paths, LOCAL_SITE_ORIGIN);
   const reverseProxy = await readFile(join(repositoryRoot, 'deploy/reverse-proxy/public-site.conf'), 'utf8');
-  if ((reverseProxy.match(/^upstream /gmu) ?? []).length !== 1
-    || !reverseProxy.includes('upstream beyondwin_public_react')
-    || /astro|rollback/iu.test(reverseProxy)) {
-    throw new Error('Prepared reverse proxy must contain one React origin and no rollback renderer');
-  }
+  assertPreparedPublicProxyConfiguration(reverseProxy);
   const production = {
     productionCanonicalOrigin: 'not_measured' as const,
     production_cutover_authorized: false as const,

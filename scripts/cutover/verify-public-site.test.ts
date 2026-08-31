@@ -1,12 +1,32 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { LOCAL_SITE_ORIGIN, PUBLIC_SECURITY_HEADERS, robotsText, sitemapXml } from '../../apps/site/app/delivery';
-import { assertProductionBoundary, verifyStaticDelivery } from './verify-public-site.mts';
+import {
+  assertPreparedPublicProxyConfiguration,
+  assertProductionBoundary,
+  verifyStaticDelivery,
+} from './verify-public-site.mts';
 import { cleanHostCommandEnvironment } from './verify-clean-host.mts';
 
 describe('React-only public-site verification', () => {
+  it('verifies the prepared two-upstream proxy exposes one exact raw public API target', async () => {
+    const configuration = await readFile(
+      new URL('../../deploy/reverse-proxy/public-site.conf', import.meta.url),
+      'utf8',
+    );
+    expect(() => assertPreparedPublicProxyConfiguration(configuration)).not.toThrow();
+    expect(() => assertPreparedPublicProxyConfiguration(
+      configuration.replace('location = /api/public/ask', 'location /api/public/ask'),
+    )).toThrow(/exact/iu);
+    expect(() => assertPreparedPublicProxyConfiguration(
+      configuration.replace('$request_uri != "/api/public/ask"', '$uri != "/api/public/ask"'),
+    )).toThrow(/raw request target/iu);
+    expect(() => assertPreparedPublicProxyConfiguration(
+      configuration.replace('X-Forwarded-For $remote_addr', 'X-Forwarded-For $proxy_add_x_forwarded_for'),
+    )).toThrow(/forwarding/iu);
+  });
   it('uses an explicit Node 24 clean-host environment and drops hostile ambient secrets', () => {
     const environment = cleanHostCommandEnvironment({
       PATH: '/hostile/bin',

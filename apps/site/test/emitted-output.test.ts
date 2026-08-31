@@ -20,6 +20,7 @@ let thoughtsIndexHtml = '';
 let thoughtHtml = '';
 let searchHtml = '';
 let searchData = '';
+let searchJavascript = '';
 let memoryMapHtml = '';
 
 const ARTICLE_IDS = [
@@ -80,6 +81,10 @@ beforeAll(async () => {
     readFile(join(candidateRoot, 'build/client/search/_.data'), 'utf8'),
     readFile(join(candidateRoot, 'build/client/memory/map/index.html'), 'utf8'),
   ]);
+  const searchAssets = (await readdir(join(candidateRoot, 'build/client/assets')))
+    .filter((name) => /^search-[^.]+\.js$/u.test(name));
+  expect(searchAssets).toHaveLength(1);
+  searchJavascript = await readFile(join(candidateRoot, 'build/client/assets', searchAssets[0]!), 'utf8');
 }, 120_000);
 
 describe('React Router emitted critical output', () => {
@@ -198,6 +203,13 @@ describe('React Router emitted critical output', () => {
       'f29c064b1c0f77e5906a9c02e5b8e0a573ae6c44373b99fb75532c90fd481f20',
     );
     expect(searchHtml).toContain('src="/images/form-and-thought-agent-avatar-v1.png"');
+    expect(searchHtml).not.toMatch(/search-avatar-derivative|form-and-thought-agent-avatar-v1\.(?:avif|webp)/u);
+    for (const derivative of [
+      'form-and-thought-agent-avatar-v1.avif',
+      'form-and-thought-agent-avatar-v1.webp',
+    ]) {
+      await expect(access(join(candidateRoot, 'build/client/images', derivative))).rejects.toThrow();
+    }
   });
 
   it('keeps both emitted search payloads free of private material and rejected agent labels', () => {
@@ -206,6 +218,36 @@ describe('React Router emitted critical output', () => {
         /bodyHtml|privatePath|sourcePath|memory\/|\/Users\/|src\/content\//u,
       );
       expect(output).not.toMatch(/AI 대리인|AI DELEGATE|MIND 01/u);
+    }
+    expect(searchJavascript).not.toMatch(
+      /publicSecondBrainFixture|fixtureAnswer|rollbackEvidence|OPENAI_API_KEY|api\.openai\.com|\/Users\/|src\/content\/|memory\/\*\*|(?:\.\.\/)+memory\/|privatePath|sourcePath|search-avatar-derivative/iu,
+    );
+  });
+
+  it('emits one complete no-JS search shell with ID-only provider binding', () => {
+    expect(searchHtml.match(/class="site-shell"/gu)).toHaveLength(1);
+    expect(searchHtml.match(/class="skip-link" href="#main-content"/gu)).toHaveLength(1);
+    expect(searchHtml.match(/class="site-header(?:\s|")/gu)).toHaveLength(1);
+    for (const href of ['/reviews/', '/articles/', '/thoughts/', '/search/']) {
+      expect(searchHtml).toContain(`href="${href}"`);
+    }
+    expect(searchHtml).not.toContain('<footer');
+    expect(searchHtml).toContain('공개 기록에 무엇을 묻고 싶나요?');
+    expect(searchHtml).not.toContain('제 기록에 무엇을 묻고 싶나요?');
+    expect(searchHtml).toContain('action="/search/" method="get"');
+    expect(searchHtml).toContain('name="q"');
+    expect(searchHtml).toMatch(/maxlength="120"/iu);
+    expect(searchHtml).toContain('<details class="question-composer__privacy">');
+    expect(searchHtml).toContain('현재 질문과 선택된 공개 기록 발췌');
+    expect(searchHtml).toContain('원문 질문의 서버 보관 기간은 0일');
+    expect(searchHtml).not.toMatch(/production ZDR|ZDR.{0,30}(?:verified|검증)/iu);
+
+    expect(searchData.match(/contentReleaseId/gu)).toHaveLength(1);
+    expect(searchData.match(/answerReleaseId/gu)).toHaveLength(1);
+    for (const output of [searchHtml, searchData]) {
+      expect(output).not.toMatch(
+        /publicSecondBrainFixture|fixtureAnswer|rollbackEvidence|providerUrl|apiKey|chunkChecksum|evidenceChecksum|claims\s*[:",]|\/Users\/|src\/content\/|memory\*\*|memory\//iu,
+      );
     }
   });
 

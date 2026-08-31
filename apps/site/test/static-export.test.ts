@@ -92,6 +92,7 @@ describe('fail-closed React Router static export orchestration', () => {
       await mkdir(join(fixture.spikeRoot, 'build/client/assets'), { recursive: true });
       await mkdir(join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era'), { recursive: true });
       await mkdir(join(fixture.spikeRoot, 'build/client/memory/map'), { recursive: true });
+      await mkdir(join(fixture.spikeRoot, 'build/client/search'), { recursive: true });
       await writeFile(join(fixture.spikeRoot, 'build/client/index.html'), '<h1>verified candidate output</h1>');
       await writeFile(
         join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era/index.html'),
@@ -103,6 +104,14 @@ describe('fail-closed React Router static export orchestration', () => {
         );
         await writeFile(join(fixture.spikeRoot, 'build/client/__spa-fallback.html'), '<h1>static fallback</h1>');
         await writeFile(join(fixture.spikeRoot, 'build/client/assets/root-generated.js'), 'framework asset');
+        await writeFile(
+          join(fixture.spikeRoot, 'build/client/search/index.html'),
+          '<main><form action="/search/" method="get"><input name="q" maxlength="120"></form></main>',
+        );
+        await writeFile(
+          join(fixture.spikeRoot, 'build/client/search/_.data'),
+          JSON.stringify({ contentReleaseId: 'content-id', answerReleaseId: 'answer-id' }),
+        );
       },
     });
 
@@ -115,6 +124,12 @@ describe('fail-closed React Router static export orchestration', () => {
       .toContain('static fallback');
     expect(await readFile(join(fixture.spikeRoot, 'build/client/assets/root-generated.js'), 'utf8'))
       .toBe('framework asset');
+    const searchData = await readFile(join(fixture.spikeRoot, 'build/client/search/_.data'), 'utf8');
+    expect(JSON.parse(searchData)).toEqual({
+      contentReleaseId: 'content-id',
+      answerReleaseId: 'answer-id',
+    });
+    expect(searchData).not.toMatch(/fixture|rollback|claims|evidence|memory\/|\/Users\//iu);
     expect(await readFile(
       join(fixture.spikeRoot, 'build/client/thoughts/why-i-read-in-the-ai-era/index.html'),
       'utf8',
