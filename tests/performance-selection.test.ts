@@ -3,6 +3,8 @@ import {
   PERFORMANCE_BUDGETS,
   PERFORMANCE_ROUTES,
   PERFORMANCE_ROUTE_SELECTOR_ENV,
+  SEARCH_AVATAR_PERFORMANCE_BOUNDARY,
+  SEARCH_CRITICAL_CSS_BUDGETS,
   selectPerformanceRoutes,
 } from './e2e/performance-selection';
 
@@ -33,6 +35,21 @@ describe('Task 14 performance route selection', () => {
       initialJsGzipBytesMax: 128 * 1024,
       fontBytesMax: 250 * 1024,
       firstFrameImageBytesMax: 512 * 1024,
+    });
+  });
+
+  it('seals the search critical CSS ceilings independently of the browser image cell', () => {
+    expect(SEARCH_CRITICAL_CSS_BUDGETS).toEqual({
+      rawBytesMax: 28 * 1024,
+      gzipBytesMax: 6 * 1024,
+    });
+  });
+
+  it('keeps the approval-dependent search avatar cell explicit and unmeasured', () => {
+    expect(SEARCH_AVATAR_PERFORMANCE_BOUNDARY).toEqual({
+      derivativeApproval: 'not_authorized',
+      pictureSelection: 'not_measured',
+      firstFrameImageBudget: 'not_measured',
     });
   });
 

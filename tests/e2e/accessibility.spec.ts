@@ -7,7 +7,11 @@ const REPRESENTATIVE_SURFACES = [
   { name: 'reviews desktop', viewport: { width: 1440, height: 900 }, path: '/reviews/' },
   { name: 'articles calibrated', viewport: { width: 1080, height: 1440 }, path: '/articles/' },
   { name: 'thoughts intermediate', viewport: { width: 768, height: 900 }, path: '/thoughts/' },
+  { name: 'search desktop', viewport: { width: 1440, height: 900 }, path: '/search/' },
+  { name: 'search compact tablet', viewport: { width: 768, height: 900 }, path: '/search/' },
   { name: 'search mobile', viewport: { width: 390, height: 844 }, path: '/search/' },
+  { name: 'search minimum reflow', viewport: { width: 320, height: 844 }, path: '/search/' },
+  { name: 'search short landscape', viewport: { width: 720, height: 450 }, path: '/search/' },
   { name: 'article index mobile', viewport: { width: 390, height: 844 }, path: '/articles/' },
   {
     name: 'article detail calibrated',

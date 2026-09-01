@@ -22,6 +22,17 @@ export const PERFORMANCE_BUDGETS = {
   firstFrameImageBytesMax: 512 * 1024,
 } as const;
 
+export const SEARCH_CRITICAL_CSS_BUDGETS = {
+  rawBytesMax: 28 * 1024,
+  gzipBytesMax: 6 * 1024,
+} as const;
+
+export const SEARCH_AVATAR_PERFORMANCE_BOUNDARY = {
+  derivativeApproval: 'not_authorized',
+  pictureSelection: 'not_measured',
+  firstFrameImageBudget: 'not_measured',
+} as const;
+
 export type PerformanceRoute = (typeof PERFORMANCE_ROUTES)[number];
 
 type PerformanceRouteName = keyof typeof ROUTES_BY_NAME;

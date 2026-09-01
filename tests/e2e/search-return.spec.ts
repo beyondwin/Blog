@@ -14,25 +14,22 @@ function localUrl(path: string): string {
   return new URL(path, OFFICIAL_BASE_URL).href;
 }
 
-test('desktop search empty state exposes eight or fewer corpus keywords and one real card per primary lane', async ({ page }) => {
+test('desktop search opens on the question-led composer without a discovery-card grid', async ({ page }) => {
   await page.setViewportSize(APPROVED_VIEWPORTS.desktop);
   const runtimeIssues = observeRuntimeIssues(page);
   await page.goto('/search/');
 
-  await expect(page.getByRole('heading', { level: 1, name: '검색' })).toBeVisible();
-  await expect(page.getByRole('searchbox', { name: '검색어' })).toHaveAttribute('maxlength', '120');
-  await expect(page.locator('.search-keywords__link')).toHaveCount(8);
-  await expect(page.getByRole('list', { name: '검색 탐색' }).getByRole('link')).toHaveCount(3);
-  await expect(page.locator('.search-discovery-card__kind')).toHaveText(['서평', '아티클', '생각']);
-  await expect(page.getByRole('heading', { name: /^(?:글|책|문장|주제와 태그)$/u })).toHaveCount(0);
+  await expect(page.getByRole('heading', { level: 1, name: '공개 기록에 무엇을 묻고 싶나요?' })).toBeVisible();
+  await expect(page.getByRole('searchbox', { name: '기록에 묻기' })).toHaveAttribute('maxlength', '120');
+  await expect(page.locator('.search-discovery-card, .search-keywords')).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
   expect(runtimeIssues).toEqual([]);
 
-  const accessibility = await new AxeBuilder({ page }).include('.search-page').analyze();
+  const accessibility = await new AxeBuilder({ page }).include('.second-brain-search').analyze();
   expect(accessibility.violations).toEqual([]);
 });
 
-test('mobile search renders one relevance list, a real zero-state suggestion set, and bounds hostile-length queries', async ({ page }) => {
+test('mobile location-restored search renders one relevance list and bounds hostile-length queries', async ({ page }) => {
   await page.setViewportSize(APPROVED_VIEWPORTS.mobile390);
   await page.goto(`/search/?q=${query}`);
   await expect(page.locator('.search-result-list')).toHaveCount(1);
@@ -46,15 +43,15 @@ test('mobile search renders one relevance list, a real zero-state suggestion set
   await expectNoHorizontalOverflow(page);
 
   await page.goto(`/search/?q=${'가'.repeat(121)}`);
-  await expect(page.getByRole('searchbox', { name: '검색어' })).toHaveValue('');
-  await expect(page.getByRole('list', { name: '검색 탐색' }).getByRole('link')).toHaveCount(3);
+  await expect(page.getByRole('searchbox', { name: '기록에 묻기' })).toHaveValue('AI 시대에도 왜 계속 책을 읽나요?');
+  await expect(page.locator('.search-discovery-card, .search-keywords')).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
 });
 
 test('426px search returns to the same bounded query and exact result', async ({ page }) => {
   await page.setViewportSize(APPROVED_VIEWPORTS.mobile426);
   await page.goto(`/search/?q=${query}`);
-  const input = page.getByRole('searchbox', { name: '검색어' });
+  const input = page.getByRole('searchbox', { name: '기록에 묻기' });
   await expect(input).toHaveValue(query);
   const result = page.locator(`#${resultAnchor}`);
   await result.scrollIntoViewIfNeeded();
@@ -86,7 +83,7 @@ test('426px search returns to the same bounded query and exact result', async ({
 test('360px stale search anchor keeps its bounded query without forced scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto(`/search/?q=${query}#record-articles-stale-anchor`);
-  await expect(page.getByRole('searchbox', { name: '검색어' })).toHaveValue(query);
+  await expect(page.getByRole('searchbox', { name: '기록에 묻기' })).toHaveValue(query);
   await expect(page.locator(`#${resultAnchor}`)).toBeAttached();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   expect(new URL(page.url()).searchParams.get('q')).toBe(query);

@@ -1,6 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 
-export const OFFICIAL_BASE_URL = process.env.FORM_THOUGHT_E2E_BASE_URL ?? 'http://127.0.0.1:4391';
+export const OFFICIAL_BASE_URL = process.env.FORM_THOUGHT_E2E_EXTERNAL_STACK === '1'
+  ? process.env.FORM_THOUGHT_E2E_EXTERNAL_ORIGIN!
+  : 'http://127.0.0.1:4391';
 
 export const APPROVED_VIEWPORTS = {
   desktop: { width: 1440, height: 960 },
