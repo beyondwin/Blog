@@ -151,6 +151,16 @@ test('@live-smoke two independent approved questions traverse the owned live pro
   await page.screenshot({ path: `${evidenceRoot}/live-desktop-1440x900.png`, fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: `${evidenceRoot}/live-mobile-390x844.png`, fullPage: true });
+  const claims: string[] = [];
+  const excerpts: string[] = [];
+  for (const body of bodies) {
+    if (body.kind !== 'answer') continue;
+    for (const claim of body.claims) claims.push(claim.text);
+    for (const item of body.evidence) excerpts.push(item.excerpt);
+  }
+  expect(claims.length).toBeGreaterThan(0);
+  expect(excerpts.length).toBeGreaterThan(0);
+  await writeFile(`${evidenceRoot}/response-sentinels.json`, `${JSON.stringify({ claims, excerpts })}\n`);
   await writeFile(`${evidenceRoot}/browser-receipt.json`, `${JSON.stringify({
     schemaVersion: 1,
     posts: 2,

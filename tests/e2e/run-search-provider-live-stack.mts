@@ -91,6 +91,7 @@ export interface LiveSmokeReceipt {
 export interface LiveSmokeDependencies {
   readonly env: NodeJS.ProcessEnv;
   readonly argv: readonly string[];
+  readonly evidenceDestination: string;
   snapshotLedger(): Promise<LiveSmokeLedgerSnapshot>;
   indexReservationMicroUsd(): Promise<number>;
   startLive(): Promise<{
@@ -99,8 +100,9 @@ export interface LiveSmokeDependencies {
     output(): string;
     stop(): Promise<void>;
   }>;
-  runBrowser(url: string, evidenceRoot: string): Promise<void>;
+  runBrowser(url: string, evidenceRoot: string): Promise<string>;
   inspectCleanup(pid: number, beforeTemps: readonly string[]): Promise<LiveSmokeReceipt['cleanup']>;
+  readLedgerBytes(): Promise<string>;
   gitDiff(): Promise<string>;
   listTempRoots(): Promise<string[]>;
 }
@@ -169,6 +171,20 @@ export function assertLiveSmokeReady(input: {
   assertLiveSmokeBudget(input.availableMicroUsd, input.indexReservationMicroUsd);
 }
 
+export function liveSmokeSentinels(env: NodeJS.ProcessEnv, extra: readonly string[] = []): string[] {
+  const sentinels = [...liveQuestions, ...extra];
+  if (typeof env.OPENAI_API_KEY === 'string' && env.OPENAI_API_KEY !== '') sentinels.push(env.OPENAI_API_KEY);
+  return [...new Set(sentinels.filter(Boolean))].sort((left, right) => right.length - left.length);
+}
+
+export function scrubLiveSmokeDiagnostics(
+  value: string,
+  env: NodeJS.ProcessEnv,
+  extra: readonly string[] = [],
+): string {
+  return scrubDiagnostic(value, liveSmokeSentinels(env, extra));
+}
+
 export function assertNoLiveSmokeSentinels(value: string, sentinels: readonly string[]): void {
   for (const sentinel of sentinels) {
     if (sentinel !== '' && value.includes(sentinel)) {
@@ -177,7 +193,30 @@ export function assertNoLiveSmokeSentinels(value: string, sentinels: readonly st
   }
 }
 
-export function parseLiveSmokeReceipt(value: unknown): LiveSmokeReceipt {
+export function parseResponseSentinels(value: unknown): readonly string[] {
+  exactKeys(value, ['claims', 'excerpts'], 'live smoke response sentinels');
+  if (!Array.isArray(value.claims) || !Array.isArray(value.excerpts)
+    || value.claims.some((item) => typeof item !== 'string' || item === '')
+    || value.excerpts.some((item) => typeof item !== 'string' || item === '')) {
+    throw new Error('live smoke response sentinels are invalid');
+  }
+  return Object.freeze([...new Set([...value.claims, ...value.excerpts])]);
+}
+
+async function readHarvestedSentinels(directory: string): Promise<string[]> {
+  try {
+    const bytes = await readFile(resolve(directory, 'response-sentinels.json'), 'utf8');
+    return [...parseResponseSentinels(JSON.parse(bytes))];
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
+export function parseLiveSmokeReceipt(
+  value: unknown,
+  sentinels: readonly string[] = liveSmokeSentinels(process.env),
+): LiveSmokeReceipt {
   exactKeys(value, RECEIPT_KEYS, 'live smoke receipt');
   exactKeys(value.ledger, LEDGER_KEYS, 'live smoke receipt ledger');
   exactKeys(value.cleanup, CLEANUP_KEYS, 'live smoke receipt cleanup');
@@ -263,14 +302,8 @@ export function parseLiveSmokeReceipt(value: unknown): LiveSmokeReceipt {
       tempDirectories: 0 as const,
     }),
   });
-  assertNoLiveSmokeSentinels(JSON.stringify(receipt), liveSmokeSentinels(process.env));
+  assertNoLiveSmokeSentinels(JSON.stringify(receipt), sentinels);
   return receipt;
-}
-
-function liveSmokeSentinels(env: NodeJS.ProcessEnv, extra: readonly string[] = []): string[] {
-  const sentinels = [...liveQuestions, ...extra];
-  if (typeof env.OPENAI_API_KEY === 'string' && env.OPENAI_API_KEY !== '') sentinels.push(env.OPENAI_API_KEY);
-  return [...new Set(sentinels.filter(Boolean))].sort((left, right) => right.length - left.length);
 }
 
 function parseBrowserReceipt(value: unknown): {
@@ -390,6 +423,7 @@ function productionLiveSmokeDependencies(): LiveSmokeDependencies {
   return {
     env,
     argv: process.argv.slice(2),
+    evidenceDestination: outputRoot,
     async snapshotLedger() {
       try {
         const ledger = await LocalBudgetLedger.open(ledgerPath);
@@ -459,8 +493,15 @@ function productionLiveSmokeDependencies(): LiveSmokeDependencies {
         'test', 'tests/e2e/search-provider-live.spec.ts', '--project=chromium-151',
       ], playwrightEnv);
       const result = await child.exited;
-      if (result.code !== 0) throw new Error(scrubDiagnostic(`Playwright live smoke failed\n${child.output()}`, liveQuestions));
-      process.stdout.write(scrubDiagnostic(child.output(), liveQuestions));
+      const harvested = await readHarvestedSentinels(evidenceRoot);
+      const output = child.output();
+      if (result.code !== 0) {
+        throw new Error(scrubLiveSmokeDiagnostics(`Playwright live smoke failed\n${output}`, env, harvested));
+      }
+      return output;
+    },
+    async readLedgerBytes() {
+      return readFile(ledgerPath, 'utf8').catch(() => '');
     },
     async inspectCleanup(pid, beforeTemps) {
       const project = `beyondwin-public-answer-live-${String(pid)}`;
@@ -533,17 +574,27 @@ export async function runSearchProviderLiveStack(
     live = await dependencies.startLive();
     const livePid = live.pid;
     const liveOutput = live.output;
-    await dependencies.runBrowser(live.url, stagingRoot);
+    const browserOutput = await dependencies.runBrowser(live.url, stagingRoot);
     const browserReceiptBytes = await readFile(resolve(stagingRoot, 'browser-receipt.json'), 'utf8');
     const browserReceipt = parseBrowserReceipt(JSON.parse(browserReceiptBytes));
-    assertNoLiveSmokeSentinels(browserReceiptBytes, liveSmokeSentinels(dependencies.env));
+    const harvested = await readHarvestedSentinels(stagingRoot);
+    if (browserReceipt.answeredQuestions >= 1 && harvested.length === 0) {
+      throw new Error('live smoke did not harvest answer or excerpt sentinels');
+    }
+    const sentinels = liveSmokeSentinels(dependencies.env, harvested);
+    const gitSentinels = sentinels.filter((value) => !liveQuestions.includes(value));
+    assertNoLiveSmokeSentinels(browserReceiptBytes, sentinels);
     const after = await dependencies.snapshotLedger();
     const chargedDeltaMicroUsd = after.chargedMicroUsd - before.chargedMicroUsd;
     const liveProviderCalls = Math.max(1, browserReceipt.answeredQuestions);
-    const sentinels = liveSmokeSentinels(dependencies.env);
+    assertNoLiveSmokeSentinels(browserOutput, sentinels);
     assertNoLiveSmokeSentinels(liveOutput(), sentinels);
-    assertNoLiveSmokeSentinels(await readFile(ledgerPath, 'utf8').catch(() => ''), sentinels);
-    assertNoLiveSmokeSentinels(await dependencies.gitDiff(), [dependencies.env.OPENAI_API_KEY ?? '']);
+    assertNoLiveSmokeSentinels(await dependencies.readLedgerBytes(), sentinels);
+    const diff = await dependencies.gitDiff();
+    if (/(?:^|\n)[AM]\s+(?:output\/playwright|\.superpowers\/)/u.test(diff)) {
+      throw new Error('live smoke left tracked residue');
+    }
+    assertNoLiveSmokeSentinels(diff, gitSentinels);
     await live.stop();
     live = undefined;
     const cleanup = await dependencies.inspectCleanup(livePid, beforeTemps);
@@ -571,28 +622,41 @@ export async function runSearchProviderLiveStack(
         reconciled: true,
       },
       cleanup,
-    });
+    }, sentinels);
     assertNoLiveSmokeSentinels(JSON.stringify(receipt), sentinels);
+    await rm(resolve(stagingRoot, 'response-sentinels.json'), { force: true });
     await writeFile(resolve(stagingRoot, 'live-smoke-receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`);
     cleanupRegistry.forget('staging-root');
-    await publishEvidenceDirectory(stagingRoot, outputRoot);
+    await publishEvidenceDirectory(stagingRoot, dependencies.evidenceDestination);
+    if (browserOutput.trim() !== '') {
+      process.stdout.write(scrubLiveSmokeDiagnostics(browserOutput, dependencies.env, harvested));
+    }
     process.stdout.write(
       `search provider live smoke: PASS (${String(browserReceipt.answeredQuestions)} answer, `
       + `${String(browserReceipt.fallbackQuestions)} fallback, live provider calls ${String(liveProviderCalls)})\n`,
     );
   } catch (error) {
-    primary = error instanceof Error
-      ? new Error(scrubDiagnostic(error.message, liveQuestions))
-      : error;
+    const harvested = await readHarvestedSentinels(stagingRoot).catch(() => []);
+    primary = new Error(scrubLiveSmokeDiagnostics(
+      error instanceof Error ? error.message : String(error),
+      dependencies.env,
+      harvested,
+    ));
   } finally {
     signals.remove();
     const signalOutcome = await signals.outcome();
     if (primary === undefined && signalOutcome !== undefined) primary = signalOutcome;
     if (live) {
       try {
-        assertNoLiveSmokeSentinels(live.output(), liveSmokeSentinels(dependencies.env));
+        const harvested = await readHarvestedSentinels(stagingRoot).catch(() => []);
+        assertNoLiveSmokeSentinels(live.output(), liveSmokeSentinels(dependencies.env, harvested));
       } catch (error) {
-        primary ??= error;
+        const harvested = await readHarvestedSentinels(stagingRoot).catch(() => []);
+        primary ??= new Error(scrubLiveSmokeDiagnostics(
+          error instanceof Error ? error.message : String(error),
+          dependencies.env,
+          harvested,
+        ));
       }
     }
     const settled = await settleCleanup(primary, [

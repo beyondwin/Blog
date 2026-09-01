@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -318,5 +318,224 @@ describe('search provider live smoke runner', () => {
     )).toThrow(/sentinel/u);
     expect(() => assertNoLiveSmokeSentinels(sentinels.answer, [sentinels.answer])).toThrow(/sentinel/u);
     expect(() => assertNoLiveSmokeSentinels(sentinels.excerpt, [sentinels.excerpt])).toThrow(/sentinel/u);
+  });
+
+  const zeros = Object.freeze({
+    ownedProcesses: 0 as const,
+    composeProjects: 0 as const,
+    containers: 0 as const,
+    volumes: 0 as const,
+    tempDirectories: 0 as const,
+  });
+
+  async function writeBrowserArtifacts(
+    evidenceRoot: string,
+    harvested = { claims: [sentinels.answer], excerpts: [sentinels.excerpt] },
+  ) {
+    await writeFile(join(evidenceRoot, 'browser-receipt.json'), `${JSON.stringify({
+      schemaVersion: 1,
+      posts: 2,
+      answeredQuestions: 1,
+      fallbackQuestions: 1,
+      viewports: ['1440x900', '390x844'],
+      disclosureVisible: true,
+      overflowFree: true,
+      consoleErrorFree: true,
+      evidenceDialogAccessible: true,
+      targetsUnclipped: true,
+      secondRequestIndependent: true,
+      proxyOriginOnly: true,
+    }, null, 2)}\n`);
+    await writeFile(join(evidenceRoot, 'response-sentinels.json'), `${JSON.stringify(harvested)}\n`);
+  }
+
+  function fakeLiveStack(input: {
+    events: string[];
+    destination: string;
+    output?: string;
+    browserOutput?: string;
+    ledgerBytes?: string;
+    gitDiff?: string;
+    inspect?: () => Promise<typeof zeros>;
+    throwBrowser?: Error;
+  }) {
+    let stopped = false;
+    let charged = 10_000;
+    return {
+      env: {
+        OPENAI_API_KEY: sentinels.key,
+        FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE: 'true',
+      } as NodeJS.ProcessEnv,
+      argv: ['--confirm-live-provider'],
+      evidenceDestination: input.destination,
+      snapshotLedger: async () => {
+        input.events.push('ledger');
+        const chargedMicroUsd = charged;
+        charged = 18_420;
+        return {
+          month: '2026-09',
+          hardCapMicroUsd: 1_000_000 as const,
+          chargedMicroUsd,
+          availableMicroUsd: 1_000_000 - chargedMicroUsd,
+        };
+      },
+      indexReservationMicroUsd: async () => {
+        input.events.push('index');
+        return 12_000;
+      },
+      listTempRoots: async () => {
+        input.events.push('temps');
+        return [];
+      },
+      startLive: async () => {
+        input.events.push('start');
+        return {
+          url: 'http://127.0.0.1:4328/search/',
+          pid: 4242,
+          output: () => input.output ?? '',
+          stop: async () => {
+            input.events.push('stop');
+            stopped = true;
+          },
+        };
+      },
+      runBrowser: async (_url: string, evidenceRoot: string) => {
+        input.events.push('browser');
+        await writeBrowserArtifacts(evidenceRoot);
+        if (input.throwBrowser) throw input.throwBrowser;
+        return input.browserOutput ?? '';
+      },
+      readLedgerBytes: async () => {
+        input.events.push('ledger-bytes');
+        return input.ledgerBytes ?? '';
+      },
+      gitDiff: async () => {
+        input.events.push('git');
+        return input.gitDiff ?? '';
+      },
+      inspectCleanup: async (pid: number) => {
+        input.events.push('cleanup');
+        if (!stopped) throw new Error('live smoke leftover owned resources remain');
+        expect(pid).toBe(4242);
+        if (input.inspect) return input.inspect();
+        return zeros;
+      },
+    };
+  }
+
+  it('writes a redacted receipt, publishes evidence, and stops before cleanup on an injected success', async () => {
+    const { runSearchProviderLiveStack, parseLiveSmokeReceipt } = await liveRunnerModule();
+    const { PROVIDER_MODEL_POLICY } = await import(
+      '../apps/server/src/modules/public-answer/infrastructure/openai/provider-model-policy.js'
+    );
+    const parent = await mkdtemp(join(tmpdir(), 'beyondwin-live-smoke-success-'));
+    temporaryRoots.push(parent);
+    const destination = join(parent, 'public-answer-live');
+    const events: string[] = [];
+    await runSearchProviderLiveStack(fakeLiveStack({ events, destination }));
+
+    expect(events).toEqual([
+      'ledger', 'index', 'temps', 'start', 'browser', 'ledger', 'ledger-bytes', 'git', 'stop', 'cleanup',
+    ]);
+    const receipt = parseLiveSmokeReceipt(JSON.parse(await readFile(join(destination, 'live-smoke-receipt.json'), 'utf8')));
+    expect(receipt).toEqual({
+      schemaVersion: 1,
+      status: 'PASS',
+      fixtureMode: false,
+      provenance: 'local-non-zdr',
+      generationModel: 'gpt-5.6-luna',
+      semanticModel: 'gpt-5.6-luna',
+      reasoningEffort: 'high',
+      embeddingModel: 'text-embedding-3-large',
+      policyHash: PROVIDER_MODEL_POLICY.policyHash,
+      liveProviderCalls: 1,
+      answeredQuestions: 1,
+      fallbackQuestions: 1,
+      viewports: ['1440x900', '390x844'],
+      ledger: {
+        month: '2026-09',
+        hardCapMicroUsd: 1_000_000,
+        beforeChargedMicroUsd: 10_000,
+        afterChargedMicroUsd: 18_420,
+        chargedDeltaMicroUsd: 8_420,
+        availableMicroUsd: 981_580,
+        reconciled: true,
+      },
+      cleanup: zeros,
+    });
+    await expect(access(join(destination, 'response-sentinels.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    const published = await readFile(join(destination, 'live-smoke-receipt.json'), 'utf8');
+    expect(published).not.toContain(sentinels.key);
+    expect(published).not.toContain(sentinels.answer);
+    expect(published).not.toContain(sentinels.excerpt);
+  });
+
+  it('does not publish a receipt when cleanup reports leftover owned resources', async () => {
+    const { runSearchProviderLiveStack } = await liveRunnerModule();
+    const parent = await mkdtemp(join(tmpdir(), 'beyondwin-live-smoke-leftover-'));
+    temporaryRoots.push(parent);
+    const destination = join(parent, 'public-answer-live');
+    const events: string[] = [];
+    await expect(runSearchProviderLiveStack(fakeLiveStack({
+      events,
+      destination,
+      inspect: async () => {
+        throw new Error('live smoke leftover owned resources remain');
+      },
+    }))).rejects.toThrow(/leftover owned resources/u);
+    expect(events).toContain('stop');
+    expect(events.indexOf('stop')).toBeLessThan(events.indexOf('cleanup'));
+    await expect(access(join(destination, 'live-smoke-receipt.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('fails closed on leftover git residue, ledger leaks, and unharvested model output', async () => {
+    const { runSearchProviderLiveStack } = await liveRunnerModule();
+    const parent = await mkdtemp(join(tmpdir(), 'beyondwin-live-smoke-sentinel-'));
+    temporaryRoots.push(parent);
+
+    await expect(runSearchProviderLiveStack(fakeLiveStack({
+      events: [],
+      destination: join(parent, 'git'),
+      gitDiff: `M output/playwright/public-answer-live/live-smoke-receipt.json\n${sentinels.excerpt}`,
+    }))).rejects.toThrow(/sentinel|tracked residue/u);
+
+    await expect(runSearchProviderLiveStack(fakeLiveStack({
+      events: [],
+      destination: join(parent, 'ledger'),
+      ledgerBytes: sentinels.answer,
+    }))).rejects.toThrow(/sentinel/u);
+
+    await expect(runSearchProviderLiveStack(fakeLiveStack({
+      events: [],
+      destination: join(parent, 'output'),
+      output: sentinels.answer,
+    }))).rejects.toThrow(/sentinel/u);
+
+    await expect(runSearchProviderLiveStack(fakeLiveStack({
+      events: [],
+      destination: join(parent, 'browser-log'),
+      browserOutput: sentinels.excerpt,
+    }))).rejects.toThrow(/sentinel/u);
+  });
+
+  it('scrubs key, claim, and excerpt sentinels from a failed live run dump', async () => {
+    const { runSearchProviderLiveStack } = await liveRunnerModule();
+    const parent = await mkdtemp(join(tmpdir(), 'beyondwin-live-smoke-scrub-'));
+    temporaryRoots.push(parent);
+    const destination = join(parent, 'public-answer-live');
+    let message = '';
+    try {
+      await runSearchProviderLiveStack(fakeLiveStack({
+        events: [],
+        destination,
+        throwBrowser: new Error(`Playwright failed key=${sentinels.key} answer=${sentinels.answer} excerpt=${sentinels.excerpt}`),
+      }));
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toMatch(/Playwright failed|sentinel|redacted|driven-value/u);
+    expect(message).not.toContain(sentinels.key);
+    expect(message).not.toContain(sentinels.answer);
+    expect(message).not.toContain(sentinels.excerpt);
   });
 });
