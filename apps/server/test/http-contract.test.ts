@@ -170,6 +170,25 @@ describe('public answer HTTP contract', () => {
     expect({ baseCalls, slowCalls }).toEqual({ baseCalls: 1, slowCalls: 1 });
   });
 
+  it('holds only the first replace-active request in slow SQL and delegates the replacement', async () => {
+    let baseCalls = 0;
+    let slowCalls = 0;
+    const executor = createFixtureScenarioExecutor('replace-active', {
+      async execute() { baseCalls += 1; return answer; },
+    }, async () => { slowCalls += 1; });
+    const command = {
+      requestId: randomUUID(), question: '첫 질문', contentReleaseId: CONTENT_RELEASE, answerReleaseId: ANSWER_RELEASE,
+      networkKey: 'network', signal: new AbortController().signal,
+      deadlineAt: performance.now() + 12_000, catalog: snapshot,
+    };
+
+    await expect(executor.execute(command)).resolves.toEqual({
+      kind: 'search', reason: 'insufficient-evidence', answerReleaseId: ANSWER_RELEASE,
+    });
+    await expect(executor.execute({ ...command, requestId: randomUUID(), question: '대체 질문' })).resolves.toBe(answer);
+    expect({ baseCalls, slowCalls }).toEqual({ baseCalls: 1, slowCalls: 1 });
+  });
+
   it.each([
     ['answer', answer, 200, undefined],
     ['insufficient evidence', { kind: 'search', reason: 'insufficient-evidence', answerReleaseId: ANSWER_RELEASE }, 200, undefined],

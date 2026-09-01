@@ -196,7 +196,12 @@ function QuestionComposer({ id, label, note, onBlur, onChange, onFocus, onSubmit
   );
 }
 
-function RetrievalSequence({ view }: { view: 'retrieving' | 'connecting' | 'composing' }) {
+function RetrievalSequence({ onChange, onSubmit, value, view }: {
+  onChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  value: string;
+  view: 'retrieving' | 'connecting' | 'composing';
+}) {
   const steps = [
     ['retrieving', '관련 기록을 찾고 있습니다'],
     ['connecting', '생각 사이를 잇고 있습니다'],
@@ -208,6 +213,14 @@ function RetrievalSequence({ view }: { view: 'retrieving' | 'connecting' | 'comp
       <ol>{steps.map(([step, copy]) => (
         <li key={step} data-active={view === step ? 'true' : 'false'}><span>{copy}</span></li>
       ))}</ol>
+      <QuestionComposer
+        id="second-brain-replacement"
+        label="다른 질문으로 바꾸기"
+        placeholder="새 질문을 입력하세요"
+        value={value}
+        onChange={onChange}
+        onSubmit={onSubmit}
+      />
     </div>
   );
 }
@@ -433,7 +446,14 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
           />
           <section className="second-brain-dialogue" aria-label="공개 기록과 대화">
             <div className="second-brain-dialogue__inner">
-              {progressView ? <RetrievalSequence view={progressView} /> : null}
+              {progressView ? (
+                <RetrievalSequence
+                  view={progressView}
+                  value={inputValue}
+                  onChange={setInputValue}
+                  onSubmit={onSubmit}
+                />
+              ) : null}
               {state.view === 'answered' || state.view === 'evidence-open' ? (
                 <AnswerStage
                   answer={state.answer}

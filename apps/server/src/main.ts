@@ -69,8 +69,10 @@ export function createFixtureScenarioExecutor(
   base: PublicAnswerExecutor,
   slowSql: (signal: AbortSignal, deadlineAt: number) => Promise<void>,
 ): PublicAnswerExecutor {
+  let requestCount = 0;
   return Object.freeze({
     async execute(command: AnswerPublicQuestionCommand): Promise<PublicAnswerOutcome> {
+      requestCount += 1;
       switch (scenario) {
         case 'success':
         case 'stress-max':
@@ -94,6 +96,10 @@ export function createFixtureScenarioExecutor(
             }
             throw error;
           }
+          return { kind: 'search', reason: 'insufficient-evidence', answerReleaseId: command.catalog.answerReleaseId };
+        case 'replace-active':
+          if (requestCount > 1) return base.execute(command);
+          await slowSql(command.signal, command.deadlineAt);
           return { kind: 'search', reason: 'insufficient-evidence', answerReleaseId: command.catalog.answerReleaseId };
       }
     },

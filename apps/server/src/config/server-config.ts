@@ -201,7 +201,8 @@ export type FixtureScenario =
   | 'timeout'
   | 'release-mismatch'
   | 'slow-sql'
-  | 'stress-max';
+  | 'stress-max'
+  | 'replace-active';
 
 function required(env: NodeJS.ProcessEnv, name: string): string {
   const value = env[name];
@@ -278,7 +279,7 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
   const host = env.HOST ?? '127.0.0.1';
   const fixtureScenario = env.FORM_THOUGHT_TEST_FIXTURE_SCENARIO === undefined ? null : enumeration(
     env.FORM_THOUGHT_TEST_FIXTURE_SCENARIO,
-    ['success', 'provider-disabled', 'insufficient-evidence', 'unavailable', 'timeout', 'release-mismatch', 'slow-sql', 'stress-max'] as const,
+    ['success', 'provider-disabled', 'insufficient-evidence', 'unavailable', 'timeout', 'release-mismatch', 'slow-sql', 'stress-max', 'replace-active'] as const,
     'FORM_THOUGHT_TEST_FIXTURE_SCENARIO',
   );
   const trustedProxyAddresses = proxies(env.FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES);

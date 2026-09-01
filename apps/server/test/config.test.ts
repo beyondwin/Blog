@@ -104,6 +104,7 @@ describe('server configuration', () => {
     'release-mismatch',
     'slow-sql',
     'stress-max',
+    'replace-active',
   ] as const)('accepts the internal %s fixture scenario only for a loopback test fixture runtime', async (scenario) => {
     await expect(parseServerConfig(base({
       HOST: '127.0.0.1', PORT: '4307',

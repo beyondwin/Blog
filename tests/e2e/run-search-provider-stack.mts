@@ -30,6 +30,32 @@ export function scrubDiagnostic(value: string, drivenValues: readonly string[] =
 
 type Cleanup = readonly [name: string, operation: () => Promise<unknown>];
 
+export interface CleanupRegistry {
+  register(name: string, operation: () => Promise<unknown>): () => Promise<unknown>;
+  entries(): readonly Cleanup[];
+  forget(name: string): void;
+}
+
+export function createCleanupRegistry(): CleanupRegistry {
+  const operations = new Map<string, () => Promise<unknown>>();
+  return Object.freeze({
+    register(name: string, operation: () => Promise<unknown>) {
+      if (operations.has(name)) throw new Error(`duplicate owned cleanup: ${name}`);
+      let inFlight: Promise<unknown> | undefined;
+      const cleanup = () => {
+        inFlight ??= Promise.resolve().then(operation).finally(() => {
+          if (operations.get(name) === cleanup) operations.delete(name);
+        });
+        return inFlight;
+      };
+      operations.set(name, cleanup);
+      return cleanup;
+    },
+    entries: () => [...operations.entries()],
+    forget(name: string) { operations.delete(name); },
+  });
+}
+
 export async function settleCleanup(primary: unknown, cleanups: readonly Cleanup[]): Promise<unknown> {
   const results = await Promise.allSettled(cleanups.map(([, operation]) => operation()));
   const cleanupErrors = results.flatMap((result, index) => result.status === 'rejected'
@@ -64,7 +90,7 @@ interface OwnedChild {
   stop(signal?: NodeJS.Signals): Promise<void>;
 }
 
-interface ObserverReceipt {
+export interface ObserverReceipt {
   authorizationPresent: boolean;
   constructedForEqualsPeer: boolean;
   constructedHostEqualsProxy: boolean;
@@ -78,18 +104,54 @@ interface ObserverReceipt {
 }
 
 const activeChildren = new Set<OwnedChild>();
-const activeCleanups = new Map<string, () => Promise<unknown>>();
+const cleanupRegistry = createCleanupRegistry();
 
 function registerCleanup(name: string, operation: () => Promise<unknown>): () => Promise<unknown> {
-  let completed = false;
-  const cleanup = async () => {
-    if (completed) return;
-    completed = true;
-    activeCleanups.delete(name);
-    await operation();
+  return cleanupRegistry.register(name, operation);
+}
+
+interface RunnerSignalSource {
+  once(event: 'SIGINT' | 'SIGTERM', listener: () => void): unknown;
+  removeListener(event: 'SIGINT' | 'SIGTERM', listener: () => void): unknown;
+}
+
+export function installRunnerSignalHandlers(input: {
+  source?: RunnerSignalSource;
+  children: () => readonly Pick<OwnedChild, 'stop'>[];
+  cleanups: () => readonly Cleanup[];
+}) {
+  const source = input.source ?? process;
+  let interrupted: 'SIGINT' | 'SIGTERM' | undefined;
+  let cleanupOutcome: Promise<unknown> | undefined;
+  const handle = (signal: 'SIGINT' | 'SIGTERM') => {
+    if (cleanupOutcome) return;
+    interrupted = signal;
+    cleanupOutcome = settleCleanup(new Error(`runner interrupted by ${signal}`), [
+      ...input.children().map((child, index) => [
+        `signal-child-${String(index + 1)}`,
+        async () => child.stop('SIGTERM'),
+      ] as const),
+      ...input.cleanups(),
+    ]);
   };
-  activeCleanups.set(name, cleanup);
-  return cleanup;
+  const onInt = () => handle('SIGINT');
+  const onTerm = () => handle('SIGTERM');
+  source.once('SIGINT', onInt);
+  source.once('SIGTERM', onTerm);
+  return Object.freeze({
+    interrupted: () => interrupted,
+    outcome: () => cleanupOutcome ?? Promise.resolve(undefined),
+    remove() {
+      source.removeListener('SIGINT', onInt);
+      source.removeListener('SIGTERM', onTerm);
+    },
+  });
+}
+
+function mergeFailures(primary: unknown, secondary: unknown): unknown {
+  if (primary === undefined) return secondary;
+  if (secondary === undefined) return primary;
+  return new AggregateError([primary, secondary], 'runner and signal cleanup failed');
 }
 
 function spawnOwned(command: string, args: readonly string[], env: NodeJS.ProcessEnv = process.env): OwnedChild {
@@ -107,30 +169,35 @@ function spawnOwned(command: string, args: readonly string[], env: NodeJS.Proces
     child.once('error', reject);
     child.once('exit', (code, signal) => accept({ code, signal }));
   });
+  let stopping: Promise<void> | undefined;
+  const stopProcess = async (signal: NodeJS.Signals) => {
+    if (child.exitCode !== null || child.signalCode !== null || !child.pid) return;
+    try {
+      if (process.platform === 'win32') child.kill(signal);
+      else process.kill(-child.pid, signal);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+    }
+    const stopped = await Promise.race([
+      exited.then(() => true),
+      new Promise<false>((accept) => setTimeout(accept, 10_000, false)),
+    ]);
+    if (stopped) return;
+    try {
+      if (process.platform === 'win32') child.kill('SIGKILL');
+      else process.kill(-child.pid, 'SIGKILL');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+    }
+    await Promise.race([exited, new Promise((accept) => setTimeout(accept, 2_000))]);
+  };
   const owned: OwnedChild = {
     child,
     output: () => text,
     exited,
-    async stop(signal = 'SIGINT') {
-      if (child.exitCode !== null || child.signalCode !== null || !child.pid) return;
-      try {
-        if (process.platform === 'win32') child.kill(signal);
-        else process.kill(-child.pid, signal);
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
-      }
-      const stopped = await Promise.race([
-        exited.then(() => true),
-        new Promise<false>((accept) => setTimeout(accept, 10_000, false)),
-      ]);
-      if (stopped) return;
-      try {
-        if (process.platform === 'win32') child.kill('SIGKILL');
-        else process.kill(-child.pid, 'SIGKILL');
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
-      }
-      await Promise.race([exited, new Promise((accept) => setTimeout(accept, 2_000))]);
+    stop(signal = 'SIGINT') {
+      stopping ??= stopProcess(signal);
+      return stopping;
     },
   };
   activeChildren.add(owned);
@@ -249,7 +316,14 @@ async function startRedirectStub(firstPort: number, trapPort: number, status: 30
   return { firstServer, trapServer, trap };
 }
 
-async function runPlaywright(tag: string, proxyOrigin: string, previewOrigin: string, apiOrigin: string, evidenceRoot: string) {
+async function runPlaywright(
+  tag: string,
+  proxyOrigin: string,
+  previewOrigin: string,
+  apiOrigin: string,
+  evidenceRoot: string,
+  databaseUrl?: string,
+) {
   const env = { ...process.env };
   delete env.OPENAI_API_KEY;
   Object.assign(env, {
@@ -259,6 +333,8 @@ async function runPlaywright(tag: string, proxyOrigin: string, previewOrigin: st
     FORM_THOUGHT_E2E_API_ORIGIN: apiOrigin,
     FORM_THOUGHT_E2E_EVIDENCE_ROOT: evidenceRoot,
   });
+  if (databaseUrl) env.FORM_THOUGHT_E2E_DATABASE_URL = databaseUrl;
+  else delete env.FORM_THOUGHT_E2E_DATABASE_URL;
   const child = spawnOwned(process.execPath, [
     resolve(root, 'node_modules/@playwright/test/cli.js'),
     'test', 'tests/e2e/search-provider.spec.ts', '--project=chromium-151', '--grep', tag,
@@ -299,12 +375,16 @@ async function hostileHeaderProbe(proxyPort: number) {
   });
 }
 
-async function postgresReceipt(fixturePid: number) {
+async function fixtureDatabaseUrl(fixturePid: number) {
   const project = `beyondwin-public-answer-serve-${fixturePid}`;
   const { stdout } = await execFile('docker', ['compose', '-p', project, '-f', compose, 'port', 'postgres', '5432'], { cwd: root });
   const port = Number(stdout.trim().slice(stdout.trim().lastIndexOf(':') + 1));
   if (!Number.isSafeInteger(port)) throw new Error('fixture Postgres port receipt is invalid');
-  const pool = new Pool({ connectionString: `postgresql://beyondwin_test:beyondwin_test@127.0.0.1:${port}/beyondwin_test` });
+  return `postgresql://beyondwin_test:beyondwin_test@127.0.0.1:${port}/beyondwin_test`;
+}
+
+async function postgresReceipt(databaseUrl: string) {
+  const pool = new Pool({ connectionString: databaseUrl });
   try {
     let active = 1;
     for (let attempt = 0; attempt < 100 && active > 0; attempt += 1) {
@@ -334,9 +414,31 @@ function assertPrivacyReceipts(receipts: readonly ObserverReceipt[], expectedCou
   }
 }
 
+export function canonicalObserverEvidence(receipts: readonly ObserverReceipt[], expectedRequestCount: number) {
+  const canonicalReceipts = receipts.map((receipt) => ({
+    authorizationPresent: receipt.authorizationPresent,
+    constructedForEqualsPeer: receipt.constructedForEqualsPeer,
+    constructedHostEqualsProxy: receipt.constructedHostEqualsProxy,
+    constructedProtoHttp: receipt.constructedProtoHttp,
+    cookiePresent: receipt.cookiePresent,
+    forwardedPresent: receipt.forwardedPresent,
+    proxyAuthorizationPresent: receipt.proxyAuthorizationPresent,
+    refererPresent: receipt.refererPresent,
+    unexpectedForwardedPresent: receipt.unexpectedForwardedPresent,
+    xRealIpPresent: receipt.xRealIpPresent,
+  }));
+  const receiptChecksum = `sha256:${createHash('sha256').update(JSON.stringify(canonicalReceipts)).digest('hex')}`;
+  return Object.freeze({
+    requestCount: canonicalReceipts.length,
+    expectedRequestCount,
+    receiptChecksum,
+    receipts: Object.freeze(canonicalReceipts),
+  });
+}
+
 async function runFixtureCell(input: {
   tag: string;
-  scenario: 'success' | 'provider-disabled' | 'insufficient-evidence' | 'unavailable' | 'timeout' | 'release-mismatch' | 'slow-sql' | 'stress-max';
+  scenario: 'success' | 'provider-disabled' | 'insufficient-evidence' | 'unavailable' | 'timeout' | 'release-mismatch' | 'slow-sql' | 'stress-max' | 'replace-active';
   previewOrigin: string;
   root: string;
   evidenceRoot: string;
@@ -358,6 +460,9 @@ async function runFixtureCell(input: {
   let primary: unknown;
   try {
     await waitHttp(`${apiOrigin}/health/ready`, fixture);
+    const databaseUrl = input.scenario === 'slow-sql' || input.scenario === 'replace-active'
+      ? await fixtureDatabaseUrl(fixture.child.pid!)
+      : undefined;
     observer = await startObserver(observerPort, apiPort, proxyPort);
     proxy = spawnOwned(process.execPath, [
       tsx, resolve(root, 'scripts/cutover/local-proxy.mts'),
@@ -368,18 +473,15 @@ async function runFixtureCell(input: {
     ], env);
     await waitHttp(`${proxyOrigin}/search/`, proxy);
     if (input.tag === '@success-core') await hostileHeaderProbe(proxyPort);
-    await runPlaywright(input.tag, proxyOrigin, input.previewOrigin, apiOrigin, input.evidenceRoot);
+    await runPlaywright(input.tag, proxyOrigin, input.previewOrigin, apiOrigin, input.evidenceRoot, databaseUrl);
     assertPrivacyReceipts(observer.receipts, input.expectedRequests);
-    await writeFile(resolve(input.root, `${input.tag.slice(1)}-observer.json`), `${JSON.stringify({
-      requestCount: observer.receipts.length,
-      expectedRequestCount: input.expectedRequests,
-      allApproved: true,
-    }, null, 2)}\n`);
-    if (input.scenario === 'slow-sql') {
-      if (!fixture.child.pid) throw new Error('fixture process PID unavailable');
-      const receipt = await postgresReceipt(fixture.child.pid);
+    await writeFile(resolve(input.root, `${input.tag.slice(1)}-observer.json`), `${JSON.stringify(
+      canonicalObserverEvidence(observer.receipts, input.expectedRequests), null, 2,
+    )}\n`);
+    if (databaseUrl) {
+      const receipt = await postgresReceipt(databaseUrl);
       if (!receipt.noSleepingQuery || !receipt.poolRecovered) throw new Error('slow SQL cancellation receipt failed');
-      await writeFile(resolve(input.root, 'slow-sql-postgres.json'), `${JSON.stringify(receipt, null, 2)}\n`);
+      await writeFile(resolve(input.root, `${input.tag.slice(1)}-postgres.json`), `${JSON.stringify(receipt, null, 2)}\n`);
     }
   } catch (error) {
     primary = new Error(scrubDiagnostic(
@@ -484,14 +586,10 @@ export async function runSearchProviderStack() {
   const stagingCleanup = registerCleanup('staging-root', async () => rm(stagingRoot, { recursive: true, force: true }));
   let preview: OwnedChild | undefined;
   let previewCleanup: (() => Promise<unknown>) | undefined;
-  let interrupted: NodeJS.Signals | undefined;
-  const onSignal = (signal: NodeJS.Signals) => {
-    interrupted = signal;
-    for (const child of [...activeChildren]) void child.stop('SIGTERM');
-    for (const cleanup of [...activeCleanups.values()]) void cleanup();
-  };
-  process.once('SIGINT', onSignal);
-  process.once('SIGTERM', onSignal);
+  const signals = installRunnerSignalHandlers({
+    children: () => [...activeChildren],
+    cleanups: () => cleanupRegistry.entries(),
+  });
   let primary: unknown;
   try {
     const receiptRoot = resolve(stagingRoot, 'receipts');
@@ -522,7 +620,7 @@ export async function runSearchProviderStack() {
       ['@timeout', 'timeout', 1],
       ['@release-mismatch', 'release-mismatch', 1],
       ['@unsupported', 'success', 1],
-      ['@second-submit', 'success', 2],
+      ['@second-submit', 'replace-active', 2],
       ['@navigation', 'success', 0],
       ['@canonical-fallback', 'insufficient-evidence', 1],
       ['@popstate-active', 'slow-sql', 1],
@@ -540,7 +638,7 @@ export async function runSearchProviderStack() {
       throw new Error('FORM_THOUGHT_STACK_FOCUSED_TAG is not an allowlisted fixture cell');
     }
     for (const [tag, scenario, expectedRequests] of fixtureCells.filter(([tag]) => !focusedTag || tag === focusedTag)) {
-      if (interrupted) throw new Error(`runner interrupted by ${interrupted}`);
+      if (signals.interrupted()) throw new Error(`runner interrupted by ${signals.interrupted()}`);
       await runFixtureCell({ tag, scenario, expectedRequests, previewOrigin, root: receiptRoot, evidenceRoot: stagingRoot });
     }
     if (focusedTag) {
@@ -560,14 +658,14 @@ export async function runSearchProviderStack() {
       productionAvatarDerivative: 'not_authorized',
       productionAvatarPerformance: 'not_measured',
     }, null, 2)}\n`);
-    activeCleanups.delete('staging-root');
+    cleanupRegistry.forget('staging-root');
     await publishEvidenceDirectory(stagingRoot, outputRoot);
     process.stdout.write('search provider stack: PASS (21 owned cells, fixture mode, live provider calls 0)\n');
   } catch (error) {
     primary = error;
   } finally {
-    process.removeListener('SIGINT', onSignal);
-    process.removeListener('SIGTERM', onSignal);
+    signals.remove();
+    primary = mergeFailures(primary, await signals.outcome());
     if (preview && rawQuestions.some((question) => preview.output().includes(question))) {
       primary ??= new Error('preview logs contain a raw question');
     }

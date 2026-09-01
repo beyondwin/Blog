@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { Pool } from 'pg';
 import { expectNoHorizontalOverflow } from './support';
 
 const external = process.env.FORM_THOUGHT_E2E_EXTERNAL_STACK === '1';
@@ -202,23 +203,50 @@ test('@unsupported arbitrary format-only question takes the deterministic fallba
 });
 
 test('@second-submit keeps query and hash byte-identical and replaces the answer only through a second POST', async ({ page }) => {
+  const databaseUrl = process.env.FORM_THOUGHT_E2E_DATABASE_URL;
+  expect(databaseUrl).toMatch(/^postgresql:\/\/beyondwin_test:beyondwin_test@127\.0\.0\.1:\d+\/beyondwin_test$/u);
+  const pool = new Pool({ connectionString: databaseUrl });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await instrumentPage(page);
   const requests = askRequests(page);
   const diagnostics = requestDiagnostics(page);
-  await page.goto(`/search/?q=${graphify}#record-articles-graphify-code-knowledge-graph-deep-dive`);
-  await expect(page.locator('.second-brain-search')).toHaveAttribute('data-view', 'search-results');
-  const initialUrl = page.url();
-  const initialHistoryCalls = await settledSearchHistoryCalls(page);
-  await submit(page, sampleQuestion);
-  await expect(page.locator('.answer-stage')).toBeVisible({ timeout: 15_000 });
-  await submit(page, secondQuestion);
-  await expect(page.locator('.answer-stage__asked strong')).toHaveText(secondQuestion, { timeout: 15_000 });
-  expect(page.url()).toBe(initialUrl);
-  expect(await historyCalls(page)).toEqual(initialHistoryCalls);
-  expect(requests).toHaveLength(2);
-  await assertNoRawPersistence(page, sampleQuestion);
-  await assertNoRawPersistence(page, secondQuestion);
-  assertCleanDiagnostics(diagnostics, [sampleQuestion, secondQuestion]);
+  try {
+    await page.goto(`/search/?q=${graphify}#record-articles-graphify-code-knowledge-graph-deep-dive`);
+    await expect(page.locator('.second-brain-search')).toHaveAttribute('data-view', 'search-results');
+    const initialUrl = page.url();
+    const initialHistoryCalls = await settledSearchHistoryCalls(page);
+    await submit(page, sampleQuestion);
+    await expect(page.locator('.second-brain-search')).toHaveAttribute('data-view', 'pending');
+    await expect.poll(async () => Number((await pool.query<{ count: string }>(`
+      SELECT count(*)::text AS count FROM pg_stat_activity
+      WHERE datname=current_database() AND query LIKE 'SELECT pg_sleep(30)%' AND state='active'
+    `)).rows[0]!.count), { message: 'the first request must enter the owned runtime slow query' }).toBe(1);
+    expect(await page.evaluate(() => document.getAnimations()
+      .filter((animation) => animation.playState === 'running').length)).toBe(0);
+
+    const replacementComposer = page.getByRole('searchbox', { name: '다른 질문으로 바꾸기' });
+    await expect(replacementComposer, 'replacement must be available while the first runtime query is active')
+      .toBeVisible({ timeout: 750 });
+    await replacementComposer.fill(secondQuestion);
+    await replacementComposer.press('Enter');
+    await expect(page.locator('.second-brain-search')).toHaveAttribute('data-view', 'pending');
+    await expect(page.locator('.answer-stage__asked strong')).toHaveText(secondQuestion, { timeout: 15_000 });
+    await expect.poll(async () => Number((await pool.query<{ count: string }>(`
+      SELECT count(*)::text AS count FROM pg_stat_activity
+      WHERE datname=current_database() AND query LIKE 'SELECT pg_sleep(30)%' AND state='active'
+    `)).rows[0]!.count), { message: 'replacement must cancel the first runtime query' }).toBe(0);
+    await page.waitForTimeout(250);
+    await expect(page.locator('.answer-stage__asked strong')).toHaveText(secondQuestion);
+    await expect(page.locator('.answer-stage__asked strong')).not.toHaveText(sampleQuestion);
+    expect(page.url()).toBe(initialUrl);
+    expect(await historyCalls(page)).toEqual(initialHistoryCalls);
+    expect(requests).toHaveLength(2);
+    await assertNoRawPersistence(page, sampleQuestion);
+    await assertNoRawPersistence(page, secondQuestion);
+    assertCleanDiagnostics(diagnostics, [sampleQuestion, secondQuestion]);
+  } finally {
+    await pool.end();
+  }
 });
 
 test('@popstate-active cancels active SQL and restores only the prior location state', async ({ page }) => {
@@ -424,6 +452,29 @@ async function assertAccessibleState(page: Page) {
     .filter((animation) => animation.playState === 'running').length)).toBe(0);
 }
 
+async function forcePortraitFailureWithoutGeometryShift(
+  page: Page,
+  diagnostics: ReturnType<typeof requestDiagnostics>,
+) {
+  const frame = page.locator('.agent-stage__portrait-frame');
+  const before = await frame.evaluate((element) => element.getBoundingClientRect().toJSON());
+  const missing = page.waitForResponse((response) => (
+    new URL(response.url()).pathname === '/images/task8-owned-missing-avatar.png' && response.status() === 404
+  ));
+  await page.locator('.agent-stage__portrait').evaluate((image) => {
+    (image as HTMLImageElement).src = '/images/task8-owned-missing-avatar.png';
+  });
+  await missing;
+  await expect(page.locator('.agent-stage')).toHaveAttribute('data-image-state', 'error');
+  expect(await frame.evaluate((element) => element.getBoundingClientRect().toJSON())).toEqual(before);
+  await expect(page.getByText('FORM & THOUGHT', { exact: true })).toBeVisible();
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  expect(diagnostics.pageErrors).toEqual([]);
+  expect(diagnostics.consoleWarnings).toEqual([]);
+  expect(diagnostics.consoleErrors.every((message) => /status of 404/u.test(message))).toBe(true);
+  diagnostics.consoleErrors.length = 0;
+}
+
 async function exerciseMobileMenu(page: Page) {
   const open = page.getByRole('button', { name: '메뉴 열기' });
   if (!await open.isVisible() || await open.getAttribute('aria-haspopup') !== 'dialog') return;
@@ -471,6 +522,8 @@ for (const cell of viewportCells) {
       await page.keyboard.press('Enter');
       await expect(page.locator('#main-content')).toBeFocused();
       await assertAccessibleState(page);
+
+      await forcePortraitFailureWithoutGeometryShift(page, diagnostics);
 
       await exerciseMobileMenu(page);
 
