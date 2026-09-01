@@ -428,6 +428,10 @@ describe('owned fixture serve harness', () => {
       host: '::1', port: 4308, apiOrigin: 'http://[::1]:4308/',
       publicOrigin: 'http://[::1]:4309', fixtureScenario: 'slow-sql',
     });
+    expect(parseServeFixtureArguments([
+      'serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4308',
+      '--fixture-scenario=stress-max',
+    ])).toMatchObject({ fixtureScenario: 'stress-max' });
     for (const argv of [
       ['serve-fixture'],
       ['serve-fixture', '--host=127.0.0.1', '--port=4307', '--public-origin=http://127.0.0.1:4308/'],

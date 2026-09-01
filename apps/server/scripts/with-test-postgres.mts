@@ -59,6 +59,7 @@ export interface ServeFixtureHarnessDependencies {
 
 const fixtureScenarios = new Set<FixtureScenario>([
   'success', 'provider-disabled', 'insufficient-evidence', 'unavailable', 'timeout', 'release-mismatch', 'slow-sql',
+  'stress-max',
 ]);
 
 function loopback(value: string): boolean {

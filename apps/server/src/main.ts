@@ -21,7 +21,10 @@ import { PublicAnswerDeadlineError } from './modules/public-answer/domain/public
 import { AnswerPublicQuestion } from './modules/public-answer/application/answer-public-question.js';
 import type { AnswerPublicQuestionCommand } from './modules/public-answer/domain/public-answer.js';
 import { DeterministicEmbeddingClient } from './modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
-import { FixtureAnswerGenerator } from './modules/public-answer/infrastructure/fixture/fixture-answer-generator.js';
+import {
+  FixtureAnswerGenerator,
+  StressFixtureAnswerGenerator,
+} from './modules/public-answer/infrastructure/fixture/fixture-answer-generator.js';
 import { FixtureSemanticVerifier } from './modules/public-answer/infrastructure/fixture/fixture-semantic-verifier.js';
 import { InMemoryRedactedEventSink } from './modules/public-answer/infrastructure/fixture/in-memory-redacted-event-sink.js';
 import { InMemoryUsageGuard } from './modules/public-answer/infrastructure/guards/in-memory-usage-guard.js';
@@ -70,6 +73,7 @@ export function createFixtureScenarioExecutor(
     async execute(command: AnswerPublicQuestionCommand): Promise<PublicAnswerOutcome> {
       switch (scenario) {
         case 'success':
+        case 'stress-max':
           return base.execute(command);
         case 'provider-disabled':
           return { kind: 'search', reason: 'provider-disabled', answerReleaseId: command.catalog.answerReleaseId };
@@ -197,7 +201,9 @@ export async function startApplication(): Promise<NestFastifyApplication> {
       generator = new OpenAiResponsesGenerator(responses);
       semanticVerifier = new OpenAiSemanticVerifier(responses);
     } else if (config.publicAskMode === 'fixture') {
-      generator = new FixtureAnswerGenerator();
+      generator = config.fixtureScenario === 'stress-max'
+        ? new StressFixtureAnswerGenerator()
+        : new FixtureAnswerGenerator();
       semanticVerifier = new FixtureSemanticVerifier();
     } else {
       generator = { async generate() { throw new Error('disabled mode must not generate'); } };

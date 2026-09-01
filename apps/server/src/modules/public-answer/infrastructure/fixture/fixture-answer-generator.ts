@@ -27,3 +27,29 @@ export class FixtureAnswerGenerator implements AnswerGenerator {
     });
   }
 }
+
+function exactStressClaim(index: number): string {
+  const unit = `${index + 1}번째 검증된 공개 기록에 기반한 답변 `;
+  return [...unit.repeat(Math.ceil(600 / [...unit].length))].slice(0, 600).join('');
+}
+
+/** Test-only boundary driver. Composition restricts this generator to fixture mode and the stress-max CLI scenario. */
+export class StressFixtureAnswerGenerator implements AnswerGenerator {
+  async generate(input: Parameters<AnswerGenerator['generate']>[0]) {
+    if (input.evidence.length < 6) {
+      throw new PublicAnswerInvalidResponseError('stress fixture requires six authorized evidence items');
+    }
+    const sources = input.evidence.slice(0, 6);
+    const claims = sources.slice(0, 5).map((source, index) => Object.freeze({
+      claimId: `claim-${index + 1}`,
+      text: exactStressClaim(index),
+      evidenceIds: Object.freeze(index === 0
+        ? [source.evidenceId, sources[5]!.evidenceId]
+        : [source.evidenceId]),
+    }));
+    return Object.freeze({
+      claims: Object.freeze(claims),
+      usage: Object.freeze({ inputTokens: 0, outputTokens: 0 }),
+    });
+  }
+}

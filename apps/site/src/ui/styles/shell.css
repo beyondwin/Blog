@@ -5,7 +5,7 @@ body, button, input, select, textarea { font-family: var(--ft-font-ui); }
 a { color: inherit; text-underline-offset: .22em; text-decoration-thickness: 1px; }
 img, svg { max-width: 100%; }
 ::selection { background: color-mix(in srgb, var(--ft-terracotta) 28%, var(--ft-paper)); color: var(--ft-ink); }
-:where(a, button, input, select, textarea):focus-visible { outline: 2px solid var(--ft-on-terracotta); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ft-ink); }
+:where(a, button, input, select, summary, textarea):focus-visible { outline: 2px solid var(--ft-on-terracotta); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ft-ink); }
 .visually-hidden { position: absolute!important; width: 1px!important; height: 1px!important; overflow: hidden!important; clip: rect(0 0 0 0)!important; clip-path: inset(50%)!important; white-space: nowrap!important; }
 .site-shell { width: 100%; min-height: 100vh; margin: 0; overflow-x: clip; background: var(--ft-paper); color: var(--ft-ink); caret-color: var(--ft-terracotta-dark); box-shadow: none; border-radius: 0; }
 .site-shell-width { width: calc(100% - 128px); margin-inline: auto; }
