@@ -229,7 +229,7 @@ export class InMemoryUsageGuard implements UsageGuard {
         budget.providerCostMicroUsd += actualCost - state.reservedCost;
         state.state = 'settled';
       },
-      release: () => {
+      release: async () => {
         if (released) return;
         released = true;
         for (const state of Object.values(stages)) {

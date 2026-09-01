@@ -2,7 +2,7 @@ import type { PublicAnswerPortErrorKind, PublicAnswerRateLimitBucket } from '../
 
 export type PublicAnswerResultKind =
   | 'answer' | 'insufficient-evidence' | 'unsupported-question' | 'release-mismatch' | 'provider-disabled'
-  | 'rate-limited' | 'timeout' | 'unavailable' | 'invalid-response';
+  | 'budget-exhausted' | 'rate-limited' | 'timeout' | 'unavailable' | 'invalid-response';
 export type PublicAnswerLatencyBucket = '<250ms' | '250-999ms' | '1-2.999s' | '3-7.999s' | '8-12s';
 export type PublicAnswerTokenBucket = '0' | '1-999' | '1000-1999' | '2000-3999' | '4000-6000' | 'over-budget';
 export type PublicAnswerRateBucket = 'admitted' | PublicAnswerRateLimitBucket | 'concurrency';
@@ -25,7 +25,7 @@ export interface PublicAnswerEventSink { record(event: PublicAnswerEvent): void;
 
 const MEASUREMENT_KEYS = ['occurredAt','requestId','contentReleaseId','answerReleaseId','resultKind','errorKind','latencyMs','retrievedCount','providerInputTokens','providerOutputTokens','rateBucket'] as const;
 const EVENT_KEYS = ['occurredAt','expiresAt','requestId','contentReleasePrefix','answerReleasePrefix','resultKind','errorKind','latencyBucket','retrievedCount','providerInputBucket','providerOutputBucket','rateBucket'] as const;
-const RESULT_KINDS = new Set<PublicAnswerResultKind>(['answer','insufficient-evidence','unsupported-question','release-mismatch','provider-disabled','rate-limited','timeout','unavailable','invalid-response']);
+const RESULT_KINDS = new Set<PublicAnswerResultKind>(['answer','insufficient-evidence','unsupported-question','release-mismatch','provider-disabled','budget-exhausted','rate-limited','timeout','unavailable','invalid-response']);
 const ERROR_KINDS = new Set<PublicAnswerPortErrorKind>(['rate-limit','concurrency','cost-limit','deadline','transport','invalid-response']);
 const LATENCY_BUCKETS = new Set<PublicAnswerLatencyBucket>(['<250ms','250-999ms','1-2.999s','3-7.999s','8-12s']);
 const TOKEN_BUCKETS = new Set<PublicAnswerTokenBucket>(['0','1-999','1000-1999','2000-3999','4000-6000','over-budget']);

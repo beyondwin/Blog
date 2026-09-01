@@ -147,7 +147,7 @@ function harness(options: HarnessOptions = {}) {
       calls.push(`stage.${stage}.settle`);
       stages.settled.push({ stage, usage });
     },
-    release() {
+    async release() {
       calls.push('usage.release');
     },
   };
@@ -575,7 +575,6 @@ describe('AnswerPublicQuestion', () => {
   it.each([
     ['rate', new PublicAnswerRateLimitError('rate', 'network-hour'), 'rate-limited', true, 'rate-limit', 'network-hour'],
     ['concurrency', new PublicAnswerConcurrencyError('concurrency'), 'rate-limited', true, 'concurrency', 'concurrency'],
-    ['cost', new PublicAnswerCostLimitError('cost'), 'rate-limited', true, 'cost-limit', 'global-day'],
     ['deadline', new PublicAnswerDeadlineError('deadline'), 'timeout', true, 'deadline', 'admitted'],
     ['transport', new PublicAnswerTransportError('transport'), 'unavailable', true, 'transport', 'admitted'],
     ['malformed', new PublicAnswerInvalidResponseError('malformed'), 'invalid-response', false, 'invalid-response', 'admitted'],
@@ -586,6 +585,52 @@ describe('AnswerPublicQuestion', () => {
 
     expect(h.calls).toEqual(['usage.acquire', 'event.record']);
     expect(h.events).toEqual([expect.objectContaining({ errorKind, rateBucket })]);
+  });
+
+  it('maps monthly cost-limit exhaustion to budget-exhausted search without leaking the error message', async () => {
+    const h = harness({ guardError: new PublicAnswerCostLimitError('secret-cost-limit-message') });
+
+    await expectSearch(h.useCase.execute(command()), 'budget-exhausted');
+
+    expect(h.calls).toEqual(['usage.acquire', 'event.record']);
+    expect(h.events).toEqual([expect.objectContaining({
+      resultKind: 'budget-exhausted',
+      errorKind: 'cost-limit',
+      rateBucket: 'global-day',
+    })]);
+    expect(JSON.stringify(h.events[0])).not.toContain('secret-cost-limit-message');
+  });
+
+  it('awaits an asynchronous usage lease release before returning', async () => {
+    let releaseCompleted = false;
+    const useCase = new AnswerPublicQuestion({
+      policy: Object.freeze({ mode: 'fixture' }),
+      retriever: {
+        async retrieve() {
+          return { evidence: [EVIDENCE], sufficient: false, candidateCount: 0, usage: ZERO_USAGE };
+        },
+      },
+      generator: { async generate() { throw new Error('unused'); } },
+      deterministicVerifier: { verify() { throw new Error('unused'); } },
+      semanticVerifier: { async verify() { throw new Error('unused'); } },
+      usageGuard: {
+        async acquire() {
+          return {
+            async acquireGeneration() { throw new Error('unused'); },
+            beginStage() {},
+            settleStage() {},
+            async release() {
+              await new Promise<void>((resolve) => { setImmediate(resolve); });
+              releaseCompleted = true;
+            },
+          };
+        },
+      },
+      eventSink: { record() {} },
+    });
+
+    await expectSearch(useCase.execute(command()), 'insufficient-evidence');
+    expect(releaseCompleted).toBe(true);
   });
 
   it('records one strictly allowlisted event without question, address, claims, evidence, URL, or path', async () => {

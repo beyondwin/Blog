@@ -2,7 +2,8 @@ export type SearchReason =
   | 'insufficient-evidence'
   | 'unsupported-question'
   | 'release-mismatch'
-  | 'provider-disabled';
+  | 'provider-disabled'
+  | 'budget-exhausted';
 
 export interface AuthorizedEvidence {
   evidenceId: string;

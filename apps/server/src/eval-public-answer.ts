@@ -280,7 +280,7 @@ function evaluationUsageAdapter(guard: EvaluationUsageGuard): UsageGuard {
         },
         beginStage: lease.beginStage,
         settleStage: lease.settleStage,
-        release: lease.release,
+        release: async () => { lease.release(); },
       });
     },
   });

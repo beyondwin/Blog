@@ -188,7 +188,10 @@ describe('InMemoryUsageGuard', () => {
     expect(() => lease.settleStage('embedding', { inputTokens: 2_001, outputTokens: 0 })).toThrow(/usage/u);
     lease.settleStage('embedding', { inputTokens: 10, outputTokens: 0 });
     expect(() => lease.settleStage('embedding', { inputTokens: 10, outputTokens: 0 })).toThrow(/already settled/u);
-    lease.release(); lease.release();
+    const released = lease.release();
+    expect(released).toBeInstanceOf(Promise);
+    await released;
+    await lease.release();
     expect(guard.usageTotals()).toEqual({ providerTokens: 10, providerCostMicroUsd: 2 });
   });
 

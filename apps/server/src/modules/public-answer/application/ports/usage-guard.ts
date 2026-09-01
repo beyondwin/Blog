@@ -15,7 +15,7 @@ export interface UsageLease {
   acquireGeneration(signal: AbortSignal): Promise<GenerationLease>;
   beginStage(stage: ProviderStage): void;
   settleStage(stage: ProviderStage, usage: ProviderTokenUsage): void;
-  release(): void;
+  release(): Promise<void>;
 }
 
 export interface UsageGuard {

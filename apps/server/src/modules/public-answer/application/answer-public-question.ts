@@ -91,13 +91,17 @@ function semanticVerificationPasses(
   return sentenceUnits.every((unit) => !unit.critical || supportedIds.has(unit.id));
 }
 
-function mappedOutcome(error: unknown): Extract<PublicAnswerOutcome, { kind: 'error' }> | undefined {
+function mappedOutcome(
+  error: unknown,
+  command: AnswerPublicQuestionCommand,
+): Extract<PublicAnswerOutcome, { kind: 'error' | 'search' }> | undefined {
   if (!(error instanceof PublicAnswerPortError)) return undefined;
   switch (error.kind) {
     case 'rate-limit':
     case 'concurrency':
-    case 'cost-limit':
       return { kind: 'error', code: 'rate-limited', retryable: true };
+    case 'cost-limit':
+      return { kind: 'search', reason: 'budget-exhausted', answerReleaseId: command.catalog.answerReleaseId };
     case 'deadline':
       return { kind: 'error', code: 'timeout', retryable: true };
     case 'transport':
@@ -162,7 +166,7 @@ export class AnswerPublicQuestion {
     try {
       return await this.executeWithUsage(command, usageLease, startedAt, metrics);
     } finally {
-      usageLease.release();
+      await usageLease.release();
     }
   }
 
@@ -289,7 +293,7 @@ export class AnswerPublicQuestion {
     metrics: ExecutionMetrics,
     error: unknown,
   ): Promise<PublicAnswerOutcome> {
-    const outcome = mappedOutcome(error);
+    const outcome = mappedOutcome(error, command);
     if (!outcome) throw error;
     if (error instanceof PublicAnswerPortError) {
       metrics.errorKind = error.kind;
