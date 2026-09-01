@@ -121,4 +121,83 @@ describe('public-answer first-slice database evaluation', () => {
     )).rejects.toThrow(/preauthorized|budget|authority|provider embedding seam/u);
     expect(providerCalls).toBe(0);
   });
+
+  it('starts a local-non-zdr provider runtime against the exact verified catalog and budgeted usage guard', async () => {
+    const { createLocalProviderAuthorization, writeLocalProviderAuthorization } = await import(
+      '../../src/config/local-provider-authorization.js'
+    );
+    const { composedPublicAnswerRuntime, startApplication } = await import('../../src/main.js');
+    const { DeterministicEmbeddingClient } = await import(
+      '../../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js'
+    );
+    const { LocalBudgetUsageGuard } = await import(
+      '../../src/modules/public-answer/infrastructure/guards/local-budget-usage-guard.js'
+    );
+    const { OpenAiResponsesGenerator } = await import(
+      '../../src/modules/public-answer/infrastructure/openai/openai-responses-generator.js'
+    );
+    const { PostgresHybridRetriever } = await import(
+      '../../src/modules/public-answer/infrastructure/postgres/postgres-hybrid-retriever.js'
+    );
+    const { PostgresRedactedEventSink } = await import(
+      '../../src/modules/public-answer/infrastructure/postgres/postgres-redacted-event-sink.js'
+    );
+    const { VerifiedAnswerReleaseCatalogSource } = await import(
+      '../../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js'
+    );
+    const { OpenAiSemanticVerifier } = await import(
+      '../../src/modules/public-answer/infrastructure/verification/semantic-verifier.js'
+    );
+    const { PROVIDER_MODEL_POLICY } = await import(
+      '../../src/modules/public-answer/infrastructure/openai/provider-model-policy.js'
+    );
+
+    const root = await mkdtemp(join(tmpdir(), 'local-e2e-runtime-'));
+    temporaryRoots.push(root);
+    const authorizationPath = join(root, 'authorization.json');
+    const budgetLedgerPath = join(root, 'budget-ledger.json');
+    const receiptRoot = join(root, 'embedding-receipts');
+    await mkdir(receiptRoot);
+    await writeLocalProviderAuthorization(
+      authorizationPath,
+      createLocalProviderAuthorization({
+        createdAt: '2026-09-02T00:00:00.000Z',
+        policyHash: PROVIDER_MODEL_POLICY.policyHash,
+        monthlyHardCapMicroUsd: 1_000_000,
+      }),
+    );
+    const env = {
+      ...evaluationEnv(),
+      HOST: '127.0.0.1',
+      PORT: '4307',
+      FORM_THOUGHT_PUBLIC_ASK_MODE: 'provider',
+      OPENAI_API_KEY: 'never-called-test-key',
+      FORM_THOUGHT_PROVIDER_EMBEDDING_RECEIPT_ROOT: receiptRoot,
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308',
+      FORM_THOUGHT_LOCAL_PROVIDER_AUTHORIZATION: authorizationPath,
+      FORM_THOUGHT_LOCAL_BUDGET_LEDGER: budgetLedgerPath,
+    };
+    await indexAnswerRelease(
+      ['--embedding-mode=provider', '--confirm-live-provider', '--provider-authority=local'],
+      env,
+      () => undefined,
+      { providerEmbeddingClient: new DeterministicEmbeddingClient('test') },
+    );
+    const app = await startApplication({ env, attach: false });
+    try {
+      const composed = composedPublicAnswerRuntime(app);
+      expect(composed.usageGuard).toBeInstanceOf(LocalBudgetUsageGuard);
+      expect(composed.retriever).toBeInstanceOf(PostgresHybridRetriever);
+      expect(composed.generator).toBeInstanceOf(OpenAiResponsesGenerator);
+      expect(composed.semanticVerifier).toBeInstanceOf(OpenAiSemanticVerifier);
+      expect(composed.eventSink).toBeInstanceOf(PostgresRedactedEventSink);
+      expect(composed.catalogSource).toBeInstanceOf(VerifiedAnswerReleaseCatalogSource);
+      const fastify = app.getHttpAdapter().getInstance();
+      const ready = await fastify.inject({ method: 'GET', url: '/health/ready' });
+      expect(ready.statusCode).toBe(200);
+      expect(ready.json()).toEqual({ status: 'ready' });
+    } finally {
+      await app.close();
+    }
+  });
 });

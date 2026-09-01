@@ -259,9 +259,23 @@ function databaseUrl(value: string): string {
   } catch { throw new Error('FORM_THOUGHT_DATABASE_URL is invalid'); }
 }
 
-function loopbackAddress(value: string): boolean {
+export function loopbackAddress(value: string): boolean {
   const family = isIP(value);
   return (family === 4 && value.startsWith('127.')) || (family === 6 && value === '::1');
+}
+
+export function assertLocalProviderRuntime(config: Readonly<ServerConfig>): void {
+  if (config.providerAuthority?.kind !== 'local-non-zdr') return;
+  if (config.nodeEnv === 'production') throw new Error('production rejects local-non-zdr authority');
+  if (!loopbackAddress(config.host)) throw new Error('local-non-zdr authorization requires a loopback host');
+  let originHost = '';
+  try { originHost = new URL(config.publicOrigin ?? '').hostname.replace(/^\[|\]$/gu, ''); } catch { /* rejected below */ }
+  if (!config.publicOrigin || !loopbackAddress(originHost)) {
+    throw new Error('local-non-zdr authorization requires a loopback public origin');
+  }
+  if (config.trustedProxyAddresses.some((address) => !loopbackAddress(address))) {
+    throw new Error('local-non-zdr authorization requires loopback trusted proxies');
+  }
 }
 
 function normalizedOrigin(
@@ -372,6 +386,9 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
       throw new Error('local-non-zdr authorization requires a loopback public origin');
     }
     if (!localBudgetLedgerPath) throw new Error('local-non-zdr authorization requires an absolute budget ledger path');
+    if (trustedProxyAddresses.some((address) => !loopbackAddress(address))) {
+      throw new Error('local-non-zdr authorization requires loopback trusted proxies');
+    }
     if (providerDataControlReceiptPath) {
       throw new Error('local-non-zdr authorization cannot be combined with production ZDR evidence');
     }

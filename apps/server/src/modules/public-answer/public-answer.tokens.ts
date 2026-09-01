@@ -3,6 +3,7 @@ export const PUBLIC_ANSWER_TOKENS = Object.freeze({
   ANSWER_RELEASE_CATALOG_SOURCE: Symbol('public-answer.answer-release-catalog-source'),
   RETRIEVER: Symbol('public-answer.retriever'),
   EMBEDDING_CLIENT: Symbol('public-answer.embedding-client'),
+  RESPONSES_CLIENT: Symbol('public-answer.responses-client'),
   ANSWER_GENERATOR: Symbol('public-answer.answer-generator'),
   DETERMINISTIC_VERIFIER: Symbol('public-answer.deterministic-verifier'),
   SEMANTIC_VERIFIER: Symbol('public-answer.semantic-verifier'),

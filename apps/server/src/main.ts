@@ -4,15 +4,26 @@ import { pathToFileURL } from 'node:url';
 
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import type { Pool } from 'pg';
 
 import { AppModule } from './app.module.js';
-import { parseServerConfig, type FixtureScenario, type ServerConfig } from './config/server-config.js';
+import {
+  localProviderAuthorizationHash,
+  readLocalProviderAuthorization,
+} from './config/local-provider-authorization.js';
+import {
+  assertLocalProviderRuntime,
+  parseServerConfig,
+  type FixtureScenario,
+  type ServerConfig,
+} from './config/server-config.js';
 import { RuntimeReadiness, runRuntimeStartupChecks } from './health/runtime-readiness.js';
 import { BoundedErrorFilter } from './http/bounded-error.filter.js';
 import { RuntimeLifecycle } from './lifecycle/runtime-lifecycle.js';
 import type { AnswerGenerator } from './modules/public-answer/application/ports/answer-generator.js';
 import type { AnswerReleaseCatalogSource } from './modules/public-answer/application/ports/answer-release-catalog.js';
 import type { DeterministicAnswerVerifier, SemanticAnswerVerifier } from './modules/public-answer/application/ports/answer-verifier.js';
+import type { EmbeddingClient } from './modules/public-answer/application/ports/embedding-client.js';
 import type { PublicAnswerEventSink } from './modules/public-answer/application/ports/event-sink.js';
 import type { Retriever } from './modules/public-answer/application/ports/retriever.js';
 import type { UsageGuard } from './modules/public-answer/application/ports/usage-guard.js';
@@ -28,6 +39,8 @@ import {
 import { FixtureSemanticVerifier } from './modules/public-answer/infrastructure/fixture/fixture-semantic-verifier.js';
 import { InMemoryRedactedEventSink } from './modules/public-answer/infrastructure/fixture/in-memory-redacted-event-sink.js';
 import { InMemoryUsageGuard } from './modules/public-answer/infrastructure/guards/in-memory-usage-guard.js';
+import { LocalBudgetLedger } from './modules/public-answer/infrastructure/guards/local-budget-ledger.js';
+import { LocalBudgetUsageGuard } from './modules/public-answer/infrastructure/guards/local-budget-usage-guard.js';
 import { OpenAIEmbeddingClient } from './modules/public-answer/infrastructure/openai/openai-embedding-client.js';
 import { OpenAiResponsesClient } from './modules/public-answer/infrastructure/openai/openai-responses-client.js';
 import { OpenAiResponsesGenerator } from './modules/public-answer/infrastructure/openai/openai-responses-generator.js';
@@ -54,10 +67,42 @@ export interface ApplicationRuntimeOverrides {
   readonly semanticVerifier?: SemanticAnswerVerifier;
   readonly usageGuard?: UsageGuard;
   readonly eventSink?: PublicAnswerEventSink;
+  readonly embeddingClient?: EmbeddingClient;
+  readonly responsesClient?: OpenAiResponsesClient;
 }
 
 export interface CreateApplicationOptions {
   readonly runtime?: ApplicationRuntimeOverrides;
+}
+
+export interface StartApplicationOptions {
+  readonly env?: NodeJS.ProcessEnv;
+  readonly config?: Readonly<ServerConfig>;
+  readonly pool?: Pool;
+  readonly controlPool?: Pool;
+  readonly catalogSource?: AnswerReleaseCatalogSource;
+  readonly attach?: boolean;
+  readonly createEmbeddingClient?: (apiKey: string) => EmbeddingClient;
+  readonly createResponsesClient?: (apiKey: string) => OpenAiResponsesClient;
+}
+
+export interface ComposedPublicAnswerRuntime {
+  readonly catalogSource: AnswerReleaseCatalogSource;
+  readonly retriever: Retriever;
+  readonly generator: AnswerGenerator;
+  readonly semanticVerifier: SemanticAnswerVerifier;
+  readonly usageGuard: UsageGuard;
+  readonly eventSink: PublicAnswerEventSink;
+  readonly embeddingClient?: EmbeddingClient;
+  readonly responsesClient?: OpenAiResponsesClient;
+}
+
+const composedRuntimes = new WeakMap<NestFastifyApplication, ComposedPublicAnswerRuntime>();
+
+export function composedPublicAnswerRuntime(app: NestFastifyApplication): ComposedPublicAnswerRuntime {
+  const composed = composedRuntimes.get(app);
+  if (!composed) throw new Error('public answer runtime is not composed');
+  return composed;
 }
 
 type PublicAnswerExecutor = Readonly<{
@@ -144,6 +189,8 @@ function shellRuntime(overrides: ApplicationRuntimeOverrides = {}): PublicAnswer
     semanticVerifier: overrides.semanticVerifier,
     usageGuard: overrides.usageGuard,
     eventSink: overrides.eventSink,
+    embeddingClient: overrides.embeddingClient,
+    responsesClient: overrides.responsesClient,
   };
 }
 
@@ -170,6 +217,7 @@ export async function createApplication(options: CreateApplicationOptions = {}):
     }
   });
   const app = await NestFactory.create<NestFastifyApplication>(AppModule.register(runtime), adapter, {
+    abortOnError: false,
     bufferLogs: false,
     logger: false,
   });
@@ -177,17 +225,34 @@ export async function createApplication(options: CreateApplicationOptions = {}):
   return app;
 }
 
-export async function startApplication(): Promise<NestFastifyApplication> {
-  const config = await parseServerConfig(process.env);
-  const pool = createPostgresPool(config.databaseUrl);
-  const controlPool = createPostgresControlPool(config.databaseUrl);
+export async function startApplication(options: StartApplicationOptions = {}): Promise<NestFastifyApplication> {
+  const config = options.config ?? await parseServerConfig(options.env ?? process.env);
+  assertLocalProviderRuntime(config);
+  if (config.providerAuthority?.kind === 'local-non-zdr') {
+    const authorization = await readLocalProviderAuthorization(config.providerAuthority.authorizationPath);
+    if (localProviderAuthorizationHash(authorization) !== config.providerAuthority.authorizationHash) {
+      throw new Error('local-non-zdr authorization drift');
+    }
+  }
+  const pool = options.pool ?? createPostgresPool(config.databaseUrl);
+  const controlPool = options.controlPool ?? createPostgresControlPool(config.databaseUrl);
   let app: NestFastifyApplication | undefined;
   try {
-    const catalogSource = new VerifiedAnswerReleaseCatalogSource(config, pool);
+    const catalogSource = options.catalogSource ?? new VerifiedAnswerReleaseCatalogSource(config, pool);
     const readiness = new RuntimeReadiness<VerifiedCatalogSnapshot>({
       startupCheck: async () => runRuntimeStartupChecks(config, { pool, catalogSource }),
     });
     const queries = new CancellablePgQueryRunner(pool, controlPool);
+    let embeddingClient: EmbeddingClient | undefined;
+    let responsesClient: OpenAiResponsesClient | undefined;
+    if (config.publicAskMode === 'provider') {
+      embeddingClient = options.createEmbeddingClient?.(config.openAiApiKey!)
+        ?? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'query' });
+      responsesClient = options.createResponsesClient?.(config.openAiApiKey!)
+        ?? new OpenAiResponsesClient(config.openAiApiKey!);
+    } else if (config.publicAskMode === 'fixture') {
+      embeddingClient = new DeterministicEmbeddingClient(config.nodeEnv);
+    }
     const retriever: Retriever = config.publicAskMode === 'disabled'
       ? {
         async retrieve() {
@@ -197,15 +262,12 @@ export async function startApplication(): Promise<NestFastifyApplication> {
           });
         },
       }
-      : new PostgresHybridRetriever(config.publicAskMode === 'provider'
-        ? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'query' })
-        : new DeterministicEmbeddingClient(config.nodeEnv), queries);
+      : new PostgresHybridRetriever(embeddingClient!, queries);
     let generator: AnswerGenerator;
     let semanticVerifier: SemanticAnswerVerifier;
     if (config.publicAskMode === 'provider') {
-      const responses = new OpenAiResponsesClient(config.openAiApiKey!);
-      generator = new OpenAiResponsesGenerator(responses);
-      semanticVerifier = new OpenAiSemanticVerifier(responses);
+      generator = new OpenAiResponsesGenerator(responsesClient!);
+      semanticVerifier = new OpenAiSemanticVerifier(responsesClient!);
     } else if (config.publicAskMode === 'fixture') {
       generator = config.fixtureScenario === 'stress-max'
         ? new StressFixtureAnswerGenerator()
@@ -215,7 +277,13 @@ export async function startApplication(): Promise<NestFastifyApplication> {
       generator = { async generate() { throw new Error('disabled mode must not generate'); } };
       semanticVerifier = { async verify() { throw new Error('disabled mode must not verify'); } };
     }
-    const usageGuard = await InMemoryUsageGuard.create();
+    const trafficGuard = await InMemoryUsageGuard.create();
+    const usageGuard = config.providerAuthority?.kind === 'local-non-zdr'
+      ? await LocalBudgetUsageGuard.create({
+        ledger: await LocalBudgetLedger.open(config.providerAuthority.budgetLedgerPath),
+        inner: trafficGuard,
+      })
+      : trafficGuard;
     const eventSink = config.publicAskMode === 'fixture'
       ? new InMemoryRedactedEventSink()
       : new PostgresRedactedEventSink(pool);
@@ -255,9 +323,25 @@ export async function startApplication(): Promise<NestFastifyApplication> {
         semanticVerifier,
         usageGuard,
         eventSink,
+        embeddingClient,
+        responsesClient,
       },
     });
     await readiness.initialize();
+    composedRuntimes.set(app, Object.freeze({
+      catalogSource,
+      retriever,
+      generator,
+      semanticVerifier,
+      usageGuard,
+      eventSink,
+      embeddingClient,
+      responsesClient,
+    }));
+    if (options.attach === false) {
+      await app.init();
+      return app;
+    }
     await app.listen(config.port, config.host);
     lifecycle.registerSignals();
     return app;

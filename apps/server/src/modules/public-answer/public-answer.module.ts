@@ -8,6 +8,7 @@ import { AnswerPublicQuestion } from './application/answer-public-question.js';
 import type { AnswerGenerator } from './application/ports/answer-generator.js';
 import type { AnswerReleaseCatalogSource } from './application/ports/answer-release-catalog.js';
 import type { DeterministicAnswerVerifier, SemanticAnswerVerifier } from './application/ports/answer-verifier.js';
+import type { EmbeddingClient } from './application/ports/embedding-client.js';
 import type { PublicAnswerEventSink } from './application/ports/event-sink.js';
 import type { Retriever } from './application/ports/retriever.js';
 import type { UsageGuard } from './application/ports/usage-guard.js';
@@ -28,6 +29,8 @@ export interface PublicAnswerModuleRuntime {
   readonly semanticVerifier?: SemanticAnswerVerifier;
   readonly usageGuard?: UsageGuard;
   readonly eventSink?: PublicAnswerEventSink;
+  readonly embeddingClient?: EmbeddingClient;
+  readonly responsesClient?: unknown;
 }
 
 function required<T>(value: T | undefined, label: string): T {
@@ -46,6 +49,12 @@ export class PublicAnswerModule {
       { provide: RuntimeReadiness, useValue: runtime.readiness },
       { provide: RuntimeLifecycle, useValue: runtime.lifecycle },
     ];
+    if (runtime.embeddingClient) {
+      providers.push({ provide: PUBLIC_ANSWER_TOKENS.EMBEDDING_CLIENT, useValue: runtime.embeddingClient });
+    }
+    if (runtime.responsesClient) {
+      providers.push({ provide: PUBLIC_ANSWER_TOKENS.RESPONSES_CLIENT, useValue: runtime.responsesClient });
+    }
     if (runtime.answerPublicQuestion) {
       providers.push({ provide: AnswerPublicQuestion, useValue: runtime.answerPublicQuestion });
     } else {

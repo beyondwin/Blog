@@ -3,14 +3,22 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
 import type { ServerConfig } from '../config/server-config.js';
+import {
+  localProviderAuthorizationHash,
+  readLocalProviderAuthorization,
+} from '../config/local-provider-authorization.js';
 import { readProviderDataControlReceipt } from '../config/provider-data-control-receipt.js';
 import type { AnswerReleaseCatalogSnapshot } from '../modules/public-answer/application/ports/answer-release-catalog.js';
 import type { AnswerReleaseCatalogSource } from '../modules/public-answer/application/ports/answer-release-catalog.js';
+import { LocalBudgetLedger } from '../modules/public-answer/infrastructure/guards/local-budget-ledger.js';
 import {
+  isLocalProviderEmbeddingReceipt,
   readBundledProviderPricing,
   readProviderEmbeddingReceipt,
+  type DurableProviderEmbeddingReceipt,
   type ProviderEmbeddingReceipt,
 } from '../modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
+import { PROVIDER_MODEL_POLICY } from '../modules/public-answer/infrastructure/openai/provider-model-policy.js';
 import type { VerifiedCatalogSnapshot } from '../modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 import { providerChecksum } from '../modules/public-answer/infrastructure/openai/provider-json.js';
 import {
@@ -42,6 +50,8 @@ interface RuntimeStartupDependencies {
   readonly readProductionEvaluation?: typeof readProductionEvaluationReport;
   readonly readEvaluationUsage?: typeof readEvaluationUsageReceipt;
   readonly readPublicEvaluationManifest?: () => Promise<Buffer>;
+  readonly readLocalProviderAuthorization?: typeof readLocalProviderAuthorization;
+  readonly openLocalBudgetLedger?: (path: string) => Promise<unknown>;
 }
 
 interface RuntimeChunkRow {
@@ -56,6 +66,49 @@ interface RuntimeChunkRow {
   embedding_model: string;
   embedding_dimensions: number;
   embedding: string;
+}
+
+async function reopenLocalProviderEvidence(
+  authority: Extract<NonNullable<ServerConfig['providerAuthority']>, { kind: 'local-non-zdr' }>,
+  catalog: VerifiedCatalogSnapshot,
+  providerEmbeddingReceiptRoot: string | null | undefined,
+  dependencies: RuntimeStartupDependencies,
+): Promise<void> {
+  const readAuthorization = dependencies.readLocalProviderAuthorization ?? readLocalProviderAuthorization;
+  const openLedger = dependencies.openLocalBudgetLedger ?? ((path: string) => LocalBudgetLedger.open(path));
+  const authorization = await readAuthorization(authority.authorizationPath);
+  if (localProviderAuthorizationHash(authorization) !== authority.authorizationHash) {
+    throw new Error('runtime readiness local-non-zdr authorization drift');
+  }
+  await openLedger(authority.budgetLedgerPath);
+  if (!providerEmbeddingReceiptRoot) {
+    throw new Error('runtime readiness local-non-zdr index receipt is missing');
+  }
+  const readEmbedding = dependencies.readProviderEmbedding ?? readProviderEmbeddingReceipt;
+  const embedding: DurableProviderEmbeddingReceipt = await readEmbedding(
+    providerEmbeddingReceiptRoot,
+    catalog.answerReleaseId,
+    catalog.embeddingReceiptHash,
+  );
+  if (!isLocalProviderEmbeddingReceipt(embedding)
+    || embedding.providerAuthorityKind !== 'local-non-zdr'
+    || embedding.providerAuthorityHash !== authority.authorizationHash
+    || embedding.providerPolicyHash !== PROVIDER_MODEL_POLICY.policyHash
+    || embedding.providerPricingReceiptHash !== PROVIDER_MODEL_POLICY.pricingReceiptHash
+    || embedding.contentReleaseId !== catalog.contentReleaseId
+    || embedding.answerReleaseId !== catalog.answerReleaseId
+    || embedding.contentManifestHash !== catalog.contentManifestHash
+    || embedding.answerManifestHash !== catalog.answerManifestHash
+    || embedding.answerArtifactHash !== catalog.answerArtifactHash
+    || embedding.corpusApprovalHash !== catalog.corpusApprovalHash
+    || embedding.embeddingReceiptHash !== catalog.embeddingReceiptHash
+    || embedding.indexChecksum !== catalog.indexChecksum
+    || embedding.providerVectorSetChecksum !== catalog.vectorSetChecksum
+    || embedding.embeddingModel !== PROVIDER_MODEL_POLICY.embeddingModel
+    || embedding.embeddingDimensions !== PROVIDER_MODEL_POLICY.embeddingDimensions
+    || embedding.embeddingSource !== 'provider') {
+    throw new Error('runtime readiness local-non-zdr index receipt does not match the active authority or current policy');
+  }
 }
 
 function vectorChecksum(text: string): string {
@@ -123,6 +176,7 @@ export async function runRuntimeStartupChecks(
     if (config.nodeEnv === 'production') {
       throw new Error('runtime readiness production rejects local-non-zdr authority');
     }
+    await reopenLocalProviderEvidence(config.providerAuthority, catalog, config.providerEmbeddingReceiptRoot, dependencies);
   } else if (config.publicAskMode === 'provider') {
     if (config.nodeEnv === 'production' && config.providerAuthority?.kind !== 'production-zdr') {
       throw new Error('runtime readiness production requires production-zdr authority');
@@ -137,11 +191,15 @@ export async function runRuntimeStartupChecks(
       readControl(config.providerDataControlReceiptPath),
       readPricing(),
       readEmbedding(config.providerEmbeddingReceiptRoot, catalog.answerReleaseId, catalog.embeddingReceiptHash),
-    ]) as readonly [Awaited<ReturnType<typeof readProviderDataControlReceipt>>, Readonly<{ receiptHash: string }>, ProviderEmbeddingReceipt];
-    if (embedding.contentReleaseId !== catalog.contentReleaseId || embedding.answerReleaseId !== catalog.answerReleaseId
-      || embedding.embeddingModel !== 'text-embedding-3-large' || embedding.embeddingDimensions !== 3072
-      || embedding.embeddingSource !== 'provider' || embedding.providerDataControlReceiptHash !== control.receiptHash
-      || embedding.providerPricingReceiptHash !== pricing.receiptHash) {
+    ]);
+    if (isLocalProviderEmbeddingReceipt(embedding)) {
+      throw new Error('runtime readiness production rejects local-non-zdr receipt');
+    }
+    const productionEmbedding = embedding as ProviderEmbeddingReceipt;
+    if (productionEmbedding.contentReleaseId !== catalog.contentReleaseId || productionEmbedding.answerReleaseId !== catalog.answerReleaseId
+      || productionEmbedding.embeddingModel !== 'text-embedding-3-large' || productionEmbedding.embeddingDimensions !== 3072
+      || productionEmbedding.embeddingSource !== 'provider' || productionEmbedding.providerDataControlReceiptHash !== control.receiptHash
+      || productionEmbedding.providerPricingReceiptHash !== pricing.receiptHash) {
       throw new Error('runtime readiness provider evidence drift');
     }
     if (config.nodeEnv === 'production') {

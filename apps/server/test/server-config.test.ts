@@ -143,6 +143,7 @@ describe('discriminated provider authority', () => {
   it.each([
     ['non-loopback host', { HOST: '192.0.2.10' }],
     ['non-loopback origin', { FORM_THOUGHT_PUBLIC_ORIGIN: 'https://example.com' }],
+    ['non-loopback trusted proxy', { FORM_THOUGHT_TRUSTED_PROXY_ADDRESSES: '192.0.2.10' }],
     ['fixture mode', { FORM_THOUGHT_PUBLIC_ASK_MODE: 'fixture', OPENAI_API_KEY: undefined }],
     ['disabled mode', { FORM_THOUGHT_PUBLIC_ASK_MODE: 'disabled', OPENAI_API_KEY: undefined }],
     ['missing ledger', { FORM_THOUGHT_LOCAL_BUDGET_LEDGER: undefined }],
