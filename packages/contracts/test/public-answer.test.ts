@@ -158,6 +158,10 @@ describe('public answer contracts', () => {
     })).toThrow();
     expect(publicAskResponseSchema.parse({ kind: 'search', reason: 'insufficient-evidence' }))
       .toEqual({ kind: 'search', reason: 'insufficient-evidence' });
+    expect(publicAskResponseSchema.parse({
+      kind: 'search',
+      reason: 'budget-exhausted',
+    })).toEqual({ kind: 'search', reason: 'budget-exhausted' });
     expect(publicAskResponseSchema.parse({ kind: 'error', code: 'timeout', retryable: true }))
       .toEqual({ kind: 'error', code: 'timeout', retryable: true });
     expect(() => publicAskResponseSchema.parse({ kind: 'search', reason: 'other' })).toThrow();

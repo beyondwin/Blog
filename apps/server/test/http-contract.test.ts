@@ -195,6 +195,7 @@ describe('public answer HTTP contract', () => {
     ['insufficient evidence', { kind: 'search', reason: 'insufficient-evidence', answerReleaseId: ANSWER_RELEASE }, 200, undefined],
     ['unsupported question', { kind: 'search', reason: 'unsupported-question', answerReleaseId: ANSWER_RELEASE }, 200, undefined],
     ['provider disabled', { kind: 'search', reason: 'provider-disabled', answerReleaseId: ANSWER_RELEASE }, 200, undefined],
+    ['budget exhausted', { kind: 'search', reason: 'budget-exhausted', answerReleaseId: ANSWER_RELEASE }, 200, undefined],
     ['release mismatch', { kind: 'search', reason: 'release-mismatch', answerReleaseId: ANSWER_RELEASE }, 409, undefined],
     ['rate limited', { kind: 'error', code: 'rate-limited', retryable: true }, 429, '20'],
     ['timeout', { kind: 'error', code: 'timeout', retryable: true }, 503, undefined],

@@ -18,6 +18,7 @@ import { SearchResults } from './SearchResults';
 import {
   askExperienceReducer,
   initialAskState,
+  LOCAL_PROVIDER_DISCLOSURE,
   SAMPLE_QUESTION,
 } from './secondBrain';
 import type { PublicAskProvider } from './publicAskTransport';
@@ -149,9 +150,12 @@ function AgentStage({ answer, interactive, onOpenEvidence, phase }: LivingEviden
   );
 }
 
-function QuestionComposer({ id, label, note, onBlur, onChange, onFocus, onSubmit, placeholder, value }: {
+function QuestionComposer({
+  id, label, localProviderDisclosure = false, note, onBlur, onChange, onFocus, onSubmit, placeholder, value,
+}: {
   id: string;
   label: string;
+  localProviderDisclosure?: boolean;
   note?: string;
   onBlur?: () => void;
   onChange: (value: string) => void;
@@ -184,6 +188,9 @@ function QuestionComposer({ id, label, note, onBlur, onChange, onFocus, onSubmit
       <p className="question-composer__privacy-summary">
         공개 승인 기록만 사용 · 이 사이트는 질문을 저장하지 않음
       </p>
+      {localProviderDisclosure ? (
+        <p className="question-composer__local-disclosure">{LOCAL_PROVIDER_DISCLOSURE}</p>
+      ) : null}
       {note ? <p className="question-composer__note">{note}</p> : null}
       <details className="question-composer__privacy">
         <summary className="touch-target">질문과 근거는 어떻게 처리되나요?</summary>
@@ -196,7 +203,8 @@ function QuestionComposer({ id, label, note, onBlur, onChange, onFocus, onSubmit
   );
 }
 
-function RetrievalSequence({ onChange, onSubmit, value, view }: {
+function RetrievalSequence({ localProviderDisclosure, onChange, onSubmit, value, view }: {
+  localProviderDisclosure: boolean;
   onChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   value: string;
@@ -216,6 +224,7 @@ function RetrievalSequence({ onChange, onSubmit, value, view }: {
       <QuestionComposer
         id="second-brain-replacement"
         label="다른 질문으로 바꾸기"
+        localProviderDisclosure={localProviderDisclosure}
         placeholder="새 질문을 입력하세요"
         value={value}
         onChange={onChange}
@@ -225,9 +234,10 @@ function RetrievalSequence({ onChange, onSubmit, value, view }: {
   );
 }
 
-function AnswerStage({ answer, evidenceOpen, onOpenEvidence, onSubmit, question }: {
+function AnswerStage({ answer, evidenceOpen, localProviderDisclosure, onOpenEvidence, onSubmit, question }: {
   answer: AnswerViewModel;
   evidenceOpen: boolean;
+  localProviderDisclosure: boolean;
   onOpenEvidence: (evidenceId: string, trigger: HTMLElement) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   question: string;
@@ -268,6 +278,7 @@ function AnswerStage({ answer, evidenceOpen, onOpenEvidence, onSubmit, question 
       <QuestionComposer
         id="second-brain-follow-up"
         label="이 생각에 이어 묻기"
+        localProviderDisclosure={localProviderDisclosure}
         placeholder="다음 질문을 입력하세요"
         value={followUp}
         onChange={setFollowUp}
@@ -290,9 +301,15 @@ function progressStatus(view: string, query: string, resultCount: number): strin
   return '질문을 기다리고 있습니다.';
 }
 
-export function SecondBrainExperience({ initialQuery, inventory, provider }: {
+export function SecondBrainExperience({
+  initialQuery,
+  inventory,
+  localProviderDisclosure = false,
+  provider,
+}: {
   initialQuery: string;
   inventory: readonly SearchInventoryItem[];
+  localProviderDisclosure?: boolean;
   provider: PublicAskProvider;
 }) {
   const [state, dispatch] = useReducer(askExperienceReducer, initialQuery, initialAskState);
@@ -450,6 +467,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
                 <RetrievalSequence
                   view={progressView}
                   value={inputValue}
+                  localProviderDisclosure={localProviderDisclosure}
                   onChange={setInputValue}
                   onSubmit={onSubmit}
                 />
@@ -458,6 +476,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
                 <AnswerStage
                   answer={state.answer}
                   evidenceOpen={state.view === 'evidence-open'}
+                  localProviderDisclosure={localProviderDisclosure}
                   question={state.query}
                   onOpenEvidence={openEvidence}
                   onSubmit={onSubmit}
@@ -469,6 +488,7 @@ export function SecondBrainExperience({ initialQuery, inventory, provider }: {
                   <QuestionComposer
                     id="second-brain-question"
                     label="기록에 묻기"
+                    localProviderDisclosure={localProviderDisclosure}
                     note={composerNote}
                     placeholder="질문을 입력하세요"
                     value={inputValue}

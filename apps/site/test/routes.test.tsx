@@ -391,7 +391,8 @@ describe('React Router current-behavior static route contract', () => {
     expect(new Set(data.inventory.map((item: { kind: string }) => item.kind))).toEqual(
       new Set(['article', 'review', 'thought']),
     );
-    expect(Object.keys(data).sort()).toEqual(['binding', 'initialQuery', 'inventory']);
+    expect(Object.keys(data).sort()).toEqual(['binding', 'initialQuery', 'inventory', 'localProviderDisclosure']);
+    expect(data.localProviderDisclosure).toBe(false);
     expect(Object.keys(data.binding).sort()).toEqual(['answerReleaseId', 'contentReleaseId']);
     expect(data.inventory.every((item: { id: string }) => (
       /^(?:articles|reviews|thoughts)\//u.test(item.id)

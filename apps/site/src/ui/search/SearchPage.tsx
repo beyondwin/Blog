@@ -42,15 +42,29 @@ export {
   type SearchMatch,
 } from './searchModel';
 
-export function SearchPage({ binding, initialQuery = '', inventory, provider }: {
+export function SearchPage({
+  binding,
+  initialQuery = '',
+  inventory,
+  provider,
+  localProviderDisclosure = false,
+}: {
   binding: PublicAnswerReleaseBinding;
   initialQuery?: string;
   inventory: readonly SearchInventoryItem[];
   provider?: PublicAskProvider;
+  localProviderDisclosure?: boolean;
 }) {
   const activeProvider = useMemo(
     () => provider ?? createLazyPublicAskProvider(binding),
     [provider, binding.answerReleaseId, binding.contentReleaseId],
   );
-  return <SecondBrainExperience initialQuery={initialQuery} inventory={inventory} provider={activeProvider} />;
+  return (
+    <SecondBrainExperience
+      initialQuery={initialQuery}
+      inventory={inventory}
+      provider={activeProvider}
+      localProviderDisclosure={localProviderDisclosure}
+    />
+  );
 }

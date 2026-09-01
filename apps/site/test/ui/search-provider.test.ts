@@ -123,6 +123,7 @@ describe('HttpPublicAskProvider', () => {
     [200, { kind: 'search', reason: 'insufficient-evidence' }, undefined],
     [200, { kind: 'search', reason: 'unsupported-question' }, undefined],
     [200, { kind: 'search', reason: 'provider-disabled' }, undefined],
+    [200, { kind: 'search', reason: 'budget-exhausted' }, undefined],
     [409, { kind: 'search', reason: 'release-mismatch' }, undefined],
     [400, { kind: 'error', code: 'invalid-response', retryable: false }, undefined],
     [413, { kind: 'error', code: 'invalid-response', retryable: false }, undefined],
@@ -144,6 +145,7 @@ describe('HttpPublicAskProvider', () => {
   it.each([
     [200, { kind: 'error', code: 'invalid-response', retryable: false }, undefined],
     [409, { kind: 'search', reason: 'unsupported-question' }, undefined],
+    [409, { kind: 'search', reason: 'budget-exhausted' }, undefined],
     [400, { kind: 'search', reason: 'provider-disabled' }, undefined],
     [413, answer, undefined],
     [415, { kind: 'error', code: 'rate-limited', retryable: true }, '20'],

@@ -39,6 +39,7 @@ const binding = {
   answerReleaseId: 'b'.repeat(64),
 };
 const compactPrivacyDisclosure = '공개 승인 기록만 사용 · 이 사이트는 질문을 저장하지 않음';
+const localLiveDisclosure = '로컬 개발용 AI 호출 · ZDR 검증 아님';
 const answerEvidence = [0, 1, 2, 3, 4, 5].map((index) => ({
     evidenceId: String(index + 3).repeat(64).slice(0, 64),
     chunkId: String(index + 6).repeat(64).slice(0, 64),
@@ -97,7 +98,10 @@ const inventory: SearchInventoryItem[] = [{
   topics: ['Graphify', 'AI'],
 }];
 
-function clientPlugin(serverMarkup: string, criticalCss: string, options: { deferHydration?: boolean } = {}): Plugin {
+function clientPlugin(serverMarkup: string, criticalCss: string, options: {
+  deferHydration?: boolean;
+  localProviderDisclosure?: boolean;
+} = {}): Plugin {
   const entryId = '\0second-brain-search-client.tsx';
   return {
     name: 'second-brain-search-client',
@@ -158,7 +162,7 @@ function clientPlugin(serverMarkup: string, criticalCss: string, options: { defe
           window.__secondBrainRoot = hydrateRoot(
             document.querySelector('#root'),
             <SiteShell currentSection="search">
-              <SearchPage binding={binding} initialQuery="" inventory={inventory} provider={provider} />
+              <SearchPage binding={binding} initialQuery="" inventory={inventory} provider={provider} localProviderDisclosure={${JSON.stringify(options.localProviderDisclosure === true)}} />
             </SiteShell>,
           );
         };
@@ -193,15 +197,21 @@ function clientPlugin(serverMarkup: string, criticalCss: string, options: { defe
   };
 }
 
-function renderApplication() {
+function renderApplication(options: { localProviderDisclosure?: boolean } = {}) {
   return createElement(SiteShell, {
-    children: createElement(SearchPage, { binding, initialQuery: '', inventory, provider }),
+    children: createElement(SearchPage, {
+      binding,
+      initialQuery: '',
+      inventory,
+      provider,
+      localProviderDisclosure: options.localProviderDisclosure === true,
+    }),
     currentSection: 'search',
   });
 }
 
-async function startHarness(options: { deferHydration?: boolean } = {}) {
-  const markup = renderToString(renderApplication());
+async function startHarness(options: { deferHydration?: boolean; localProviderDisclosure?: boolean } = {}) {
+  const markup = renderToString(renderApplication(options));
   const criticalCss = (await Promise.all([
     readFile(tokenStylesPath, 'utf8'),
     readFile(shellStylesPath, 'utf8'),
@@ -1552,6 +1562,7 @@ describe('second-brain search client interaction', () => {
       const compactDisclosure = page.getByText(compactPrivacyDisclosure, { exact: true });
       expect(await compactDisclosure.count()).toBe(1);
       expect(await compactDisclosure.isVisible()).toBe(true);
+      expect(await page.getByText(localLiveDisclosure, { exact: true }).count()).toBe(0);
       const summary = page.getByText('질문과 근거는 어떻게 처리되나요?', { exact: true });
       await summary.focus();
       await summary.press('Enter');
@@ -1560,6 +1571,62 @@ describe('second-brain search client interaction', () => {
       expect(disclosure).toContain('현재 질문과 선택된 공개 기록 발췌');
       expect(disclosure).toContain('설정된 AI 제공자');
       expect(disclosure).toContain('0일');
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 20_000);
+
+  it('reads the local-live disclosure marker only from the exact build/loader env', async () => {
+    const { localProviderDisclosureEnabled } = await import('../../app/routes/search');
+    expect(localProviderDisclosureEnabled({})).toBe(false);
+    expect(localProviderDisclosureEnabled({ FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE: 'true' })).toBe(true);
+    expect(localProviderDisclosureEnabled({
+      FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE: 'true',
+      FORM_THOUGHT_DELIVERY_MODE: 'local',
+    })).toBe(true);
+    expect(localProviderDisclosureEnabled({
+      FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE: 'true',
+      FORM_THOUGHT_DELIVERY_MODE: 'production',
+    })).toBe(false);
+    expect(localProviderDisclosureEnabled({ FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE: 'TRUE' })).toBe(false);
+    expect(localProviderDisclosureEnabled({ FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE: '1' })).toBe(false);
+    expect(localProviderDisclosureEnabled({
+      FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE: 'true',
+      FORM_THOUGHT_PUBLIC_ORIGIN: 'http://127.0.0.1:4308',
+    })).toBe(true);
+  });
+
+  it('keeps ordinary local static and production presentations free of the local-live marker', () => {
+    const ordinary = renderToString(renderApplication());
+    const production = renderToString(renderApplication({ localProviderDisclosure: false }));
+    expect(ordinary).toContain(compactPrivacyDisclosure);
+    expect(ordinary).not.toContain(localLiveDisclosure);
+    expect(production).not.toContain(localLiveDisclosure);
+    expect(`${ordinary}${production}`).not.toMatch(/gpt-5\.6-luna|1,000,000|micro-USD|OPENAI_API_KEY|\/Users\//u);
+  });
+
+  it('places the compact local-live disclosure next to the existing privacy disclosure', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness({ localProviderDisclosure: true });
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+      const marker = page.getByText(localLiveDisclosure, { exact: true });
+      expect(await marker.count()).toBe(1);
+      expect(await marker.isVisible()).toBe(true);
+      expect(await page.getByText(compactPrivacyDisclosure, { exact: true }).count()).toBe(1);
+      expect(await page.evaluate(() => {
+        const privacy = document.querySelector('.question-composer__privacy-summary');
+        const disclosure = document.querySelector('.question-composer__local-disclosure');
+        return disclosure?.previousElementSibling === privacy
+          && disclosure?.textContent === '로컬 개발용 AI 호출 · ZDR 검증 아님';
+      })).toBe(true);
+      expect(await page.locator('.question-composer__local-disclosure').textContent())
+        .not.toMatch(/gpt-5\.6-luna|1,000,000|micro-USD|OPENAI_API_KEY|budget|ledger/iu);
     } finally {
       await browser?.close();
       await server?.close();

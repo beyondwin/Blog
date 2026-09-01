@@ -12,13 +12,26 @@ const searchCss = import.meta.env.SSR
   : '';
 export const handle: RouteCriticalCssHandle = { criticalCss: searchCss };
 
+export function localProviderDisclosureEnabled(
+  env: {
+    FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE?: string;
+    FORM_THOUGHT_DELIVERY_MODE?: string;
+  } = process.env,
+): boolean {
+  return env.FORM_THOUGHT_DELIVERY_MODE !== 'production'
+    && env.FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE === 'true';
+}
+
 export async function loader({ request }: { request?: Request } = {}) {
   const release = await loadVerifiedRelease();
   const answerRelease = await loadVerifiedSearchAnswerRelease(release);
   const initialQuery = boundedSearchQuery(
     request ? new URL(request.url).searchParams.get('q') ?? '' : '',
   );
-  return verifiedSearchLoaderData(release, answerRelease, initialQuery);
+  return {
+    ...verifiedSearchLoaderData(release, answerRelease, initialQuery),
+    localProviderDisclosure: localProviderDisclosureEnabled(),
+  };
 }
 
 export function SearchPresentation({ data }: { data: Awaited<ReturnType<typeof loader>> }) {
@@ -34,6 +47,7 @@ export function SearchPresentation({ data }: { data: Awaited<ReturnType<typeof l
           binding={data.binding}
           initialQuery={data.initialQuery}
           inventory={data.inventory}
+          localProviderDisclosure={data.localProviderDisclosure}
         />
       </SiteShell>
     </>

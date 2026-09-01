@@ -48,7 +48,7 @@ function responseFor(outcome: PublicAnswerOutcome): PublicAskResponse {
 }
 
 function responseStatus(outcome: PublicAnswerOutcome): number {
-  if (outcome.kind === 'search' && outcome.reason === 'release-mismatch') return 409;
+  if (outcome.kind === 'search') return outcome.reason === 'release-mismatch' ? 409 : 200;
   if (outcome.kind !== 'error') return 200;
   if (outcome.code === 'rate-limited') return 429;
   return 503;

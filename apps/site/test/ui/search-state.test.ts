@@ -4,6 +4,7 @@ import type { CoordinatedAskResult } from '../../src/ui/search/publicAskCoordina
 import {
   SAMPLE_QUESTION,
   askExperienceReducer,
+  fallbackCopy,
   initialAskState,
 } from '../../src/ui/search/secondBrain';
 
@@ -97,6 +98,7 @@ describe('provider-aware second-brain state', () => {
     [{ kind: 'search', reason: 'unsupported-question' }, '이 질문은 공개 기록만으로 답하기 어려워 검색 결과를 보여드립니다.'],
     [{ kind: 'search', reason: 'provider-disabled' }, '현재 답변 기능을 쉬고 있어 공개 기록 검색 결과를 보여드립니다.'],
     [{ kind: 'search', reason: 'release-mismatch' }, '공개 기록 버전이 바뀌어 안전하게 검색 결과로 전환했습니다.'],
+    [{ kind: 'search', reason: 'budget-exhausted' }, '로컬 월간 AI 사용 한도에 도달해 공개 기록 검색 결과를 보여드립니다.'],
     [{ kind: 'error', code: 'timeout', retryable: true }, '답변을 기다리는 시간이 길어져 공개 기록 검색 결과로 전환했습니다.'],
     [{ kind: 'error', code: 'unavailable', retryable: true }, '답변 기능에 연결하지 못해 공개 기록 검색 결과를 보여드립니다.'],
     [{ kind: 'error', code: 'rate-limited', retryable: true }, '잠시 질문이 많아 공개 기록 검색 결과를 보여드립니다.'],
@@ -177,6 +179,27 @@ describe('provider-aware second-brain state', () => {
     expect(askExperienceReducer(pending, {
       type: 'network-settled', result: { kind: 'aborted', token: 1 },
     })).toBe(pending);
+  });
+
+  it('keeps budget-exhausted copy exact and leaves pre-existing fallback copy unchanged', () => {
+    expect(fallbackCopy['budget-exhausted'])
+      .toBe('로컬 월간 AI 사용 한도에 도달해 공개 기록 검색 결과를 보여드립니다.');
+    expect(fallbackCopy['insufficient-evidence'])
+      .toBe('충분한 공개 근거를 확인하지 못해 검색 결과를 보여드립니다.');
+    expect(fallbackCopy['unsupported-question'])
+      .toBe('이 질문은 공개 기록만으로 답하기 어려워 검색 결과를 보여드립니다.');
+    expect(fallbackCopy['provider-disabled'])
+      .toBe('현재 답변 기능을 쉬고 있어 공개 기록 검색 결과를 보여드립니다.');
+    expect(fallbackCopy['release-mismatch'])
+      .toBe('공개 기록 버전이 바뀌어 안전하게 검색 결과로 전환했습니다.');
+    expect(fallbackCopy.timeout)
+      .toBe('답변을 기다리는 시간이 길어져 공개 기록 검색 결과로 전환했습니다.');
+    expect(fallbackCopy.unavailable)
+      .toBe('답변 기능에 연결하지 못해 공개 기록 검색 결과를 보여드립니다.');
+    expect(fallbackCopy['rate-limited'])
+      .toBe('잠시 질문이 많아 공개 기록 검색 결과를 보여드립니다.');
+    expect(fallbackCopy['invalid-response'])
+      .toBe('검증할 수 없는 답변 대신 공개 기록 검색 결과를 보여드립니다.');
   });
 
   it('uses deterministic real search for direct URLs with no provider answer state', () => {

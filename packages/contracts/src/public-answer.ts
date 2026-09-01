@@ -216,7 +216,13 @@ export const publicAskResponseSchema = z.discriminatedUnion('kind', [
   publicAnswerResponseSchema,
   z.object({
     kind: z.literal('search'),
-    reason: z.enum(['insufficient-evidence', 'unsupported-question', 'provider-disabled', 'release-mismatch']),
+    reason: z.enum([
+      'insufficient-evidence',
+      'unsupported-question',
+      'provider-disabled',
+      'release-mismatch',
+      'budget-exhausted',
+    ]),
   }).strict(),
   z.object({
     kind: z.literal('error'),

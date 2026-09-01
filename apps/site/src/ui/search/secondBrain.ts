@@ -9,11 +9,15 @@ export const FALLBACK_NOTICE = {
   'unsupported-question': '이 질문은 공개 기록만으로 답하기 어려워 검색 결과를 보여드립니다.',
   'provider-disabled': '현재 답변 기능을 쉬고 있어 공개 기록 검색 결과를 보여드립니다.',
   'release-mismatch': '공개 기록 버전이 바뀌어 안전하게 검색 결과로 전환했습니다.',
+  'budget-exhausted': '로컬 월간 AI 사용 한도에 도달해 공개 기록 검색 결과를 보여드립니다.',
   timeout: '답변을 기다리는 시간이 길어져 공개 기록 검색 결과로 전환했습니다.',
   unavailable: '답변 기능에 연결하지 못해 공개 기록 검색 결과를 보여드립니다.',
   'rate-limited': '잠시 질문이 많아 공개 기록 검색 결과를 보여드립니다.',
   'invalid-response': '검증할 수 없는 답변 대신 공개 기록 검색 결과를 보여드립니다.',
 } as const;
+
+export const fallbackCopy = FALLBACK_NOTICE;
+export const LOCAL_PROVIDER_DISCLOSURE = '로컬 개발용 AI 호출 · ZDR 검증 아님';
 
 export type AskExperienceState =
   | { view: 'idle'; query: '' }
