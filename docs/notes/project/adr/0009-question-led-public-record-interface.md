@@ -2,9 +2,13 @@
 
 - Status: accepted
 - Date: 2026-08-29
+- Last amended: 2026-08-30
 - Decision owners: user / project
 - Supersedes: ADR-0007의 `/search/` keyword-first 화면 구성만 부분 대체
 - Superseded by: none
+- Amended by: ADR-0010 for runtime, provider, privacy, abuse and evaluation boundaries
+
+> Amendment resolution (2026-08-30): 질문·탐색·답변·근거 UX와 deterministic fallback은 유지한다. ADR-0010이 열려 있던 public-answer runtime, provider, privacy/retention, abuse protection과 evaluation 결정을 고정하고 verified public-answer vertical slice로 확장한다.
 
 ## Context
 

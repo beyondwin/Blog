@@ -2,12 +2,15 @@
 
 - Status: accepted
 - Date: 2026-08-23
-- Last amended: 2026-08-28
+- Last amended: 2026-08-30
 - Decision owners: user / project
 - Supersedes: none
 - Superseded by: ADR-0007 for Astro retention and public-renderer rollback only
+- Amended by: ADR-0010 for the `apps/server` framework shell and one public-host API path
 
 > Amendment resolution (2026-08-28): modular-monolith, immutable public projection, public/private boundary와 React Router 선택은 유지한다. 아래의 Astro rollback retention, parity-after-selection, renderer rollback 지시는 역사적 migration evidence이며 현재 제거 순서는 ADR-0007과 FORM & THOUGHT 구현 계획이 대체한다.
+
+> Amendment resolution (2026-08-30): ADR-0010은 `apps/server`의 HTTP/composition shell을 NestJS 12 on Fastify 5로 좁히고 public host에 same-origin `POST /api/public/ask` 한 경로만 허용한다. Modular monolith, API/worker의 직접 module 공유, immutable public projection, public/private boundary와 나머지 host 격리는 유지한다.
 
 ## Context
 

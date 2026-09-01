@@ -8,10 +8,11 @@
 # Dependencies
 node_modules/
 
-# Astro and Vercel build output
+# Generated build output
 .astro/
 .vercel/
 dist/
+build/public-answer-releases/
 build/public-releases/
 
 # Test and coverage output
