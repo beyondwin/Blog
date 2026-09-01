@@ -74,7 +74,7 @@ function vectorChecksum(text: string): string {
 export async function runRuntimeStartupChecks(
   config: Readonly<Pick<ServerConfig,
     'publicAskMode' | 'providerDataControlReceiptPath' | 'providerEmbeddingReceiptRoot'>
-    & Partial<Pick<ServerConfig, 'nodeEnv' | 'productionEvalReportPath' | 'evaluationUsageReceiptPath'>>>,
+    & Partial<Pick<ServerConfig, 'nodeEnv' | 'productionEvalReportPath' | 'evaluationUsageReceiptPath' | 'providerAuthority'>>>,
   dependencies: RuntimeStartupDependencies,
 ): Promise<VerifiedCatalogSnapshot> {
   await dependencies.pool.query('SELECT 1');
@@ -119,7 +119,14 @@ export async function runRuntimeStartupChecks(
   }
   if (providerChecksum(vectorEntries) !== catalog.vectorSetChecksum) throw new Error('runtime readiness database vector-set drift');
   if (providerChecksum(indexRows) !== catalog.indexRowsChecksum) throw new Error('runtime readiness database index-row checksum drift');
-  if (config.publicAskMode === 'provider') {
+  if (config.providerAuthority?.kind === 'local-non-zdr') {
+    if (config.nodeEnv === 'production') {
+      throw new Error('runtime readiness production rejects local-non-zdr authority');
+    }
+  } else if (config.publicAskMode === 'provider') {
+    if (config.nodeEnv === 'production' && config.providerAuthority?.kind !== 'production-zdr') {
+      throw new Error('runtime readiness production requires production-zdr authority');
+    }
     if (!config.providerDataControlReceiptPath || !config.providerEmbeddingReceiptRoot) {
       throw new Error('runtime readiness provider evidence is missing');
     }

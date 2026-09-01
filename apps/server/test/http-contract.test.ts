@@ -77,6 +77,7 @@ const config: Readonly<ServerConfig> = Object.freeze({
   providerEmbeddingReceiptRoot: null,
   deletionReceiptRoot: null,
   fixtureScenario: 'success',
+  providerAuthority: null,
 });
 
 const apps: Awaited<ReturnType<typeof createApplication>>[] = [];

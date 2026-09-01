@@ -113,7 +113,7 @@ const shellConfig = Object.freeze({
   corpusApprovalPath: '/tmp/disabled-approval.json', trustedProxyAddresses: Object.freeze([]),
   networkHmacSecret: 'disabled-shell-secret-at-least-32-characters', publicOrigin: null,
   edgeReachabilityReceiptPath: null, openAiApiKey: null, providerDataControlReceiptPath: null,
-  providerEmbeddingReceiptRoot: null, deletionReceiptRoot: null, fixtureScenario: null,
+  providerEmbeddingReceiptRoot: null, deletionReceiptRoot: null, fixtureScenario: null, providerAuthority: null,
 }) satisfies Readonly<ServerConfig>;
 
 function shellRuntime(overrides: ApplicationRuntimeOverrides = {}): PublicAnswerModuleRuntime {

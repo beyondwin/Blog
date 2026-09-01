@@ -4,6 +4,10 @@ import { lstat, open } from 'node:fs/promises';
 import { isIP } from 'node:net';
 import { isAbsolute, resolve } from 'node:path';
 
+import {
+  localProviderAuthorizationHash,
+  readLocalProviderAuthorization,
+} from './local-provider-authorization.js';
 import { readProviderDataControlReceipt } from './provider-data-control-receipt.js';
 
 export interface ProviderSpendReceiptInput {
@@ -181,6 +185,16 @@ export async function readEdgeReachabilityReceipt(
   } finally { await handle.close(); }
 }
 
+export type ProviderAuthority =
+  | Readonly<{ kind: 'production-zdr'; receiptPath: string }>
+  | Readonly<{
+      kind: 'local-non-zdr';
+      authorizationPath: string;
+      budgetLedgerPath: string;
+      authorizationHash: string;
+    }>
+  | null;
+
 export interface ServerConfig {
   nodeEnv: 'development' | 'test' | 'production'; host: string; port: number;
   publicAskMode: 'disabled' | 'fixture' | 'provider'; replicaCount: 1; databaseUrl: string;
@@ -191,6 +205,7 @@ export interface ServerConfig {
   deletionReceiptRoot: string | null;
   productionEvalReportPath?: string | null; evaluationUsageReceiptPath?: string | null;
   fixtureScenario: FixtureScenario | null;
+  providerAuthority: ProviderAuthority;
 }
 
 export type FixtureScenario =
@@ -249,12 +264,17 @@ function loopbackAddress(value: string): boolean {
   return (family === 4 && value.startsWith('127.')) || (family === 6 && value === '::1');
 }
 
-function normalizedOrigin(value: string | undefined, nodeEnv: ServerConfig['nodeEnv']): string | null {
+function normalizedOrigin(
+  value: string | undefined,
+  nodeEnv: ServerConfig['nodeEnv'],
+  allowHttpLoopback = false,
+): string | null {
   if (value === undefined) return null;
   try {
     const url = new URL(value);
+    const host = url.hostname.replace(/^\[|\]$/gu, '');
     const protocolAllowed = url.protocol === 'https:'
-      || (nodeEnv === 'test' && url.protocol === 'http:' && loopbackAddress(url.hostname.replace(/^\[|\]$/gu, '')));
+      || ((allowHttpLoopback || nodeEnv === 'test') && url.protocol === 'http:' && loopbackAddress(host));
     if (!protocolAllowed || url.username || url.password || url.search || url.hash || url.pathname !== '/'
       || url.origin !== value) throw new Error();
     return url.origin;
@@ -299,7 +319,20 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
   }
   const corpusApprovalPath = absolute(env.FORM_THOUGHT_CORPUS_APPROVAL_PATH, 'FORM_THOUGHT_CORPUS_APPROVAL_PATH',
     nodeEnv === 'production' ? undefined : resolve('src/data/public-answer-corpus-approval.v1.json'));
-  const publicOrigin = normalizedOrigin(env.FORM_THOUGHT_PUBLIC_ORIGIN, nodeEnv);
+  if (nodeEnv === 'production'
+    && (env.FORM_THOUGHT_LOCAL_PROVIDER_AUTHORIZATION !== undefined
+      || env.FORM_THOUGHT_LOCAL_BUDGET_LEDGER !== undefined)) {
+    throw new Error('production rejects local-non-zdr provider authorization');
+  }
+  const localProviderAuthorizationPath = optionalAbsolute(env.FORM_THOUGHT_LOCAL_PROVIDER_AUTHORIZATION,
+    'FORM_THOUGHT_LOCAL_PROVIDER_AUTHORIZATION');
+  const localBudgetLedgerPath = optionalAbsolute(env.FORM_THOUGHT_LOCAL_BUDGET_LEDGER,
+    'FORM_THOUGHT_LOCAL_BUDGET_LEDGER');
+  const publicOrigin = normalizedOrigin(
+    env.FORM_THOUGHT_PUBLIC_ORIGIN,
+    nodeEnv,
+    localProviderAuthorizationPath !== null,
+  );
   if (fixtureScenario !== null) {
     let originHost = '';
     let originPort = '';
@@ -329,6 +362,34 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
       publicOrigin, trustedProxyAddresses, provider: providerReceipt,
     });
   }
+  let providerAuthority: ProviderAuthority = null;
+  if (localProviderAuthorizationPath) {
+    if (publicAskMode !== 'provider') throw new Error('local-non-zdr authorization requires provider mode');
+    if (!loopbackAddress(host)) throw new Error('local-non-zdr authorization requires a loopback host');
+    let originHost = '';
+    try { originHost = new URL(publicOrigin ?? '').hostname.replace(/^\[|\]$/gu, ''); } catch { /* rejected below */ }
+    if (!publicOrigin || !loopbackAddress(originHost)) {
+      throw new Error('local-non-zdr authorization requires a loopback public origin');
+    }
+    if (!localBudgetLedgerPath) throw new Error('local-non-zdr authorization requires an absolute budget ledger path');
+    if (providerDataControlReceiptPath) {
+      throw new Error('local-non-zdr authorization cannot be combined with production ZDR evidence');
+    }
+    const authorization = await readLocalProviderAuthorization(localProviderAuthorizationPath);
+    providerAuthority = Object.freeze({
+      kind: 'local-non-zdr' as const,
+      authorizationPath: localProviderAuthorizationPath,
+      budgetLedgerPath: localBudgetLedgerPath,
+      authorizationHash: localProviderAuthorizationHash(authorization),
+    });
+  } else if (localBudgetLedgerPath) {
+    throw new Error('local budget ledger requires local-non-zdr authorization');
+  } else if (nodeEnv === 'production' && providerDataControlReceiptPath) {
+    providerAuthority = Object.freeze({
+      kind: 'production-zdr' as const,
+      receiptPath: providerDataControlReceiptPath,
+    });
+  }
   const result: ServerConfig = {
     nodeEnv, host, port, publicAskMode, replicaCount: 1,
     databaseUrl: databaseUrl(required(env, 'FORM_THOUGHT_DATABASE_URL')),
@@ -338,7 +399,7 @@ export async function parseServerConfig(env: NodeJS.ProcessEnv): Promise<Readonl
     publicOrigin, edgeReachabilityReceiptPath, openAiApiKey, providerDataControlReceiptPath, providerEmbeddingReceiptRoot,
     deletionReceiptRoot: optionalAbsolute(env.FORM_THOUGHT_DELETION_RECEIPT_ROOT, 'FORM_THOUGHT_DELETION_RECEIPT_ROOT'),
     productionEvalReportPath, evaluationUsageReceiptPath,
-    fixtureScenario,
+    fixtureScenario, providerAuthority,
   };
   return Object.freeze(result);
 }

@@ -317,6 +317,7 @@ describe('runtime readiness', () => {
       nodeEnv: 'production', publicAskMode: 'provider', providerDataControlReceiptPath: '/receipts/control.json',
       providerEmbeddingReceiptRoot: '/receipts/embedding', productionEvalReportPath: '/receipts/eval.json',
       evaluationUsageReceiptPath: '/receipts/usage.json',
+      providerAuthority: { kind: 'production-zdr', receiptPath: '/receipts/control.json' },
     } as any;
     await expect(runRuntimeStartupChecks(config, dependencies as any)).resolves.toBe(catalog);
     expect(receivedBinding).toMatchObject({

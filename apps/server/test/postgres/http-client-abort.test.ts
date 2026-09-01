@@ -56,6 +56,7 @@ describe('real HTTP client abort', () => {
       networkHmacSecret: 'abort-proof-secret-at-least-32-characters', publicOrigin: null,
       edgeReachabilityReceiptPath: null, openAiApiKey: null, providerDataControlReceiptPath: null,
       providerEmbeddingReceiptRoot: null, deletionReceiptRoot: null, fixtureScenario: 'slow-sql',
+      providerAuthority: null,
     }) satisfies Readonly<ServerConfig>;
     let queryStarted!: () => void;
     const started = new Promise<void>((resolve) => { queryStarted = resolve; });
