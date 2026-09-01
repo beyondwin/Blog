@@ -18,14 +18,15 @@ checksum-addressed `public-release`와 분리된 `public-answer-release`, 그리
 | public memory input | `src/data/memory.public.json` | 공개 앱이 읽을 수 있는 유일한 memory projection |
 | private memory | `memory/**` | projection 입력. public app/release가 직접 읽지 않음 |
 | 공개 답변 artifact | `packages/content/src/answer-release` | 승인 corpus를 opaque chunk/evidence와 canonical locator로 materialize하고 active binding을 검증 |
-| 공개 답변 runtime | `apps/server` | NestJS 12/Fastify 5 shell, PostgreSQL hybrid retrieval, generation/citation 검증, privacy/rate/cost guard |
+| 공개 답변 runtime | `apps/server` | NestJS 12/Fastify 5 shell, PostgreSQL hybrid retrieval, Luna high generation/citation 검증, local-non-ZDR live와 production ZDR 분리, privacy/rate/cost guard |
 | 공개 답변 browser seam | `apps/site/src/ui/search` | release ID binding, one-shot POST coordinator, verified answer 또는 deterministic `SearchResults` |
 | delivery | `apps/site/build-static-export.ts`, `apps/site/serve-static.ts` | verified release binding, atomic staging, assets, SEO/404/security headers, static host |
 
 Private Studio, 인증, background worker와 범용 ingestion은 여전히
 [ADR-0005](adr/0005-node-react-modular-monolith.md)의 후속 범위다. 현재 server 구현은
-ADR-0010의 public-answer vertical slice에 한정된다. ADR-0010은 작업 시 read-only authority로
-확인하며 이 변경에서 index나 catalog를 다시 쓰지 않는다.
+[ADR-0010](adr/0010-public-answer-runtime-and-release-boundary.md)의 public-answer vertical slice와
+[ADR-0011](adr/0011-local-live-public-answer-and-luna-provider.md)의 owner-local Luna live runtime에
+한정된다.
 
 ## route map
 
@@ -171,26 +172,46 @@ Nginx는 `proxy_hide_header`, `proxy_redirect off`, `server_tokens off`로 승�
 header 이름을 숨긴다. core Nginx가 임의 미래 header를 wildcard allowlist로 막는다고 주장하지 않는다.
 다른 `/api/*`, health, database, studio/worker route는 public host에 연결하지 않는다.
 
+Active Responses policy는 `gpt-5.6-luna`와 `reasoning.effort: high`다. `store: false`, tools 없음,
+strict Structured Outputs, 최대 output 500 tokens를 유지한다. query/corpus embedding은
+`text-embedding-3-large` 3,072 dimensions다. 질문은 독립이며 conversation history를 저장하거나
+전송하지 않는다.
+
 runtime은 request-local catalog snapshot과 response release header를 exact active pair에 결합한다.
 release mismatch, insufficient evidence, unsupported question, provider disabled/error, malformed or invalid
-citation, semantic contradiction, timeout, rate/cost/concurrency limit은 생성 답변 대신 deterministic
-search 결과로 귀결된다. claim의 모든 문장은 같은 answer release의 evidence ID를 가져야 하며
-canonical locator는 provider output이 아니라 verified catalog가 다시 결합한다.
+citation, semantic contradiction, timeout, rate/cost/concurrency limit과 local `budget-exhausted`는
+생성 답변 대신 deterministic search 결과로 귀결된다. claim의 모든 문장은 같은 answer release의
+evidence ID를 가져야 하며 canonical locator는 provider output이 아니라 verified catalog가 다시 결합한다.
 
 질문, 답변, excerpt와 provider payload는 application/server log와 telemetry에 남기지 않고 raw
 retention은 0일이다. 저장되는 request event는 release prefix, result/error kind, latency/token/count/rate
 bucket뿐이며 7일 만료, daily aggregate는 90일 만료다. UI는 질문과 선택된 공개 발췌가 설정된 AI
 제공자에게 전달된다는 사실을 제출 전에 공개한다. Responses generation/semantic request의
-`store:false`나 fixture mode는 production Zero Data Retention 증거가 아니다. 별도 provider-admin
-data-control receipt, provider embedding receipt, edge/backup/deletion/retention/ownership evidence와
-실제 production origin이 없으므로 live provider readiness, provider quality, production deploy와 traffic은
-`not_measured`이고 권한도 없다.
+`store:false`, fixture mode, `local-non-zdr` live는 production Zero Data Retention 증거가 아니다. 별도
+provider-admin data-control receipt, provider embedding receipt, edge/backup/deletion/retention/ownership
+evidence와 실제 production origin이 없으므로 live provider readiness, provider quality, production
+deploy와 traffic은 `not_measured`이고 권한도 없다.
+
+운영 명령은 세 경계를 섞지 않는다.
+
+```bash
+npm run site:preview -- --host 127.0.0.1 --port 4328   # GET/HEAD static preview only
+npm run public-answer:local:live                        # real owner-local RAG + Luna, non-ZDR
+env -u OPENAI_API_KEY npx tsx tests/e2e/run-search-provider-stack.mts  # mandatory keyless proof
+```
+
+`site:preview`는 GET/HEAD static host다. same-origin POST는 405이며 API가 아니다.
+`public-answer:local:live` 한 명령이 verified release, disposable PostgreSQL, Nest/Fastify Luna
+runtime, preview와 same-origin proxy를 소유한다. local authorization은 `local-non-zdr`이고
+production config/readiness가 거부한다. indexing과 질문은 UTC calendar-month 1,000,000 micro-USD
+hard cap을 공유한다. 이 local evidence는 production ZDR, hidden-corpus quality, deploy authority가
+아니다. 키가 없으면 live smoke는 `blocked: OPENAI_API_KEY missing`이다.
 
 local mandatory drill은 fixture keyless mode에서 exact browser → local proxy → Nest → disposable
 PostgreSQL 경로를 사용한다. redirect trap, status/fallback, raw-question privacy, response/request header
 seal, rate limit, navigation/BFCache, abort-ignoring browser deadline과 `pg_sleep` TCP-close cancellation을
-실제 process/socket에서 검증한다. fixture vector와 deterministic answer는 production readiness나 hidden
-corpus metric을 통과시키지 않는다.
+실제 process/socket에서 검증한다. `OPENAI_API_KEY`가 있으면 시작하지 않으며 live provider call은 0이다.
+fixture vector와 deterministic answer는 production readiness나 hidden corpus metric을 통과시키지 않는다.
 
 ## delivery origin과 static host
 
@@ -236,17 +257,19 @@ npm run public-answer-release:build
 npm run public-answer-release:verify
 npm run server:index:fixture
 npm run site:build
-npm run site:preview -- --host 127.0.0.1 --port 4391
-npx tsx tests/e2e/run-search-provider-stack.mts
+npm run site:preview -- --host 127.0.0.1 --port 4328   # GET/HEAD static preview only
+npm run public-answer:local:live                        # real owner-local RAG + Luna, non-ZDR
+env -u OPENAI_API_KEY npx tsx tests/e2e/run-search-provider-stack.mts  # mandatory keyless proof
 npm run validate
 ```
 
 `npm run validate`의 순서는 agent contract, content, strict media, article quality, memory,
 전체 Vitest, workspace typecheck, release build/verify/cleanup, local site build다. public delivery
-전체 확인은 exact retained Playwright suite와 `npm run cutover:verify`, public-answer end-to-end는
-`tests/e2e/run-search-provider-stack.mts`, clean machine recovery는 `npm run cutover:clean-host`가
-소유한다. 이 명령 이름의 `cutover`는 유지된 React-only verifier namespace이며 제거된 renderer
-비교를 실행하지 않는다.
+전체 확인은 exact retained Playwright suite와 `npm run cutover:verify`, public-answer keyless
+end-to-end는 `tests/e2e/run-search-provider-stack.mts`, owner-local Luna live는
+`public-answer:local:live`, clean machine recovery는 `npm run cutover:clean-host`가 소유한다.
+이 명령 이름의 `cutover`는 유지된 React-only verifier namespace이며 제거된 renderer 비교를
+실행하지 않는다. local live success는 production ZDR이나 deploy 권한이 아니다.
 
 ## 문서와 역사
 

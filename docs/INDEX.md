@@ -2,7 +2,7 @@
 
 `docs/_index/catalog.yml`이 기준이다. 새 curated note를 추가하거나 옮기면 catalog와 이 파일을 같이 갱신한다.
 
-프로젝트 운영 문서는 [문서 지도](notes/project/README.md)에서 시작한다. 끝난 전환 기록은 [레거시 종료 기록](notes/project/history/README.md)에만 둔다.
+프로젝트 운영 문서는 [문서 지도](notes/project/README.md)에서 시작한다. 끝난 전환 기록은 [레거시 종료 기록](notes/project/history/README.md)에만 둔다. 공개 답변의 static preview, owner-local Luna live, keyless fixture 명령은 [Agent Runbook](notes/project/agent-runbook.md)과 [아키텍처 레퍼런스](notes/project/architecture-reference.md)가 구분한다.
 
 ## 프로젝트 · 지금
 

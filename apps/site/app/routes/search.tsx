@@ -13,10 +13,7 @@ const searchCss = import.meta.env.SSR
 export const handle: RouteCriticalCssHandle = { criticalCss: searchCss };
 
 export function localProviderDisclosureEnabled(
-  env: {
-    FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE?: string;
-    FORM_THOUGHT_DELIVERY_MODE?: string;
-  } = process.env,
+  env: NodeJS.ProcessEnv = process.env,
 ): boolean {
   return env.FORM_THOUGHT_DELIVERY_MODE !== 'production'
     && env.FORM_THOUGHT_LOCAL_LIVE_DISCLOSURE === 'true';

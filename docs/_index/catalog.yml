@@ -209,9 +209,9 @@
   type: workflow
   language: ko
   status: organized
-  summary: 에이전트가 React-only route, immutable release, source/media, docs/memory 작업별 read order, exact owner, browser matrix와 public/private boundary를 확인하는 실행 지도.
-  source: ADR-0007 and current repository owners
-  updated: 2026-08-29
+  summary: 에이전트가 React-only route, immutable release, source/media, docs/memory, public-answer static preview/local Luna live/keyless fixture 작업별 read order, exact owner, browser matrix와 public/private boundary를 확인하는 실행 지도.
+  source: ADR-0007, ADR-0010, ADR-0011 and current repository owners
+  updated: 2026-09-02
 
 - title: Architecture Decision Records
   path: docs/notes/project/adr/README.md
@@ -221,7 +221,7 @@
   status: organized
   summary: Index, status model, template, and maintenance workflow for durable beyondwin product, architecture, boundary, publishing-policy, and UX decisions.
   source: AGENTS.md
-  updated: 2026-08-29
+  updated: 2026-09-02
 
 - title: 'ADR-0000: ADR 관리 규칙'
   path: docs/notes/project/adr/0000-adr-governance.md
@@ -329,9 +329,9 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Defines the accepted public scope states, immutable answer release, NestJS on Fastify runtime, hybrid RAG, citation validation, privacy, abuse controls, evaluation gates, and approved avatar-centered evidence interaction.
-  source: user decisions, approved clickable prototype, research 2026-08-30, and implementation closeout 2026-09-01
-  updated: 2026-09-01
+  summary: Defines the accepted public scope states, immutable answer release, NestJS on Fastify runtime, hybrid RAG, citation validation, privacy, abuse controls, evaluation gates, and approved avatar-centered evidence interaction. Active Luna local-live policy is ADR-0011; the first generation-adapter wording here is historical.
+  source: user decisions, approved clickable prototype, research 2026-08-30, implementation closeout 2026-09-01, and ADR-0011 local-live closeout 2026-09-02
+  updated: 2026-09-02
 
 - title: 'ADR-0011: 로컬 live 공개 답변 runtime과 Luna 단일 provider'
   path: docs/notes/project/adr/0011-local-live-public-answer-and-luna-provider.md
@@ -339,8 +339,8 @@
   type: decision-record
   language: ko
   status: organized
-  summary: Defines the accepted single-command owner-local live RAG runtime, GPT-5.6 Luna high policy, non-ZDR local provenance, USD 1 monthly hard cap, and removal of active GPT-5.4 provider compatibility.
-  source: user decisions and repository diagnosis 2026-09-02
+  summary: Defines the accepted single-command owner-local live RAG runtime, GPT-5.6 Luna high policy, non-ZDR local provenance, USD 1 monthly hard cap, keyless fixture proof, and removal of previous generation-adapter compatibility.
+  source: user decisions, repository diagnosis, and local-live implementation closeout 2026-09-02
   updated: 2026-09-02
 
 - title: Node/React 모듈러 모놀리스 상세 설계
@@ -449,9 +449,9 @@
   type: reference
   language: ko
   status: organized
-  summary: 현재 React Router route map, content/public schema, immutable release, media approval, memory, static delivery origin, no-JS와 validation boundary를 정리한 built-truth reference.
-  source: apps/site, packages/content, packages/contracts, ADR-0007
-  updated: 2026-08-29
+  summary: 현재 React Router route map, content/public schema, immutable release, media approval, memory, Nest public-answer runtime, static preview versus local Luna live versus keyless fixture, static delivery origin, no-JS와 validation boundary를 정리한 built-truth reference.
+  source: apps/site, apps/server, packages/content, packages/contracts, ADR-0007, ADR-0010, ADR-0011
+  updated: 2026-09-02
 
 - title: beyondwin이 이렇게 구성된 이유
   path: docs/notes/project/design-and-content-rationale.md

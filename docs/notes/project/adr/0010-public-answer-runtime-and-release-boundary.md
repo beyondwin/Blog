@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-08-30
-- Last amended: 2026-09-01 after implementation closeout and public-evidence hardening
+- Last amended: 2026-09-02 after ADR-0011 Luna local-live operating closeout
 - Decision owners: user / project
 - Supersedes: none
 - Superseded by: none
@@ -132,6 +132,8 @@ ADR-0005의 public-host 경계에 다음 한 가지 예외만 추가한다.
 - 첫 answer adapter는 OpenAI Responses API의 pinned model
   `gpt-5.4-mini-2026-03-17`을 native `fetch`로 호출한다. `store: false`, tools 없음,
   `reasoning.effort: none`, Structured Outputs와 최대 output 500 tokens를 사용한다.
+  이 문단은 최초 구현 결정의 역사적 기록이다. 현재 operating policy는 ADR-0011의
+  `gpt-5.6-luna` / `reasoning.effort: high`다.
 - provider는 질문, 선택된 공개 excerpt와 opaque evidence ID만 받는다. canonical path, private
   dependency, filesystem path와 raw source는 받지 않는다.
 - 모델은 `{claims: [{text, evidenceIds}]}`만 반환한다. canonical locator는 server가 pinned
@@ -295,6 +297,11 @@ retrieval, prompt와 log 단계에서 이미 private 정보가 노출될 수 있
   [architecture reference](../architecture-reference.md)와 [agent runbook](../agent-runbook.md)이다.
 - answer release/contracts, Nest runtime과 `/search/` integration은 main의 `0d5e45d`까지 구현·검증하고
   위 built-truth 문서에 반영했다. Production deploy와 traffic cutover는 여전히 별도 권한이다.
+- 2026-09-02 ADR-0011 closeout: active Responses policy는 Luna high이고 owner-local 한 명령은
+  `npm run public-answer:local:live`다. static `site:preview`는 GET/HEAD only이며, mandatory
+  keyless proof는 `env -u OPENAI_API_KEY npx tsx tests/e2e/run-search-provider-stack.mts`다.
+  local provenance는 `local-non-zdr`이고 production ZDR, hidden-corpus quality, deploy evidence가
+  아니다. 이 closeout의 live smoke는 `blocked: OPENAI_API_KEY missing`이다.
 - 상세 설계 원본은 public repository에 포함하지 않는 local-only evidence
   `docs/superpowers/specs/2026-08-30-public-second-brain-rag-design.md`
   (`sha256:0044d6be24aad98e31d254955bae905689f4f8a357b17a4f6931fe85d7d334fe`)다.

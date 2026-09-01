@@ -14,22 +14,31 @@
 PostgreSQL retrieval과 provider에 도달하지 않고 405로 끝난다.
 
 ADR-0010의 provider path는 production 안전 경계를 먼저 고정했다. Provider mode는 ZDR
-data-control receipt와 live embedding receipt를 요구하고, 최초 answer model은
-`gpt-5.4-mini-2026-03-17`, `reasoning.effort: none`으로 고정했다. 이 경계는 production 준비에는
+data-control receipt와 live embedding receipt를 요구하고, 최초 generation adapter와
+`reasoning.effort: none`은 그 ADR의 역사적 기록으로 남긴다. 이 경계는 production 준비에는
 유효하지만 owner가 API key로 실제 로컬 RAG 상호작용을 검증하는 한 명령을 제공하지 않는다.
 
 사용자는 owner-local 실제 상호작용, GPT-5.6 Luna high, process 환경변수 secret, 독립 질문,
-월 USD 1 상한과 local non-ZDR disclosure를 승인했다. GPT-5.4 provider 호환성은 유지하지 않되
-deterministic fallback과 keyless fixture 검증은 유지하기로 했다.
+월 USD 1 상한과 local non-ZDR disclosure를 승인했다. 이전 generation adapter 호환성은 유지하지
+않되 deterministic fallback과 keyless fixture 검증은 유지하기로 했다.
 
 ## Decision
 
 ### 단일 owner-local live runtime
 
+현재 운영 명령은 다음 세 경계를 구분한다.
+
+```bash
+npm run site:preview -- --host 127.0.0.1 --port 4328   # GET/HEAD static preview only
+npm run public-answer:local:live                        # real owner-local RAG + Luna, non-ZDR
+env -u OPENAI_API_KEY npx tsx tests/e2e/run-search-provider-stack.mts  # mandatory keyless proof
+```
+
 `npm run public-answer:local:live` 한 명령이 verified release, disposable PostgreSQL/pgvector,
 Nest/Fastify provider runtime, static preview와 same-origin local proxy의 전체 수명주기를 소유한다.
 기존 서버나 port를 채택·종료·재설정하지 않으며 loopback 가용 port만 사용한다. Readiness가 exact
-content/answer release pair를 검증한 뒤에만 브라우저 origin을 제공한다.
+content/answer release pair를 검증한 뒤에만 브라우저 origin을 제공한다. static preview만으로는
+same-origin POST가 405로 끝난다.
 
 정상 종료, startup 실패, SIGINT와 SIGTERM에서 proxy, preview, API, database를 역순 정리한다.
 소유 process 종료를 확인하지 못하면 destructive database cleanup을 수행하지 않고 retained state를
@@ -42,9 +51,9 @@ Active generation과 semantic verification은 OpenAI Responses API의 `gpt-5.6-l
 bounded output을 유지한다. Query와 corpus embedding은 `text-embedding-3-large`를 유지한다.
 
 Model, reasoning, pricing identity, request contract와 evaluation identity는 하나의 provider policy로
-고정한다. GPT-5.4 active constant, pricing entry, protocol fixture, receipt allowlist와 compatibility
-activation은 제거한다. 과거 GPT-5.4 receipt는 새 policy에서 fail closed하며 migration하지 않는다.
-과거 ADR wording은 결정 이력으로만 보존한다.
+고정한다. 이전 generation-model active constant, pricing entry, protocol fixture, receipt allowlist와
+compatibility activation은 제거한다. 과거 해당 receipt는 새 policy에서 fail closed하며 migration하지
+않는다. 과거 ADR wording은 결정 이력으로만 보존한다.
 
 ### Local non-ZDR provenance
 
@@ -85,7 +94,7 @@ fallback은 live provider와 분리된 mandatory gate로 유지한다.
 - 사용자는 질문마다 독립적인 retrieval/answer 흐름을 선택했다.
 - 사용자는 `gpt-5.6-luna`, `reasoning.effort: high`, `text-embedding-3-large` 조합을 승인했다.
 - 사용자는 API key를 process environment로만 제공하고 월 USD 1 상한을 승인했다.
-- 사용자는 local non-ZDR mode를 선택했고, GPT-5.4 provider 레거시만 제거하도록 승인했다.
+- 사용자는 local non-ZDR mode를 선택했고, 이전 generation adapter 레거시만 제거하도록 승인했다.
 - Repository evidence: `apps/site/serve-static.ts`는 GET/HEAD 외 method를 405로 거부하고,
   `scripts/cutover/local-proxy.mts`와 provider stack integration은 same-origin API topology를 이미
   증명한다.
@@ -98,7 +107,7 @@ fallback은 live provider와 분리된 mandatory gate로 유지한다.
   있다.
 - Local interaction은 billable external processing이며 `store:false`만으로 ZDR을 주장하지 않는다.
 - Persistent local ledger와 owned process orchestration이라는 새 maintenance surface가 생긴다.
-- Active provider policy는 Luna 하나라 단순해지지만 과거 GPT-5.4 live receipt를 재사용할 수 없다.
+- Active provider policy는 Luna 하나라 단순해지지만 과거 generation-model live receipt를 재사용할 수 없다.
 - Production deploy, traffic, provider quality와 ZDR readiness는 계속 `not_measured`이고 별도 권한이다.
 - Deterministic fallback과 fixture stack을 유지해 provider outage와 비과금 regression 검증을
   보존한다.
@@ -120,7 +129,7 @@ Production과 비슷하지만 owner-local interaction에 persistent volume, secr
 안전 receipt는 하나지만 일반 API key를 사용한 owner-local 검증을 막는다. Production이 local
 provenance를 거부하는 조건으로 별도 local non-ZDR mode를 채택했다.
 
-### GPT-5.4 compatibility 유지
+### 이전 generation adapter compatibility 유지
 
 Receipt/model/pricing branch가 늘고 어떤 policy로 답했는지 모호해진다. 사용자가 legacy support를
 원하지 않았으므로 active compatibility를 제거한다.
@@ -138,12 +147,13 @@ Receipt/model/pricing branch가 늘고 어떤 policy로 답했는지 모호해�
 
 ## Follow-up
 
-- Local-only detailed design:
-  `docs/superpowers/specs/2026-09-02-local-live-public-answer-design.md`
-- 승인된 spec의 implementation plan은
-  `docs/superpowers/plans/2026-09-02-local-live-public-answer.md`에 분해되어 있다.
-- 구현은 model-policy/ledger/authorization RED부터 시작하고, keyless stack과 승인된 USD 1 이내 live
-  browser smoke로 종료한다.
+구현은 2026-09-02에 local live harness, Luna policy, shared USD 1 ledger, local-non-ZDR
+authorization, deterministic fallback과 keyless fixture stack으로 반영했다. 현재 운영 문서는
+static preview, owner-local Luna live, mandatory keyless proof를 구분한다. 승인된 live browser
+smoke는 `OPENAI_API_KEY`가 없으면 `blocked: OPENAI_API_KEY missing`이다. 이 상태는 production
+ZDR, hidden-corpus quality, deploy authority가 아니다.
+
+Local-only detailed design과 plan은 ignored `docs/superpowers/`에 남는다.
 
 ## Sources
 

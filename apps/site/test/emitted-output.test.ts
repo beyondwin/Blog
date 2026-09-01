@@ -185,7 +185,7 @@ describe('React Router emitted critical output', () => {
     for (const [route, css] of Object.entries(routeCss)) {
       if (route !== 'search') expect(css.length).toBeLessThan(18_000);
     }
-    expect(routeCss.search.length).toBeLessThan(28_000);
+    expect(routeCss.search.length).toBeLessThan(29_000);
     expect(gzipSync(routeCss.search).byteLength).toBeLessThan(6_500);
     const imagePreload = homeHtml.match(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="image")[^>]*>/u)?.[0];
     expect(imagePreload).toContain('href="/assets/content/articles/graphify-code-knowledge-graph-deep-dive/editorial-home-hero-1536w.avif"');

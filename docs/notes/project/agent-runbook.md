@@ -9,6 +9,7 @@
 1. `git status --short --branch`로 기존 변경을 보존한다.
 2. root `AGENTS.md`와 수정 subtree의 `AGENTS.md`를 읽는다.
 3. 제품·architecture·data/publication·durable UX 작업이면 ADR index와 ADR-0007을 읽는다.
+   public-answer runtime은 ADR-0010과 ADR-0011을 함께 읽는다.
 4. route/UI는 `site-change`, content/research는 `research-and-publish`, docs/memory는
    `archive-and-memory` skill을 사용한다.
 5. focused RED/GREEN 뒤 `npm run validate`와 필요한 browser matrix를 실행한다.
@@ -42,7 +43,7 @@ Graphify는 article 주제이지 프로젝트 도구가 아니다. current comma
 | public memory | exact private inputs + projection JSON | `npm run memory:validate`, `npm run validate`, `/memory/` |
 | route/UI | exact route/component/CSS/test owners | focused test, `npm run validate`, desktop/mobile browser |
 | release/media | exact schema/builder/approval owners | adversarial focused tests, strict media, build/verify/clean |
-| public answer runtime | answer-release/contracts + `apps/server` + search seam | focused contract/server/site tests, disposable Postgres, mandatory fixture stack |
+| public answer runtime | answer-release/contracts + `apps/server` + search seam | focused contract/server/site tests, disposable Postgres, mandatory keyless fixture stack; local live는 별도 권한·키 |
 | delivery | static exporter/host/verifier owners | unit, site build, actual host/404/headers, retained Playwright |
 
 ## structured content handoff
@@ -79,25 +80,38 @@ npm run public-answer-release:verify
 npm run public-answer-release:clean-test
 npm run server:index:fixture
 npm run site:build
-npm run site:preview -- --host 127.0.0.1 --port 4391
+npm run site:preview -- --host 127.0.0.1 --port 4328   # GET/HEAD static preview only
+npm run public-answer:local:live                        # real owner-local RAG + Luna, non-ZDR
+env -u OPENAI_API_KEY npx tsx tests/e2e/run-search-provider-stack.mts  # mandatory keyless proof
 ```
 
 `site:build` is local evidence. Do not invent `FORM_THOUGHT_SITE_ORIGIN`. A production build requires
 an explicitly approved normalized HTTPS origin; current production origin is `not_measured` and
 authorization is `false`.
 
-Public-answer local drill은 production key 없이 fixture mode와 disposable PostgreSQL을 사용한다.
+`site:preview`는 GET/HEAD static host만 제공한다. `/search/` same-origin `POST /api/public/ask`는
+여기서 405이며 Nest/PostgreSQL/Luna에 도달하지 않는다.
+
+`public-answer:local:live` 한 명령이 verified release, disposable PostgreSQL/pgvector, Nest/Fastify
+`gpt-5.6-luna` / `reasoning.effort: high` runtime, static preview와 same-origin proxy를 소유한다.
+질문마다 독립 retrieval이며 conversation history는 없다. indexing과 질문은 같은 UTC month
+1,000,000 micro-USD ledger를 공유한다. provenance는 `local-non-zdr`이고 production ZDR,
+hidden-corpus quality, deploy readiness로 쓰지 않는다. API key는 process environment
+`OPENAI_API_KEY`만 사용한다. 키가 없으면 live smoke는 `blocked: OPENAI_API_KEY missing`이다.
+
+Public-answer 비과금 drill은 production key 없이 fixture mode와 disposable PostgreSQL을 사용한다.
 
 ```bash
 npx tsx scripts/cutover/verify-public-answer-nginx.mts
-npx tsx tests/e2e/run-search-provider-stack.mts
+env -u OPENAI_API_KEY npx tsx tests/e2e/run-search-provider-stack.mts
 ```
 
-두 번째 명령만 browser → exact local proxy → Nest/Fastify → PostgreSQL의 mandatory integration
-receipt다. Playwright `route`/`fulfill`, API mock, direct preview 또는 component fixture로 대신하지 않는다.
-runner는 owned port/process group/temp root/Compose project를 만들고 success, 모든 status/fallback,
-navigation/BFCache, redirect, header/privacy, rate-limit, abort-ignoring 8초 deadline과 slow-SQL backend
-cancellation을 검사한 뒤 성공·실패·signal에서 정리한다. 실제 provider key/call은 금지한다.
+두 번째 명령만 browser → exact local proxy → Nest/Fastify → PostgreSQL의 mandatory keyless
+integration receipt다. Playwright `route`/`fulfill`, API mock, direct preview 또는 component fixture로
+대신하지 않는다. runner는 owned port/process group/temp root/Compose project를 만들고 success, 모든
+status/fallback, navigation/BFCache, redirect, header/privacy, rate-limit, abort-ignoring 8초
+deadline과 slow-SQL backend cancellation을 검사한 뒤 성공·실패·signal에서 정리한다.
+`OPENAI_API_KEY`가 있으면 시작하지 않으며 live provider call은 0이어야 한다.
 
 ## public/private and search boundaries
 
@@ -113,8 +127,8 @@ cancellation을 검사한 뒤 성공·실패·signal에서 정리한다. 실제 
 - 명시적 POST는 raw question을 URL/history/session storage에 쓰지 않고 failure link를 canonical-only로
   만든다. 직접 GET/location restore의 기존 deterministic result와 scroll continuity만 유지한다.
 - 질문/답변/excerpt의 durable retention은 0일이고 log/telemetry에는 redacted bucket만 남긴다.
-  `store:false`, fixture mode와 local proof를 production ZDR, live-provider quality 또는 deploy readiness로
-  표현하지 않는다.
+  `store:false`, fixture mode, `local-non-zdr` live와 keyless stack을 production ZDR,
+  hidden-corpus quality 또는 deploy readiness로 표현하지 않는다.
 - Publishing, memory promotion, cover approval and generated-media approval require explicit authority.
 
 ## browser completion
@@ -145,6 +159,7 @@ and superseded decisions as history; 끝난 전환 기록은 `docs/notes/project
 - Treating a scaffold, risk fix, release build or local static build as publication/deploy authority.
 - Hiding 17 cover-rights warnings because the safer public release contains no cover bytes.
 - Claiming no-JS search filtering on a single static `/search/index.html`.
+- Treating `site:preview` 405 as a search bug, or local Luna live as production ZDR/deploy evidence.
 - Inventing a production domain or treating `.invalid` as production evidence.
 - Running only unit tests for a visible route change.
 - Restoring removed renderer/comparison tools from historical notes.
