@@ -611,8 +611,29 @@ describe('second-brain search client interaction', () => {
       })).toBe(true);
       const before = await page.locator('.agent-stage__portrait-frame').evaluate((element) => element.getBoundingClientRect().toJSON());
 
-      await page.evaluate(() => (window as typeof window & { __hydrateSecondBrainSearch?: () => void }).__hydrateSecondBrainSearch?.());
-      await expect.poll(() => page.locator('.agent-stage').getAttribute('data-image-state'), { timeout: 4_000 }).toBe('error');
+      await expect.poll(() => page.evaluate(() => typeof (window as typeof window & {
+        __hydrateSecondBrainSearch?: () => void;
+      }).__hydrateSecondBrainSearch === 'function')).toBe(true);
+      await page.evaluate(async () => {
+        const root = document.querySelector('#root');
+        const hydrate = (window as typeof window & {
+          __hydrateSecondBrainSearch?: () => void;
+        }).__hydrateSecondBrainSearch;
+        if (!root || !hydrate) throw new Error('deferred hydration control must be ready');
+        const fallbackReady = new Promise<void>((resolveFallback) => {
+          const observeFallback = () => {
+            if (root.querySelector('.agent-stage')?.getAttribute('data-image-state') !== 'error') return;
+            observer.disconnect();
+            resolveFallback();
+          };
+          const observer = new MutationObserver(observeFallback);
+          observer.observe(root, { attributes: true, attributeFilter: ['data-image-state'], subtree: true });
+          observeFallback();
+        });
+        hydrate();
+        await fallbackReady;
+      });
+      expect(await page.locator('.agent-stage').getAttribute('data-image-state')).toBe('error');
       expect(await page.locator('.agent-stage__portrait-frame').evaluate((element) => element.getBoundingClientRect().toJSON())).toEqual(before);
       expect(await page.getByRole('img', { name: '종이 조각이 접힌 FORM & THOUGHT 기록 안내자' }).count()).toBe(1);
       expect(await page.getByText('FORM & THOUGHT', { exact: true }).count()).toBe(1);
