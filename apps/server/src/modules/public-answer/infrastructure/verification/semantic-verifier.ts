@@ -7,6 +7,7 @@ import {
   wrapUntrustedExcerpt,
 } from '../openai/openai-responses-generator.js';
 import { canonicalProviderJson } from '../openai/provider-json.js';
+import { PROVIDER_MODEL_POLICY } from '../openai/provider-model-policy.js';
 
 export const SUPPORT_SCHEMA = Object.freeze({
   type: 'object',
@@ -76,7 +77,9 @@ export class OpenAiSemanticVerifier implements SemanticAnswerVerifier {
         evidence: selected.map((item) => ({ evidenceId: item.evidenceId, excerpt: wrapUntrustedExcerpt(item.excerpt) })),
       });
       return {
-        model: 'gpt-5.4-mini-2026-03-17', store: false, tools: [], reasoning: { effort: 'none' }, max_output_tokens: 500,
+        model: PROVIDER_MODEL_POLICY.semanticModel, store: false, tools: [],
+        reasoning: { effort: PROVIDER_MODEL_POLICY.reasoningEffort },
+        max_output_tokens: PROVIDER_MODEL_POLICY.maxResponsesOutputTokens,
         input: [
           { role: 'developer', content: [{ type: 'input_text', text: INSTRUCTIONS }] },
           { role: 'user', content: [{ type: 'input_text', text: application }] },

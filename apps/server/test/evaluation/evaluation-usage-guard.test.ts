@@ -10,7 +10,7 @@ import { canonicalProviderJson, providerChecksum } from '../../src/modules/publi
 const receipt = {
   maxApplicationRequests: 180,
   maxApplicationProviderTokens: 2_700_000,
-  maxApplicationCostMicroUsd: 2_476_800,
+  maxApplicationCostMicroUsd: 694_800,
   maxIndexProviderTokens: 100_000,
   maxIndexCostMicroUsd: 20_000,
 } as const;
@@ -28,7 +28,7 @@ function usageReceipt(overrides: Record<string, unknown> = {}) {
     hiddenManifestHash: `sha256:${'4'.repeat(64)}`, corpusApprovalHash: `sha256:${'5'.repeat(64)}`,
     providerEmbeddingReceiptHash: `sha256:${'6'.repeat(64)}`, retrievalPolicyHash: `sha256:${'7'.repeat(64)}`,
     runCount: 3, maxApplicationRequests: 180, maxApplicationProviderTokens: 2_700_000,
-    maxApplicationCostMicroUsd: 2_476_800, maxIndexProviderTokens: 100_000, maxIndexCostMicroUsd: 20_000,
+    maxApplicationCostMicroUsd: 694_800, maxIndexProviderTokens: 100_000, maxIndexCostMicroUsd: 20_000,
     verifierIdentityHash: `sha256:${'8'.repeat(64)}`, issuedAt: '2026-08-29T00:00:00.000Z',
     expiresAt: '2026-09-02T00:00:00.000Z', ...overrides,
   };
@@ -58,7 +58,7 @@ describe('evaluation usage guard', () => {
   });
 
   it('settles actual bucketed totals and refuses application token/cost overages', () => {
-    const small = new EvaluationUsageGuard({ ...receipt, maxApplicationProviderTokens: 14_999, maxApplicationCostMicroUsd: 13_759 });
+    const small = new EvaluationUsageGuard({ ...receipt, maxApplicationProviderTokens: 14_999, maxApplicationCostMicroUsd: 3_859 });
     expect(() => small.beginApplicationRequest()).toThrow(/token|cost|maximum/i);
     const guard = new EvaluationUsageGuard(receipt);
     const lease = guard.beginApplicationRequest();

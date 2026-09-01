@@ -3,6 +3,7 @@ import {
   PublicAnswerTransportError,
 } from '../../domain/public-answer-errors.js';
 import { canonicalProviderJson } from './provider-json.js';
+import { assertCurrentResponsesPolicy } from './provider-model-policy.js';
 
 const RESPONSES_ENDPOINT = 'https://api.openai.com/v1/responses';
 const RESPONSE_CAP = 64 * 1024;
@@ -79,12 +80,8 @@ export function assertCanonicalResponsesRequest(request: unknown, contract: Resp
     ['model', 'store', 'tools', 'reasoning', 'max_output_tokens', 'input', 'text'],
     'Responses request',
   );
-  if (root.model !== 'gpt-5.4-mini-2026-03-17' || root.store !== false || root.max_output_tokens !== 500
-    || !Array.isArray(root.tools) || root.tools.length !== 0) {
-    throw new PublicAnswerInvalidResponseError('Responses request settings are invalid');
-  }
-  const reasoning = exactKeys(root.reasoning, ['effort'], 'Responses reasoning');
-  if (reasoning.effort !== 'none') throw new PublicAnswerInvalidResponseError('Responses reasoning is invalid');
+  assertCurrentResponsesPolicy(root);
+  exactKeys(root.reasoning, ['effort'], 'Responses reasoning');
   const text = exactKeys(root.text, ['format'], 'Responses text');
   const format = exactKeys(text.format, ['type', 'name', 'strict', 'schema'], 'Responses format');
   if (format.type !== 'json_schema' || format.name !== contract.schemaName || format.strict !== true

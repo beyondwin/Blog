@@ -65,8 +65,8 @@ describe('OpenAiResponsesGenerator', () => {
       'input', 'max_output_tokens', 'model', 'reasoning', 'store', 'text', 'tools',
     ]);
     expect(request).toMatchObject({
-      model: 'gpt-5.4-mini-2026-03-17', store: false, tools: [],
-      reasoning: { effort: 'none' }, max_output_tokens: 500,
+      model: 'gpt-5.6-luna', store: false, tools: [],
+      reasoning: { effort: 'high' }, max_output_tokens: 500,
       text: { format: { type: 'json_schema', name: 'public_answer_claims_v1', strict: true, schema: GENERATION_SCHEMA } },
     });
     const input = request.input as Array<{ role: string; content: Array<{ type: string; text: string }> }>;
@@ -186,7 +186,7 @@ describe('OpenAiResponsesGenerator', () => {
 
 describe('OpenAiResponsesClient', () => {
   const canonical = {
-    model: 'gpt-5.4-mini-2026-03-17', store: false, tools: [], reasoning: { effort: 'none' }, max_output_tokens: 500,
+    model: 'gpt-5.6-luna', store: false, tools: [], reasoning: { effort: 'high' }, max_output_tokens: 500,
     input: [
       { role: 'developer', content: [{ type: 'input_text', text: 'instructions' }] },
       { role: 'user', content: [{ type: 'input_text', text: `{"question":"q","evidence":[{"evidenceId":"${EVIDENCE_ID}","excerpt":"x"}]}` }] },
@@ -196,7 +196,7 @@ describe('OpenAiResponsesClient', () => {
 
   it.each([
     ['top-level', { ...canonical, metadata: {} }],
-    ['reasoning', { ...canonical, reasoning: { effort: 'none', extra: true } }],
+    ['reasoning', { ...canonical, reasoning: { effort: 'high', extra: true } }],
     ['third-message', { ...canonical, input: [...canonical.input, canonical.input[0]] }],
     ['second-content', { ...canonical, input: [{ ...canonical.input[0], content: [...canonical.input[0].content, canonical.input[0].content[0]] }, canonical.input[1]] }],
     ['application-extra', { ...canonical, input: [canonical.input[0], { ...canonical.input[1], content: [{ type: 'input_text', text: '{"question":"q","recordId":"x","evidence":[]}' }] }] }],
@@ -393,7 +393,7 @@ describe('synthetic loopback protocol receipts', () => {
     const fixtureRoot = new URL('./fixtures/openai/', import.meta.url);
     const manifest = JSON.parse(await readFile(new URL('provider-protocol-fixtures.v1.json', fixtureRoot), 'utf8'));
     expect(manifest.provenance).toBe('synthetic-loopback');
-    expect(manifest.model).toBe('gpt-5.4-mini-2026-03-17');
+    expect(manifest.model).toBe('gpt-5.6-luna');
     const targets = [
       [new URL(manifest.claimsFixture.path, fixtureRoot), manifest.claimsFixture.checksum],
       [new URL(manifest.supportFixture.path, fixtureRoot), manifest.supportFixture.checksum],

@@ -8,7 +8,13 @@ import type {
 } from '../../application/ports/usage-guard.js';
 import { PUBLIC_ANSWER_REQUEST_TIMEOUT_MS } from '../../application/ports/usage-guard.js';
 import { PublicAnswerCostLimitError, PublicAnswerRateLimitError } from '../../domain/public-answer-errors.js';
-import { canonicalProviderJson, exactObject, providerChecksum } from '../openai/provider-json.js';
+import { exactObject, providerChecksum } from '../openai/provider-json.js';
+import {
+  PROVIDER_MODEL_POLICY,
+  PROVIDER_PRICING_RECEIPT,
+  bundledProviderPricingBytes,
+  providerOperationCostMicroUsd,
+} from '../openai/provider-model-policy.js';
 import { FifoSemaphore } from './fifo-semaphore.js';
 
 export const REQUEST_BODY_BYTES = 4_096;
@@ -31,8 +37,10 @@ export const GLOBAL_DAILY = 150;
 export const DAILY_PROVIDER_TOKENS = 2_250_000;
 export const DAILY_PROVIDER_COST_MICROUSD = 2_100_000;
 export const WORST_CASE_PROVIDER_TOKENS = 15_000;
-export const WORST_CASE_COST_MICROUSD = 13_760;
-const PROVIDER_PRICING_RECEIPT_HASH = 'sha256:857a4cbb29eed073fe9725f7bb1ec5f88ea8763d9b914fce727dcb74067aa8a4';
+export const WORST_CASE_COST_MICROUSD = providerOperationCostMicroUsd('query-embedding', { inputTokens: 2_000, outputTokens: 0 })
+  + providerOperationCostMicroUsd('generation', { inputTokens: PROVIDER_INPUT_TOKEN_UPPER_BOUND, outputTokens: PROVIDER_OUTPUT_TOKENS })
+  + providerOperationCostMicroUsd('semantic', { inputTokens: PROVIDER_INPUT_TOKEN_UPPER_BOUND, outputTokens: PROVIDER_OUTPUT_TOKENS });
+const PROVIDER_PRICING_RECEIPT_HASH = PROVIDER_MODEL_POLICY.pricingReceiptHash;
 
 export interface RuntimeProviderPricing {
   readonly receiptHash: string;
@@ -46,22 +54,24 @@ export async function readRuntimeProviderPricing(
 ): Promise<Readonly<RuntimeProviderPricing>> {
   const bytes = await readFile(source);
   const parsed = exactObject(JSON.parse(bytes.toString('utf8')), ['canonicalHash','models','observedAt','rounding','schemaVersion','sources']);
-  const models = exactObject(parsed.models, ['gpt-5.4-mini-2026-03-17','text-embedding-3-large']);
-  const embedding = exactObject(models['text-embedding-3-large'], ['inputMicroUsdPerMillionTokens','outputMicroUsdPerMillionTokens']);
-  const responses = exactObject(models['gpt-5.4-mini-2026-03-17'], ['inputMicroUsdPerMillionTokens','outputMicroUsdPerMillionTokens']);
+  const models = exactObject(parsed.models, [PROVIDER_MODEL_POLICY.generationModel, PROVIDER_MODEL_POLICY.embeddingModel]);
+  const embedding = exactObject(models[PROVIDER_MODEL_POLICY.embeddingModel], ['inputMicroUsdPerMillionTokens','outputMicroUsdPerMillionTokens']);
+  const responses = exactObject(models[PROVIDER_MODEL_POLICY.generationModel], ['inputMicroUsdPerMillionTokens','outputMicroUsdPerMillionTokens']);
   const { canonicalHash, ...body } = parsed;
-  if (parsed.schemaVersion !== 1 || parsed.observedAt !== '2026-08-30' || parsed.rounding !== 'ceil-micro-usd-per-operation'
-    || !Array.isArray(parsed.sources) || parsed.sources.length !== 2
-    || parsed.sources.some((source) => typeof source !== 'string' || !source.startsWith('https://platform.openai.com/'))
-    || embedding.inputMicroUsdPerMillionTokens !== 130_000 || embedding.outputMicroUsdPerMillionTokens !== 0
-    || responses.inputMicroUsdPerMillionTokens !== 750_000 || responses.outputMicroUsdPerMillionTokens !== 4_500_000
+  if (parsed.schemaVersion !== PROVIDER_PRICING_RECEIPT.schemaVersion || parsed.observedAt !== PROVIDER_PRICING_RECEIPT.observedAt
+    || parsed.rounding !== PROVIDER_PRICING_RECEIPT.rounding
+    || !Array.isArray(parsed.sources) || parsed.sources.length !== PROVIDER_PRICING_RECEIPT.sources.length
+    || parsed.sources.some((source, index) => source !== PROVIDER_PRICING_RECEIPT.sources[index])
+    || embedding.inputMicroUsdPerMillionTokens !== PROVIDER_MODEL_POLICY.prices.embeddingInput || embedding.outputMicroUsdPerMillionTokens !== 0
+    || responses.inputMicroUsdPerMillionTokens !== PROVIDER_MODEL_POLICY.prices.responsesInput
+    || responses.outputMicroUsdPerMillionTokens !== PROVIDER_MODEL_POLICY.prices.responsesOutput
     || canonicalHash !== PROVIDER_PRICING_RECEIPT_HASH || canonicalHash !== providerChecksum(body)
-    || bytes.toString('utf8') !== `${canonicalProviderJson(parsed)}\n`) throw new Error('bundled runtime pricing receipt is invalid');
+    || bytes.toString('utf8') !== bundledProviderPricingBytes()) throw new Error('bundled runtime pricing receipt is invalid');
   return Object.freeze({
     receiptHash: canonicalHash as string,
-    embeddingInputMicroUsdPerMillionTokens: 130_000,
-    responsesInputMicroUsdPerMillionTokens: 750_000,
-    responsesOutputMicroUsdPerMillionTokens: 4_500_000,
+    embeddingInputMicroUsdPerMillionTokens: PROVIDER_MODEL_POLICY.prices.embeddingInput,
+    responsesInputMicroUsdPerMillionTokens: PROVIDER_MODEL_POLICY.prices.responsesInput,
+    responsesOutputMicroUsdPerMillionTokens: PROVIDER_MODEL_POLICY.prices.responsesOutput,
   });
 }
 
@@ -88,9 +98,15 @@ interface StageState {
 }
 
 const STAGE_RESERVATIONS: Readonly<Record<ProviderStage, Readonly<{ tokens: number; cost: number }>>> = Object.freeze({
-  embedding: Object.freeze({ tokens: 2_000, cost: 260 }),
-  generation: Object.freeze({ tokens: 6_500, cost: 6_750 }),
-  semantic: Object.freeze({ tokens: 6_500, cost: 6_750 }),
+  embedding: Object.freeze({ tokens: 2_000, cost: providerOperationCostMicroUsd('query-embedding', { inputTokens: 2_000, outputTokens: 0 }) }),
+  generation: Object.freeze({
+    tokens: PROVIDER_INPUT_TOKEN_UPPER_BOUND + PROVIDER_OUTPUT_TOKENS,
+    cost: providerOperationCostMicroUsd('generation', { inputTokens: PROVIDER_INPUT_TOKEN_UPPER_BOUND, outputTokens: PROVIDER_OUTPUT_TOKENS }),
+  }),
+  semantic: Object.freeze({
+    tokens: PROVIDER_INPUT_TOKEN_UPPER_BOUND + PROVIDER_OUTPUT_TOKENS,
+    cost: providerOperationCostMicroUsd('semantic', { inputTokens: PROVIDER_INPUT_TOKEN_UPPER_BOUND, outputTokens: PROVIDER_OUTPUT_TOKENS }),
+  }),
 });
 
 function utcDay(now: number): string { return new Date(now).toISOString().slice(0, 10); }
@@ -102,20 +118,19 @@ export interface InMemoryUsageGuardOptions {
 
 export class InMemoryUsageGuard implements UsageGuard {
   readonly #clock: () => number;
-  readonly #pricing: Readonly<RuntimeProviderPricing>;
   readonly #semaphore: FifoSemaphore;
   readonly #networks = new Map<string, NetworkUsage>();
   #budget: DailyBudget;
 
-  private constructor(options: InMemoryUsageGuardOptions, pricing: Readonly<RuntimeProviderPricing>) {
+  private constructor(options: InMemoryUsageGuardOptions) {
     this.#clock = options.clock ?? Date.now;
-    this.#pricing = pricing;
     this.#semaphore = options.semaphore ?? new FifoSemaphore({ running: GLOBAL_RUNNING, queued: GLOBAL_QUEUED, waitMs: QUEUE_WAIT_MS });
     this.#budget = { day: utcDay(this.#clock()), requests: 0, providerTokens: 0, providerCostMicroUsd: 0 };
   }
 
   static async create(options: InMemoryUsageGuardOptions = {}): Promise<InMemoryUsageGuard> {
-    return new InMemoryUsageGuard(options, await readRuntimeProviderPricing());
+    await readRuntimeProviderPricing();
+    return new InMemoryUsageGuard(options);
   }
 
   async acquire(input: { networkKey: string; requestId: string; signal: AbortSignal }): Promise<UsageLease> {
@@ -175,9 +190,9 @@ export class InMemoryUsageGuard implements UsageGuard {
 
   #lease(budget: DailyBudget): UsageLease {
     const stages: Record<ProviderStage, StageState> = {
-      embedding: { state: 'unused', reservedTokens: 2_000, reservedCost: 260 },
-      generation: { state: 'unused', reservedTokens: 6_500, reservedCost: 6_750 },
-      semantic: { state: 'unused', reservedTokens: 6_500, reservedCost: 6_750 },
+      embedding: { state: 'unused', reservedTokens: STAGE_RESERVATIONS.embedding.tokens, reservedCost: STAGE_RESERVATIONS.embedding.cost },
+      generation: { state: 'unused', reservedTokens: STAGE_RESERVATIONS.generation.tokens, reservedCost: STAGE_RESERVATIONS.generation.cost },
+      semantic: { state: 'unused', reservedTokens: STAGE_RESERVATIONS.semantic.tokens, reservedCost: STAGE_RESERVATIONS.semantic.cost },
     };
     let released = false;
     let generationAttempted = false;
@@ -205,12 +220,11 @@ export class InMemoryUsageGuard implements UsageGuard {
           : usage.inputTokens <= PROVIDER_INPUT_TOKEN_UPPER_BOUND && usage.outputTokens <= PROVIDER_OUTPUT_TOKENS;
         if (!Number.isSafeInteger(usage.inputTokens) || usage.inputTokens < 0
           || !Number.isSafeInteger(usage.outputTokens) || usage.outputTokens < 0 || !limit) throw new Error('provider stage usage is invalid');
-        const price = stage === 'embedding'
-          ? this.#pricing.embeddingInputMicroUsdPerMillionTokens
-          : this.#pricing.responsesInputMicroUsdPerMillionTokens;
-        const outputPrice = stage === 'embedding' ? 0 : this.#pricing.responsesOutputMicroUsdPerMillionTokens;
         const actualTokens = usage.inputTokens + usage.outputTokens;
-        const actualCost = Math.ceil((usage.inputTokens * price + usage.outputTokens * outputPrice) / 1_000_000);
+        const actualCost = providerOperationCostMicroUsd(
+          stage === 'embedding' ? 'query-embedding' : stage,
+          usage,
+        );
         budget.providerTokens += actualTokens - state.reservedTokens;
         budget.providerCostMicroUsd += actualCost - state.reservedCost;
         state.state = 'settled';

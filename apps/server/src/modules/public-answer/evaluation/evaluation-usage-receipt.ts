@@ -24,7 +24,7 @@ export interface EvaluationUsageReceiptInput {
   readonly runCount: 3;
   readonly maxApplicationRequests: 180;
   readonly maxApplicationProviderTokens: 2_700_000;
-  readonly maxApplicationCostMicroUsd: 2_476_800;
+  readonly maxApplicationCostMicroUsd: 694_800;
   readonly maxIndexProviderTokens: 100_000;
   readonly maxIndexCostMicroUsd: 20_000;
   readonly verifierIdentityHash: string;
@@ -47,7 +47,7 @@ function parse(input: unknown): EvaluationUsageReceiptInput & { canonicalHash: s
   ] as const;
   if (value.schemaVersion !== 1 || hashes.some((field) => typeof value[field] !== 'string' || !checksumPattern.test(value[field] as string))
     || value.runCount !== 3 || value.maxApplicationRequests !== 180
-    || value.maxApplicationProviderTokens !== 2_700_000 || value.maxApplicationCostMicroUsd !== 2_476_800
+    || value.maxApplicationProviderTokens !== 2_700_000 || value.maxApplicationCostMicroUsd !== 694_800
     || value.maxIndexProviderTokens !== 100_000 || value.maxIndexCostMicroUsd !== 20_000) {
     throw new Error('evaluation usage receipt limits or identity are invalid');
   }

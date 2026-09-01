@@ -41,6 +41,10 @@ describe('OpenAiSemanticVerifier', () => {
     expect(result).toEqual({ supportedSentenceIds: units.map((unit) => unit.id), contradictedSentenceIds: [], usage: { inputTokens: 50, outputTokens: 4 } });
     const request = requests[0];
     expect(Object.keys(request).sort()).toEqual(['input', 'max_output_tokens', 'model', 'reasoning', 'store', 'text', 'tools']);
+    expect(request).toMatchObject({
+      model: 'gpt-5.6-luna', store: false, tools: [],
+      reasoning: { effort: 'high' }, max_output_tokens: 500,
+    });
     expect(request.text).toEqual({ format: { type: 'json_schema', name: 'public_answer_support_v1', strict: true, schema: SUPPORT_SCHEMA } });
     const data = JSON.parse(request.input[1].content[0].text);
     expect(data.sentences).toEqual(units.map((unit) => ({ sentenceId: unit.id, text: unit.text, evidenceIds: unit.evidenceIds })));

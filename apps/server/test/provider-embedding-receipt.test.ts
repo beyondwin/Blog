@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createProviderEmbeddingReceipt, estimateEmbeddingCostMicroUsd, readBundledProviderPricing, readProviderEmbeddingReceipt, writeProviderEmbeddingReceipt } from '../src/modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
+import { PROVIDER_MODEL_POLICY } from '../src/modules/public-answer/infrastructure/openai/provider-model-policy.js';
 import { DeterministicEmbeddingClient } from '../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
 import { createProviderEmbeddingAuthorities, PostgresAnswerReleaseIndexer, prepareEmbeddingSet } from '../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
 import { parseIndexEmbeddingMode, providerIndexBudget } from '../src/index-answer-release.js';
@@ -16,7 +17,10 @@ function input() { return { schemaVersion: 1 as const, contentReleaseId: 'a'.rep
 describe('provider embedding receipt', () => {
   it('rounds cost upward and writes, fsyncs, strict-reopens canonical provenance without secret payloads', async () => {
     expect(estimateEmbeddingCostMicroUsd(1)).toBe(1); expect(estimateEmbeddingCostMicroUsd(100_000)).toBe(13_000);
-    await expect(readBundledProviderPricing()).resolves.toEqual({ receiptHash: 'sha256:857a4cbb29eed073fe9725f7bb1ec5f88ea8763d9b914fce727dcb74067aa8a4', embeddingInputMicroUsdPerMillionTokens: 130000 });
+    await expect(readBundledProviderPricing()).resolves.toEqual({
+      receiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      embeddingInputMicroUsdPerMillionTokens: 130000,
+    });
     const root = await mkdtemp(join(tmpdir(), 'provider-embedding-')); roots.push(root);
     const receipt = createProviderEmbeddingReceipt(input()); const path = await writeProviderEmbeddingReceipt(root, receipt);
     const reopened = await readProviderEmbeddingReceipt(root, receipt.answerReleaseId, receipt.embeddingReceiptHash);

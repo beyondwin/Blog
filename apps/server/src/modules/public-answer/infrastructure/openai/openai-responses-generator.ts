@@ -4,12 +4,12 @@ import type { AuthorizedEvidence, GeneratedClaim } from '../../domain/public-ans
 import { ConservativeTokenCounter } from './conservative-token-counter.js';
 import { OpenAiResponsesClient } from './openai-responses-client.js';
 import { canonicalProviderJson } from './provider-json.js';
+import { PROVIDER_MODEL_POLICY } from './provider-model-policy.js';
 import { normalizeAnswerQuery } from '../postgres/answer-query-normalizer.js';
 
-const MODEL = 'gpt-5.4-mini-2026-03-17';
 const ID = /^[a-f0-9]{64}$/u;
 const MAX_EVIDENCE_TOKENS = 4_000;
-const MAX_TOTAL_TOKENS = 6_000;
+const MAX_TOTAL_TOKENS = PROVIDER_MODEL_POLICY.maxResponsesInputTokens;
 
 export const GENERATION_SCHEMA = Object.freeze({
   type: 'object',
@@ -89,11 +89,11 @@ function parseClaims(value: unknown): readonly GeneratedClaim[] {
 
 function requestBody(applicationText: string) {
   return {
-    model: MODEL,
+    model: PROVIDER_MODEL_POLICY.generationModel,
     store: false,
     tools: [],
-    reasoning: { effort: 'none' },
-    max_output_tokens: 500,
+    reasoning: { effort: PROVIDER_MODEL_POLICY.reasoningEffort },
+    max_output_tokens: PROVIDER_MODEL_POLICY.maxResponsesOutputTokens,
     input: [
       { role: 'developer', content: [{ type: 'input_text', text: INSTRUCTIONS }] },
       { role: 'user', content: [{ type: 'input_text', text: applicationText }] },

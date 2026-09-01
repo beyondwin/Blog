@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "provenance": "synthetic-loopback",
-  "model": "gpt-5.4-mini-2026-03-17",
+  "model": "gpt-5.6-luna",
   "claimsFixture": {
     "path": "responses-claims.v1.json",
     "checksum": "sha256:dcf611765ac8f5ef2c2e83c52b1811fc194d5a2c36b2e2db4aab67396acfc9d7"
@@ -10,7 +10,7 @@
     "path": "responses-support.v1.json",
     "checksum": "sha256:886ee1aaa490dd501226abf7d03b818f9a69e3185bd84d4636795a0a826907e7"
   },
-  "generationSchemaSourceHash": "sha256:1c7adc90506af9574bde3b3cc429868edc470517ab85da95f903f7c2ad5bb86a",
-  "supportSchemaSourceHash": "sha256:90f056cd418ce2555ffb7b0a7abfd62760b4ec15dc2fe0c2f1fe75d8d78a6ced",
-  "parserSourceHash": "sha256:19fbc2670b716d9c0e9334c95076330533382643090251d01b803cc138bb1f24"
+  "generationSchemaSourceHash": "sha256:ab290268cd019dc605795c8a3c50e554c0809d1b07c9e3e6d0325c59bd777bfb",
+  "supportSchemaSourceHash": "sha256:0fe15b6ae375f6ccb434efda5436199101224a4b831605035039747b05d72f32",
+  "parserSourceHash": "sha256:195f85b743b49a302f5eb026e0213e6c98b2a61c928c4912b3bb613b8ae0831c"
 }

@@ -1,12 +1,11 @@
 import type { ProviderStage, ProviderTokenUsage } from '../application/ports/usage-guard.js';
+import { providerOperationCostMicroUsd } from '../infrastructure/openai/provider-model-policy.js';
 
 const reservations = Object.freeze({
-  embedding: Object.freeze({ tokens: 2_000, cost: 260 }),
-  generation: Object.freeze({ tokens: 6_500, cost: 6_750 }),
-  semantic: Object.freeze({ tokens: 6_500, cost: 6_750 }),
+  embedding: Object.freeze({ tokens: 2_000, cost: providerOperationCostMicroUsd('query-embedding', { inputTokens: 2_000, outputTokens: 0 }) }),
+  generation: Object.freeze({ tokens: 6_500, cost: providerOperationCostMicroUsd('generation', { inputTokens: 6_000, outputTokens: 500 }) }),
+  semantic: Object.freeze({ tokens: 6_500, cost: providerOperationCostMicroUsd('semantic', { inputTokens: 6_000, outputTokens: 500 }) }),
 });
-const inputPrice = Object.freeze({ embedding: 130_000, generation: 750_000, semantic: 750_000 });
-const outputPrice = Object.freeze({ embedding: 0, generation: 4_500_000, semantic: 4_500_000 });
 
 export interface EvaluationUsageLimits {
   readonly maxApplicationRequests: number;
@@ -51,7 +50,7 @@ export class EvaluationUsageGuard {
     release(): void;
   }> {
     const worstTokens = 15_000;
-    const worstCost = 13_760;
+    const worstCost = reservations.embedding.cost + reservations.generation.cost + reservations.semantic.cost;
     if (this.#applicationRequests + 1 > this.limits.maxApplicationRequests) throw new Error('evaluation application request 181 exceeds maximum before call');
     if (this.#applicationProviderTokens + worstTokens > this.limits.maxApplicationProviderTokens) throw new Error('evaluation application token maximum exceeded before call');
     if (this.#applicationCostMicroUsd + worstCost > this.limits.maxApplicationCostMicroUsd) throw new Error('evaluation application cost maximum exceeded before call');
@@ -75,7 +74,10 @@ export class EvaluationUsageGuard {
         if (!Number.isSafeInteger(usage.inputTokens) || usage.inputTokens < 0 || !Number.isSafeInteger(usage.outputTokens)
           || usage.outputTokens < 0 || !limit) throw new Error('evaluation provider stage usage is invalid');
         const actualTokens = usage.inputTokens + usage.outputTokens;
-        const actualCost = Math.ceil((usage.inputTokens * inputPrice[stage] + usage.outputTokens * outputPrice[stage]) / 1_000_000);
+        const actualCost = providerOperationCostMicroUsd(
+          stage === 'embedding' ? 'query-embedding' : stage,
+          usage,
+        );
         this.#applicationProviderTokens += actualTokens - reservations[stage].tokens;
         this.#applicationCostMicroUsd += actualCost - reservations[stage].cost;
         states[stage] = 'settled';

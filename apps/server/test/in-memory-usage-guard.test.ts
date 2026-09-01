@@ -15,6 +15,7 @@ import {
 import { FifoSemaphore } from '../src/modules/public-answer/infrastructure/guards/fifo-semaphore.js';
 import { PublicAnswerConcurrencyError, PublicAnswerRateLimitError } from '../src/modules/public-answer/domain/public-answer-errors.js';
 import { canonicalProviderJson, providerChecksum } from '../src/modules/public-answer/infrastructure/openai/provider-json.js';
+import { PROVIDER_MODEL_POLICY } from '../src/modules/public-answer/infrastructure/openai/provider-model-policy.js';
 
 const signal = () => new AbortController().signal;
 
@@ -24,13 +25,13 @@ describe('runtime pricing receipt', () => {
   it('strict-reads the sealed prices and proves the 150-request reservation arithmetic', async () => {
     const pricing = await readRuntimeProviderPricing();
     expect(pricing).toEqual({
-      receiptHash: 'sha256:857a4cbb29eed073fe9725f7bb1ec5f88ea8763d9b914fce727dcb74067aa8a4',
+      receiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
       embeddingInputMicroUsdPerMillionTokens: 130_000,
-      responsesInputMicroUsdPerMillionTokens: 750_000,
-      responsesOutputMicroUsdPerMillionTokens: 4_500_000,
+      responsesInputMicroUsdPerMillionTokens: 200_000,
+      responsesOutputMicroUsdPerMillionTokens: 1_200_000,
     });
     expect(WORST_CASE_PROVIDER_TOKENS).toBe(15_000);
-    expect(WORST_CASE_COST_MICROUSD).toBe(13_760);
+    expect(WORST_CASE_COST_MICROUSD).toBe(3_860);
     expect(GLOBAL_DAILY * WORST_CASE_PROVIDER_TOKENS).toBe(DAILY_PROVIDER_TOKENS);
     expect(GLOBAL_DAILY * WORST_CASE_COST_MICROUSD).toBeLessThanOrEqual(DAILY_PROVIDER_COST_MICROUSD);
   });
@@ -133,9 +134,9 @@ describe('InMemoryUsageGuard', () => {
     const guard = await InMemoryUsageGuard.create({ clock: () => Date.parse('2026-08-30T12:00:00.000Z') });
     const leases = [];
     for (let index = 0; index < 150; index += 1) leases.push(await guard.acquire({ networkKey: `network-${index}`, requestId: String(index), signal: signal() }));
-    expect(guard.usageTotals()).toEqual({ providerTokens: 2_250_000, providerCostMicroUsd: 2_064_000 });
+    expect(guard.usageTotals()).toEqual({ providerTokens: 2_250_000, providerCostMicroUsd: 579_000 });
     await expect(guard.acquire({ networkKey: 'network-150', requestId: '150', signal: signal() })).rejects.toBeInstanceOf(PublicAnswerRateLimitError);
-    expect(guard.usageTotals()).toEqual({ providerTokens: 2_250_000, providerCostMicroUsd: 2_064_000 });
+    expect(guard.usageTotals()).toEqual({ providerTokens: 2_250_000, providerCostMicroUsd: 579_000 });
     for (const lease of leases) lease.release();
   });
 
@@ -146,7 +147,7 @@ describe('InMemoryUsageGuard', () => {
     await expect(guard.acquire({ networkKey: 'utc-rejected', requestId: 'rejected', signal: signal() })).rejects.toMatchObject({ rateBucket: 'global-day' });
     now += 1;
     const lease = await guard.acquire({ networkKey: 'utc-new-day', requestId: 'new-day', signal: signal() });
-    expect(guard.operationalSnapshot()).toMatchObject({ day: '2026-08-31', requests: 1, providerTokens: 15_000, providerCostMicroUsd: 13_760 });
+    expect(guard.operationalSnapshot()).toMatchObject({ day: '2026-08-31', requests: 1, providerTokens: 15_000, providerCostMicroUsd: 3_860 });
     lease.release();
   });
 
@@ -197,7 +198,7 @@ describe('InMemoryUsageGuard', () => {
     lease.beginStage(stage); lease.release();
     const expected = stage === 'embedding'
       ? { providerTokens: 2_000, providerCostMicroUsd: 260 }
-      : { providerTokens: 6_500, providerCostMicroUsd: 6_750 };
+      : { providerTokens: 6_500, providerCostMicroUsd: 1_800 };
     expect(guard.usageTotals()).toEqual(expected);
   });
 
@@ -208,13 +209,13 @@ describe('InMemoryUsageGuard', () => {
     const generation = await lease.acquireGeneration(signal());
     lease.beginStage('generation'); lease.settleStage('generation', { inputTokens: 2_000, outputTokens: 100 });
     generation.release(); generation.release(); lease.release();
-    expect(guard.usageTotals()).toEqual({ providerTokens: 3_100, providerCostMicroUsd: 2_080 });
+    expect(guard.usageTotals()).toEqual({ providerTokens: 3_100, providerCostMicroUsd: 650 });
     expect(() => lease.beginStage('semantic')).toThrow(/released/u);
   });
 
   it.each([
     ['embedding', { inputTokens: 1, outputTokens: 0 }, { providerTokens: 1, providerCostMicroUsd: 1 }],
-    ['generation', { inputTokens: 1, outputTokens: 1 }, { providerTokens: 2, providerCostMicroUsd: 6 }],
+    ['generation', { inputTokens: 1, outputTokens: 1 }, { providerTokens: 2, providerCostMicroUsd: 2 }],
     ['semantic', { inputTokens: 1, outputTokens: 0 }, { providerTokens: 1, providerCostMicroUsd: 1 }],
   ] as const)('settles %s independently with upward micro-USD rounding', async (stage, usage, expected) => {
     const guard = await InMemoryUsageGuard.create();
@@ -225,8 +226,8 @@ describe('InMemoryUsageGuard', () => {
 
   it.each([
     ['embedding', { inputTokens: 2_000, outputTokens: 0 }, { providerTokens: 2_000, providerCostMicroUsd: 260 }],
-    ['generation', { inputTokens: 6_000, outputTokens: 500 }, { providerTokens: 6_500, providerCostMicroUsd: 6_750 }],
-    ['semantic', { inputTokens: 6_000, outputTokens: 500 }, { providerTokens: 6_500, providerCostMicroUsd: 6_750 }],
+    ['generation', { inputTokens: 6_000, outputTokens: 500 }, { providerTokens: 6_500, providerCostMicroUsd: 1_800 }],
+    ['semantic', { inputTokens: 6_000, outputTokens: 500 }, { providerTokens: 6_500, providerCostMicroUsd: 1_800 }],
   ] as const)('accepts the exact %s settlement ceiling', async (stage, usage, expected) => {
     const guard = await InMemoryUsageGuard.create();
     const lease = await guard.acquire({ networkKey: stage, requestId: stage, signal: signal() });
@@ -261,7 +262,7 @@ describe('InMemoryUsageGuard', () => {
     lease.release();
     expect(guard.usageTotals()).toEqual(stage === 'embedding'
       ? { providerTokens: 2_000, providerCostMicroUsd: 260 }
-      : { providerTokens: 6_500, providerCostMicroUsd: 6_750 });
+      : { providerTokens: 6_500, providerCostMicroUsd: 1_800 });
   });
 
   it('permits exactly one generation-acquisition attempt after success, timeout, overflow, or abort', async () => {

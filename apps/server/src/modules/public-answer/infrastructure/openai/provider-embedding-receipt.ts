@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { canonicalProviderJson, exactObject, providerChecksum, strictOpenCanonicalJson } from './provider-json.js';
+import { PROVIDER_MODEL_POLICY, PROVIDER_PRICING_RECEIPT, bundledProviderPricingBytes } from './provider-model-policy.js';
 
 const HASH = /^sha256:[a-f0-9]{64}$/u; const ID = /^[a-f0-9]{64}$/u;
 export interface ProviderEmbeddingReceiptInput {
@@ -25,7 +26,8 @@ export function createProviderEmbeddingReceipt(input: ProviderEmbeddingReceiptIn
   if (input.schemaVersion !== 1 || !ID.test(input.contentReleaseId) || !ID.test(input.answerReleaseId)
     || ![input.contentManifestHash,input.answerManifestHash,input.answerArtifactHash,input.corpusApprovalHash,input.providerDataControlReceiptHash,input.providerPricingReceiptHash,input.providerVectorSetChecksum,input.indexChecksum]
       .every((value) => HASH.test(value))
-    || input.embeddingModel !== 'text-embedding-3-large' || input.embeddingDimensions !== 3072 || input.embeddingSource !== 'provider'
+    || input.embeddingModel !== PROVIDER_MODEL_POLICY.embeddingModel
+    || input.embeddingDimensions !== PROVIDER_MODEL_POLICY.embeddingDimensions || input.embeddingSource !== 'provider'
     || !Number.isSafeInteger(input.inputTokens) || input.inputTokens < 0 || !Number.isSafeInteger(input.costMicroUsd) || input.costMicroUsd < 0
     || !exactTime(input.createdAt) || !exactTime(input.completedAt) || Date.parse(input.createdAt) > Date.parse(input.completedAt)
     || input.entries.some((entry) => !HASH.test(entry.chunkChecksum) || !HASH.test(entry.vectorChecksum))) throw new Error('provider embedding receipt is invalid');
@@ -81,22 +83,34 @@ export async function readProviderEmbeddingReceipt(root: string, answerReleaseId
   return receipt;
 }
 
-export function estimateEmbeddingCostMicroUsd(tokens: number, pricePerMillion = 130_000): number {
-  if (!Number.isSafeInteger(tokens) || tokens < 0 || !Number.isSafeInteger(pricePerMillion) || pricePerMillion < 0) throw new Error('provider price arithmetic invalid');
+export function estimateEmbeddingCostMicroUsd(
+  tokens: number,
+  pricePerMillion = PROVIDER_MODEL_POLICY.prices.embeddingInput,
+): number {
+  if (!Number.isSafeInteger(tokens) || tokens < 0 || !Number.isSafeInteger(pricePerMillion) || pricePerMillion < 0) {
+    throw new Error('provider price arithmetic invalid');
+  }
   return Math.ceil(tokens * pricePerMillion / 1_000_000);
 }
 
 export async function readBundledProviderPricing(): Promise<Readonly<{ receiptHash: string; embeddingInputMicroUsdPerMillionTokens: number }>> {
   const bytes = await readFile(new URL('./provider-pricing.v1.json', import.meta.url));
   const parsed = exactObject(JSON.parse(bytes.toString('utf8')), ['canonicalHash','models','observedAt','rounding','schemaVersion','sources']);
-  const models = exactObject(parsed.models, ['gpt-5.4-mini-2026-03-17','text-embedding-3-large']);
-  const embedding = exactObject(models['text-embedding-3-large'], ['inputMicroUsdPerMillionTokens','outputMicroUsdPerMillionTokens']);
-  const responses = exactObject(models['gpt-5.4-mini-2026-03-17'], ['inputMicroUsdPerMillionTokens','outputMicroUsdPerMillionTokens']);
+  const models = exactObject(parsed.models, [PROVIDER_MODEL_POLICY.generationModel, PROVIDER_MODEL_POLICY.embeddingModel]);
+  const embedding = exactObject(models[PROVIDER_MODEL_POLICY.embeddingModel], ['inputMicroUsdPerMillionTokens','outputMicroUsdPerMillionTokens']);
+  const responses = exactObject(models[PROVIDER_MODEL_POLICY.generationModel], ['inputMicroUsdPerMillionTokens','outputMicroUsdPerMillionTokens']);
   const { canonicalHash, ...body } = parsed;
-  if (parsed.schemaVersion !== 1 || parsed.observedAt !== '2026-08-30' || parsed.rounding !== 'ceil-micro-usd-per-operation'
-    || !Array.isArray(parsed.sources) || parsed.sources.some((source) => typeof source !== 'string' || !source.startsWith('https://platform.openai.com/'))
-    || embedding.inputMicroUsdPerMillionTokens !== 130_000 || embedding.outputMicroUsdPerMillionTokens !== 0
-    || responses.inputMicroUsdPerMillionTokens !== 750_000 || responses.outputMicroUsdPerMillionTokens !== 4_500_000
-    || canonicalHash !== providerChecksum(body) || bytes.toString('utf8') !== `${canonicalProviderJson(parsed)}\n`) throw new Error('bundled provider pricing receipt is invalid');
-  return Object.freeze({ receiptHash: canonicalHash as string, embeddingInputMicroUsdPerMillionTokens: 130_000 });
+  if (parsed.schemaVersion !== PROVIDER_PRICING_RECEIPT.schemaVersion || parsed.observedAt !== PROVIDER_PRICING_RECEIPT.observedAt
+    || parsed.rounding !== PROVIDER_PRICING_RECEIPT.rounding
+    || !Array.isArray(parsed.sources) || parsed.sources.length !== PROVIDER_PRICING_RECEIPT.sources.length
+    || parsed.sources.some((source, index) => source !== PROVIDER_PRICING_RECEIPT.sources[index])
+    || embedding.inputMicroUsdPerMillionTokens !== PROVIDER_MODEL_POLICY.prices.embeddingInput || embedding.outputMicroUsdPerMillionTokens !== 0
+    || responses.inputMicroUsdPerMillionTokens !== PROVIDER_MODEL_POLICY.prices.responsesInput
+    || responses.outputMicroUsdPerMillionTokens !== PROVIDER_MODEL_POLICY.prices.responsesOutput
+    || canonicalHash !== PROVIDER_MODEL_POLICY.pricingReceiptHash || canonicalHash !== providerChecksum(body)
+    || bytes.toString('utf8') !== bundledProviderPricingBytes()) throw new Error('bundled provider pricing receipt is invalid');
+  return Object.freeze({
+    receiptHash: canonicalHash as string,
+    embeddingInputMicroUsdPerMillionTokens: PROVIDER_MODEL_POLICY.prices.embeddingInput,
+  });
 }

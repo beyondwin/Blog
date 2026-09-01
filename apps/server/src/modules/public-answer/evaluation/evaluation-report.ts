@@ -3,6 +3,7 @@ import { lstat, open } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 
 import { providerChecksum } from '../infrastructure/openai/provider-json.js';
+import { PROVIDER_MODEL_POLICY } from '../infrastructure/openai/provider-model-policy.js';
 import {
   evaluateFirstSliceGate,
   evaluateHiddenGate,
@@ -12,8 +13,8 @@ import {
 export const EVALUATOR_VERSION = 'public-answer-evaluator-v1' as const;
 export const EVALUATOR_HASH = providerChecksum({ version: EVALUATOR_VERSION, gates: 'hidden-30-12-12-6-v1' });
 export const RETRIEVER_VERSION = 'postgres-hybrid-rrf-v1' as const;
-export const EMBEDDING_MODEL = 'text-embedding-3-large' as const;
-export const GENERATION_MODEL = 'gpt-5.4-mini-2026-03-17' as const;
+export const EMBEDDING_MODEL = PROVIDER_MODEL_POLICY.embeddingModel;
+export const GENERATION_MODEL = PROVIDER_MODEL_POLICY.generationModel;
 export const PROMPT_SCHEMA_VERSION = 'public-answer-generation-and-support-v1' as const;
 export const PROMPT_SCHEMA_HASH = providerChecksum({ generation: 'public_answer_claims_v1', semantic: 'public_answer_support_v1' });
 export const SEMANTIC_VERIFIER_VERSION = 'semantic-support-v1' as const;
