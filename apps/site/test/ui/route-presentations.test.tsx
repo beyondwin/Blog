@@ -373,7 +373,7 @@ describe('full public route expansion', () => {
     }));
 
     expect(html).toContain('value="AI 설계 "');
-    expect(html).not.toMatch(/answerLead|claims?|evidence|excerpt|checksum|fixture|답변에 사용한 맥락/u);
+    expect(html).not.toMatch(/class="(?:answer-stage|evidence-panel|living-evidence-desk__card)|data-view="(?:answered|evidence-open)"|answerLead|fixtureAnswer|rollbackEvidence|chunkChecksum|evidenceChecksum|답변에 사용한 맥락/u);
     expect(search.boundedSearchQuery('AI 설계 ')).toBe('AI 설계');
     expect(search.searchOriginForItem(article, 'AI 설계 ')).toEqual({
       kind: 'search', query: 'AI 설계', anchorId: 'record-articles-ai-design',
@@ -434,7 +434,7 @@ describe('full public route expansion', () => {
         expect(JSON.stringify(data)).not.toMatch(
           /"(?:answer|claims?|evidence|excerpt|checksum|fixture|manifest)"\s*:/u,
         );
-        expect(html).not.toMatch(/answerLead|claims?|evidence|excerpt|checksum|fixture|답변에 사용한 맥락/u);
+        expect(html).not.toMatch(/class="(?:answer-stage|evidence-panel|living-evidence-desk__card)|data-view="(?:answered|evidence-open)"|answerLead|fixtureAnswer|rollbackEvidence|chunkChecksum|evidenceChecksum|답변에 사용한 맥락/u);
       }
     }
   });

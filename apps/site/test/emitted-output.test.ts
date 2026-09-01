@@ -151,7 +151,7 @@ describe('React Router emitted critical output', () => {
       expect(modules[0]?.[1]).toContain('window.__reactRouterRouteModules');
       expect(modules[0]?.[1]).toMatch(/import\("\/assets\/entry\.client-[^"]+\.js"\);/u);
       expect(styles[0]?.[1]).toContain('.site-header__inner');
-      expect(styles[0]?.[1]).toContain(':where(a,button,input,select,textarea):focus-visible');
+      expect(styles[0]?.[1]).toContain(':where(a,button,input,select,summary,textarea):focus-visible');
       expect(styles[0]?.[1]).toContain('@media (prefers-reduced-motion:reduce)');
       return [route, styles[0]?.[1] ?? ''];
     })) as Record<keyof typeof routeHtml, string>;
