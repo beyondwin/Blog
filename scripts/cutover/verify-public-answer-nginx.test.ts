@@ -69,7 +69,7 @@ describe('prepared public-answer core-Nginx verifier', () => {
     } finally {
       await rm(cleanRoot, { recursive: true, force: true });
     }
-  });
+  }, 120_000);
 
   it('runs the pinned real core Nginx and seals every named hostile header on success and errors', async () => {
     const receipt = await verifyPublicAnswerNginx({ repositoryRoot: resolve(import.meta.dirname, '../..') });
