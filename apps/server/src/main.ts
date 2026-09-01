@@ -312,7 +312,7 @@ export async function startApplication(options: StartApplicationOptions = {}): P
         readiness,
         lifecycle,
         catalogSource,
-        answerPublicQuestion: fixtureExecutor,
+        answerPublicQuestion: fixtureExecutor ?? baseUseCase,
         networkKey: new TrustedProxyNetworkKey({
           masterSecret: config.networkHmacSecret,
           trustedProxyAddresses: config.trustedProxyAddresses,

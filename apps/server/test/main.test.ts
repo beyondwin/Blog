@@ -14,6 +14,7 @@ import {
 } from '../src/config/local-provider-authorization.js';
 import { parseServerConfig, type ServerConfig } from '../src/config/server-config.js';
 import { composedPublicAnswerRuntime, startApplication } from '../src/main.js';
+import { AnswerPublicQuestion } from '../src/modules/public-answer/application/answer-public-question.js';
 import { InMemoryUsageGuard } from '../src/modules/public-answer/infrastructure/guards/in-memory-usage-guard.js';
 import { LocalBudgetLedger } from '../src/modules/public-answer/infrastructure/guards/local-budget-ledger.js';
 import { LocalBudgetUsageGuard } from '../src/modules/public-answer/infrastructure/guards/local-budget-usage-guard.js';
@@ -194,6 +195,24 @@ describe('local provider runtime composition', () => {
     expect(responsesClient).toBeInstanceOf(OpenAiResponsesClient);
     expect((semanticVerifier as unknown as { client: unknown }).client).toBe(responsesClient);
     expect(config.providerAuthority).toMatchObject({ kind: 'local-non-zdr' });
+
+    const execute = vi.spyOn(AnswerPublicQuestion.prototype, 'execute');
+    const fastify = app.getHttpAdapter().getInstance();
+    const response = await fastify.inject({
+      method: 'POST',
+      url: '/api/public/ask',
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+      payload: JSON.stringify({
+        version: 1,
+        question: '이 기록의 핵심은 무엇인가요?',
+        contentReleaseId: 'c'.repeat(64),
+        answerReleaseId: 'a'.repeat(64),
+      }),
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ kind: 'search', reason: 'insufficient-evidence' });
+    expect(response.json()).not.toMatchObject({ kind: 'error', code: 'unavailable' });
   });
 
   it('keeps fixture mode on the in-memory daily guard', async () => {
