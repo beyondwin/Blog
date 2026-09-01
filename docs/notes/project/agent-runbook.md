@@ -42,6 +42,7 @@ Graphify는 article 주제이지 프로젝트 도구가 아니다. current comma
 | public memory | exact private inputs + projection JSON | `npm run memory:validate`, `npm run validate`, `/memory/` |
 | route/UI | exact route/component/CSS/test owners | focused test, `npm run validate`, desktop/mobile browser |
 | release/media | exact schema/builder/approval owners | adversarial focused tests, strict media, build/verify/clean |
+| public answer runtime | answer-release/contracts + `apps/server` + search seam | focused contract/server/site tests, disposable Postgres, mandatory fixture stack |
 | delivery | static exporter/host/verifier owners | unit, site build, actual host/404/headers, retained Playwright |
 
 ## structured content handoff
@@ -73,6 +74,10 @@ rights approval. Warning/hold/unverified covers stay text-led.
 npm run public-release:build
 npm run public-release:verify
 npm run public-release:clean-test
+npm run public-answer-release:build
+npm run public-answer-release:verify
+npm run public-answer-release:clean-test
+npm run server:index:fixture
 npm run site:build
 npm run site:preview -- --host 127.0.0.1 --port 4391
 ```
@@ -81,23 +86,51 @@ npm run site:preview -- --host 127.0.0.1 --port 4391
 an explicitly approved normalized HTTPS origin; current production origin is `not_measured` and
 authorization is `false`.
 
+Public-answer local drill은 production key 없이 fixture mode와 disposable PostgreSQL을 사용한다.
+
+```bash
+npx tsx scripts/cutover/verify-public-answer-nginx.mts
+npx tsx tests/e2e/run-search-provider-stack.mts
+```
+
+두 번째 명령만 browser → exact local proxy → Nest/Fastify → PostgreSQL의 mandatory integration
+receipt다. Playwright `route`/`fulfill`, API mock, direct preview 또는 component fixture로 대신하지 않는다.
+runner는 owned port/process group/temp root/Compose project를 만들고 success, 모든 status/fallback,
+navigation/BFCache, redirect, header/privacy, rate-limit, abort-ignoring 8초 deadline과 slow-SQL backend
+cancellation을 검사한 뒤 성공·실패·signal에서 정리한다. 실제 provider key/call은 금지한다.
+
 ## public/private and search boundaries
 
 - Public app/release reads `src/data/memory.public.json`, never top-level `memory/**`.
-- Public release rejects status/draft, private locator, raw prompt/job, source map and embedding leaks.
+- Public release와 분리된 public-answer release는 verified public release와 checksum 승인 allowlist만
+  읽으며 private locator, raw prompt/job/provider payload, vector와 source map을 emitted artifact에 넣지 않는다.
+- `/search/` loader의 answer authority는 exact `contentReleaseId`, `answerReleaseId` 두 필드다. legacy
+  answer fixture/rollback evidence나 answer text를 loader에 다시 넣지 않는다.
 - Primary navigation/search is reviews, articles, thoughts, search only.
 - Secondary analysis/ideas/travel/tags/memory routes remain canonical outside primary search.
 - No-JS anchors and GET forms remain functional. Static `/search/` cannot generate arbitrary
   query-specific HTML; JS-off preserves canonical URL and base discovery, not filtering/input restore.
+- 명시적 POST는 raw question을 URL/history/session storage에 쓰지 않고 failure link를 canonical-only로
+  만든다. 직접 GET/location restore의 기존 deterministic result와 scroll continuity만 유지한다.
+- 질문/답변/excerpt의 durable retention은 0일이고 log/telemetry에는 redacted bucket만 남긴다.
+  `store:false`, fixture mode와 local proof를 production ZDR, live-provider quality 또는 deploy readiness로
+  표현하지 않는다.
 - Publishing, memory promotion, cover approval and generated-media approval require explicit authority.
 
 ## browser completion
 
 Visible work uses a separate local port and checks 1440×900, relevant calibrated reference width,
-768px, 390×844 and 320px. Record URL, viewport, release id, screenshot/hash, console, accessibility,
-overflow and reference ID. Include keyboard-only, menu containment/restore, reduced motion, no-JS,
-long titles, HOLD cover, image failure, table/code and actual static-host 404. Unrun means
+768px, 390×844, 320px와 720×450/DPR 2. Record URL, viewport, 두 release ID, screenshot/hash,
+console, accessibility, overflow and reference ID. `/search/`는 idle/answer/fallback, keyboard submit,
+44×44 target, 2px focus, citation/source switching, evidence dialog와 mobile menu containment/restore,
+reduced motion/data saver/coarse pointer, no-JS, second-submit/popstate/BFCache를 포함한다. 일반 route는
+긴 title, HOLD cover, image failure, table/code와 actual static-host 404를 유지한다. Unrun means
 `not_measured`.
+
+현재 avatar 원본 PNG는 `1,872,261 bytes`다. 별도 derivative approval/rights receipt가 없으면
+AVIF/WebP promotion은 `not_authorized`, responsive `<picture>`/PNG-not-fetched/512 KiB production cell은
+`not_measured`로 남긴다. 대신 승인 비의존 JS/CSS, layout, fixture stack gate를 계속 실행하며 test를
+약화하지 않는다.
 
 ## docs and ADR rules
 

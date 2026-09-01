@@ -95,16 +95,42 @@ anchor와 17건 ledger를 제공한다. 서평은 18건 ledger를 제공하며 �
 ### 검색
 
 `/search/`는 FORM & THOUGHT의 공개 기록에 질문하는 second-brain 표면이다. 첫 화면은 avatar가
-있는 종이 collage stage와 질문 composer를 49/51로 놓고, 모바일은 avatar 다음에 질문이 온다.
-승인된 sample 질문은 `관련 기록 탐색 → 생각 연결 → 답 쓰기` 뒤 실제 공개 thought에서 검증한
-답과 세 근거를 보여 준다. 근거는 desktop left panel, mobile bottom sheet로 열리며 focus trap,
-`Escape`, backdrop close와 trigger focus return을 제공한다.
+있는 Living Evidence Desk와 질문 composer를 49/51로 놓고, 모바일은 avatar와 근거 trail 다음에
+질문이 온다. 승인 heading은 `공개 기록에 무엇을 묻고 싶나요?`다. 명시적인 질문 제출은 현재
+`(contentReleaseId, answerReleaseId)`에 결합한 same-origin `POST /api/public/ask` 한 요청이며,
+browser는 cookie와 referrer를 보내지 않고 redirect를 거부한다. 답변은 `관련 기록 탐색 → 생각 연결
+→ 답 쓰기` 뒤에만 나타난다. 8초 browser coordinator deadline이 끝나면 provider가 abort를 무시해도
+한 번만 deterministic 검색으로 전환하고, 이전 제출의 늦은 resolve/reject는 stale로 버린다.
+자동 retry, streaming, 대화 transcript는 없다.
 
-LLM/RAG를 아직 연결하지 않았으므로 다른 질문에 sample 답을 재사용하지 않는다. 임의 질문은
-primary corpus인 서평·아티클·생각의 deterministic 결과로 전환한다. GET form과 canonical query
-URL은 유지하지만 `ssr: false` 정적 export이므로 query별 filtering과 input restoration은
-hydration 이후에만 동작한다. JavaScript-off에서 query-specific 결과나 생성 답변을 제공한다고
-주장하지 않는다.
+POST는 raw 질문을 URL, history 또는 session storage에 쓰지 않는다. 답변, 검색 결과, 오류/fallback
+상태는 동시에 렌더되지 않는다. insufficient evidence, unsupported question, provider disabled/error,
+timeout, invalid response, rate limit과 release mismatch는 모두 실제 `SearchResults`로 간다. 이 POST
+fallback의 상세 링크는 canonical-only다. 반대로 직접 GET, reload, popstate와 BFCache 복원은
+location의 `?q=`에서 만든 기존 deterministic 검색과 검증된 scroll continuity만 유지하며 provider를
+호출하지 않는다.
+
+검증된 답은 claim 문장 바로 뒤에 번호 citation을 렌더하고, 각 citation은 같은 answer release의
+opaque evidence ID에만 연결된다. 근거 button은 desktop left dialog, mobile bottom sheet를 열며
+source switching, focus trap, `Escape`, backdrop close와 trigger focus return을 제공한다. `원문 보기`는
+server가 release manifest에서 다시 결합한 canonical locator다. Living Evidence Desk의 card, text,
+button과 연결선은 semantic DOM/CSS/SVG가 소유한다. Three.js/WebGL dependency는 없다. Pointer
+parallax는 fine pointer에서만 켜지고 reduced motion, data saver, page hidden/blur에서는 즉시 0으로
+복원된다. 모바일 근거는 normal-flow trail이며 모든 visible control은 최소 `44×44px`다.
+
+GET form과 canonical query URL은 유지하지만 `ssr: false` 정적 export의 `/search/index.html` 하나는
+임의 query별 HTML을 만들지 않는다. JavaScript-off에서는 canonical GET과 base composer/privacy
+disclosure만 보장하며 query-specific filtering, input restoration 또는 생성 답변을 주장하지 않는다.
+disclosure는 질문과 선택된 공개 발췌가 이 답을 위해 설정된 AI 제공자에게 전달되고 원문 질문의 서버
+보관 기간은 0일이라고 설명한다. `store:false`와 local fixture evidence를 production ZDR 검증으로
+표현하지 않는다.
+
+2026-09-01 local fixture/browser 측정에서 search initial JavaScript는 desktop/mobile 모두
+`121,188 bytes gzip`(budget `131,072`), route critical CSS는 `22,911 bytes raw` /
+`4,878 bytes gzip`(budget `28,672` / `6,144`), permanent `will-change`는 0이었다. 기존 avatar PNG는
+`1,872,261 bytes`다. 승인된 AVIF/WebP derivative receipt가 없으므로 derivative public 승격은
+`not_authorized`, `<picture>` 선택·PNG 미요청과 512 KiB first-frame production cell은
+`not_measured`다. 이 경계를 통과한 것처럼 보이게 budget이나 test를 낮추지 않는다.
 
 ### detail
 
