@@ -45,6 +45,8 @@ function harness(overrides: Partial<LocalLiveHarnessDependencies> = {}) {
   const nestEnv: NodeJS.ProcessEnv[] = [];
   const buildEnv: NodeJS.ProcessEnv[] = [];
   const indexEnv: NodeJS.ProcessEnv[] = [];
+  const previewEnv: NodeJS.ProcessEnv[] = [];
+  const proxyEnv: NodeJS.ProcessEnv[] = [];
   const dependencies: LocalLiveHarnessDependencies = {
     env: { OPENAI_API_KEY: 'test-local-key' },
     nodeMajor: 24,
@@ -81,8 +83,8 @@ function harness(overrides: Partial<LocalLiveHarnessDependencies> = {}) {
     async reopenBinding() { events.push('binding.reopen'); },
     async buildSite(env) { buildEnv.push(env); events.push('site.build'); },
     startNest(env) { nestEnv.push(env); events.push('nest.start'); return liveChild('nest', events); },
-    startPreview() { events.push('preview.start'); return liveChild('preview', events); },
-    startProxy() { events.push('proxy.start'); return liveChild('proxy', events); },
+    startPreview(env) { previewEnv.push(env); events.push('preview.start'); return liveChild('preview', events); },
+    startProxy(env) { proxyEnv.push(env); events.push('proxy.start'); return liveChild('proxy', events); },
     async ready(url) { events.push(`ready:${url}`); return true; },
     print(value) { printed.push(value); events.push(`print:${value.trim()}`); },
     sleep: async () => undefined,
@@ -94,7 +96,7 @@ function harness(overrides: Partial<LocalLiveHarnessDependencies> = {}) {
     redactValues: [],
     ...overrides,
   };
-  return { dependencies, events, printed, nestEnv, buildEnv, indexEnv };
+  return { dependencies, events, printed, nestEnv, buildEnv, indexEnv, previewEnv, proxyEnv };
 }
 
 describe('local live argument parser and preflight', () => {
@@ -287,7 +289,62 @@ describe('owned local live harness', () => {
     expect(h.nestEnv[0]?.FORM_THOUGHT_PUBLIC_ORIGIN).toBe('http://127.0.0.1:4328');
     expect(h.nestEnv[0]?.FORM_THOUGHT_LOCAL_PROVIDER_AUTHORIZATION)
       .toBe('/repo/.superpowers/runtime/public-answer-live/authorization.json');
+    expect(h.nestEnv[0]?.OPENAI_API_KEY).toBe('test-local-key');
+    expect(h.indexEnv[0]?.OPENAI_API_KEY).toBe('test-local-key');
+    expect(h.buildEnv[0]?.OPENAI_API_KEY).toBeUndefined();
+    expect(h.previewEnv[0]?.OPENAI_API_KEY).toBeUndefined();
+    expect(h.proxyEnv[0]?.OPENAI_API_KEY).toBeUndefined();
     expect(h.events.filter((event) => event.startsWith('print:'))).toHaveLength(1);
+  });
+
+  it('keeps the sentinel API key on Nest and indexing only', async () => {
+    const h = harness({ env: { OPENAI_API_KEY: SENTINEL_KEY } });
+    await runLocalLiveHarness({ host: '127.0.0.1', port: 4328 }, h.dependencies);
+    expect(h.nestEnv[0]?.OPENAI_API_KEY).toBe(SENTINEL_KEY);
+    expect(h.indexEnv[0]?.OPENAI_API_KEY).toBe(SENTINEL_KEY);
+    expect(h.buildEnv[0]).not.toHaveProperty('OPENAI_API_KEY');
+    expect(h.previewEnv[0]).not.toHaveProperty('OPENAI_API_KEY');
+    expect(h.proxyEnv[0]).not.toHaveProperty('OPENAI_API_KEY');
+  });
+
+  it('attaches redacted child logs when startup fails', async () => {
+    const h = harness({
+      env: { OPENAI_API_KEY: SENTINEL_KEY },
+      redactValues: [SENTINEL_QUESTION],
+      startNest() {
+        h.events.push('nest.start');
+        return {
+          ...liveChild('nest', h.events, {
+            startup: Promise.reject(new Error('nest exited before startup')),
+            wait: Promise.reject(new Error('nest exited before startup')),
+          }),
+          output: () => `listen failed key=${SENTINEL_KEY} q=${SENTINEL_QUESTION}`,
+        };
+      },
+    });
+    let message = '';
+    try {
+      await runLocalLiveHarness({ host: '127.0.0.1', port: null }, h.dependencies);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toMatch(/listen failed/u);
+    expect(message).toMatch(/owned nest log/u);
+    expect(message).toContain('[redacted-secret]');
+    expect(message).not.toContain(SENTINEL_KEY);
+    expect(message).not.toContain(SENTINEL_QUESTION);
+  });
+
+  it('attaches child logs to a startup deadline', async () => {
+    const h = harness({
+      startupDeadlineMs: 0,
+      startNest() {
+        h.events.push('nest.start');
+        return { ...liveChild('nest', h.events, { startup: hanging() }), output: () => 'still starting nest' };
+      },
+    });
+    await expect(runLocalLiveHarness({ host: '127.0.0.1', port: null }, h.dependencies))
+      .rejects.toThrow(/startup deadline[\s\S]*still starting nest/u);
   });
 
   it('redacts a sentinel key and question from diagnostics', async () => {

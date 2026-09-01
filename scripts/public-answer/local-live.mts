@@ -126,6 +126,14 @@ export function redactLiveDiagnostics(
   return unique.reduce((output, secret) => output.replaceAll(secret, '[redacted-secret]'), value);
 }
 
+function withChildLogs(message: string, children: readonly OwnedLiveProcess[]): string {
+  const logs = children.flatMap((child) => {
+    const output = child.output().trim();
+    return output === '' ? [] : [`owned ${child.role} log:\n${output}`];
+  });
+  return logs.length === 0 ? message : `${message}\n${logs.join('\n')}`;
+}
+
 function spawnRun(input: OwnedComposeRun): Promise<string> {
   return new Promise((accept, reject) => {
     if (input.signal?.aborted) { reject(input.signal.reason ?? new Error('owned process start aborted')); return; }
@@ -574,9 +582,17 @@ export async function runLocalLiveHarness(
     }
   }
   if (childTerminationUnconfirmed) {
-    throw redact(new Error('owned child termination was not confirmed; database retained for owned-process safety'));
+    throw redact(new Error(withChildLogs(
+      'owned child termination was not confirmed; database retained for owned-process safety',
+      children,
+    )));
   }
-  if (primary !== undefined) throw redact(primary);
+  if (primary !== undefined) {
+    throw redact(new Error(withChildLogs(
+      primary instanceof Error ? primary.message : String(primary),
+      children,
+    )));
+  }
 }
 
 const entrypoint = process.argv[1];
