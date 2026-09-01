@@ -10,6 +10,7 @@ import {
   PublicAskTransportError,
   type PublicAnswerReleaseBinding,
 } from '../../src/ui/search/publicAskProvider';
+import { createLazyPublicAskProvider } from '../../src/ui/search/SearchPage';
 
 const binding: PublicAnswerReleaseBinding = {
   contentReleaseId: 'a'.repeat(64),
@@ -17,7 +18,7 @@ const binding: PublicAnswerReleaseBinding = {
 };
 const evidenceId = 'c'.repeat(64);
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
-const publicAskProviderPath = join(repositoryRoot, 'apps/site/src/ui/search/publicAskProvider.ts');
+const searchPagePath = join(repositoryRoot, 'apps/site/src/ui/search/SearchPage.tsx');
 
 const answer = {
   kind: 'answer' as const,
@@ -50,6 +51,39 @@ async function expectTransportCode(promise: Promise<unknown>, code: 'timeout' | 
 }
 
 describe('HttpPublicAskProvider', () => {
+  it('loads the production provider only on first ask and reuses it for later asks', async () => {
+    const injectedAsk = vi.fn().mockResolvedValue({ kind: 'search', reason: 'provider-disabled' });
+    const construct = vi.fn();
+    const loadProvider = vi.fn().mockResolvedValue({
+      HttpPublicAskProvider: class {
+        constructor(receivedBinding: PublicAnswerReleaseBinding) {
+          construct(receivedBinding);
+        }
+
+        ask = injectedAsk;
+      },
+    });
+    const provider = createLazyPublicAskProvider(binding, loadProvider);
+    const firstSignal = new AbortController().signal;
+    const secondSignal = new AbortController().signal;
+
+    expect(loadProvider).not.toHaveBeenCalled();
+    await expect(provider.ask('첫 질문', { signal: firstSignal })).resolves.toEqual({
+      kind: 'search',
+      reason: 'provider-disabled',
+    });
+    await expect(provider.ask('둘째 질문', { signal: secondSignal })).resolves.toEqual({
+      kind: 'search',
+      reason: 'provider-disabled',
+    });
+
+    expect(loadProvider).toHaveBeenCalledTimes(1);
+    expect(construct).toHaveBeenCalledOnce();
+    expect(construct).toHaveBeenCalledWith(binding);
+    expect(injectedAsk).toHaveBeenNthCalledWith(1, '첫 질문', { signal: firstSignal });
+    expect(injectedAsk).toHaveBeenNthCalledWith(2, '둘째 질문', { signal: secondSignal });
+  });
+
   it('sends one exact same-origin POST with only the bounded request and the caller signal', async () => {
     const signal = new AbortController().signal;
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(response(answer));
@@ -256,11 +290,12 @@ describe('HttpPublicAskProvider', () => {
     }
   });
 
-  it('uses the default browser fetch with its required receiver', async () => {
+  it('keeps the browser provider module and network lazy, then uses receiver-safe fetch', async () => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;
     const cacheRoot = await mkdtemp(join(tmpdir(), 'beyondwin-provider-fetch-vite-'));
     let requestCount = 0;
+    let providerModuleRequests = 0;
     try {
       const entryId = '\0public-ask-provider-browser.ts';
       server = await createViteServer({
@@ -276,24 +311,28 @@ describe('HttpPublicAskProvider', () => {
           load(id) {
             if (id !== entryId) return null;
             return `
-              import { HttpPublicAskProvider } from ${JSON.stringify(publicAskProviderPath)};
+              import { createLazyPublicAskProvider } from ${JSON.stringify(searchPagePath)};
               const binding = ${JSON.stringify(binding)};
-              const provider = new HttpPublicAskProvider(binding);
-              window.__providerResult = provider.ask('브라우저 질문', {
-                signal: new AbortController().signal,
-              }).then(
-                (value) => ({ ok: true, value }),
-                (error) => ({
-                  ok: false,
-                  code: error?.code,
-                  cause: error?.cause?.message ?? error?.message,
-                }),
-              );
+              const provider = createLazyPublicAskProvider(binding);
+              window.__providerReady = true;
+              window.__providerAsk = () => provider.ask('브라우저 질문', {
+                  signal: new AbortController().signal,
+                }).then(
+                  (value) => ({ ok: true, value }),
+                  (error) => ({
+                    ok: false,
+                    code: error?.code,
+                    cause: error?.cause?.message ?? error?.message,
+                  }),
+                );
             `;
           },
           configureServer(viteServer) {
             viteServer.middlewares.use((request, response, next) => {
               const pathname = new URL(request.url ?? '/', 'http://provider.test').pathname;
+              if (pathname.endsWith('/apps/site/src/ui/search/publicAskProvider.ts')) {
+                providerModuleRequests += 1;
+              }
               if (pathname === '/api/public/ask') {
                 requestCount += 1;
                 response.statusCode = 200;
@@ -319,15 +358,32 @@ describe('HttpPublicAskProvider', () => {
       browser = await chromium.launch({ headless: true });
       const page = await browser.newPage();
       await page.goto(`http://127.0.0.1:${address.port}/__public-ask-provider-browser/`);
+      await expect.poll(() => page.evaluate(() => (window as typeof window & {
+        __providerReady?: boolean;
+      }).__providerReady)).toBe(true);
+      expect(requestCount).toBe(0);
+      const initialProviderResources = await page.evaluate(() => performance.getEntriesByType('resource')
+        .filter((entry) => entry.name.includes('publicAskProvider')).map((entry) => entry.name));
+      expect({ initialProviderResources, providerModuleRequests }).toEqual({
+        initialProviderResources: [],
+        providerModuleRequests: 0,
+      });
+
       const result = await page.evaluate(() => (window as typeof window & {
-        __providerResult: Promise<unknown>;
-      }).__providerResult);
+        __providerAsk(): Promise<unknown>;
+      }).__providerAsk());
 
       expect(result).toEqual({
         ok: true,
         value: { kind: 'search', reason: 'provider-disabled' },
       });
       expect(requestCount).toBe(1);
+      expect(providerModuleRequests).toBe(1);
+      await page.evaluate(() => (window as typeof window & {
+        __providerAsk(): Promise<unknown>;
+      }).__providerAsk());
+      expect(requestCount).toBe(2);
+      expect(providerModuleRequests).toBe(1);
     } finally {
       await browser?.close();
       await server?.close();

@@ -3,7 +3,7 @@ import {
   PublicAskTransportError,
   type PublicAskProvider,
   type PublicAskTransportCode,
-} from './publicAskProvider';
+} from './publicAskTransport';
 
 export type CoordinatedAskResult =
   | { kind: 'response'; token: number; response: PublicAskResponse }

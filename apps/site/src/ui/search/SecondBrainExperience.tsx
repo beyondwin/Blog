@@ -20,7 +20,7 @@ import {
   initialAskState,
   SAMPLE_QUESTION,
 } from './secondBrain';
-import type { PublicAskProvider } from './publicAskProvider';
+import type { PublicAskProvider } from './publicAskTransport';
 import { boundedSearchQuery, searchMatches, type SearchInventoryItem } from './searchModel';
 import { usePointerParallax } from './usePointerParallax';
 
