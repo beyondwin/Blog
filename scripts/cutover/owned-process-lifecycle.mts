@@ -183,6 +183,47 @@ export async function runOwnedCleanupSteps(
   return errors;
 }
 
+export interface OwnedStoppableChild {
+  role: string;
+  wait: Promise<void>;
+  signal(signal: 'SIGINT' | 'SIGTERM' | 'SIGKILL'): void;
+}
+
+export async function confirmOwnedChildStop(
+  child: Pick<OwnedStoppableChild, 'wait' | 'signal'>,
+  options: {
+    sleep: (milliseconds: number) => Promise<void>;
+    gracefulMs?: number;
+    killMs?: number;
+  },
+): Promise<boolean> {
+  const gracefulMs = options.gracefulMs ?? 10_000;
+  const killMs = options.killMs ?? 2_000;
+  let stopped = false;
+  const observed = child.wait.then(() => { stopped = true; }, () => { stopped = true; });
+  child.signal('SIGTERM');
+  await Promise.race([observed, options.sleep(gracefulMs)]);
+  if (stopped) return true;
+  child.signal('SIGKILL');
+  await Promise.race([observed, options.sleep(killMs)]);
+  return stopped;
+}
+
+export async function stopOwnedChildrenInReverse(
+  children: readonly OwnedStoppableChild[],
+  options: {
+    sleep: (milliseconds: number) => Promise<void>;
+    gracefulMs?: number;
+    killMs?: number;
+  },
+): Promise<{ confirmed: boolean; unconfirmedRoles: readonly string[] }> {
+  const unconfirmedRoles: string[] = [];
+  for (const child of [...children].reverse()) {
+    if (!await confirmOwnedChildStop(child, options)) unconfirmedRoles.push(child.role);
+  }
+  return { confirmed: unconfirmedRoles.length === 0, unconfirmedRoles };
+}
+
 export interface OwnedSignalEvidence {
   installed_at: string;
   signals: ['SIGINT', 'SIGTERM'];

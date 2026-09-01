@@ -10,6 +10,7 @@ import { indexAnswerRelease } from '../src/index-answer-release.js';
 import { runPostgresMigrations } from '../src/modules/public-answer/infrastructure/postgres/postgres-migrations.js';
 import { createPostgresPool } from '../src/modules/public-answer/infrastructure/postgres/postgres-pool.js';
 import { readVerifiedAnswerReleaseAuthority } from '../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
+import { startOwnedPostgres } from '../../../scripts/public-answer/owned-postgres.mts';
 
 export interface HarnessRun {
   command: string; args: readonly string[]; cwd: string; env: NodeJS.ProcessEnv; capture: boolean;
@@ -270,37 +271,7 @@ export async function startOwnedFixtureDatabase(
     'repositoryRoot' | 'composeFile' | 'projectName' | 'env' | 'run'>>,
   signal?: AbortSignal,
 ): Promise<{ databaseUrl: string; stop(): Promise<void> }> {
-  const docker = (args: readonly string[], capture = false, interruptible = true) => dependencies.run({
-    command: 'docker', args, cwd: dependencies.repositoryRoot, env: dependencies.env, capture,
-    ...(interruptible ? { signal } : {}),
-  });
-  let startupAttempted = false;
-  try {
-    startupAttempted = true;
-    await docker(['compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'up', '-d', '--wait']);
-    const mapped = (await docker([
-      'compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'port', 'postgres', '5432',
-    ], true)).trim();
-    const port = mapped.slice(mapped.lastIndexOf(':') + 1);
-    if (!/^\d+$/u.test(port)) throw new Error('Compose returned an invalid Postgres port');
-    return {
-      databaseUrl: `postgresql://beyondwin_test:beyondwin_test@127.0.0.1:${port}/beyondwin_test`,
-      async stop() {
-        await docker([
-          'compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'down', '-v', '--remove-orphans',
-        ], false, false);
-      },
-    };
-  } catch (error) {
-    if (startupAttempted) await dependencies.run({
-      command: 'docker',
-      args: ['compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'down', '-v', '--remove-orphans'],
-      cwd: dependencies.repositoryRoot,
-      env: dependencies.env,
-      capture: false,
-    }).catch(() => undefined);
-    throw error;
-  }
+  return startOwnedPostgres(dependencies, signal);
 }
 
 export async function runServeFixtureHarness(
@@ -425,19 +396,16 @@ export async function runTestPostgresHarness(
   const discovered = evaluation
     ? await dependencies.discoverEvaluation!() : await dependencies.discover();
   if (discovered.length === 0) throw new Error(`dedicated ${evaluation ? 'evaluation' : 'Postgres'} config discovered zero owned tests`);
-  let started = false;
-  const docker = (args: readonly string[], capture = false) => dependencies.run({
-    command: 'docker', args, cwd: dependencies.repositoryRoot, env: dependencies.env, capture,
-  });
+  let database: Awaited<ReturnType<typeof startOwnedPostgres>> | undefined;
   try {
-    await docker(['compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'up', '-d', '--wait']);
-    started = true;
-    const mapped = (await docker([
-      'compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'port', 'postgres', '5432',
-    ], true)).trim();
-    const port = mapped.slice(mapped.lastIndexOf(':') + 1);
-    if (!/^\d+$/u.test(port)) throw new Error('Compose returned an invalid Postgres port');
-    const databaseUrl = `postgresql://beyondwin_test:beyondwin_test@127.0.0.1:${port}/beyondwin_test`;
+    database = await startOwnedPostgres({
+      repositoryRoot: dependencies.repositoryRoot,
+      composeFile: dependencies.composeFile,
+      projectName: dependencies.projectName,
+      env: dependencies.env,
+      run: dependencies.run,
+    });
+    const databaseUrl = database.databaseUrl;
     const childEnv: NodeJS.ProcessEnv = {
       ...dependencies.env,
       FORM_THOUGHT_TEST_DATABASE_URL: databaseUrl,
@@ -502,9 +470,7 @@ export async function runTestPostgresHarness(
       });
     }
   } finally {
-    if (started) await docker([
-      'compose', '-p', dependencies.projectName, '-f', dependencies.composeFile, 'down', '-v', '--remove-orphans',
-    ]).catch((error) => {
+    if (database) await database.stop().catch((error) => {
       process.stderr.write(`Postgres cleanup failed: ${String(error)}\n`);
       process.exitCode = 1;
     });

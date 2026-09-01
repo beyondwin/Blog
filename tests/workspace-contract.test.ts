@@ -131,6 +131,9 @@ describe('React-only Node 24 workspace contract', () => {
     expect(rootManifest.scripts?.['server:eval:hidden:offline']).toBe('npm run eval:hidden:offline --workspace @beyondwin/server');
     expect(rootManifest.scripts?.['server:eval:hidden:provider:live']).toBe('npm run eval:hidden:provider:live --workspace @beyondwin/server');
     expect(rootManifest.scripts?.['server:eval:clean']).toBe('npm run eval:clean --workspace @beyondwin/server');
+    expect(rootManifest.scripts?.['public-answer:local:live']).toBe('tsx scripts/public-answer/local-live.mts');
+    expect(rootManifest.scripts?.['public-answer:local:live:smoke'])
+      .toBe('tsx tests/e2e/run-search-provider-live-stack.mts --confirm-live-provider');
   });
 
   it('seals the final ordered validation chain', async () => {

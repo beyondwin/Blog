@@ -40,6 +40,8 @@
     "cutover:clean-host": "tsx scripts/cutover/verify-clean-host.mts",
     "cutover:seal-performance": "tsx scripts/cutover/seal-performance-receipt.mts",
     "cutover:verify": "tsx scripts/cutover/verify-public-site.mts",
+    "public-answer:local:live": "tsx scripts/public-answer/local-live.mts",
+    "public-answer:local:live:smoke": "tsx tests/e2e/run-search-provider-live-stack.mts --confirm-live-provider",
     "test": "vitest run",
     "test:workspaces": "vitest run tests/workspace-contract.test.ts packages/contracts/test packages/content/test",
     "typecheck:workspaces": "npm run typecheck --workspaces --if-present",
