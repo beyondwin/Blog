@@ -19,6 +19,7 @@ ADR은 회의록이나 일일 작업 로그가 아니다. 미래 구현을 제�
 | [ADR-0008](0008-full-bleed-density-and-topic-media.md) | Full-bleed 압축 지면과 주제별 미디어 사용 | accepted | 2026-08-29 | ADR-0007의 outer shell/elevation과 architecture-dominant media만 부분 대체하고 route와 편집 구조는 유지한다. |
 | [ADR-0009](0009-question-led-public-record-interface.md) | 질문형 public second-brain 검색 인터페이스 | accepted | 2026-08-30 | `/search/` 질문·응답·근거 흐름과 truthful fallback을 유지하며 ADR-0010이 실제 runtime/provider/privacy/evaluation 경계를 고정한다. |
 | [ADR-0010](0010-public-answer-runtime-and-release-boundary.md) | 공개 답변 runtime과 answer-release 경계 | accepted | 2026-09-01 | 공개 범위, immutable answer release, NestJS/Fastify RAG와 avatar-centered evidence UX를 고정하고 구현 closeout을 기록한다. |
+| [ADR-0011](0011-local-live-public-answer-and-luna-provider.md) | 로컬 live 공개 답변 runtime과 Luna 단일 provider | accepted | 2026-09-02 | 한 명령의 owner-local live RAG, Luna high, local non-ZDR provenance, 월 USD 1 hard cap과 GPT-5.4 provider 제거를 고정한다. |
 
 ## 상태
 

@@ -7,6 +7,12 @@
 - Supersedes: none
 - Superseded by: none
 - Amends: ADR-0005의 server framework와 public-host 경계, ADR-0009의 열린 RAG 결정
+- Amended by: ADR-0011의 owner-local live runtime, Luna 단일 provider와 local non-ZDR 경계
+
+> Amendment resolution (2026-09-02): production ZDR, public release, retrieval, validation, fallback와
+> evaluation 경계는 유지한다. ADR-0011이 active answer model을 `gpt-5.6-luna` high로 교체하고,
+> GPT-5.4 provider compatibility를 제거하며, production evidence로 사용할 수 없는 별도 owner-local
+> non-ZDR live runtime을 추가한다. 아래 GPT-5.4 wording은 최초 구현 결정의 역사적 기록이다.
 
 ## Context
 

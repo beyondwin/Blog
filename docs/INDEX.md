@@ -36,6 +36,7 @@
 | ADR-0008: Full-bleed 압축 지면과 주제별 미디어 사용 | decision-record | ko | [docs/notes/project/adr/0008-full-bleed-density-and-topic-media.md](notes/project/adr/0008-full-bleed-density-and-topic-media.md) |
 | ADR-0009: 질문형 public second-brain 검색 인터페이스 | decision-record | ko | [docs/notes/project/adr/0009-question-led-public-record-interface.md](notes/project/adr/0009-question-led-public-record-interface.md) |
 | ADR-0010: 공개 답변 runtime과 answer-release 경계 | decision-record | ko | [docs/notes/project/adr/0010-public-answer-runtime-and-release-boundary.md](notes/project/adr/0010-public-answer-runtime-and-release-boundary.md) |
+| ADR-0011: 로컬 live 공개 답변 runtime과 Luna 단일 provider | decision-record | ko | [docs/notes/project/adr/0011-local-live-public-answer-and-luna-provider.md](notes/project/adr/0011-local-live-public-answer-and-luna-provider.md) |
 
 ## 프로젝트 · 종료 기록
 
