@@ -7,8 +7,10 @@ import { runRuntimeStartupChecks } from '../../src/health/runtime-readiness.js';
 import { providerChecksum } from '../../src/modules/public-answer/infrastructure/openai/provider-json.js';
 import { runPostgresMigrations } from '../../src/modules/public-answer/infrastructure/postgres/postgres-migrations.js';
 import { DeterministicEmbeddingClient } from '../../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
+import { PROVIDER_MODEL_POLICY } from '../../src/modules/public-answer/infrastructure/openai/provider-model-policy.js';
 import {
   createFixtureEmbeddingReceipt,
+  createProviderEmbeddingAuthorities,
   PostgresAnswerReleaseIndexer,
   prepareEmbeddingSet,
 } from '../../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
@@ -218,6 +220,33 @@ describe('public answer Postgres migration', () => {
     expect((await pool.query<{ title: string; heading_path: string[] }>(
       'SELECT title,heading_path FROM public_answer_chunks WHERE binding_id=$1', [receipt.bindingId],
     )).rows).toEqual([{ title: 'Example', heading_path: ['Heading'] }]);
+  });
+
+  it('activates a matching local-non-zdr receipt in test and never activates it under production authority', async () => {
+    const value = release('d');
+    const prepared = await prepareEmbeddingSet(value, new DeterministicEmbeddingClient('test'), new AbortController().signal);
+    const local = createProviderEmbeddingAuthorities(value, prepared, {
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      createdAt: '2026-09-02T00:00:00.000Z',
+      completedAt: '2026-09-02T00:00:01.000Z',
+    });
+    await expect(new PostgresAnswerReleaseIndexer('production').activate(
+      value, prepared, local.activation, pool, new AbortController().signal, local.durable,
+    )).rejects.toThrow(/local-non-zdr|production|unsupported/u);
+    expect((await pool.query('SELECT count(*)::int AS count FROM public_answer_release_bindings')).rows[0].count).toBe(0);
+    const activated = await new PostgresAnswerReleaseIndexer('test').activate(
+      value, prepared, local.activation, pool, new AbortController().signal, local.durable,
+    );
+    expect(activated.state).toBe('active');
+    const repeated = await new PostgresAnswerReleaseIndexer('test').activate(
+      value, prepared, local.activation, pool, new AbortController().signal, local.durable,
+    );
+    expect(repeated.bindingId).toBe(activated.bindingId);
+    expect((await pool.query("SELECT embedding_source,count(*)::int AS count FROM public_answer_release_bindings GROUP BY embedding_source")).rows)
+      .toEqual([{ embedding_source: 'provider', count: 1 }]);
   });
 
   it('atomically activates, idempotently reuses, and keeps test-only provider evidence byte-distinct and rollback-selectable', async () => {

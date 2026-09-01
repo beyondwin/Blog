@@ -4,7 +4,13 @@ import type { Pool, PoolClient } from 'pg';
 
 import type { EmbeddingClient } from '../../application/ports/embedding-client.js';
 import type { VerifiedActivePublicAnswerReleaseAuthority } from '../release/verified-answer-release-catalog.js';
-import { createProviderEmbeddingReceipt, estimateEmbeddingCostMicroUsd, type ProviderEmbeddingReceipt } from '../openai/provider-embedding-receipt.js';
+import {
+  createProviderEmbeddingReceipt,
+  estimateEmbeddingCostMicroUsd,
+  isLocalProviderEmbeddingReceipt,
+  type DurableProviderEmbeddingReceipt,
+} from '../openai/provider-embedding-receipt.js';
+import { PROVIDER_MODEL_POLICY, providerOperationCostMicroUsd } from '../openai/provider-model-policy.js';
 
 const MODEL = 'text-embedding-3-large' as const;
 const DIMENSIONS = 3072 as const;
@@ -269,8 +275,14 @@ function assertReceipt(release: VerifiedActivePublicAnswerReleaseAuthority, prep
   }
 }
 
-function assertProviderAuthorization(prepared: PreparedEmbeddingSet, receipt: EmbeddingProvenanceReceipt, authority: ProviderEmbeddingReceipt): void {
+function assertProviderAuthorization(prepared: PreparedEmbeddingSet, receipt: EmbeddingProvenanceReceipt, authority: DurableProviderEmbeddingReceipt): void {
   const exactEntries = prepared.vectors.map(({ chunkChecksum, vectorChecksum }) => ({ chunkChecksum, vectorChecksum }));
+  if (isLocalProviderEmbeddingReceipt(authority)
+    && (authority.providerAuthorityKind !== 'local-non-zdr'
+      || authority.providerPolicyHash !== PROVIDER_MODEL_POLICY.policyHash
+      || authority.providerPricingReceiptHash !== PROVIDER_MODEL_POLICY.pricingReceiptHash)) {
+    throw new Error('provider activation receipt authority mismatch');
+  }
   if (authority.embeddingReceiptHash !== receipt.receiptHash || authority.contentReleaseId !== receipt.contentReleaseId
     || authority.answerReleaseId !== receipt.answerReleaseId || authority.contentManifestHash !== receipt.contentManifestHash
     || authority.answerManifestHash !== receipt.answerManifestHash || authority.answerArtifactHash !== receipt.answerArtifactHash
@@ -281,21 +293,45 @@ function assertProviderAuthorization(prepared: PreparedEmbeddingSet, receipt: Em
     || canonical(authority.entries) !== canonical(exactEntries)) throw new Error('provider activation receipt authority mismatch');
 }
 
+export type ProviderEmbeddingAuthorityInput = Readonly<{
+  createdAt: string;
+  completedAt: string;
+  providerPricingReceiptHash: string;
+} & (
+  | { providerDataControlReceiptHash: string }
+  | {
+      providerAuthorityKind: 'local-non-zdr';
+      providerAuthorityHash: string;
+      providerPolicyHash: string;
+    }
+)>;
+
 export function createProviderEmbeddingAuthorities(
   release: VerifiedActivePublicAnswerReleaseAuthority,
   prepared: PreparedEmbeddingSet,
-  input: Readonly<{ providerDataControlReceiptHash: string; providerPricingReceiptHash: string; createdAt: string; completedAt: string }>,
-): Readonly<{ durable: ProviderEmbeddingReceipt; activation: EmbeddingProvenanceReceipt }> {
+  input: ProviderEmbeddingAuthorityInput,
+): Readonly<{ durable: DurableProviderEmbeddingReceipt; activation: EmbeddingProvenanceReceipt }> {
+  const costUsdMicros = 'providerAuthorityKind' in input
+    ? providerOperationCostMicroUsd('corpus-embedding', { inputTokens: prepared.usage.inputTokens, outputTokens: 0 })
+    : estimateEmbeddingCostMicroUsd(prepared.usage.inputTokens);
   const provenance = {
     schemaVersion: 1 as const, source: 'provider' as const, model: MODEL, dimensions: DIMENSIONS,
     ...releaseHashes(release), vectorSetChecksum: prepared.vectorSetChecksum, chunkCount: prepared.vectors.length,
     calls: prepared.usage.calls, inputTokens: prepared.usage.inputTokens, outputTokens: prepared.usage.outputTokens,
-    costUsdMicros: estimateEmbeddingCostMicroUsd(prepared.usage.inputTokens),
+    costUsdMicros,
   };
   const rows = prepared.indexRows.map((row) => ({ ...row, source: 'provider' }));
   const indexChecksum = checksum({ rows, provenance });
-  const durable = createProviderEmbeddingReceipt({
-    schemaVersion: 1, ...releaseHashes(release), providerDataControlReceiptHash: input.providerDataControlReceiptHash,
+  const hashes = releaseHashes(release);
+  const durable = createProviderEmbeddingReceipt('providerAuthorityKind' in input ? {
+    schemaVersion: 1, ...hashes, providerAuthorityKind: 'local-non-zdr',
+    providerAuthorityHash: input.providerAuthorityHash, providerPolicyHash: input.providerPolicyHash,
+    providerPricingReceiptHash: input.providerPricingReceiptHash, embeddingModel: MODEL, embeddingDimensions: DIMENSIONS,
+    embeddingSource: 'provider', entries: prepared.vectors.map((entry) => ({ chunkChecksum: entry.chunkChecksum, vectorChecksum: entry.vectorChecksum })),
+    inputTokens: prepared.usage.inputTokens, costMicroUsd: provenance.costUsdMicros,
+    providerVectorSetChecksum: prepared.vectorSetChecksum, indexChecksum, createdAt: input.createdAt, completedAt: input.completedAt,
+  } : {
+    schemaVersion: 1, ...hashes, providerDataControlReceiptHash: input.providerDataControlReceiptHash,
     providerPricingReceiptHash: input.providerPricingReceiptHash, embeddingModel: MODEL, embeddingDimensions: DIMENSIONS,
     embeddingSource: 'provider', entries: prepared.vectors.map((entry) => ({ chunkChecksum: entry.chunkChecksum, vectorChecksum: entry.vectorChecksum })),
     inputTokens: prepared.usage.inputTokens, costMicroUsd: provenance.costUsdMicros,
@@ -339,11 +375,14 @@ export class PostgresAnswerReleaseIndexer {
     receipt: EmbeddingProvenanceReceipt,
     pool: Pool,
     signal: AbortSignal,
-    providerAuthorization?: ProviderEmbeddingReceipt,
+    providerAuthorization?: DurableProviderEmbeddingReceipt,
   ): Promise<Readonly<{ bindingId: string; answerReleaseId: string; state: 'active' }>> {
     if (signal.aborted) throw signal.reason ?? new Error('index activation aborted');
     if (receipt.source === 'provider') {
       if (!providerAuthorization) throw new Error('provider activation requires Task 4 strict-reopened authorization');
+      if (this.nodeEnv === 'production' && isLocalProviderEmbeddingReceipt(providerAuthorization)) {
+        throw new Error('production rejects local-non-zdr embedding receipts');
+      }
       assertProviderAuthorization(prepared, receipt, providerAuthorization);
     }
     if (this.nodeEnv === 'production' && receipt.source !== 'provider') throw new Error('fixture provenance is forbidden in production');

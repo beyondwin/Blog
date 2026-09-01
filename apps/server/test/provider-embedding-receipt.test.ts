@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createProviderEmbeddingReceipt, estimateEmbeddingCostMicroUsd, readBundledProviderPricing, readProviderEmbeddingReceipt, writeProviderEmbeddingReceipt } from '../src/modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
-import { PROVIDER_MODEL_POLICY } from '../src/modules/public-answer/infrastructure/openai/provider-model-policy.js';
+import { PROVIDER_MODEL_POLICY, providerOperationCostMicroUsd } from '../src/modules/public-answer/infrastructure/openai/provider-model-policy.js';
 import { DeterministicEmbeddingClient } from '../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
 import { createProviderEmbeddingAuthorities, PostgresAnswerReleaseIndexer, prepareEmbeddingSet } from '../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
 import { parseIndexEmbeddingMode, providerIndexBudget } from '../src/index-answer-release.js';
@@ -13,6 +13,40 @@ import { parseTombstoneCommand, providerPurgeCostWarning, runTombstoneCliWithExi
 
 const roots: string[] = []; afterEach(async () => { const { rm } = await import('node:fs/promises'); await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))); });
 function input() { return { schemaVersion: 1 as const, contentReleaseId: 'a'.repeat(64), answerReleaseId: 'b'.repeat(64), contentManifestHash: `sha256:${'1'.repeat(64)}`, answerManifestHash: `sha256:${'2'.repeat(64)}`, answerArtifactHash: `sha256:${'3'.repeat(64)}`, corpusApprovalHash: `sha256:${'4'.repeat(64)}`, providerDataControlReceiptHash: `sha256:${'5'.repeat(64)}`, providerPricingReceiptHash: `sha256:${'6'.repeat(64)}`, embeddingModel: 'text-embedding-3-large' as const, embeddingDimensions: 3072 as const, embeddingSource: 'provider' as const, entries: [{ chunkChecksum: `sha256:${'7'.repeat(64)}`, vectorChecksum: `sha256:${'8'.repeat(64)}` }], inputTokens: 1, costMicroUsd: 1, providerVectorSetChecksum: `sha256:${'9'.repeat(64)}`, indexChecksum: `sha256:${'a'.repeat(64)}`, createdAt: '2026-08-30T00:00:00.000Z', completedAt: '2026-08-30T00:00:01.000Z' }; }
+function localInput() {
+  return {
+    schemaVersion: 1 as const,
+    contentReleaseId: 'a'.repeat(64),
+    answerReleaseId: 'b'.repeat(64),
+    contentManifestHash: `sha256:${'1'.repeat(64)}`,
+    answerManifestHash: `sha256:${'2'.repeat(64)}`,
+    answerArtifactHash: `sha256:${'3'.repeat(64)}`,
+    corpusApprovalHash: `sha256:${'4'.repeat(64)}`,
+    providerAuthorityKind: 'local-non-zdr' as const,
+    providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+    providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+    providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+    embeddingModel: 'text-embedding-3-large' as const,
+    embeddingDimensions: 3072 as const,
+    embeddingSource: 'provider' as const,
+    entries: [{ chunkChecksum: `sha256:${'7'.repeat(64)}`, vectorChecksum: `sha256:${'8'.repeat(64)}` }],
+    inputTokens: 1,
+    costMicroUsd: providerOperationCostMicroUsd('corpus-embedding', { inputTokens: 1, outputTokens: 0 }),
+    providerVectorSetChecksum: `sha256:${'9'.repeat(64)}`,
+    indexChecksum: `sha256:${'a'.repeat(64)}`,
+    createdAt: '2026-09-02T00:00:00.000Z',
+    completedAt: '2026-09-02T00:00:01.000Z',
+  };
+}
+function sampleRelease() {
+  return {
+    contentReleaseId: 'a'.repeat(64), answerReleaseId: 'b'.repeat(64), manifestHash: `sha256:${'2'.repeat(64)}`, artifactHash: `sha256:${'3'.repeat(64)}`, corpusApprovalHash: `sha256:${'4'.repeat(64)}`,
+    manifest: { identity: { contentManifestHash: `sha256:${'1'.repeat(64)}` } },
+    chunks: [{ chunkId: 'c'.repeat(64), recordId: 'articles/example', canonicalPath: '/articles/example/' }],
+    evidence: [{ evidenceId: 'e'.repeat(64), chunkId: 'c'.repeat(64), recordId: 'articles/example' }],
+    indexInputs: [{ chunkId: 'c'.repeat(64), chunkChecksum: `sha256:${'7'.repeat(64)}`, recordId: 'articles/example', canonicalPath: '/articles/example/', title: 'Example', headingPath: ['H'], text: 'public text', searchText: 'public text' }],
+  } as any;
+}
 
 describe('provider embedding receipt', () => {
   it('rounds cost upward and writes, fsyncs, strict-reopens canonical provenance without secret payloads', async () => {
@@ -53,8 +87,64 @@ describe('provider embedding receipt', () => {
     await expect(writeProviderEmbeddingReceipt(root,receipt,{afterFinalLink:async()=>{throw new Error('must-not-run');}})).rejects.toThrow(/exists/u);
     expect(await readFile(join(root,receipt.answerReleaseId,`${receipt.embeddingReceiptHash.slice(7)}.json`))).toEqual(before);
   });
+  it('records local-non-zdr authority, policy, pricing, release hashes, and usage without secrets', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'local-embedding-')); roots.push(root);
+    const receipt = createProviderEmbeddingReceipt(localInput());
+    expect(receipt).toMatchObject({
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: localInput().providerAuthorityHash,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      contentReleaseId: localInput().contentReleaseId,
+      answerReleaseId: localInput().answerReleaseId,
+      contentManifestHash: localInput().contentManifestHash,
+      answerManifestHash: localInput().answerManifestHash,
+      answerArtifactHash: localInput().answerArtifactHash,
+      corpusApprovalHash: localInput().corpusApprovalHash,
+      entries: localInput().entries,
+      inputTokens: 1,
+      costMicroUsd: 1,
+    });
+    expect(receipt).not.toHaveProperty('providerDataControlReceiptHash');
+    const path = await writeProviderEmbeddingReceipt(root, receipt);
+    const bytes = await readFile(path, 'utf8');
+    expect(bytes).not.toMatch(/question|vectorValues|apiKey|providerBody|canonicalPath|OPENAI_API_KEY|public text/u);
+    await expect(readProviderEmbeddingReceipt(root, receipt.answerReleaseId, receipt.embeddingReceiptHash)).resolves.toEqual(receipt);
+    expect(() => createProviderEmbeddingReceipt({ ...localInput(), providerPolicyHash: `sha256:${'0'.repeat(64)}` })).toThrow(/policy|authority|invalid/u);
+    expect(() => createProviderEmbeddingReceipt({ ...localInput(), text: 'raw chunk text' } as any)).toThrow(/unknown/u);
+  });
+  it('rejects GPT-5.4-era receipts and local receipts under production authority before database activation', async () => {
+    expect(() => createProviderEmbeddingReceipt({ ...input(), generationModel: 'gpt-5.4-mini-2026-03-17' } as any)).toThrow(/unknown|unsupported|gpt-5.4/iu);
+    const release = sampleRelease();
+    const prepared = await prepareEmbeddingSet(release, new DeterministicEmbeddingClient('test'), new AbortController().signal);
+    const localAuthority = createProviderEmbeddingAuthorities(release, prepared, {
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      createdAt: '2026-09-02T00:00:00.000Z',
+      completedAt: '2026-09-02T00:00:01.000Z',
+    });
+    expect(localAuthority.durable).toMatchObject({
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      entries: prepared.vectors.map(({ chunkChecksum, vectorChecksum }) => ({ chunkChecksum, vectorChecksum })),
+      inputTokens: prepared.usage.inputTokens,
+      costMicroUsd: providerOperationCostMicroUsd('corpus-embedding', {
+        inputTokens: prepared.usage.inputTokens, outputTokens: 0,
+      }),
+    });
+    let connected = false;
+    const pool = { connect: async () => { connected = true; throw new Error('database must stay closed'); } } as any;
+    await expect(new PostgresAnswerReleaseIndexer('production').activate(
+      release, prepared, localAuthority.activation, pool, new AbortController().signal, localAuthority.durable,
+    )).rejects.toThrow(/local-non-zdr|production|unsupported/u);
+    expect(connected).toBe(false);
+  });
   it('binds every prepared chunk/vector and index checksum into the durable activation authority', async () => {
-    const release = { contentReleaseId: 'a'.repeat(64), answerReleaseId: 'b'.repeat(64), manifestHash: `sha256:${'2'.repeat(64)}`, artifactHash: `sha256:${'3'.repeat(64)}`, corpusApprovalHash: `sha256:${'4'.repeat(64)}`, manifest: { identity: { contentManifestHash: `sha256:${'1'.repeat(64)}` } }, chunks: [{ chunkId: 'c'.repeat(64), recordId: 'articles/example', canonicalPath: '/articles/example/' }], evidence: [{ evidenceId: 'e'.repeat(64), chunkId: 'c'.repeat(64), recordId: 'articles/example' }], indexInputs: [{ chunkId: 'c'.repeat(64), chunkChecksum: `sha256:${'7'.repeat(64)}`, recordId: 'articles/example', canonicalPath: '/articles/example/', title: 'Example', headingPath: ['H'], text: 'public text', searchText: 'public text' }] } as any;
+    const release = sampleRelease();
     const prepared = await prepareEmbeddingSet(release, new DeterministicEmbeddingClient('test'), new AbortController().signal);
     const authority = createProviderEmbeddingAuthorities(release, prepared, { providerDataControlReceiptHash: `sha256:${'5'.repeat(64)}`, providerPricingReceiptHash: `sha256:${'6'.repeat(64)}`, createdAt: '2026-08-30T00:00:00.000Z', completedAt: '2026-08-30T00:00:01.000Z' });
     expect(authority.durable.entries).toEqual(prepared.vectors.map(({ chunkChecksum, vectorChecksum }) => ({ chunkChecksum, vectorChecksum })));
@@ -65,6 +155,7 @@ describe('provider embedding receipt', () => {
   it('keeps provider indexing behind two explicit flags and deduplicated pre-call maxima', () => {
     expect(parseIndexEmbeddingMode(['--embedding-mode=fixture'])).toBe('fixture');
     expect(parseIndexEmbeddingMode(['--embedding-mode=provider','--confirm-live-provider'])).toBe('provider');
+    expect(parseIndexEmbeddingMode(['--embedding-mode=provider','--confirm-live-provider','--provider-authority=local'])).toBe('provider');
     for (const argv of [[],['--embedding-mode=provider'],['--confirm-live-provider'],['--embedding-mode=provider','--confirm-live-provider','extra']]) expect(() => parseIndexEmbeddingMode(argv)).toThrow(/confirmation|explicit/u);
     expect(providerIndexBudget([{ chunkChecksum: 'same', text: '한' }, { chunkChecksum: 'same', text: '한' }])).toEqual({ tokenUpperBound: 3, costUpperBoundMicroUsd: 1 });
     expect(() => providerIndexBudget([{ chunkChecksum: 'large', text: 'x'.repeat(100_001) }])).toThrow(/maximum/u);

@@ -1,17 +1,24 @@
 import { pathToFileURL } from 'node:url';
 import { rm } from 'node:fs/promises';
 
+import type { Pool } from 'pg';
+
 import { parseServerConfig } from './config/server-config.js';
 import { DeterministicEmbeddingClient } from './modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
+import { LocalBudgetLedger } from './modules/public-answer/infrastructure/guards/local-budget-ledger.js';
 import { readProviderDataControlReceipt } from './config/provider-data-control-receipt.js';
 import { OpenAIEmbeddingClient } from './modules/public-answer/infrastructure/openai/openai-embedding-client.js';
 import {
   estimateEmbeddingCostMicroUsd,
+  isLocalProviderEmbeddingReceipt,
   readBundledProviderPricing,
   readProviderEmbeddingReceipt,
   writeProviderEmbeddingReceipt,
-  type ProviderEmbeddingReceipt,
+  type DurableProviderEmbeddingReceipt,
 } from './modules/public-answer/infrastructure/openai/provider-embedding-receipt.js';
+import {
+  PROVIDER_MODEL_POLICY,
+} from './modules/public-answer/infrastructure/openai/provider-model-policy.js';
 import {
   createProviderEmbeddingAuthorities,
   createFixtureEmbeddingReceipt,
@@ -41,10 +48,97 @@ export interface ActivatedBindingAuthority {
   embeddingReceiptHash: string; chunkCount: number; indexChecksum: string;
 }
 
-export function parseIndexEmbeddingMode(argv: readonly string[]): 'fixture' | 'provider' {
-  if (argv.length === 1 && argv[0] === '--embedding-mode=fixture') return 'fixture';
-  if (argv.length === 2 && argv[0] === '--embedding-mode=provider' && argv[1] === '--confirm-live-provider') return 'provider';
+export function parseIndexCommand(argv: readonly string[]): Readonly<{
+  mode: 'fixture' | 'provider';
+  providerAuthority: 'local-non-zdr' | 'production-zdr' | null;
+}> {
+  if (argv.length === 1 && argv[0] === '--embedding-mode=fixture') {
+    return { mode: 'fixture', providerAuthority: null };
+  }
+  if (argv.length === 2 && argv[0] === '--embedding-mode=provider' && argv[1] === '--confirm-live-provider') {
+    return { mode: 'provider', providerAuthority: 'production-zdr' };
+  }
+  if (argv.length === 3 && argv[0] === '--embedding-mode=provider' && argv[1] === '--confirm-live-provider'
+    && argv[2] === '--provider-authority=local') {
+    return { mode: 'provider', providerAuthority: 'local-non-zdr' };
+  }
   throw new Error('indexing requires one explicit embedding mode and provider confirmation');
+}
+
+export function parseIndexEmbeddingMode(argv: readonly string[]): 'fixture' | 'provider' {
+  return parseIndexCommand(argv).mode;
+}
+
+export async function reserveAndEmbedCorpus<T extends { usage: { inputTokens: number } }>(
+  ledger: LocalBudgetLedger,
+  inputs: readonly { chunkChecksum: string; text: string }[],
+  embed: () => Promise<T>,
+): Promise<T> {
+  const reservation = await ledger.reserve({
+    operation: 'corpus-embedding',
+    maxUsage: { inputTokens: providerIndexBudget(inputs).tokenUpperBound, outputTokens: 0 },
+  });
+  await reservation.begin();
+  try {
+    const embedded = await embed();
+    await reservation.settle({ inputTokens: embedded.usage.inputTokens, outputTokens: 0 });
+    return embedded;
+  } catch (error) {
+    // After begin(), provider acceptance is ambiguous; do not releaseUnattempted.
+    throw error;
+  }
+}
+
+export function localLiveIndexReopensExactly(
+  answer: {
+    contentReleaseId: string;
+    answerReleaseId: string;
+    manifest: { identity: { contentManifestHash: string } };
+    manifestHash: string;
+    artifactHash: string;
+    corpusApprovalHash: string;
+    indexInputs: readonly { chunkChecksum: string }[];
+  },
+  receipt: DurableProviderEmbeddingReceipt,
+  binding: ActivatedBindingRow,
+  expected: Readonly<{
+    providerAuthorityHash: string;
+    providerPolicyHash: string;
+    providerPricingReceiptHash: string;
+  }>,
+): boolean {
+  if (!isLocalProviderEmbeddingReceipt(receipt)) {
+    throw new Error('old provider embedding receipt is unsupported');
+  }
+  const releaseMatches = receipt.contentReleaseId === answer.contentReleaseId
+    && receipt.answerReleaseId === answer.answerReleaseId
+    && receipt.contentManifestHash === answer.manifest.identity.contentManifestHash
+    && receipt.answerManifestHash === answer.manifestHash
+    && receipt.answerArtifactHash === answer.artifactHash
+    && receipt.corpusApprovalHash === answer.corpusApprovalHash
+    && receipt.providerAuthorityKind === 'local-non-zdr'
+    && receipt.providerAuthorityHash === expected.providerAuthorityHash
+    && receipt.providerPolicyHash === expected.providerPolicyHash
+    && receipt.providerPolicyHash === PROVIDER_MODEL_POLICY.policyHash
+    && receipt.providerPricingReceiptHash === expected.providerPricingReceiptHash
+    && receipt.providerPricingReceiptHash === PROVIDER_MODEL_POLICY.pricingReceiptHash
+    && receipt.embeddingModel === PROVIDER_MODEL_POLICY.embeddingModel
+    && receipt.embeddingDimensions === PROVIDER_MODEL_POLICY.embeddingDimensions
+    && receipt.entries.length === answer.indexInputs.length
+    && receipt.entries.every((entry, index) => entry.chunkChecksum === answer.indexInputs[index]?.chunkChecksum);
+  const bindingMatches = binding.content_release_id === receipt.contentReleaseId
+    && binding.answer_release_id === receipt.answerReleaseId
+    && binding.content_manifest_hash === receipt.contentManifestHash
+    && binding.answer_manifest_hash === receipt.answerManifestHash
+    && binding.answer_artifact_hash === receipt.answerArtifactHash
+    && binding.embedding_model === receipt.embeddingModel
+    && binding.embedding_dimensions === receipt.embeddingDimensions
+    && binding.embedding_source === receipt.embeddingSource
+    && binding.embedding_receipt_hash === receipt.embeddingReceiptHash
+    && binding.chunk_count === receipt.entries.length
+    && binding.index_checksum === receipt.indexChecksum
+    && binding.state === 'active';
+  return releaseMatches && bindingMatches;
 }
 
 export function providerIndexBudget(inputs: readonly { chunkChecksum: string; text: string }[]): Readonly<{ tokenUpperBound: number; costUpperBoundMicroUsd: number }> {
@@ -89,10 +183,12 @@ function bindingAuthority(answer: VerifiedActivePublicAnswerReleaseAuthority, re
 export function verifyPreauthorizedProviderEmbeddingReceipt(
   answer: Pick<VerifiedActivePublicAnswerReleaseAuthority,
     'contentReleaseId' | 'answerReleaseId' | 'manifest' | 'manifestHash' | 'artifactHash' | 'corpusApprovalHash' | 'indexInputs'>,
-  receipt: Pick<ProviderEmbeddingReceipt,
-    'contentReleaseId' | 'answerReleaseId' | 'contentManifestHash' | 'answerManifestHash' | 'answerArtifactHash'
-    | 'corpusApprovalHash' | 'providerDataControlReceiptHash' | 'providerPricingReceiptHash' | 'createdAt' | 'completedAt'
-    | 'inputTokens' | 'costMicroUsd' | 'entries'>,
+  receipt: {
+    contentReleaseId: string; answerReleaseId: string; contentManifestHash: string; answerManifestHash: string;
+    answerArtifactHash: string; corpusApprovalHash: string; providerDataControlReceiptHash: string;
+    providerPricingReceiptHash: string; createdAt: string; completedAt: string; inputTokens: number;
+    costMicroUsd: number; entries: readonly { readonly chunkChecksum: string }[];
+  },
   expected: Readonly<{
     providerDataControlReceiptHash: string; providerPricingReceiptHash: string;
     maxInputTokens: number; maxCostMicroUsd: number;
@@ -120,13 +216,64 @@ export interface IndexAnswerReleaseOptions {
   readonly providerEmbeddingClient?: EmbeddingClient;
 }
 
+function emitIndexSuccess(
+  stdout: (value: string) => void,
+  answer: VerifiedActivePublicAnswerReleaseAuthority,
+  model: string,
+): void {
+  stdout(JSON.stringify({
+    kind: 'success', contentReleaseId: answer.contentReleaseId.slice(0, 12), answerReleaseId: answer.answerReleaseId.slice(0, 12),
+    approvalHash: answer.corpusApprovalHash.slice(0, 19), chunkCount: answer.chunks.length, model,
+  }) + '\n');
+}
+
+async function readReusableLocalLiveIndex(
+  pool: Pool,
+  answer: VerifiedActivePublicAnswerReleaseAuthority,
+  expected: Readonly<{
+    providerAuthorityHash: string;
+    providerPolicyHash: string;
+    providerPricingReceiptHash: string;
+  }>,
+  receiptRoot: string,
+): Promise<Readonly<{ row: ActivatedBindingRow; receipt: DurableProviderEmbeddingReceipt }> | null> {
+  const active = await pool.query<ActivatedBindingRow>(`SELECT binding_id,content_release_id,answer_release_id,
+    content_manifest_hash,answer_manifest_hash,answer_artifact_hash,embedding_model,embedding_dimensions,
+    embedding_source,embedding_receipt_hash,chunk_count,index_checksum,state
+    FROM public_answer_release_bindings WHERE state='active'`);
+  if (active.rowCount !== 1) return null;
+  const row = active.rows[0]!;
+  if (row.embedding_source !== 'provider') return null;
+  let receipt: DurableProviderEmbeddingReceipt;
+  try {
+    receipt = await readProviderEmbeddingReceipt(receiptRoot, answer.answerReleaseId, row.embedding_receipt_hash);
+  } catch {
+    return null;
+  }
+  if (!localLiveIndexReopensExactly(answer, receipt, row, expected)) return null;
+  const chunks = await pool.query<{ chunk_checksum: string }>(
+    'SELECT chunk_checksum FROM public_answer_chunks WHERE binding_id=$1 ORDER BY chunk_id', [row.binding_id],
+  );
+  const expectedChecksums = [...answer.indexInputs]
+    .sort((left, right) => left.chunkChecksum < right.chunkChecksum ? -1 : left.chunkChecksum > right.chunkChecksum ? 1 : 0)
+    .map((item) => item.chunkChecksum);
+  const written = [...chunks.rows].map((item) => item.chunk_checksum).sort();
+  if (written.length !== expectedChecksums.length || written.some((checksum, index) => checksum !== expectedChecksums[index])) {
+    return null;
+  }
+  return { row, receipt };
+}
+
 export async function indexAnswerRelease(
   argv: readonly string[],
   env: NodeJS.ProcessEnv,
   stdout: (value: string) => void = (value) => process.stdout.write(value),
   options: Readonly<IndexAnswerReleaseOptions> = {},
 ): Promise<void> {
-  const mode = parseIndexEmbeddingMode(argv); const fixture = mode === 'fixture'; const provider = mode === 'provider';
+  const command = parseIndexCommand(argv);
+  const fixture = command.mode === 'fixture';
+  const provider = command.mode === 'provider';
+  const local = command.providerAuthority === 'local-non-zdr';
   const config = await parseServerConfig(env);
   if (fixture && config.publicAskMode !== 'fixture') throw new Error('fixture indexing requires fixture mode');
   if (provider && config.publicAskMode !== 'provider') throw new Error('provider indexing requires provider mode');
@@ -138,26 +285,70 @@ export async function indexAnswerRelease(
     const budget = provider ? providerIndexBudget(answer.indexInputs) : null;
     const pricing = provider ? await readBundledProviderPricing() : null;
     if (provider && budget!.costUpperBoundMicroUsd !== estimateEmbeddingCostMicroUsd(budget!.tokenUpperBound, pricing!.embeddingInputMicroUsdPerMillionTokens)) throw new Error('provider pricing arithmetic mismatch');
-    if (provider && (!config.openAiApiKey || !config.providerDataControlReceiptPath || !config.providerEmbeddingReceiptRoot)) {
+    if (local) {
+      if (config.providerAuthority?.kind !== 'local-non-zdr' || !config.openAiApiKey || !config.providerEmbeddingReceiptRoot) {
+        throw new Error('local provider indexing requires key, receipt root, and local-non-zdr authority');
+      }
+    } else if (provider && (!config.openAiApiKey || !config.providerDataControlReceiptPath || !config.providerEmbeddingReceiptRoot)) {
       throw new Error('provider indexing requires key, data-control receipt, pricing, and receipt root');
     }
-    const dataControl = provider ? await readProviderDataControlReceipt(config.providerDataControlReceiptPath!) : null;
-    const expectedProviderReceipt = provider && options.expectedProviderReceiptHash
+    const localAuthority = config.providerAuthority?.kind === 'local-non-zdr' ? config.providerAuthority : null;
+    if (local && localAuthority && pricing) {
+      const reused = await readReusableLocalLiveIndex(pool, answer, {
+        providerAuthorityHash: localAuthority.authorizationHash,
+        providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+        providerPricingReceiptHash: pricing.receiptHash,
+      }, config.providerEmbeddingReceiptRoot!);
+      if (reused) {
+        const authority: ActivatedBindingAuthority = {
+          bindingId: reused.row.binding_id, contentReleaseId: reused.row.content_release_id,
+          answerReleaseId: reused.row.answer_release_id, contentManifestHash: reused.row.content_manifest_hash,
+          answerManifestHash: reused.row.answer_manifest_hash, answerArtifactHash: reused.row.answer_artifact_hash,
+          corpusApprovalHash: answer.corpusApprovalHash, embeddingModel: reused.row.embedding_model,
+          embeddingDimensions: reused.row.embedding_dimensions, embeddingSource: reused.row.embedding_source,
+          embeddingReceiptHash: reused.row.embedding_receipt_hash, chunkCount: reused.row.chunk_count,
+          indexChecksum: reused.row.index_checksum,
+        };
+        assertCompleteActivatedBinding(reused.row, authority, answer.corpusApprovalHash);
+        emitIndexSuccess(stdout, answer, reused.receipt.embeddingModel);
+        return;
+      }
+    }
+    const dataControl = provider && !local ? await readProviderDataControlReceipt(config.providerDataControlReceiptPath!) : null;
+    const expectedProviderReceipt = provider && !local && options.expectedProviderReceiptHash
       ? await readProviderEmbeddingReceipt(config.providerEmbeddingReceiptRoot!, answer.answerReleaseId,
         options.expectedProviderReceiptHash)
       : null;
-    const authorizedTimes = expectedProviderReceipt ? verifyPreauthorizedProviderEmbeddingReceipt(answer, expectedProviderReceipt, {
-      providerDataControlReceiptHash: dataControl!.receiptHash,
-      providerPricingReceiptHash: pricing!.receiptHash,
-      maxInputTokens: budget!.tokenUpperBound,
-      maxCostMicroUsd: budget!.costUpperBoundMicroUsd,
-      orderedIndexInputs: orderedUniqueIndexInputs(answer.indexInputs),
-    }) : null;
+    if (expectedProviderReceipt && isLocalProviderEmbeddingReceipt(expectedProviderReceipt)) {
+      throw new Error('local-non-zdr embedding receipts are not production authority');
+    }
+    const authorizedTimes = expectedProviderReceipt && !isLocalProviderEmbeddingReceipt(expectedProviderReceipt)
+      ? verifyPreauthorizedProviderEmbeddingReceipt(answer, expectedProviderReceipt, {
+        providerDataControlReceiptHash: dataControl!.receiptHash,
+        providerPricingReceiptHash: pricing!.receiptHash,
+        maxInputTokens: budget!.tokenUpperBound,
+        maxCostMicroUsd: budget!.costUpperBoundMicroUsd,
+        orderedIndexInputs: orderedUniqueIndexInputs(answer.indexInputs),
+      }) : null;
     const startedAt = authorizedTimes?.createdAt ?? new Date().toISOString();
-    const prepared = await prepareEmbeddingSet(answer, provider
+    const client = provider
       ? options.providerEmbeddingClient ?? new OpenAIEmbeddingClient(config.openAiApiKey!, { profile: 'index' })
-      : new DeterministicEmbeddingClient(config.nodeEnv), new AbortController().signal);
-    const providerAuthorities = provider ? createProviderEmbeddingAuthorities(answer, prepared, {
+      : new DeterministicEmbeddingClient(config.nodeEnv);
+    const signal = new AbortController().signal;
+    const prepared = local && localAuthority
+      ? await reserveAndEmbedCorpus(
+        await LocalBudgetLedger.open(localAuthority.budgetLedgerPath),
+        answer.indexInputs,
+        () => prepareEmbeddingSet(answer, client, signal),
+      )
+      : await prepareEmbeddingSet(answer, client, signal);
+    const providerAuthorities = provider ? createProviderEmbeddingAuthorities(answer, prepared, local && localAuthority ? {
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: localAuthority.authorizationHash,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: pricing!.receiptHash,
+      createdAt: startedAt, completedAt: authorizedTimes?.completedAt ?? new Date().toISOString(),
+    } : {
       providerDataControlReceiptHash: dataControl!.receiptHash, providerPricingReceiptHash: pricing!.receiptHash,
       createdAt: startedAt, completedAt: authorizedTimes?.completedAt ?? new Date().toISOString(),
     }) : null;
@@ -188,10 +379,7 @@ export async function indexAnswerRelease(
     const row = reread.rows[0];
     if (!row) throw new Error('complete binding reread mismatch');
     assertCompleteActivatedBinding(row, bindingAuthority(answer, receipt), answer.corpusApprovalHash);
-    stdout(JSON.stringify({
-      kind: 'success', contentReleaseId: answer.contentReleaseId.slice(0, 12), answerReleaseId: answer.answerReleaseId.slice(0, 12),
-      approvalHash: answer.corpusApprovalHash.slice(0, 19), chunkCount: answer.chunks.length, model: receipt.model,
-    }) + '\n');
+    emitIndexSuccess(stdout, answer, receipt.model);
   } finally { await pool.end(); }
 }
 
