@@ -21,6 +21,7 @@ const siteShellPath = join(repositoryRoot, 'apps/site/src/ui/components/SiteShel
 const tokenStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/tokens.css');
 const shellStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/shell.css');
 const searchStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/route-search.css');
+const avatarFallbackDeadlineMs = 20_000;
 const viteCacheRoots: string[] = [];
 
 afterEach(async () => {
@@ -219,6 +220,59 @@ async function startHarness(options: { deferHydration?: boolean } = {}) {
   const address = server.httpServer?.address();
   if (!address || typeof address === 'string') throw new Error('Vite did not bind an ephemeral port');
   return { server, baseUrl: `http://127.0.0.1:${address.port}` };
+}
+
+async function hydrateAndWaitForAvatarFallback(page: Page, deadlineMs = avatarFallbackDeadlineMs) {
+  return page.evaluate(async ({ deadlineMs: pageDeadlineMs }) => {
+    const controlledWindow = window as typeof window & {
+      __avatarFallbackWaitLifecycle?: {
+        observerCallbacks: number;
+        observerDisconnected: boolean;
+        timerCleared: boolean;
+      };
+      __hydrateSecondBrainSearch?: () => void;
+    };
+    const root = document.querySelector('#root');
+    const hydrate = controlledWindow.__hydrateSecondBrainSearch;
+    if (!root || !hydrate) throw new Error('deferred hydration control must be ready');
+    const lifecycle = {
+      observerCallbacks: 0,
+      observerDisconnected: false,
+      timerCleared: false,
+    };
+    controlledWindow.__avatarFallbackWaitLifecycle = lifecycle;
+    let observer: MutationObserver | undefined;
+    let deadline: number | undefined;
+    try {
+      await new Promise<void>((resolveFallback, rejectFallback) => {
+        const observeFallback = () => {
+          lifecycle.observerCallbacks += 1;
+          if (root.querySelector('.agent-stage')?.getAttribute('data-image-state') === 'error') resolveFallback();
+        };
+        observer = new MutationObserver(observeFallback);
+        observer.observe(root, { attributes: true, attributeFilter: ['data-image-state'], subtree: true });
+        deadline = window.setTimeout(() => {
+          const portrait = root.querySelector<HTMLImageElement>('.agent-stage__portrait');
+          rejectFallback(new Error([
+            `avatar fallback did not reach error within ${pageDeadlineMs}ms`,
+            `imageState=${root.querySelector('.agent-stage')?.getAttribute('data-image-state') ?? 'missing'}`,
+            `imageComplete=${portrait?.complete ?? 'missing'}`,
+            `naturalWidth=${portrait?.naturalWidth ?? 'missing'}`,
+          ].join('; ')));
+        }, pageDeadlineMs);
+        observeFallback();
+        hydrate();
+      });
+      return root.querySelector('.agent-stage')?.getAttribute('data-image-state') ?? 'missing';
+    } finally {
+      observer?.disconnect();
+      lifecycle.observerDisconnected = observer !== undefined;
+      if (deadline !== undefined) {
+        window.clearTimeout(deadline);
+        lifecycle.timerCleared = true;
+      }
+    }
+  }, { deadlineMs });
 }
 
 async function targetBoxesBelowMinimum(page: Page) {
@@ -614,26 +668,14 @@ describe('second-brain search client interaction', () => {
       await expect.poll(() => page.evaluate(() => typeof (window as typeof window & {
         __hydrateSecondBrainSearch?: () => void;
       }).__hydrateSecondBrainSearch === 'function')).toBe(true);
-      await page.evaluate(async () => {
-        const root = document.querySelector('#root');
-        const hydrate = (window as typeof window & {
-          __hydrateSecondBrainSearch?: () => void;
-        }).__hydrateSecondBrainSearch;
-        if (!root || !hydrate) throw new Error('deferred hydration control must be ready');
-        const fallbackReady = new Promise<void>((resolveFallback) => {
-          const observeFallback = () => {
-            if (root.querySelector('.agent-stage')?.getAttribute('data-image-state') !== 'error') return;
-            observer.disconnect();
-            resolveFallback();
-          };
-          const observer = new MutationObserver(observeFallback);
-          observer.observe(root, { attributes: true, attributeFilter: ['data-image-state'], subtree: true });
-          observeFallback();
-        });
-        hydrate();
-        await fallbackReady;
+      await expect(hydrateAndWaitForAvatarFallback(page)).resolves.toBe('error');
+      expect(await page.evaluate(() => (window as typeof window & {
+        __avatarFallbackWaitLifecycle?: unknown;
+      }).__avatarFallbackWaitLifecycle)).toEqual({
+        observerCallbacks: expect.any(Number),
+        observerDisconnected: true,
+        timerCleared: true,
       });
-      expect(await page.locator('.agent-stage').getAttribute('data-image-state')).toBe('error');
       expect(await page.locator('.agent-stage__portrait-frame').evaluate((element) => element.getBoundingClientRect().toJSON())).toEqual(before);
       expect(await page.getByRole('img', { name: '종이 조각이 접힌 FORM & THOUGHT 기록 안내자' }).count()).toBe(1);
       expect(await page.getByText('FORM & THOUGHT', { exact: true }).count()).toBe(1);
@@ -642,6 +684,46 @@ describe('second-brain search client interaction', () => {
       await server?.close();
     }
   }, 60_000);
+
+  it('rejects a missing avatar fallback with actionable state and releases its page-side wait owners', async () => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness({ deferHydration: true });
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await page.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'networkidle' });
+      await expect.poll(() => page.evaluate(() => typeof (window as typeof window & {
+        __hydrateSecondBrainSearch?: () => void;
+      }).__hydrateSecondBrainSearch === 'function')).toBe(true);
+      expect(await page.locator('.agent-stage').getAttribute('data-image-state')).toBe('ready');
+      await expect(hydrateAndWaitForAvatarFallback(page, 50)).rejects.toThrow(
+        /avatar fallback did not reach error within 50ms; imageState=ready; imageComplete=true; naturalWidth=1/u,
+      );
+      const lifecycle = await page.evaluate(() => (window as typeof window & {
+        __avatarFallbackWaitLifecycle?: {
+          observerCallbacks: number;
+          observerDisconnected: boolean;
+          timerCleared: boolean;
+        };
+      }).__avatarFallbackWaitLifecycle);
+      expect(lifecycle).toEqual({
+        observerCallbacks: expect.any(Number),
+        observerDisconnected: true,
+        timerCleared: true,
+      });
+      const callbacksBeforeMutation = lifecycle?.observerCallbacks;
+      await page.locator('.agent-stage').evaluate((stage) => stage.setAttribute('data-image-state', 'error'));
+      await page.evaluate(() => Promise.resolve());
+      expect(await page.evaluate(() => (window as typeof window & {
+        __avatarFallbackWaitLifecycle?: { observerCallbacks: number };
+      }).__avatarFallbackWaitLifecycle?.observerCallbacks)).toBe(callbacksBeforeMutation);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 20_000);
 
   it('keeps the approved desktop and mobile search composition measurable', async () => {
     let browser: Browser | undefined;
