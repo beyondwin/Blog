@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { expectNoHorizontalOverflow } from './support';
 
 const external = process.env.FORM_THOUGHT_E2E_EXTERNAL_STACK === '1';
+const live = process.env.FORM_THOUGHT_E2E_LIVE_STACK === '1';
 const proxyOrigin = process.env.FORM_THOUGHT_E2E_EXTERNAL_ORIGIN ?? '';
 const previewOrigin = process.env.FORM_THOUGHT_E2E_PREVIEW_ORIGIN ?? '';
 const apiOrigin = process.env.FORM_THOUGHT_E2E_API_ORIGIN ?? '';
@@ -15,7 +16,7 @@ const arbitraryQuestion = 'AI';
 const unsupportedQuestion = '---';
 const maximumQuestion = '가'.repeat(120);
 
-test.skip(!external, 'the provider suite requires the owned external stack');
+test.skip(!external || live, 'the provider suite requires the owned fixture stack');
 
 async function instrumentPage(page: Page) {
   await page.addInitScript(() => {

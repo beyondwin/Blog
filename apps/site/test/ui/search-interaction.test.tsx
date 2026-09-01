@@ -1636,6 +1636,50 @@ describe('second-brain search client interaction', () => {
   it.each([
     { height: 900, width: 1440 },
     { height: 844, width: 390 },
+  ])('keeps local-live disclosure visible without overflow, clipped targets, or an inaccessible evidence dialog at $width px', async (viewport) => {
+    let browser: Browser | undefined;
+    let server: ViteDevServer | undefined;
+    try {
+      const harness = await startHarness({ localProviderDisclosure: true });
+      server = harness.server;
+      browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage({ viewport });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const consoleErrors: string[] = [];
+      page.on('console', (message) => {
+        if (message.type() === 'error') consoleErrors.push(message.text());
+      });
+      page.on('pageerror', (error) => consoleErrors.push(error.message));
+      await page.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+      const disclosure = page.getByText(localLiveDisclosure, { exact: true });
+      expect(await disclosure.count()).toBe(1);
+      expect(await disclosure.isVisible()).toBe(true);
+      expect(await targetBoxesBelowMinimum(page)).toEqual([]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+
+      await page.getByRole('searchbox', { name: '기록에 묻기' }).fill(SAMPLE_QUESTION);
+      await page.getByRole('searchbox', { name: '기록에 묻기' }).press('Enter');
+      await expect.poll(() => page.locator('.second-brain-search').getAttribute('data-view')).toBe('answered');
+      const citation = page.locator('.answer-stage__citation').first();
+      await citation.click();
+      const dialog = page.getByRole('dialog', { name: '이 답의 근거' });
+      await expect.poll(() => dialog.count()).toBe(1);
+      await expect.poll(() => dialog.getByRole('button', { name: '근거 패널 닫기' })
+        .evaluate((element) => document.activeElement === element)).toBe(true);
+      expect(await dialog.getByRole('link', { name: '원문 보기' }).getAttribute('href'))
+        .toBe('/thoughts/why-i-read-in-the-ai-era/');
+      expect(await targetBoxesBelowMinimum(page)).toEqual([]);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+      expect(consoleErrors).toEqual([]);
+    } finally {
+      await browser?.close();
+      await server?.close();
+    }
+  }, 30_000);
+
+  it.each([
+    { height: 900, width: 1440 },
+    { height: 844, width: 390 },
   ])('keeps every visible Task 2 search control at least 44 by 44 at $width px', async (viewport) => {
     let browser: Browser | undefined;
     let server: ViteDevServer | undefined;

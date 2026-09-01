@@ -164,4 +164,159 @@ describe('search provider stack runner lifecycle', () => {
       receipts,
     });
   });
+
+  it('refuses OPENAI_API_KEY before any fixture cell work', async () => {
+    const previous = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = 'must-not-call-openai';
+    try {
+      const { runSearchProviderStack } = await runnerModule();
+      await expect(runSearchProviderStack()).rejects.toThrow(/refuses OPENAI_API_KEY/u);
+    } finally {
+      if (previous === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previous;
+    }
+  });
+});
+
+async function liveRunnerModule() {
+  return import('./e2e/run-search-provider-live-stack.mts');
+}
+
+describe('search provider live smoke runner', () => {
+  const sentinels = Object.freeze({
+    key: 'sk-live-sentinel-key',
+    question: 'private live question text',
+    answer: 'private live answer text',
+    excerpt: 'private live excerpt text',
+  });
+
+  it('refuses to start unless key, confirm env, and USD 1 budget all pass', async () => {
+    const { assertLiveSmokeReady, requiredLiveSmokeReservationMicroUsd, runSearchProviderLiveStack } = await liveRunnerModule();
+    const { WORST_CASE_COST_MICROUSD } = await import(
+      '../apps/server/src/modules/public-answer/infrastructure/guards/in-memory-usage-guard.js'
+    );
+    const indexReservationMicroUsd = 12_000;
+    const required = requiredLiveSmokeReservationMicroUsd(indexReservationMicroUsd);
+    expect(required).toBe(indexReservationMicroUsd + 2 * WORST_CASE_COST_MICROUSD);
+    expect(required).toBeLessThanOrEqual(1_000_000);
+
+    expect(() => assertLiveSmokeReady({
+      env: { OPENAI_API_KEY: 'k' },
+      argv: ['--confirm-live-provider'],
+      availableMicroUsd: 1_000_000,
+      indexReservationMicroUsd,
+    })).toThrow(/FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE/u);
+
+    expect(() => assertLiveSmokeReady({
+      env: { FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE: 'true' },
+      argv: ['--confirm-live-provider'],
+      availableMicroUsd: 1_000_000,
+      indexReservationMicroUsd,
+    })).toThrow(/OPENAI_API_KEY/u);
+
+    expect(() => assertLiveSmokeReady({
+      env: { OPENAI_API_KEY: 'k', FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE: 'true' },
+      argv: ['--confirm-live-provider'],
+      availableMicroUsd: required - 1,
+      indexReservationMicroUsd,
+    })).toThrow(/index plus two worst-case questions under USD 1/u);
+
+    expect(() => assertLiveSmokeReady({
+      env: { OPENAI_API_KEY: 'k', FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE: 'true' },
+      argv: ['--confirm-live-provider'],
+      availableMicroUsd: 1_000_000,
+      indexReservationMicroUsd: 1_000_000,
+    })).toThrow(/index plus two worst-case questions under USD 1/u);
+
+    expect(() => assertLiveSmokeReady({
+      env: { OPENAI_API_KEY: 'k', FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE: 'true' },
+      argv: ['--confirm-live-provider'],
+      availableMicroUsd: 1_000_000,
+      indexReservationMicroUsd,
+    })).not.toThrow();
+
+    const events: string[] = [];
+    const blocked = {
+      env: { FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE: 'true' } as NodeJS.ProcessEnv,
+      argv: ['--confirm-live-provider'],
+      snapshotLedger: async () => {
+        events.push('ledger');
+        return { month: '2026-09', hardCapMicroUsd: 1_000_000 as const, chargedMicroUsd: 0, availableMicroUsd: 1_000_000 };
+      },
+      indexReservationMicroUsd: async () => {
+        events.push('index');
+        return indexReservationMicroUsd;
+      },
+      startLive: async () => {
+        events.push('start');
+        throw new Error('live command must not start');
+      },
+    };
+    await expect(runSearchProviderLiveStack(blocked)).rejects.toThrow(/OPENAI_API_KEY/u);
+    expect(events).toEqual([]);
+  });
+
+  it('parses a synthetic redacted live receipt and rejects secret or raw-text sentinels', async () => {
+    const { parseLiveSmokeReceipt, assertNoLiveSmokeSentinels } = await liveRunnerModule();
+    const { PROVIDER_MODEL_POLICY } = await import(
+      '../apps/server/src/modules/public-answer/infrastructure/openai/provider-model-policy.js'
+    );
+    const receipt = {
+      schemaVersion: 1 as const,
+      status: 'PASS' as const,
+      fixtureMode: false as const,
+      provenance: 'local-non-zdr' as const,
+      generationModel: 'gpt-5.6-luna' as const,
+      semanticModel: 'gpt-5.6-luna' as const,
+      reasoningEffort: 'high' as const,
+      embeddingModel: 'text-embedding-3-large' as const,
+      policyHash: PROVIDER_MODEL_POLICY.policyHash,
+      liveProviderCalls: 4,
+      answeredQuestions: 1,
+      fallbackQuestions: 1,
+      viewports: ['1440x900', '390x844'] as const,
+      ledger: {
+        month: '2026-09',
+        hardCapMicroUsd: 1_000_000 as const,
+        beforeChargedMicroUsd: 10_000,
+        afterChargedMicroUsd: 18_420,
+        chargedDeltaMicroUsd: 8_420,
+        availableMicroUsd: 981_580,
+        reconciled: true as const,
+      },
+      cleanup: {
+        ownedProcesses: 0,
+        composeProjects: 0,
+        containers: 0,
+        volumes: 0,
+        tempDirectories: 0,
+      },
+    };
+
+    expect(parseLiveSmokeReceipt(receipt)).toEqual(receipt);
+    expect(() => assertNoLiveSmokeSentinels(JSON.stringify(receipt), Object.values(sentinels))).not.toThrow();
+
+    expect(() => parseLiveSmokeReceipt({ ...receipt, generationModel: 'gpt-5.4-mini-2026-03-17' }))
+      .toThrow(/gpt-5\.6-luna|unsupported provider model/u);
+    expect(() => parseLiveSmokeReceipt({ ...receipt, reasoningEffort: 'none' })).toThrow(/high/u);
+    expect(() => parseLiveSmokeReceipt({ ...receipt, fixtureMode: true })).toThrow(/fixtureMode/u);
+    expect(() => parseLiveSmokeReceipt({ ...receipt, liveProviderCalls: 0 })).toThrow(/liveProviderCalls/u);
+    expect(() => parseLiveSmokeReceipt({ ...receipt, answeredQuestions: 0, fallbackQuestions: 2 }))
+      .toThrow(/answeredQuestions/u);
+    expect(() => parseLiveSmokeReceipt({
+      ...receipt,
+      ledger: { ...receipt.ledger, chargedDeltaMicroUsd: 0, afterChargedMicroUsd: 10_000 },
+    })).toThrow(/chargedDeltaMicroUsd/u);
+    expect(() => parseLiveSmokeReceipt({
+      ...receipt,
+      ledger: { ...receipt.ledger, afterChargedMicroUsd: 1_000_001, chargedDeltaMicroUsd: 990_001, availableMicroUsd: -1 },
+    })).toThrow(/1,000,000|hard cap/u);
+    expect(() => parseLiveSmokeReceipt({ ...receipt, notes: sentinels.question })).toThrow(/unknown|sentinel|fields/u);
+    expect(() => assertNoLiveSmokeSentinels(
+      JSON.stringify({ ...receipt, leak: sentinels.key }),
+      Object.values(sentinels),
+    )).toThrow(/sentinel/u);
+    expect(() => assertNoLiveSmokeSentinels(sentinels.answer, [sentinels.answer])).toThrow(/sentinel/u);
+    expect(() => assertNoLiveSmokeSentinels(sentinels.excerpt, [sentinels.excerpt])).toThrow(/sentinel/u);
+  });
 });
