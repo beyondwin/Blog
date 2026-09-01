@@ -17,6 +17,36 @@ const ROUTES = [
 ] as const;
 const PRIMARY_LABELS = ['서평', '아티클', '생각', '검색'] as const;
 
+type MobileMenuRestoration = {
+  inertCount: number;
+  overflow: string;
+};
+
+async function observeMenuHiddenRestoration(page: Page) {
+  await page.evaluate(() => {
+    const menu = document.querySelector<HTMLElement>('#site-navigation-menu');
+    if (menu === null || menu.hidden) throw new Error('mobile menu must be visible before observing close');
+    const owner = window as typeof window & { __mobileMenuRestoration?: MobileMenuRestoration | null };
+    owner.__mobileMenuRestoration = null;
+    const observer = new MutationObserver(() => {
+      if (!menu.hidden) return;
+      owner.__mobileMenuRestoration = {
+        inertCount: document.querySelectorAll('[data-mobile-menu-inert][inert]').length,
+        overflow: document.documentElement.style.overflow,
+      };
+      observer.disconnect();
+    });
+    observer.observe(menu, { attributes: true, attributeFilter: ['hidden'] });
+  });
+}
+
+async function hiddenRestoration(page: Page) {
+  return page.evaluate(() => (
+    (window as typeof window & { __mobileMenuRestoration?: MobileMenuRestoration | null })
+      .__mobileMenuRestoration ?? null
+  ));
+}
+
 async function gotoCleanPage(page: Page, path: string) {
   const errors: string[] = [];
   page.on('console', (message) => {
@@ -104,3 +134,45 @@ test.describe('390px modal navigation behavior', () => {
     expect(await menu.getByRole('link').allTextContents()).toEqual(PRIMARY_LABELS);
   });
 });
+
+for (const viewport of [
+  { name: 'mobile', width: 390, height: 844, deviceScaleFactor: 1 },
+  { name: 'short', width: 720, height: 450, deviceScaleFactor: 2 },
+] as const) {
+  test.describe(`${viewport.name} modal restoration`, () => {
+    test.use({
+      viewport: { width: viewport.width, height: viewport.height },
+      deviceScaleFactor: viewport.deviceScaleFactor,
+    });
+
+    test('restores every inert target, root overflow, opener focus, and composer submission before hiding', async ({ page }) => {
+      await page.goto('/search/');
+      await page.evaluate(() => { document.documentElement.style.overflow = 'clip'; });
+      const opener = page.getByRole('button', { name: '메뉴 열기' });
+      await opener.click();
+      await expect(page.getByRole('dialog', { name: '주 탐색 메뉴' })).toBeVisible();
+      await observeMenuHiddenRestoration(page);
+
+      const immediate = await page.evaluate(() => {
+        const button = document.querySelector<HTMLButtonElement>('button[aria-controls="site-navigation-menu"]');
+        const menu = document.querySelector<HTMLElement>('#site-navigation-menu');
+        if (button === null || menu === null) throw new Error('mobile menu controls are unavailable');
+        button.click();
+        return {
+          inertCount: document.querySelectorAll('[data-mobile-menu-inert][inert]').length,
+          overflow: document.documentElement.style.overflow,
+        };
+      });
+
+      expect(immediate).toEqual({ inertCount: 0, overflow: 'clip' });
+      expect(await hiddenRestoration(page)).toEqual({ inertCount: 0, overflow: 'clip' });
+      expect(await page.locator('[data-mobile-menu-inert][inert]').count()).toBe(0);
+      expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('clip');
+      await expect(opener).toBeFocused();
+      const composer = page.getByRole('searchbox', { name: '기록에 묻기' });
+      await composer.fill('---');
+      await composer.press('Enter');
+      await expect(page.locator('.second-brain-search')).toHaveAttribute('data-view', 'search-results');
+    });
+  });
+}

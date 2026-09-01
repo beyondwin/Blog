@@ -478,12 +478,42 @@ async function forcePortraitFailureWithoutGeometryShift(
 async function exerciseMobileMenu(page: Page) {
   const open = page.getByRole('button', { name: '메뉴 열기' });
   if (!await open.isVisible() || await open.getAttribute('aria-haspopup') !== 'dialog') return;
+  const previousOverflow = await page.evaluate(() => document.documentElement.style.overflow);
   await open.click();
   const close = page.getByRole('button', { name: '메뉴 닫기' });
   await expect(close).toBeVisible();
   await expect(page.getByRole('dialog', { name: '주 탐색 메뉴' })).toBeVisible();
+  await page.evaluate(() => {
+    const menu = document.querySelector<HTMLElement>('#site-navigation-menu');
+    if (menu === null || menu.hidden) throw new Error('mobile menu must be visible before observing close');
+    const owner = window as typeof window & {
+      __task8MobileMenuRestoration?: { inertCount: number; overflow: string } | null;
+    };
+    owner.__task8MobileMenuRestoration = null;
+    const observer = new MutationObserver(() => {
+      if (!menu.hidden) return;
+      owner.__task8MobileMenuRestoration = {
+        inertCount: document.querySelectorAll('[data-mobile-menu-inert][inert]').length,
+        overflow: document.documentElement.style.overflow,
+      };
+      observer.disconnect();
+    });
+    observer.observe(menu, { attributes: true, attributeFilter: ['hidden'] });
+  });
   await close.click();
+  expect(await page.evaluate(() => ({
+    currentInertCount: document.querySelectorAll('[data-mobile-menu-inert][inert]').length,
+    currentOverflow: document.documentElement.style.overflow,
+    hidden: (window as typeof window & {
+      __task8MobileMenuRestoration?: { inertCount: number; overflow: string } | null;
+    }).__task8MobileMenuRestoration ?? null,
+  }))).toEqual({
+    currentInertCount: 0,
+    currentOverflow: previousOverflow,
+    hidden: { inertCount: 0, overflow: previousOverflow },
+  });
   await expect(open).toBeVisible();
+  await expect(open).toBeFocused();
   await expect(page.getByRole('dialog', { name: '주 탐색 메뉴' })).toHaveCount(0);
 }
 

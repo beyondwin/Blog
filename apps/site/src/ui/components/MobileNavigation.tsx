@@ -45,10 +45,12 @@ export function MobileNavigation({ currentSection }: { currentSection: PublicSec
   const [mobileViewport, setMobileViewport] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const releaseOpenStateRef = useRef<(() => void) | null>(null);
   const restoreFocusRef = useRef(false);
 
   const closeAndRestoreFocus = useCallback(() => {
     restoreFocusRef.current = true;
+    releaseOpenStateRef.current?.();
     setOpen(false);
   }, []);
 
@@ -121,7 +123,10 @@ export function MobileNavigation({ currentSection }: { currentSection: PublicSec
 
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('pointerdown', onPointerDown);
-    return () => {
+    let released = false;
+    const releaseOpenState = () => {
+      if (released) return;
+      released = true;
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown);
       inertTargets.forEach((target, index) => {
@@ -129,7 +134,10 @@ export function MobileNavigation({ currentSection }: { currentSection: PublicSec
       });
       if (focusFrame !== undefined) window.cancelAnimationFrame(focusFrame);
       if (mobileViewport) document.documentElement.style.overflow = previousOverflow;
+      if (releaseOpenStateRef.current === releaseOpenState) releaseOpenStateRef.current = null;
     };
+    releaseOpenStateRef.current = releaseOpenState;
+    return releaseOpenState;
   }, [closeAndRestoreFocus, mobileViewport, open]);
 
   const onSelection = () => closeAndRestoreFocus();
@@ -149,8 +157,8 @@ export function MobileNavigation({ currentSection }: { currentSection: PublicSec
         aria-haspopup={mobileViewport ? 'dialog' : undefined}
         hidden={!enhanced}
         onClick={() => {
-          if (open) restoreFocusRef.current = true;
-          setOpen((value) => !value);
+          if (open) closeAndRestoreFocus();
+          else setOpen(true);
         }}
       >
         <span aria-hidden="true"><i /><i /><i /></span>
