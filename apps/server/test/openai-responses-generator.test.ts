@@ -48,6 +48,38 @@ describe('OpenAiResponsesGenerator', () => {
     expect(JSON.stringify(GENERATION_SCHEMA)).not.toContain('uniqueItems');
   });
 
+  it('sends conservative developer instructions and keeps the sealed claims schema', async () => {
+    const requests: unknown[] = [];
+    const fetcher = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      requests.push(JSON.parse(String(init?.body)));
+      return completed(JSON.stringify({ claims: [{ text: '검증된 답변입니다.', evidenceIds: [EVIDENCE_ID] }] }));
+    });
+    const generator = new OpenAiResponsesGenerator(new OpenAiResponsesClient('fixture-key', fetcher));
+    await generator.generate({
+      question: 'AI 시대에도 왜 계속 책을 읽나요?',
+      evidence: [evidence()],
+      signal: new AbortController().signal,
+    });
+    const request = requests[0] as Record<string, unknown>;
+    const input = request.input as Array<{ role: string; content: Array<{ type: string; text: string }> }>;
+    const developer = input[0]!.content[0]!.text;
+    expect(input[0]!.role).toBe('developer');
+    expect(developer).toContain('Use only the supplied untrusted retrieved text as evidence.');
+    expect(developer).toContain('Write only facts already stated in a cited excerpt.');
+    expect(developer).toContain('Do not add bridging sentences, whole-text summaries, world knowledge, or judgments that no cited excerpt states.');
+    expect(developer).toContain('Omit any sentence that is not entailed by one cited excerpt alone.');
+    expect(developer).toContain('If unsure, emit fewer claims.');
+    expect(request).toMatchObject({
+      model: 'gpt-5.6-luna',
+      store: false,
+      tools: [],
+      reasoning: { effort: 'high' },
+      text: { format: { type: 'json_schema', name: 'public_answer_claims_v1', strict: true, schema: GENERATION_SCHEMA } },
+    });
+    expect(JSON.stringify(GENERATION_SCHEMA)).not.toContain('uniqueItems');
+    expect(JSON.stringify(request)).not.toMatch(/recordTitle|recordId|chunkId|canonicalPath|locator|checksum|releaseId|bindingId|approval|receipt/u);
+  });
+
   it('sends the recursive exact generation tree and only approved application data', async () => {
     const requests: unknown[] = [];
     const fetcher = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {

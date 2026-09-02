@@ -38,6 +38,10 @@ const INSTRUCTIONS = [
   'If evidence is insufficient, return no usable claims.',
   'Never use external knowledge.',
   'Every sentence and factual clause must cite its evidence IDs.',
+  'Write only facts already stated in a cited excerpt.',
+  'Do not add bridging sentences, whole-text summaries, world knowledge, or judgments that no cited excerpt states.',
+  'Omit any sentence that is not entailed by one cited excerpt alone.',
+  'If unsure, emit fewer claims.',
 ].join(' ');
 
 export function escapeProviderPromptControls(value: string): string {
