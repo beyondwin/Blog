@@ -507,12 +507,17 @@ export class PostgresAnswerReleaseIndexer {
         if (values.length !== DIMENSIONS || values.some((value) => !Number.isFinite(value))) throw new Error('written vector failed strict reread');
         return { chunkId: row.chunk_id, chunkChecksum: row.chunk_checksum, values, vectorChecksum: vectorChecksum(values) };
       });
-      const writtenPayload = written.rows.map((row, index) => ({
-        chunkId: row.chunk_id, chunkChecksum: row.chunk_checksum, recordId: row.record_id,
-        canonicalPath: row.canonical_path, title: row.title, headingPath: row.heading_path,
-        body: row.body, searchText: row.search_text, vectorChecksum: writtenVectors[index]!.vectorChecksum,
-        model: row.embedding_model, dimensions: row.embedding_dimensions, source: receipt.source,
-      }));
+      const writtenPayload = written.rows.map((row, index) => {
+        if (row.embedding_model !== MODEL || row.embedding_dimensions !== DIMENSIONS) {
+          throw new Error('written embedding identity mismatch');
+        }
+        return {
+          chunkId: row.chunk_id, chunkChecksum: row.chunk_checksum, recordId: row.record_id,
+          canonicalPath: row.canonical_path, title: row.title, headingPath: row.heading_path,
+          body: row.body, searchText: row.search_text, vectorChecksum: writtenVectors[index]!.vectorChecksum,
+          model: row.embedding_model, dimensions: row.embedding_dimensions, source: receipt.source,
+        };
+      });
       if (checksum({ rows: writtenPayload, provenance: receiptProvenance(receipt) }) !== receipt.indexChecksum) {
         throw new Error(`written binding index checksum mismatch: ${writtenIndexMismatch(
           prepared.indexRows.map((row) => ({ ...row, source: receipt.source })),

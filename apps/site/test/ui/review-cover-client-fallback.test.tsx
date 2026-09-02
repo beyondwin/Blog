@@ -273,6 +273,7 @@ describe('review cover client fallback', () => {
         root: repositoryRoot,
         cacheDir: await freshViteCacheRoot(),
         logLevel: 'silent',
+        optimizeDeps: { ignoreOutdatedRequests: true },
         plugins: [clientEntryPlugin(serverMarkup)],
         define: {
           'import.meta.env.VITE_FORM_THOUGHT_SITE_ORIGIN': JSON.stringify('https://form-thought.local.invalid'),

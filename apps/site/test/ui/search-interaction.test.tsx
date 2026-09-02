@@ -20,6 +20,7 @@ const publicAskProviderPath = join(repositoryRoot, 'apps/site/src/ui/search/publ
 const siteShellPath = join(repositoryRoot, 'apps/site/src/ui/components/SiteShell.tsx');
 const tokenStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/tokens.css');
 const shellStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/shell.css');
+const editorialStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/editorial.css');
 const searchStylesPath = join(repositoryRoot, 'apps/site/src/ui/styles/route-search.css');
 const avatarFallbackDeadlineMs = 20_000;
 const viteCacheRoots: string[] = [];
@@ -119,6 +120,7 @@ function clientPlugin(serverMarkup: string, criticalCss: string, options: {
         import { SiteShell } from ${JSON.stringify(siteShellPath)};
         import ${JSON.stringify(tokenStylesPath)};
         import ${JSON.stringify(shellStylesPath)};
+        import ${JSON.stringify(editorialStylesPath)};
         import ${JSON.stringify(searchStylesPath)};
         const binding = ${JSON.stringify(binding)};
         const answer = ${JSON.stringify(answer)};
@@ -215,6 +217,7 @@ async function startHarness(options: { deferHydration?: boolean; localProviderDi
   const criticalCss = (await Promise.all([
     readFile(tokenStylesPath, 'utf8'),
     readFile(shellStylesPath, 'utf8'),
+    readFile(editorialStylesPath, 'utf8'),
     readFile(searchStylesPath, 'utf8'),
   ])).join('\n');
   const server = await createServer({
@@ -223,6 +226,7 @@ async function startHarness(options: { deferHydration?: boolean; localProviderDi
     cacheDir: await freshViteCacheRoot(),
     publicDir: join(repositoryRoot, 'apps/site/public'),
     logLevel: 'silent',
+    optimizeDeps: { ignoreOutdatedRequests: true },
     plugins: [clientPlugin(markup, criticalCss, options)],
     server: { host: '127.0.0.1', port: 0, strictPort: false },
   });
@@ -673,11 +677,13 @@ describe('second-brain search client interaction', () => {
         const portrait = image as HTMLImageElement;
         return portrait.complete && portrait.naturalWidth === 0;
       })).toBe(true);
+      await expect.poll(
+        () => page.evaluate(() => typeof (window as typeof window & {
+          __hydrateSecondBrainSearch?: () => void;
+        }).__hydrateSecondBrainSearch === 'function'),
+        { timeout: 15_000 },
+      ).toBe(true);
       const before = await page.locator('.agent-stage__portrait-frame').evaluate((element) => element.getBoundingClientRect().toJSON());
-
-      await expect.poll(() => page.evaluate(() => typeof (window as typeof window & {
-        __hydrateSecondBrainSearch?: () => void;
-      }).__hydrateSecondBrainSearch === 'function')).toBe(true);
       await expect(hydrateAndWaitForAvatarFallback(page)).resolves.toBe('error');
       expect(await page.evaluate(() => (window as typeof window & {
         __avatarFallbackWaitLifecycle?: unknown;
@@ -704,9 +710,12 @@ describe('second-brain search client interaction', () => {
       browser = await chromium.launch({ headless: true });
       const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await page.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'networkidle' });
-      await expect.poll(() => page.evaluate(() => typeof (window as typeof window & {
-        __hydrateSecondBrainSearch?: () => void;
-      }).__hydrateSecondBrainSearch === 'function')).toBe(true);
+      await expect.poll(
+        () => page.evaluate(() => typeof (window as typeof window & {
+          __hydrateSecondBrainSearch?: () => void;
+        }).__hydrateSecondBrainSearch === 'function'),
+        { timeout: 15_000 },
+      ).toBe(true);
       expect(await page.locator('.agent-stage').getAttribute('data-image-state')).toBe('ready');
       await expect(hydrateAndWaitForAvatarFallback(page, 50)).rejects.toThrow(
         /avatar fallback did not reach error within 50ms; imageState=ready; imageComplete=true; naturalWidth=1/u,
@@ -746,6 +755,9 @@ describe('second-brain search client interaction', () => {
       const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await desktop.emulateMedia({ reducedMotion: 'reduce' });
       await desktop.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'networkidle' });
+      await expect.poll(() => desktop.evaluate(() => (
+        document.querySelector('.site-header__inner')?.getBoundingClientRect().height ?? 0
+      ))).toBeGreaterThan(0);
       const desktopBounds = await desktop.evaluate(() => {
         const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
         return {
@@ -766,6 +778,9 @@ describe('second-brain search client interaction', () => {
       const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
       await mobile.emulateMedia({ reducedMotion: 'reduce' });
       await mobile.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'networkidle' });
+      await expect.poll(() => mobile.evaluate(() => (
+        document.querySelector('.site-header__inner')?.getBoundingClientRect().height ?? 0
+      ))).toBeGreaterThan(0);
       const mobileBounds = await mobile.evaluate(() => {
         const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
         return {
