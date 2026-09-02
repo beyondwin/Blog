@@ -43,7 +43,7 @@ describe('immutable public answer release building', { timeout: 30_000 }, () => 
       contentReleaseId: fixture.contentRelease.manifest.releaseId,
       contentManifestHash: fixture.contentRelease.manifestHash,
       contentArtifactHash: fixture.contentRelease.artifactHash,
-      chunkerVersion: 'public-blocks-v1',
+      chunkerVersion: 'public-blocks-v2',
       normalizerVersion: 'nfkc-lower-hangul-ngram-v1',
       collections: ['articles', 'reviews', 'thoughts'],
     });

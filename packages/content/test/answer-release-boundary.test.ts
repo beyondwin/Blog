@@ -94,7 +94,7 @@ function reidentifyEvidence(item: PublicAnswerEvidence): PublicAnswerEvidence {
     ...item,
     excerptChecksum,
     evidenceId: sha256Hex(canonicalJsonLine({
-      version: 'public-blocks-v1',
+      version: 'public-blocks-v2',
       chunkId: item.chunkId,
       start: 0,
       end: Array.from(item.excerpt).length,
@@ -177,8 +177,11 @@ describe('public answer release filesystem and canonical boundary', { timeout: 3
   });
 
   it('rejects non-canonical order and duplicate IDs even when descriptors and release ID are rehashed', async () => {
-    const reversed = await writeAnswerReleaseFixture({ prose: 'First public block.\n\nSecond public block.' });
+    const reversed = await writeAnswerReleaseFixture({
+      prose: ['First public block.', '', '## Other heading', '', 'Second public block.'].join('\n'),
+    });
     const reversedChunks = (await rows<PublicAnswerChunk>(join(reversed.releasePath, 'chunks.ndjson'))).reverse();
+    expect(reversedChunks).toHaveLength(2);
     await writeCanonicalNdjson(join(reversed.releasePath, 'chunks.ndjson'), reversedChunks);
     const reversedPath = await rehashAnswerRelease(reversed.releasePath);
     await expectBothReject(reversed, reversedPath);
@@ -529,7 +532,7 @@ describe('authority-backed semantic re-derivation', { timeout: 30_000 }, () => {
       excerptChecksum,
       chunkId: evidence[0]!.chunkId,
       start: 0,
-      version: 'public-blocks-v1',
+      version: 'public-blocks-v2',
     });
     const independentlyDerivedEvidenceId = createHash('sha256')
       .update(evidenceIdentityBytes)
@@ -544,7 +547,7 @@ describe('authority-backed semantic re-derivation', { timeout: 30_000 }, () => {
       end: Array.from(evidence[0]!.excerpt).length,
       excerptChecksum,
       start: 0,
-      version: 'public-blocks-v1',
+      version: 'public-blocks-v2',
     }));
     expect(evidence[0]!.evidenceId).toBe(independentlyDerivedEvidenceId);
     expect(evidence[0]!.evidenceId).not.toBe(originalEvidenceId);

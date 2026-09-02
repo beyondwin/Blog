@@ -66,7 +66,7 @@ export const answerReleaseIdentitySchema = z.object({
   contentManifestHash: sha256ChecksumSchema,
   contentArtifactHash: sha256ChecksumSchema,
   corpusApprovalHash: sha256ChecksumSchema,
-  chunkerVersion: z.literal('public-blocks-v1'),
+  chunkerVersion: z.literal('public-blocks-v2'),
   normalizerVersion: z.literal('nfkc-lower-hangul-ngram-v1'),
   collections: z.tuple([z.literal('articles'), z.literal('reviews'), z.literal('thoughts')]),
 }).strict();

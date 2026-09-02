@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { publicRecordSchema, type PublicRecord } from '@beyondwin/contracts';
 
-export const ANSWER_CHUNKER_VERSION = 'public-blocks-v1' as const;
+export const ANSWER_CHUNKER_VERSION = 'public-blocks-v2' as const;
 export const ANSWER_NORMALIZER_VERSION = 'nfkc-lower-hangul-ngram-v1' as const;
 
 function codePointCompare(left: string, right: string): number {

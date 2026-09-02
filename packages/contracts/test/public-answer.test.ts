@@ -52,7 +52,7 @@ function manifest() {
       contentManifestHash: checksum,
       contentArtifactHash: checksum,
       corpusApprovalHash: checksum,
-      chunkerVersion: 'public-blocks-v1',
+      chunkerVersion: 'public-blocks-v2',
       normalizerVersion: 'nfkc-lower-hangul-ngram-v1',
       collections: ['articles', 'reviews', 'thoughts'],
     },

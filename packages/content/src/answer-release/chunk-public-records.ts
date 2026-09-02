@@ -33,6 +33,8 @@ type HtmlNode = {
 const evidenceTags = new Set(['p', 'li', 'blockquote', 'pre', 'tr']);
 const nonRenderedTags = new Set(['script', 'style', 'template']);
 const sentenceBoundary = new Set(['.', '!', '?', '。', '！', '？']);
+const MAX_BLOCK_CODE_POINTS = 1200;
+const BLOCK_MERGE_SEPARATOR = '\n\n';
 const collectionLabels: Record<'articles' | 'reviews' | 'thoughts', string> = {
   articles: '아티클',
   reviews: '서평',
@@ -46,6 +48,32 @@ function isAnswerPublicRecord(record: PublicRecord): record is AnswerPublicRecor
 
 function codePointLength(value: string): number {
   return Array.from(value).length;
+}
+
+function sameHeadingPath(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function mergeSameHeadingBlocks(
+  blocks: ReadonlyArray<{ headingPath: string[]; text: string }>,
+): Array<{ headingPath: string[]; text: string }> {
+  const merged: Array<{ headingPath: string[]; text: string }> = [];
+  for (const block of blocks) {
+    const current = merged.at(-1);
+    if (!current) {
+      merged.push({ headingPath: [...block.headingPath], text: block.text });
+      continue;
+    }
+    const joinedLength = codePointLength(current.text)
+      + codePointLength(BLOCK_MERGE_SEPARATOR)
+      + codePointLength(block.text);
+    if (sameHeadingPath(current.headingPath, block.headingPath) && joinedLength <= MAX_BLOCK_CODE_POINTS) {
+      current.text = `${current.text}${BLOCK_MERGE_SEPARATOR}${block.text}`;
+      continue;
+    }
+    merged.push({ headingPath: [...block.headingPath], text: block.text });
+  }
+  return merged;
 }
 
 function normalizedBlockText(node: HtmlNode): string {
@@ -72,7 +100,7 @@ function splitBlock(text: string): string[] {
   const parts: string[] = [];
   let start = 0;
   while (start < points.length) {
-    const limit = Math.min(start + 1200, points.length);
+    const limit = Math.min(start + MAX_BLOCK_CODE_POINTS, points.length);
     if (limit === points.length) {
       const last = points.slice(start).join('').trim();
       if (last) parts.push(last);
@@ -153,9 +181,10 @@ function recordChunks(record: AnswerPublicRecord): { chunks: PublicAnswerChunk[]
   const blocks = blocksForRecord(record);
   if (blocks.length === 0) throw new Error(`${recordId}: approved record has no evidence blocks`);
   if (blocks.length > 256) throw new Error(`${recordId}: approved record exceeds 256 chunks`);
+  const merged = mergeSameHeadingBlocks(blocks);
   const chunks: PublicAnswerChunk[] = [];
   const evidence: PublicAnswerEvidence[] = [];
-  for (const [index, block] of blocks.entries()) {
+  for (const [index, block] of merged.entries()) {
     const ordinal = index + 1;
     const chunkId = sha256Hex(canonicalJsonLine({
       version: ANSWER_CHUNKER_VERSION,

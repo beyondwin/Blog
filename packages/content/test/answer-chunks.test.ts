@@ -73,9 +73,22 @@ describe('public answer chunks', () => {
     expect(corpus.chunks.map(({ recordId, headingPath, ordinal, text }) => ({
       recordId, headingPath, ordinal, text,
     }))).toEqual([
-      { recordId: 'articles/public-fixture', headingPath: ['판단'], ordinal: 1, text: '요약은 결론을 줍니다.' },
-      { recordId: 'articles/public-fixture', headingPath: ['판단'], ordinal: 2, text: '독서는 판단의 시간을 줍니다.' },
-      { recordId: 'articles/public-fixture', headingPath: ['판단', '실천'], ordinal: 3, text: '답을 쉽게 믿지 않습니다.' },
+      {
+        recordId: 'articles/public-fixture',
+        headingPath: ['판단'],
+        ordinal: 1,
+        text: '요약은 결론을 줍니다.\n\n독서는 판단의 시간을 줍니다.',
+      },
+      {
+        recordId: 'articles/public-fixture',
+        headingPath: ['판단', '실천'],
+        ordinal: 2,
+        text: '답을 쉽게 믿지 않습니다.',
+      },
+    ]);
+    expect(corpus.evidence.map((item) => item.locator)).toEqual([
+      { kind: 'heading-paragraph', label: '판단 · 문단 1', ordinal: 1 },
+      { kind: 'heading-paragraph', label: '실천 · 문단 2', ordinal: 2 },
     ]);
     expect(corpus.evidence.map((item) => item.chunkId)).toEqual(corpus.chunks.map((item) => item.chunkId));
     expect(JSON.stringify(corpus)).not.toMatch(/bodyHtml|<p|status|draft|sourcePath|embedding|rawPrompt/u);
@@ -136,20 +149,22 @@ describe('public answer chunks', () => {
     const second = buildPublicAnswerCorpus(release([changed]), { approval: approvalFor([changed]) });
     const ignoredAttribute = buildPublicAnswerCorpus(release([attributed]), { approval: approvalFor([attributed]) });
 
-    expect(second.chunks[0]).toMatchObject({ chunkId: first.chunks[0]!.chunkId, checksum: first.chunks[0]!.checksum });
-    expect(second.chunks[1]).not.toMatchObject({ chunkId: first.chunks[1]!.chunkId, checksum: first.chunks[1]!.checksum });
-    expect(second.chunks[2]).toMatchObject({ chunkId: first.chunks[2]!.chunkId, checksum: first.chunks[2]!.checksum });
-    expect(second.evidence[0]).toMatchObject({
+    expect(first.chunks).toHaveLength(2);
+    expect(second.chunks[0]).not.toMatchObject({
+      chunkId: first.chunks[0]!.chunkId,
+      checksum: first.chunks[0]!.checksum,
+    });
+    expect(second.chunks[1]).toMatchObject({
+      chunkId: first.chunks[1]!.chunkId,
+      checksum: first.chunks[1]!.checksum,
+    });
+    expect(second.evidence[0]).not.toMatchObject({
       evidenceId: first.evidence[0]!.evidenceId,
       excerptChecksum: first.evidence[0]!.excerptChecksum,
     });
-    expect(second.evidence[1]).not.toMatchObject({
+    expect(second.evidence[1]).toMatchObject({
       evidenceId: first.evidence[1]!.evidenceId,
       excerptChecksum: first.evidence[1]!.excerptChecksum,
-    });
-    expect(second.evidence[2]).toMatchObject({
-      evidenceId: first.evidence[2]!.evidenceId,
-      excerptChecksum: first.evidence[2]!.excerptChecksum,
     });
     expect(ignoredAttribute).toEqual(first);
     expect(canonicalJsonLine({ z: { b: 1, a: 2 }, a: 3 })).toBe('{"a":3,"z":{"a":2,"b":1}}');
@@ -179,9 +194,58 @@ describe('public answer chunks', () => {
     expect(hardChunks.map((item) => item.text)).toEqual(['🙂'.repeat(1200), '🙂']);
     expect(hardChunks.every((item) => item.text && Array.from(item.text).length <= 1200)).toBe(true);
     expect(hardChunks.map((item) => item.ordinal)).toEqual([1, 2]);
-    expect(buildPublicAnswerCorpus(release([allowed]), { approval: approvalFor([allowed]) }).chunks)
-      .toHaveLength(256);
+    const packed = buildPublicAnswerCorpus(release([allowed]), { approval: approvalFor([allowed]) }).chunks;
+    expect(packed.length).toBeGreaterThan(0);
+    expect(packed.length).toBeLessThan(256);
+    expect(packed.every((item) => Array.from(item.text).length <= 1200)).toBe(true);
+    expect(packed.map((item) => item.ordinal)).toEqual(packed.map((_, index) => index + 1));
+    expect(packed.every((item) => item.headingPath.length === 0)).toBe(true);
     expect(() => buildPublicAnswerCorpus(release([many]), { approval: approvalFor([many]) })).toThrow(/256/i);
+  });
+
+  it('merges headingless short paragraphs into one chunk at or under 1200 code points', () => {
+    const publicRecord = record({
+      collection: 'thoughts',
+      id: 'short-thought',
+      href: '/thoughts/short-thought/',
+      bodyHtml: '<p>첫 문단입니다.</p><p>둘째 문단입니다.</p><p>셋째 문단입니다.</p>',
+    });
+    const corpus = buildPublicAnswerCorpus(release([publicRecord]), { approval: approvalFor([publicRecord]) });
+    expect(corpus.chunks).toHaveLength(1);
+    expect(corpus.chunks[0]).toMatchObject({
+      recordId: 'thoughts/short-thought',
+      headingPath: [],
+      ordinal: 1,
+      text: '첫 문단입니다.\n\n둘째 문단입니다.\n\n셋째 문단입니다.',
+    });
+    expect(corpus.evidence[0]!.locator).toEqual({
+      kind: 'heading-paragraph',
+      label: '문단 1',
+      ordinal: 1,
+    });
+    expect(Array.from(corpus.chunks[0]!.text).length).toBeLessThanOrEqual(1200);
+  });
+
+  it('does not merge short paragraphs under different headings', () => {
+    const publicRecord = record({
+      bodyHtml: '<h2>하나</h2><p>짧은 하나.</p><h2>둘</h2><p>짧은 둘.</p>',
+    });
+    const corpus = buildPublicAnswerCorpus(release([publicRecord]), { approval: approvalFor([publicRecord]) });
+    expect(corpus.chunks.map(({ headingPath, text }) => ({ headingPath, text }))).toEqual([
+      { headingPath: ['하나'], text: '짧은 하나.' },
+      { headingPath: ['둘'], text: '짧은 둘.' },
+    ]);
+  });
+
+  it('starts a new chunk when the next same-heading paragraph would exceed 1200 code points', () => {
+    const first = `${'가'.repeat(1190)}.`;
+    const second = '나'.repeat(20);
+    const publicRecord = record({
+      bodyHtml: `<h2>긴글</h2><p>${first}</p><p>${second}</p>`,
+    });
+    const corpus = buildPublicAnswerCorpus(release([publicRecord]), { approval: approvalFor([publicRecord]) });
+    expect(corpus.chunks.map((item) => item.text)).toEqual([first, second]);
+    expect(corpus.chunks.every((item) => Array.from(item.text).length <= 1200)).toBe(true);
   });
 
   it('does not turn non-rendered HTML contents into public evidence', () => {
