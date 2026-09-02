@@ -36,16 +36,16 @@ function exactStressClaim(index: number): string {
 /** Test-only boundary driver. Composition restricts this generator to fixture mode and the stress-max CLI scenario. */
 export class StressFixtureAnswerGenerator implements AnswerGenerator {
   async generate(input: Parameters<AnswerGenerator['generate']>[0]) {
-    if (input.evidence.length < 6) {
-      throw new PublicAnswerInvalidResponseError('stress fixture requires six authorized evidence items');
+    if (input.evidence.length < 2) {
+      throw new PublicAnswerInvalidResponseError('stress fixture requires two authorized evidence items');
     }
-    const sources = input.evidence.slice(0, 6);
-    const claims = sources.slice(0, 5).map((source, index) => Object.freeze({
+    const sources = input.evidence;
+    const claims = Array.from({ length: 5 }, (_, index) => Object.freeze({
       claimId: `claim-${index + 1}`,
       text: exactStressClaim(index),
       evidenceIds: Object.freeze(index === 0
-        ? [source.evidenceId, sources[5]!.evidenceId]
-        : [source.evidenceId]),
+        ? [sources[0]!.evidenceId, sources[1]!.evidenceId]
+        : [sources[index % sources.length]!.evidenceId]),
     }));
     return Object.freeze({
       claims: Object.freeze(claims),

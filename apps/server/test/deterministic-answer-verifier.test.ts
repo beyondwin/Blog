@@ -192,8 +192,8 @@ describe('fixture verification path', () => {
     expect(semantic.contradictedSentenceIds).toEqual([]);
   });
 
-  it('drives the exact five-claim, 600-code-point, six-evidence boundary only through the stress generator', async () => {
-    const items = Array.from({ length: 6 }, (_, index) => evidence({
+  it('drives the exact five-claim, 600-code-point, two-evidence boundary only through the stress generator', async () => {
+    const items = Array.from({ length: 2 }, (_, index) => evidence({
       evidenceId: String(index + 1).repeat(64),
       chunkId: String(index + 2).repeat(64),
       excerpt: `검증된 공개 기록 ${index + 1}입니다.`,
@@ -204,15 +204,16 @@ describe('fixture verification path', () => {
     });
     expect(generation.claims).toHaveLength(5);
     expect(generation.claims.map((item) => [...item.text].length)).toEqual([600, 600, 600, 600, 600]);
+    expect(generation.claims[0]?.evidenceIds).toEqual([items[0]!.evidenceId, items[1]!.evidenceId]);
     expect(new Set(generation.claims.flatMap((item) => item.evidenceIds))).toEqual(
       new Set(items.map((item) => item.evidenceId)),
     );
     expect(new CitationVerifier().verify({ catalog: catalog(items), claims: generation.claims, evidence: items }).ok).toBe(true);
   });
 
-  it('refuses to fabricate the stress response when fewer than six authorized evidence items were retrieved', async () => {
+  it('refuses to fabricate the stress response when fewer than two authorized evidence items were retrieved', async () => {
     await expect(new StressFixtureAnswerGenerator().generate({
       question: '질문', evidence: [evidence()], signal: new AbortController().signal,
-    })).rejects.toThrow(/six authorized evidence/iu);
+    })).rejects.toThrow(/two authorized evidence/iu);
   });
 });

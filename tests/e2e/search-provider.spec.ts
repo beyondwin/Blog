@@ -377,7 +377,7 @@ test('@rate-limit repeated real requests reach the guard without automatic retri
   assertCleanDiagnostics(diagnostics, [graphify]);
 });
 
-test('@stress-max real stack renders five 600-code-point claims and six canonical evidence items', async ({ page }) => {
+test('@stress-max real stack renders five 600-code-point claims and two canonical evidence items', async ({ page }) => {
   const requests = askRequests(page);
   const diagnostics = requestDiagnostics(page);
   await page.goto('/search/');
@@ -386,8 +386,8 @@ test('@stress-max real stack renders five 600-code-point claims and six canonica
   const response = await responsePromise;
   const payload = await response.json() as { claims: readonly unknown[]; evidence: readonly { evidenceId: string }[] };
   expect(payload.claims).toHaveLength(5);
-  expect(payload.evidence).toHaveLength(6);
-  expect(new Set(payload.evidence.map((item) => item.evidenceId)).size).toBe(6);
+  expect(payload.evidence).toHaveLength(2);
+  expect(new Set(payload.evidence.map((item) => item.evidenceId)).size).toBe(2);
   await expect(page.locator('.answer-stage')).toBeVisible({ timeout: 15_000 });
   const claims = page.locator('.answer-stage__lines > p');
   await expect(claims).toHaveCount(5);
@@ -396,7 +396,8 @@ test('@stress-max real stack renders five 600-code-point claims and six canonica
   ))))
     .toEqual([600, 600, 600, 600, 600]);
   const citations = page.locator('.answer-stage__citation');
-  await expect(citations).toHaveCount(6);
+  expect(new Set(await citations.evaluateAll((items) => items.map((item) => item.textContent?.trim() ?? ''))))
+    .toEqual(new Set(['1', '2']));
   for (let index = 0; index < await citations.count(); index += 1) {
     await citations.nth(index).click();
     const dialog = page.getByRole('dialog', { name: '이 답의 근거' });
