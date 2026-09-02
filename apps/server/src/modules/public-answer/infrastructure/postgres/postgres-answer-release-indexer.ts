@@ -509,7 +509,9 @@ export class PostgresAnswerReleaseIndexer {
       });
       const writtenPayload = written.rows.map((row, index) => {
         if (row.embedding_model !== MODEL || row.embedding_dimensions !== DIMENSIONS) {
-          throw new Error('written embedding identity mismatch');
+          throw new Error(
+            `written embedding identity mismatch: model=${row.embedding_model} dimensions=${String(row.embedding_dimensions)}`,
+          );
         }
         return {
           chunkId: row.chunk_id, chunkChecksum: row.chunk_checksum, recordId: row.record_id,

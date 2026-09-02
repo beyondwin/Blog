@@ -205,6 +205,37 @@ describe('fixture verification path', () => {
     expect(generation.claims).toHaveLength(5);
     expect(generation.claims.map((item) => [...item.text].length)).toEqual([600, 600, 600, 600, 600]);
     expect(generation.claims[0]?.evidenceIds).toEqual([items[0]!.evidenceId, items[1]!.evidenceId]);
+    expect(generation.claims.slice(1).map((item) => item.evidenceIds)).toEqual([
+      [items[0]!.evidenceId],
+      [items[1]!.evidenceId],
+      [items[0]!.evidenceId],
+      [items[1]!.evidenceId],
+    ]);
+    expect(new Set(generation.claims.flatMap((item) => item.evidenceIds))).toEqual(
+      new Set(items.map((item) => item.evidenceId)),
+    );
+    expect(new CitationVerifier().verify({ catalog: catalog(items), claims: generation.claims, evidence: items }).ok).toBe(true);
+  });
+
+  it('cites every retrieved evidence id when six authorized items are supplied', async () => {
+    const items = Array.from({ length: 6 }, (_, index) => evidence({
+      evidenceId: String(index + 1).repeat(64),
+      chunkId: String(index + 2).repeat(64),
+      excerpt: `검증된 공개 기록 ${index + 1}입니다.`,
+      excerptChecksum: checksum(`검증된 공개 기록 ${index + 1}입니다.`),
+    }));
+    const generation = await new StressFixtureAnswerGenerator().generate({
+      question: '질문', evidence: items, signal: new AbortController().signal,
+    });
+    expect(generation.claims).toHaveLength(5);
+    expect(generation.claims.map((item) => [...item.text].length)).toEqual([600, 600, 600, 600, 600]);
+    expect(generation.claims[0]?.evidenceIds).toEqual([items[0]!.evidenceId, items[1]!.evidenceId]);
+    expect(generation.claims.slice(1).map((item) => item.evidenceIds)).toEqual([
+      [items[2]!.evidenceId],
+      [items[3]!.evidenceId],
+      [items[4]!.evidenceId],
+      [items[5]!.evidenceId],
+    ]);
     expect(new Set(generation.claims.flatMap((item) => item.evidenceIds))).toEqual(
       new Set(items.map((item) => item.evidenceId)),
     );

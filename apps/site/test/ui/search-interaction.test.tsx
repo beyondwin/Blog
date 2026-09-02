@@ -757,7 +757,7 @@ describe('second-brain search client interaction', () => {
       await desktop.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'networkidle' });
       await expect.poll(() => desktop.evaluate(() => (
         document.querySelector('.site-header__inner')?.getBoundingClientRect().height ?? 0
-      ))).toBeGreaterThan(0);
+      ))).toBeCloseTo(88, 1);
       const desktopBounds = await desktop.evaluate(() => {
         const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
         return {
@@ -780,7 +780,7 @@ describe('second-brain search client interaction', () => {
       await mobile.goto(`${harness.baseUrl}/__second-brain-search/`, { waitUntil: 'networkidle' });
       await expect.poll(() => mobile.evaluate(() => (
         document.querySelector('.site-header__inner')?.getBoundingClientRect().height ?? 0
-      ))).toBeGreaterThan(0);
+      ))).toBeCloseTo(72, 1);
       const mobileBounds = await mobile.evaluate(() => {
         const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect().toJSON();
         return {
@@ -827,6 +827,9 @@ describe('second-brain search client interaction', () => {
         });
         await regular.emulateMedia({ reducedMotion: 'no-preference' });
         await regular.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+        await expect.poll(() => regular.evaluate(() => (
+          document.querySelector('.site-header__inner')?.getBoundingClientRect().height ?? 0
+        ))).toBeCloseTo(viewport.header, 1);
         const regularFrame = await regular.locator('.agent-stage__portrait-frame').evaluate((element) => element.getBoundingClientRect().toJSON());
         await regular.close();
 
@@ -836,6 +839,9 @@ describe('second-brain search client interaction', () => {
         });
         await reduced.emulateMedia({ reducedMotion: 'reduce' });
         await reduced.goto(`${harness.baseUrl}/search/`, { waitUntil: 'networkidle' });
+        await expect.poll(() => reduced.evaluate(() => (
+          document.querySelector('.site-header__inner')?.getBoundingClientRect().height ?? 0
+        ))).toBeCloseTo(viewport.header, 1);
         const layout = await reduced.evaluate(() => {
           const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
           const frame = rect('.agent-stage__portrait-frame');

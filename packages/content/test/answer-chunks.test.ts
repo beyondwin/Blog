@@ -248,6 +248,26 @@ describe('public answer chunks', () => {
     expect(corpus.chunks.every((item) => Array.from(item.text).length <= 1200)).toBe(true);
   });
 
+  it('packs headingless paragraphs that exceed 1200 code points into two chunks', () => {
+    const first = `${'가'.repeat(1190)}.`;
+    const second = '나'.repeat(20);
+    const publicRecord = record({
+      collection: 'thoughts',
+      id: 'long-thought',
+      href: '/thoughts/long-thought/',
+      bodyHtml: `<p>${first}</p><p>${second}</p>`,
+    });
+    const corpus = buildPublicAnswerCorpus(release([publicRecord]), { approval: approvalFor([publicRecord]) });
+    expect(corpus.chunks).toHaveLength(2);
+    expect(corpus.chunks.map((item) => item.text)).toEqual([first, second]);
+    expect(corpus.chunks.every((item) => item.headingPath.length === 0)).toBe(true);
+    expect(corpus.chunks.every((item) => Array.from(item.text).length <= 1200)).toBe(true);
+    expect(corpus.evidence.map((item) => item.locator)).toEqual([
+      { kind: 'heading-paragraph', label: '문단 1', ordinal: 1 },
+      { kind: 'heading-paragraph', label: '문단 2', ordinal: 2 },
+    ]);
+  });
+
   it('does not turn non-rendered HTML contents into public evidence', () => {
     const publicRecord = record({ bodyHtml: '<p>공개 문장<script>private raw prompt</script><style>secret</style><template>hidden</template></p>' });
 

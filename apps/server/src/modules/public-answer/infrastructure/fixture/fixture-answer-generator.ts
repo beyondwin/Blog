@@ -45,7 +45,7 @@ export class StressFixtureAnswerGenerator implements AnswerGenerator {
       text: exactStressClaim(index),
       evidenceIds: Object.freeze(index === 0
         ? [sources[0]!.evidenceId, sources[1]!.evidenceId]
-        : [sources[index % sources.length]!.evidenceId]),
+        : [sources[(index + 1) % sources.length]!.evidenceId]),
     }));
     return Object.freeze({
       claims: Object.freeze(claims),

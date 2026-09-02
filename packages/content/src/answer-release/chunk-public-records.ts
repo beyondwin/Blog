@@ -180,7 +180,7 @@ function recordChunks(record: AnswerPublicRecord): { chunks: PublicAnswerChunk[]
   const recordId = `${record.collection}/${record.id}`;
   const blocks = blocksForRecord(record);
   if (blocks.length === 0) throw new Error(`${recordId}: approved record has no evidence blocks`);
-  if (blocks.length > 256) throw new Error(`${recordId}: approved record exceeds 256 chunks`);
+  if (blocks.length > 256) throw new Error(`${recordId}: approved record exceeds 256 pre-merge blocks`);
   const merged = mergeSameHeadingBlocks(blocks);
   const chunks: PublicAnswerChunk[] = [];
   const evidence: PublicAnswerEvidence[] = [];
