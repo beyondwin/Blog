@@ -18,6 +18,7 @@ import { runPostgresMigrations } from '../../apps/server/src/modules/public-answ
 import { createPostgresPool } from '../../apps/server/src/modules/public-answer/infrastructure/postgres/postgres-pool.js';
 import { readVerifiedAnswerReleaseAuthority } from '../../apps/server/src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 import { stopOwnedChildrenInReverse } from '../cutover/owned-process-lifecycle.mts';
+import { loadIgnoredLocalEnvFile } from './local-env.mts';
 import { startOwnedPostgres, type OwnedComposeRun } from './owned-postgres.mts';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -598,6 +599,7 @@ export async function runLocalLiveHarness(
 const entrypoint = process.argv[1];
 if (entrypoint && import.meta.url === pathToFileURL(entrypoint).href) {
   try {
+    loadIgnoredLocalEnvFile(process.env, resolve(repositoryRoot, '.env'));
     await runLocalLiveHarness(parseLocalLiveArguments(process.argv.slice(2)));
   } catch (error) {
     const message = redactLiveDiagnostics(

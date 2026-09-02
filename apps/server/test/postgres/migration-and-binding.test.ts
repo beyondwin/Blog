@@ -7,6 +7,7 @@ import { runRuntimeStartupChecks } from '../../src/health/runtime-readiness.js';
 import { providerChecksum } from '../../src/modules/public-answer/infrastructure/openai/provider-json.js';
 import { runPostgresMigrations } from '../../src/modules/public-answer/infrastructure/postgres/postgres-migrations.js';
 import { DeterministicEmbeddingClient } from '../../src/modules/public-answer/infrastructure/fixture/deterministic-embedding-client.js';
+import { OpenAIEmbeddingClient } from '../../src/modules/public-answer/infrastructure/openai/openai-embedding-client.js';
 import { PROVIDER_MODEL_POLICY } from '../../src/modules/public-answer/infrastructure/openai/provider-model-policy.js';
 import {
   createFixtureEmbeddingReceipt,
@@ -14,7 +15,7 @@ import {
   PostgresAnswerReleaseIndexer,
   prepareEmbeddingSet,
 } from '../../src/modules/public-answer/infrastructure/postgres/postgres-answer-release-indexer.js';
-import { VerifiedAnswerReleaseCatalogSource } from '../../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
+import { readVerifiedAnswerReleaseAuthority, VerifiedAnswerReleaseCatalogSource } from '../../src/modules/public-answer/infrastructure/release/verified-answer-release-catalog.js';
 
 const databaseUrl = process.env.FORM_THOUGHT_TEST_DATABASE_URL;
 if (!databaseUrl) throw new Error('FORM_THOUGHT_TEST_DATABASE_URL is required');
@@ -248,6 +249,198 @@ describe('public answer Postgres migration', () => {
     expect((await pool.query("SELECT embedding_source,count(*)::int AS count FROM public_answer_release_bindings GROUP BY embedding_source")).rows)
       .toEqual([{ embedding_source: 'provider', count: 1 }]);
   });
+
+  it('round-trips pseudo-random float32 embeddings through vector(3072) text', async () => {
+    let seed = 42;
+    const rand = () => {
+      seed = Math.imul(seed ^ (seed >>> 15), seed | 1);
+      seed ^= seed + Math.imul(seed ^ (seed >>> 7), seed | 61);
+      return ((seed ^ (seed >>> 14)) >>> 0) / 4294967296;
+    };
+    const values = Array.from({ length: 3072 }, () => Math.fround((rand() * 2 - 1) * 0.05));
+    const written = `[${values.join(',')}]`;
+    const reread = (await pool.query<{ v: string }>('SELECT $1::vector(3072)::text AS v', [written])).rows[0]!.v;
+    const parsed = reread.slice(1, -1).split(',').filter(Boolean).map(Number);
+    const checksum = (nums: readonly number[]) => {
+      const bytes = Buffer.allocUnsafe(nums.length * 4);
+      nums.forEach((value, index) => bytes.writeFloatBE(Math.fround(value), index * 4));
+      return bytes.toString('hex');
+    };
+    expect(parsed.length).toBe(3072);
+    expect(checksum(parsed)).toBe(checksum(values));
+  });
+
+  it('round-trips OpenAI-like float64 embeddings after float32 quantization', async () => {
+    const values = Array.from({ length: 3072 }, (_, index) => (
+      Math.fround(Math.sin((index + 1) * 0.012345678901234567) * 0.03765432109876543)
+    ));
+    const written = `[${values.join(',')}]`;
+    const reread = (await pool.query<{ v: string }>('SELECT $1::vector(3072)::text AS v', [written])).rows[0]!.v;
+    const parsed = reread.slice(1, -1).split(',').filter(Boolean).map(Number);
+    const checksum = (nums: readonly number[]) => {
+      const bytes = Buffer.allocUnsafe(nums.length * 4);
+      nums.forEach((value, index) => bytes.writeFloatBE(Math.fround(value), index * 4));
+      return bytes.toString('hex');
+    };
+    expect(parsed.length).toBe(3072);
+    expect(checksum(parsed)).toBe(checksum(values));
+  });
+
+  it('round-trips one live OpenAI embedding through vector(3072) text', async () => {
+    const key = process.env.OPENAI_API_KEY;
+    if (typeof key !== 'string' || key.trim() === '') return;
+    const { OpenAIEmbeddingClient } = await import('../../src/modules/public-answer/infrastructure/openai/openai-embedding-client.js');
+    const client = new OpenAIEmbeddingClient(key, { profile: 'index' });
+    const embedded = await client.embed(['x'], new AbortController().signal);
+    const values = embedded.vectors[0]!.map((value) => Math.fround(value));
+    const written = `[${values.join(',')}]`;
+    const reread = (await pool.query<{ v: string }>('SELECT $1::vector(3072)::text AS v', [written])).rows[0]!.v;
+    const parsed = reread.slice(1, -1).split(',').filter(Boolean).map(Number);
+    const checksum = (nums: readonly number[]) => {
+      const bytes = Buffer.allocUnsafe(nums.length * 4);
+      nums.forEach((value, index) => bytes.writeFloatBE(Math.fround(value), index * 4));
+      return bytes.toString('hex');
+    };
+    expect(embedded.vectors[0]!.length).toBe(3072);
+    expect(parsed.length).toBe(3072);
+    expect(checksum(parsed)).toBe(checksum(values));
+  });
+
+  it('activates a one-chunk local binding with a live OpenAI embedding', async () => {
+    const key = process.env.OPENAI_API_KEY;
+    if (typeof key !== 'string' || key.trim() === '') return;
+    const value = release('8');
+    const client = new OpenAIEmbeddingClient(key, { profile: 'index' });
+    const prepared = await prepareEmbeddingSet(value, client, new AbortController().signal);
+    const local = createProviderEmbeddingAuthorities(value, prepared, {
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      createdAt: '2026-09-02T00:00:00.000Z',
+      completedAt: '2026-09-02T00:00:01.000Z',
+    });
+    await expect(new PostgresAnswerReleaseIndexer('development').activate(
+      value, prepared, local.activation, pool, new AbortController().signal, local.durable,
+    )).resolves.toMatchObject({ state: 'active' });
+  });
+
+  it('activates a local provider binding whose embedding contains negative zero', async () => {
+    const value = release('8');
+    const client = {
+      model: 'text-embedding-3-large' as const,
+      dimensions: 3072 as const,
+      async embed(texts: readonly string[], signal: AbortSignal) {
+        if (signal.aborted) throw signal.reason;
+        return {
+          vectors: texts.map(() => Array.from({ length: 3072 }, (_, dimension) => (
+            dimension === 0 ? -0 : 0.03125
+          ))),
+          usage: { inputTokens: 1, outputTokens: 0 },
+        };
+      },
+    };
+    const prepared = await prepareEmbeddingSet(value, client, new AbortController().signal);
+    const local = createProviderEmbeddingAuthorities(value, prepared, {
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      createdAt: '2026-09-02T00:00:00.000Z',
+      completedAt: '2026-09-02T00:00:01.000Z',
+    });
+    await expect(new PostgresAnswerReleaseIndexer('development').activate(
+      value, prepared, local.activation, pool, new AbortController().signal, local.durable,
+    )).resolves.toMatchObject({ state: 'active' });
+  });
+
+  it('activates a local provider binding whose vectors look like live OpenAI floats', async () => {
+    const value = release('e');
+    const client = {
+      model: 'text-embedding-3-large' as const,
+      dimensions: 3072 as const,
+      async embed(texts: readonly string[], signal: AbortSignal) {
+        if (signal.aborted) throw signal.reason;
+        return {
+          vectors: texts.map((_, textIndex) => Array.from({ length: 3072 }, (__, dimension) => (
+            Math.sin((textIndex + 1) * (dimension + 1) * 0.000137) * 0.03125
+          ))),
+          usage: { inputTokens: 12, outputTokens: 0 },
+        };
+      },
+    };
+    const prepared = await prepareEmbeddingSet(value, client, new AbortController().signal);
+    const local = createProviderEmbeddingAuthorities(value, prepared, {
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      createdAt: '2026-09-02T00:00:00.000Z',
+      completedAt: '2026-09-02T00:00:01.000Z',
+    });
+    await expect(new PostgresAnswerReleaseIndexer('development').activate(
+      value, prepared, local.activation, pool, new AbortController().signal, local.durable,
+    )).resolves.toMatchObject({ state: 'active' });
+  });
+
+  it('activates the verified public-answer corpus with live-like floats', async () => {
+    const { answer } = await readVerifiedAnswerReleaseAuthority({
+      corpusApprovalPath: resolve('src/data/public-answer-corpus-approval.v1.json'),
+      contentReleaseRoot: resolve('build/public-releases'),
+      answerReleaseRoot: resolve('build/public-answer-releases'),
+    });
+    expect(answer.indexInputs.length).toBeGreaterThan(1);
+    const client = {
+      model: 'text-embedding-3-large' as const,
+      dimensions: 3072 as const,
+      async embed(texts: readonly string[], signal: AbortSignal) {
+        if (signal.aborted) throw signal.reason;
+        return {
+          vectors: texts.map((_, textIndex) => Array.from({ length: 3072 }, (__, dimension) => (
+            Math.sin((textIndex + 1) * (dimension + 1) * 0.000137) * 0.03125
+          ))),
+          usage: { inputTokens: texts.length, outputTokens: 0 },
+        };
+      },
+    };
+    const prepared = await prepareEmbeddingSet(answer, client, new AbortController().signal);
+    const local = createProviderEmbeddingAuthorities(answer, prepared, {
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      createdAt: '2026-09-02T00:00:00.000Z',
+      completedAt: '2026-09-02T00:00:01.000Z',
+    });
+    await expect(new PostgresAnswerReleaseIndexer('development').activate(
+      answer, prepared, local.activation, pool, new AbortController().signal, local.durable,
+    )).resolves.toMatchObject({ state: 'active' });
+  });
+
+  it('activates the verified public-answer corpus with live OpenAI embeddings', async () => {
+    const key = process.env.OPENAI_API_KEY;
+    if (typeof key !== 'string' || key.trim() === '') return;
+    if (process.env.FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE !== 'true') return;
+    const { answer } = await readVerifiedAnswerReleaseAuthority({
+      corpusApprovalPath: resolve('src/data/public-answer-corpus-approval.v1.json'),
+      contentReleaseRoot: resolve('build/public-releases'),
+      answerReleaseRoot: resolve('build/public-answer-releases'),
+    });
+    expect(answer.indexInputs.length).toBeGreaterThan(1);
+    const client = new OpenAIEmbeddingClient(key, { profile: 'index' });
+    const prepared = await prepareEmbeddingSet(answer, client, new AbortController().signal);
+    const local = createProviderEmbeddingAuthorities(answer, prepared, {
+      providerAuthorityKind: 'local-non-zdr',
+      providerAuthorityHash: `sha256:${'5'.repeat(64)}`,
+      providerPolicyHash: PROVIDER_MODEL_POLICY.policyHash,
+      providerPricingReceiptHash: PROVIDER_MODEL_POLICY.pricingReceiptHash,
+      createdAt: '2026-09-02T00:00:00.000Z',
+      completedAt: '2026-09-02T00:00:01.000Z',
+    });
+    await expect(new PostgresAnswerReleaseIndexer('development').activate(
+      answer, prepared, local.activation, pool, new AbortController().signal, local.durable,
+    )).resolves.toMatchObject({ state: 'active' });
+  }, 60_000);
 
   it('atomically activates, idempotently reuses, and keeps test-only provider evidence byte-distinct and rollback-selectable', async () => {
     const value = release('1');

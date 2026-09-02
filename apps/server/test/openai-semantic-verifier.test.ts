@@ -31,6 +31,10 @@ function completed(value: unknown): Response {
 }
 
 describe('OpenAiSemanticVerifier', () => {
+  it('omits uniqueItems from the sealed Luna support schema', () => {
+    expect(JSON.stringify(SUPPORT_SCHEMA)).not.toContain('uniqueItems');
+  });
+
   it('sends the recursive exact semantic tree with sentence and evidence application data only', async () => {
     const requests: any[] = [];
     const verifier = new OpenAiSemanticVerifier(new OpenAiResponsesClient('fixture-key', vi.fn(async (_url, init) => {

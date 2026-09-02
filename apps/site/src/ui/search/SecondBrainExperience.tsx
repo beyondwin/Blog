@@ -13,7 +13,11 @@ import { ORIGIN_QUERY_MAX_LENGTH } from '../navigation/origin';
 import type { AnswerViewModel } from './answerViewModel';
 import { EvidencePanel } from './EvidencePanel';
 import { LivingEvidenceDesk, type LivingEvidenceDeskProps } from './LivingEvidenceDesk';
-import { createPublicAskCoordinator } from './publicAskCoordinator';
+import {
+  createPublicAskCoordinator,
+  LOCAL_LIVE_ASK_DEADLINE_MS,
+  PUBLIC_ASK_DEADLINE_MS,
+} from './publicAskCoordinator';
 import { SearchResults } from './SearchResults';
 import {
   askExperienceReducer,
@@ -315,7 +319,9 @@ export function SecondBrainExperience({
   const [state, dispatch] = useReducer(askExperienceReducer, initialQuery, initialAskState);
   const [inputValue, setInputValue] = useState(initialQuery || SAMPLE_QUESTION);
   const [composerNote, setComposerNote] = useState('질문을 기다리고 있습니다.');
-  const coordinator = useMemo(() => createPublicAskCoordinator(provider), [provider]);
+  const coordinator = useMemo(() => createPublicAskCoordinator(provider, {
+    deadlineMs: localProviderDisclosure ? LOCAL_LIVE_ASK_DEADLINE_MS : PUBLIC_ASK_DEADLINE_MS,
+  }), [localProviderDisclosure, provider]);
   const choreographyTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const returnFocusRef = useRef<HTMLElement | null>(null);
 

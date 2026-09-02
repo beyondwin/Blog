@@ -132,6 +132,30 @@ describe('public ask coordinator', () => {
     expect(calls).toBe(1);
   });
 
+  it('settles a local-live 12,000ms deadline without changing the default 8,000ms abort', async () => {
+    let calls = 0;
+    let settled: CoordinatedAskResult | undefined;
+    const provider: PublicAskProvider = {
+      ask: () => {
+        calls += 1;
+        return new Promise<PublicAskResponse>(() => undefined);
+      },
+    };
+    const coordinator = createPublicAskCoordinator(provider, { deadlineMs: 12_000 });
+    const result = coordinator.submit('끝나지 않는 질문');
+    void result.then((value) => { settled = value; });
+    await vi.advanceTimersByTimeAsync(8_000);
+    await Promise.resolve();
+    expect(settled).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(3_999);
+    await Promise.resolve();
+    expect(settled).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1);
+    await Promise.resolve();
+    expect(settled).toEqual({ kind: 'transport-error', token: 1, code: 'timeout' });
+    expect(calls).toBe(1);
+  });
+
   it.each(['resolve', 'reject'] as const)(
     'keeps a timeout final when the provider later tries to %s',
     async (outcome) => {

@@ -23,7 +23,7 @@ export const GENERATION_SCHEMA = Object.freeze({
         properties: {
           text: { type: 'string', minLength: 1, maxLength: 600 },
           evidenceIds: {
-            type: 'array', minItems: 1, maxItems: 6, uniqueItems: true,
+            type: 'array', minItems: 1, maxItems: 6,
             items: { type: 'string', pattern: '^[a-f0-9]{64}$' },
           },
         },

@@ -44,6 +44,10 @@ function completed(text: string): Response {
 }
 
 describe('OpenAiResponsesGenerator', () => {
+  it('omits uniqueItems from the sealed Luna generation schema', () => {
+    expect(JSON.stringify(GENERATION_SCHEMA)).not.toContain('uniqueItems');
+  });
+
   it('sends the recursive exact generation tree and only approved application data', async () => {
     const requests: unknown[] = [];
     const fetcher = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
@@ -246,6 +250,20 @@ describe('OpenAiResponsesClient', () => {
     const client = new OpenAiResponsesClient('fixture-key', fetcher);
     await expect(client.structured(canonical, { schemaName: 'schema', applicationKind: 'generation', schema: { type: 'object' } }, new AbortController().signal))
       .rejects.toThrow(/provider response/u);
+  });
+
+  it('accepts a completed Luna response that prefixes one assistant message with a reasoning item', async () => {
+    const payload = { ok: true };
+    const client = new OpenAiResponsesClient('fixture-key', async () => response({
+      status: 'completed',
+      output: [
+        { type: 'reasoning', content: [] },
+        { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: JSON.stringify(payload) }] },
+      ],
+      usage: { input_tokens: 123, output_tokens: 45 },
+    }));
+    await expect(client.structured(canonical, { schemaName: 'schema', applicationKind: 'generation', schema: { type: 'object' } }, new AbortController().signal))
+      .resolves.toEqual({ value: payload, usage: { inputTokens: 123, outputTokens: 45 } });
   });
 
   it('uses the fixed HTTPS endpoint, redirect error, and abort signal', async () => {

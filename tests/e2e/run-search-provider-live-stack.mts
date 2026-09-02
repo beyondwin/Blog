@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 
+import { loadIgnoredLocalEnvFile } from '../../scripts/public-answer/local-env.mts';
 import { WORST_CASE_COST_MICROUSD } from '../../apps/server/src/modules/public-answer/infrastructure/guards/in-memory-usage-guard.js';
 import { LocalBudgetLedger } from '../../apps/server/src/modules/public-answer/infrastructure/guards/local-budget-ledger.js';
 import { PROVIDER_MODEL_POLICY } from '../../apps/server/src/modules/public-answer/infrastructure/openai/provider-model-policy.js';
@@ -669,6 +670,7 @@ export async function runSearchProviderLiveStack(
 
 const entrypoint = process.argv[1];
 if (entrypoint && import.meta.url === pathToFileURL(entrypoint).href) {
+  loadIgnoredLocalEnvFile(process.env, resolve(root, '.env'));
   assertLiveSmokeConfirmation();
   if (!process.argv.slice(2).includes('--confirm-live-provider')) {
     throw new Error('live smoke requires --confirm-live-provider');

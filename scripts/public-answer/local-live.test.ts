@@ -5,6 +5,10 @@ import {
   stopOwnedChildrenInReverse,
 } from '../cutover/owned-process-lifecycle.mts';
 import {
+  applyIgnoredLocalEnv,
+  parseIgnoredLocalEnvFile,
+} from './local-env.mts';
+import {
   parseLocalLiveArguments,
   preflight,
   redactLiveDiagnostics,
@@ -124,6 +128,21 @@ describe('local live argument parser and preflight', () => {
     expect(() => preflight({ OPENAI_API_KEY: 'present' }, { nodeMajor: 26 })).toThrow(/Node/u);
     expect(() => preflight({ OPENAI_API_KEY: 'present' }, { nodeMajor: 24, dockerAvailable: false })).toThrow(/Docker/u);
     expect(() => preflight({ OPENAI_API_KEY: 'present' }, { nodeMajor: 24, dockerAvailable: true })).not.toThrow();
+  });
+
+  it('loads OPENAI_API_KEY from an ignored .env only when process env is empty', () => {
+    expect(parseIgnoredLocalEnvFile([
+      '# comment',
+      'FORM_THOUGHT_CONFIRM_LOCAL_LIVE_SMOKE=true',
+      'OPENAI_API_KEY=',
+      `OPENAI_API_KEY="${SENTINEL_KEY}"`,
+    ].join('\n'))).toEqual({ OPENAI_API_KEY: SENTINEL_KEY });
+    const empty: NodeJS.ProcessEnv = {};
+    applyIgnoredLocalEnv(empty, { OPENAI_API_KEY: SENTINEL_KEY });
+    expect(empty.OPENAI_API_KEY).toBe(SENTINEL_KEY);
+    const existing: NodeJS.ProcessEnv = { OPENAI_API_KEY: 'already-set' };
+    applyIgnoredLocalEnv(existing, { OPENAI_API_KEY: SENTINEL_KEY });
+    expect(existing.OPENAI_API_KEY).toBe('already-set');
   });
 });
 

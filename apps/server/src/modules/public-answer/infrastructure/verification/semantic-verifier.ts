@@ -14,8 +14,8 @@ export const SUPPORT_SCHEMA = Object.freeze({
   additionalProperties: false,
   required: ['supportedSentenceIds', 'contradictedSentenceIds'],
   properties: {
-    supportedSentenceIds: { type: 'array', uniqueItems: true, items: { type: 'string' } },
-    contradictedSentenceIds: { type: 'array', uniqueItems: true, items: { type: 'string' } },
+    supportedSentenceIds: { type: 'array', items: { type: 'string' } },
+    contradictedSentenceIds: { type: 'array', items: { type: 'string' } },
   },
 });
 

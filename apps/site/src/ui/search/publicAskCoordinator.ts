@@ -24,9 +24,17 @@ interface ActiveSubmission {
   settleCancel: (kind: 'aborted' | 'stale') => void;
 }
 
-const REQUEST_DEADLINE_MS = 8_000;
+export const PUBLIC_ASK_DEADLINE_MS = 8_000;
+export const LOCAL_LIVE_ASK_DEADLINE_MS = 12_000;
 
-export function createPublicAskCoordinator(provider: PublicAskProvider): PublicAskCoordinator {
+export function createPublicAskCoordinator(
+  provider: PublicAskProvider,
+  options: Readonly<{ deadlineMs?: number }> = {},
+): PublicAskCoordinator {
+  const deadlineMs = options.deadlineMs ?? PUBLIC_ASK_DEADLINE_MS;
+  if (!Number.isInteger(deadlineMs) || deadlineMs < 1) {
+    throw new Error('ask coordinator deadline is invalid');
+  }
   let active: ActiveSubmission | null = null;
   let lastToken = 0;
   let disposed = false;
@@ -57,7 +65,7 @@ export function createPublicAskCoordinator(provider: PublicAskProvider): PublicA
           active = null;
           controller.abort();
           resolve({ kind: 'transport-error', token, code: 'timeout' });
-        }, REQUEST_DEADLINE_MS);
+        }, deadlineMs);
         active = { token, controller, timeoutId, settleCancel };
       });
 

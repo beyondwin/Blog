@@ -40,6 +40,60 @@ function checksum(value: unknown): string {
   return `sha256:${createHash('sha256').update(typeof value === 'string' ? value : canonical(value)).digest('hex')}`;
 }
 
+function writtenIndexMismatch(
+  expectedRows: readonly PreparedIndexRow[],
+  writtenRows: readonly PreparedIndexRow[],
+): string {
+  if (expectedRows.length !== writtenRows.length) {
+    return `row-count ${writtenRows.length}!=${expectedRows.length}`;
+  }
+  const expectedById = new Map(expectedRows.map((row) => [row.chunkId, row]));
+  let byIdVectorMismatches = 0;
+  for (const written of writtenRows) {
+    const expected = expectedById.get(written.chunkId);
+    if (!expected || expected.vectorChecksum !== written.vectorChecksum) byIdVectorMismatches += 1;
+  }
+  for (let index = 0; index < expectedRows.length; index += 1) {
+    const expected = expectedRows[index]!;
+    const written = writtenRows[index]!;
+    if (expected.chunkId !== written.chunkId) {
+      return `order:chunkId@${index};byIdVectorMismatches:${byIdVectorMismatches}`;
+    }
+    const keys = Object.keys(expected).sort() as (keyof PreparedIndexRow)[];
+    for (const key of keys) {
+      if (canonical(expected[key]) !== canonical(written[key])) {
+        return `field:${String(key)}@${index};byIdVectorMismatches:${byIdVectorMismatches}`;
+      }
+    }
+  }
+  return `provenance-or-canonicalization;byIdVectorMismatches:${byIdVectorMismatches}`;
+}
+
+function writtenVectorDrift(
+  expectedVectors: readonly PreparedEmbeddingVector[],
+  writtenVectors: readonly { chunkId: string; values: readonly number[]; vectorChecksum: string }[],
+): string {
+  const expectedById = new Map(expectedVectors.map((item) => [item.chunkId, item]));
+  let driftedRows = 0;
+  let driftedDims = 0;
+  for (const written of writtenVectors) {
+    const expected = expectedById.get(written.chunkId);
+    if (!expected) {
+      driftedRows += 1;
+      continue;
+    }
+    let rowDrift = 0;
+    for (let dimension = 0; dimension < DIMENSIONS; dimension += 1) {
+      if (expected.values[dimension] !== Math.fround(written.values[dimension]!)) rowDrift += 1;
+    }
+    if (rowDrift > 0 || expected.vectorChecksum !== written.vectorChecksum) {
+      driftedRows += 1;
+      driftedDims += rowDrift;
+    }
+  }
+  return `rows=${driftedRows},dims=${driftedDims}`;
+}
+
 function detachedFrozen<T>(value: T): T {
   if (Array.isArray(value)) return Object.freeze(value.map((item) => detachedFrozen(item))) as T;
   if (value && typeof value === 'object') {
@@ -49,9 +103,14 @@ function detachedFrozen<T>(value: T): T {
   return value;
 }
 
+function float32(value: number): number {
+  const rounded = Math.fround(value);
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
 function vectorChecksum(values: readonly number[]): string {
   const bytes = Buffer.allocUnsafe(values.length * 4);
-  values.forEach((value, index) => bytes.writeFloatBE(Math.fround(value), index * 4));
+  values.forEach((value, index) => bytes.writeFloatBE(float32(value), index * 4));
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
@@ -171,7 +230,7 @@ export async function prepareEmbeddingSet(
   if (response.vectors.length !== release.indexInputs.length) throw new Error('embedding count mismatch');
   const vectors = response.vectors.map((raw, index) => {
     if (raw.length !== DIMENSIONS || raw.some((value) => !Number.isFinite(value))) throw new Error('embedding dimensions or values are invalid');
-    const values = Object.freeze(raw.map(Math.fround));
+    const values = Object.freeze(raw.map(float32));
     const input = release.indexInputs[index]!;
     return Object.freeze({
       chunkId: input.chunkId, chunkChecksum: input.chunkChecksum, values,
@@ -455,7 +514,10 @@ export class PostgresAnswerReleaseIndexer {
         model: row.embedding_model, dimensions: row.embedding_dimensions, source: receipt.source,
       }));
       if (checksum({ rows: writtenPayload, provenance: receiptProvenance(receipt) }) !== receipt.indexChecksum) {
-        throw new Error('written binding index checksum mismatch');
+        throw new Error(`written binding index checksum mismatch: ${writtenIndexMismatch(
+          prepared.indexRows.map((row) => ({ ...row, source: receipt.source })),
+          writtenPayload,
+        )}; vectorDrift:${writtenVectorDrift(prepared.vectors, writtenVectors)}`);
       }
       await client.query("UPDATE public_answer_release_bindings SET state='ready' WHERE binding_id=$1 AND state='building'", [receipt.bindingId]);
       await client.query("UPDATE public_answer_release_bindings SET state='retired' WHERE state='active'");

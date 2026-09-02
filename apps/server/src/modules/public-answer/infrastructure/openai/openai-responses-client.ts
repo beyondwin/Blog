@@ -206,11 +206,16 @@ async function readCappedBody(response: Response, signal: AbortSignal): Promise<
 
 function extractStructured(parsed: unknown): StructuredResponse {
   if (!isPlainObject(parsed) || parsed.status !== 'completed' || !Array.isArray(parsed.output)
-    || parsed.output.length !== 1) {
+    || parsed.output.length < 1) {
     throw new PublicAnswerInvalidResponseError('provider response is invalid');
   }
-  const message = parsed.output[0];
-  if (!isPlainObject(message) || message.type !== 'message' || message.role !== 'assistant'
+  const messages = parsed.output.filter((item) => isPlainObject(item) && item.type === 'message');
+  if (messages.length !== 1
+    || parsed.output.some((item) => !isPlainObject(item) || (item.type !== 'message' && item.type !== 'reasoning'))) {
+    throw new PublicAnswerInvalidResponseError('provider response is invalid');
+  }
+  const message = messages[0]!;
+  if (message.role !== 'assistant'
     || !Array.isArray(message.content) || message.content.length !== 1) {
     throw new PublicAnswerInvalidResponseError('provider response is invalid');
   }

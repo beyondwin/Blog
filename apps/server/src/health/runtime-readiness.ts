@@ -120,7 +120,10 @@ function vectorChecksum(text: string): string {
     throw new Error('runtime readiness database vector drift');
   }
   const bytes = Buffer.allocUnsafe(values.length * 4);
-  values.forEach((value, index) => bytes.writeFloatBE(Math.fround(value), index * 4));
+  values.forEach((value, index) => {
+    const rounded = Math.fround(value);
+    bytes.writeFloatBE(Object.is(rounded, -0) ? 0 : rounded, index * 4);
+  });
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
 
