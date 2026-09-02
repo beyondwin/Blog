@@ -4,6 +4,7 @@
 .worktrees/
 .playwright-cli/
 .impeccable/
+.remember/
 
 # Dependencies
 node_modules/
@@ -12,8 +13,7 @@ node_modules/
 .astro/
 .vercel/
 dist/
-build/public-answer-releases/
-build/public-releases/
+build/
 
 # Test and coverage output
 coverage/
@@ -52,6 +52,6 @@ pnpm-debug.log*
 .DS_Store
 .idea/
 .vscode/
-output/playwright
+output/
 .playwright-mcp
 /tmp/
